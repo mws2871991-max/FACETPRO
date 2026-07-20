@@ -1,0 +1,11 @@
+:root{
+  --lime:#D6FF57;
+  --gold:#B08D57;
+  --bg:#FAF9F6;
+  --ink:#1A1A1A;
+  --border:#E8E2D9;
+  --radius:12px;
+  --space-8:2rem;
+  --font-sans:'Geist',system-ui,sans-serif;
+}
+:focus-visible{outline:2px solid var(--lime);outline-offset:2px}

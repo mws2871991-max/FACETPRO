@@ -1,0 +1,2 @@
+.btn-primary{background:var(--lime);color:var(--ink);border-radius:var(--radius);padding:12px 24px;font-weight:600}
+.card{background:white;border:1px solid var(--border);border-radius:var(--radius);padding:24px}
