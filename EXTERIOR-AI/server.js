@@ -10,15 +10,61 @@ const catalogue = JSON.parse(fs.readFileSync(path.join(__dirname, 'catalogue.jso
 
 const app = express();
 app.set('trust proxy', 1);
-app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') return res.sendStatus(204);
-  next();
-});
+
+// No CORS headers: the front end is served from this same origin, so it never
+// needs them. Sending `Access-Control-Allow-Origin: *` only let any website
+// read these endpoints from a visitor's browser.
+
 app.use(express.json({ limit: '20mb' }));
-app.use(express.static(__dirname));
+
+/* ── STATIC FILES ──
+   Deny by default. Serving __dirname wholesale published the entire project —
+   data/leads.jsonl (bypassing the /api/leads password outright), server.js,
+   store.js, catalogue.json and the package files were all downloadable.
+
+   Only these are public: the two HTML pages, robots/sitemap, /assets and
+   /legal. Anything else 404s. */
+const PUBLIC_FILES = new Set([
+  '/index.html',
+  '/guided-demo.html',
+  '/robots.txt',
+  '/sitemap.xml',
+]);
+const PUBLIC_DIRS = ['/assets/', '/legal/'];
+
+// Belt and braces: even inside a public directory, never hand out source,
+// data, config or documentation. Keeps assets/swatches/CREDITS.md private and
+// stops a stray file dropped into /assets from being published by accident.
+const BLOCKED_EXTENSIONS = /\.(js|mjs|cjs|json|jsonl|md|env|lock|ya?ml|sh|py|sql|log|bak|ini|conf|pem|key|crt)$/i;
+
+function isPublicPath(rawPath) {
+  let decoded;
+  try { decoded = decodeURIComponent(rawPath); } catch (_) { return false; }
+  if (decoded.includes('\0')) return false;
+
+  // Normalise first, so `/assets/../server.js` is judged as `/server.js`.
+  // Without this the prefix check below would wave the traversal straight
+  // through — express.static resolves it to a file that is still inside the
+  // project root, so it would happily serve it.
+  const p = path.posix.normalize(decoded);
+  if (!p.startsWith('/')) return false;
+  if (BLOCKED_EXTENSIONS.test(p)) return false;
+  if (p === '/') return true;
+  if (PUBLIC_FILES.has(p)) return true;
+  return PUBLIC_DIRS.some(dir => p.startsWith(dir) && p.length > dir.length);
+}
+
+const serveStatic = express.static(__dirname, {
+  dotfiles: 'deny',   // .env, .git, .gitignore — never served
+  index: 'index.html',
+  redirect: false,
+  setHeaders: (res) => res.setHeader('X-Content-Type-Options', 'nosniff'),
+});
+
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/') || !isPublicPath(req.path)) return next();
+  serveStatic(req, res, next);
+});
 
 /* ── RATE LIMITERS ── */
 const detectLimiter = rateLimit({

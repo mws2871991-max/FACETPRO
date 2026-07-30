@@ -53,6 +53,20 @@ Open http://localhost:3020 (or whatever `PORT` you set).
 - `robots.txt`, `sitemap.xml`, `assets/og-image.png` — SEO and social sharing.
 - `data/` — where leads/detections get stored as JSONL files (gitignored: personal data).
 
+## What is publicly served
+
+Static file serving is deny-by-default. Only `index.html`, `guided-demo.html`,
+`robots.txt`, `sitemap.xml`, `/assets/**` and `/legal/**` are reachable; the
+request path is decoded and normalised before the check, so `/assets/../server.js`
+is judged as `/server.js` and refused. Source, data, config and documentation
+extensions (`.js`, `.json`, `.jsonl`, `.md`, `.yml`, `.lock`, keys, logs …) are
+blocked even inside a public directory, and dotfiles are denied outright.
+
+If you add a new public page or asset directory, add it to `PUBLIC_FILES` or
+`PUBLIC_DIRS` in `server.js` — it will 404 until you do.
+
+No CORS headers are sent. The front end is same-origin, so it never needed them.
+
 ## Installer access
 
 `GET /api/leads` returns homeowner names, emails, phone numbers and postcodes, so
