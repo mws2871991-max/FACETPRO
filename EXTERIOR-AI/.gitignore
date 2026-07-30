@@ -1,0 +1,8 @@
+node_modules/
+
+# Real keys — never commit. .env.example is the template.
+.env
+.env.local
+
+# Captured homeowner leads and detection logs (contains personal data).
+data/*.jsonl

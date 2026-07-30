@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>See How It Works — Guided Demo | Facet Pro</title>
+<meta name="description" content="A step-by-step walkthrough of Facet Pro: how one photo of your house becomes a new exterior look with a costed estimate. Try each step yourself.">
+<link rel="canonical" href="https://facetpro.co.uk/guided-demo.html">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="theme-color" content="#FBFBF8">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Facet Pro">
+<meta property="og:locale" content="en_GB">
+<meta property="og:url" content="https://facetpro.co.uk/guided-demo.html">
+<meta property="og:title" content="See how Facet Pro works — guided demo">
+<meta property="og:description" content="Walk through turning one photo of your house into a new exterior look with a costed estimate.">
+<meta property="og:image" content="https://facetpro.co.uk/assets/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://facetpro.co.uk/assets/og-image.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='16' fill='%2318181b'/%3E%3Ctext x='16' y='21' font-family='Georgia,serif' font-size='14' fill='%23FBF8F3' text-anchor='middle'%3EFP%3C/text%3E%3C/svg%3E">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  *{font-family:Inter,system-ui,sans-serif}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+  body{background:#FBFBF8}
+</style>
+</head>
+<body class="min-h-screen bg-[#FBFBF8] text-zinc-900 selection:bg-black selection:text-white">
+
+<div id="root"></div>
+
+<script>
+/* ---------------------------------------------------------------
+   Facet Pro — Interactive Guided Demo
+   Faithful, standalone re-implementation of the reference mockup
+   "Facet Pro Interactive Guided Demo". Chaptered walkthrough with
+   gated "Your Turn" interactions. Plain JS, no build step, no
+   backend wiring.
+--------------------------------------------------------------- */
+
+const root = document.getElementById('root');
+
+const HE = 5;   // seconds per chapter
+const GN = 30;  // total demo duration (6 chapters)
+
+const CHAPTERS = [
+  { id: 0, name: "Hook",       action: "Watching intro",                             caption: "AI scans your exterior in seconds. No measuring tape needed.",
+    voice: "Welcome to Facet Pro. In the next 30 seconds, we\u2019ll scan, detect, and visualize your new home exterior." },
+  { id: 1, name: "Upload",     action: "Drop your photo here to continue \u2192",     caption: "Drop a photo of your home to start the magic.",
+    voice: "Your turn. Drop your home photo here to continue the demo." },
+  { id: 2, name: "Detection",  action: "Click a detected window to confirm",         caption: "We detected 3 windows at 92% confidence.",
+    voice: "Your turn. Click a detected window to confirm our AI." },
+  { id: 3, name: "Visualizer", action: "Try Graphite \u2013 click the swatch", action2: "Drag the before / after slider",
+    caption: "Try real cladding colours instantly. Graphite is most popular.",
+    voice: "Your turn. Try Graphite, then drag the slider to compare." },
+  { id: 4, name: "Save",       action: "Type your email to save \u2013 then click Save", caption: "Save your project to get a contractor-ready render.",
+    voice: "Your turn. Type your email and save your design." },
+  { id: 5, name: "Survey",     action: "Add 3 points on the mini map to survey",     caption: "Tap the map to mark your walls for an accurate quote.",
+    voice: "Your turn. Add three points on the map to complete the survey." },
+];
+
+// Fallback swatches shown until /api/catalogue responds \u2014 replaced with the
+// real cladding options (and their real prices) as soon as it loads.
+let COLORS = [
+  { id: "alabaster",  name: "Alabaster",  hex: "#F6F3EE" },
+  { id: "clay-stone", name: "Clay Stone", hex: "#D9C5B4" },
+  { id: "sage-slate", name: "Sage Slate", hex: "#9CAF9C" },
+  { id: "graphite",   name: "Graphite",   hex: "#2F3336" },
+];
+
+fetch('/api/catalogue').then(r => r.json()).then(cat => {
+  if (Array.isArray(cat?.cladding) && cat.cladding.length) {
+    COLORS = cat.cladding.map(c => ({ id: c.id, name: c.name, hex: c.hex, image: c.image, pricePerM2: c.pricePerM2 }));
+    if (st.view) render();
+  }
+}).catch(() => {});
+
+const st = {
+  view: 'landing',
+  status: 'Ready \u2013 Welcome to Facet Pro interactive demo',
+  realVideoUrl: null,
+  playing: false,
+  chapter: 0,
+  time: 0,
+  speed: 1,
+  captionsOn: true,
+  completed: { upload: false, detect: false, colour: false, slider: false, email: false, survey: false },
+  email: '',
+  sliderPos: 65,
+  color: '#2B2D42',
+  cursor: { x: 50, y: 50 },
+  gated: false,
+  celebrating: false,
+  surveyPoints: [],
+  sliderDragging: false,
+  showCompletionModal: false,
+};
+
+let timerHandle = null;
+let refs = {};
+
+function R(msg) { st.status = msg; const el = document.getElementById('status-line'); if (el) updateStatusPill(); }
+
+function completedCount() { return Object.values(st.completed).filter(Boolean).length; }
+function progressPct() { return Math.round(completedCount() / 6 * 100); }
+
+function isChapterUnlocked(m) {
+  if (m === 0) return true;
+  if (m === 1) return st.completed.upload;
+  if (m === 2) return st.completed.detect;
+  if (m === 3) return st.completed.colour && st.completed.slider;
+  if (m === 4) return st.completed.email;
+  if (m === 5) return st.completed.survey;
+  return false;
+}
+
+function currentActionText() {
+  if (st.chapter === 3) {
+    if (!st.completed.colour) return CHAPTERS[3].action;
+    if (!st.completed.slider) return CHAPTERS[3].action2;
+  }
+  return CHAPTERS[st.chapter].action;
+}
+
+function fmtTime(sec) {
+  const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+// ---------- DOM helper ----------
+function h(tag, attrs = {}, children = []) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'className') el.className = v;
+    else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
+    else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2).toLowerCase(), v);
+    else if (v !== undefined && v !== null && v !== false) el.setAttribute(k, v === true ? '' : v);
+  }
+  (Array.isArray(children) ? children : [children]).forEach(c => {
+    if (c === null || c === undefined || c === false) return;
+    el.appendChild(typeof c === 'string' || typeof c === 'number' ? document.createTextNode(c) : c);
+  });
+  return el;
+}
+
+// ---------- timer loop ----------
+
+function startTimerIfNeeded() {
+  if (timerHandle) return;
+  timerHandle = setInterval(() => {
+    if (st.realVideoUrl) return; // real video mode drives time via onTimeUpdate
+    if (!st.playing || st.gated || st.celebrating) return;
+    const next = st.time + 0.1 * st.speed;
+    const chapterEnd = (st.chapter + 1) * HE;
+    if (next >= chapterEnd) {
+      if (st.chapter === 0) {
+        if (st.chapter < 5) {
+          st.chapter += 1;
+          st.time = chapterEnd;
+          R(`Advanced to ${CHAPTERS[st.chapter].name} \u2013 auto`);
+        } else st.time = GN;
+      } else if (!isChapterUnlocked(st.chapter)) {
+        st.playing = false;
+        st.gated = true;
+        R(`Your turn: ${currentActionText()} \u2013 interaction required`);
+        st.time = chapterEnd - 0.05;
+      } else {
+        if (st.chapter < 5) {
+          st.chapter += 1;
+          st.time = chapterEnd;
+          R(`Chapter ${st.chapter + 1}: ${CHAPTERS[st.chapter].name}`);
+        } else st.time = GN;
+      }
+    } else {
+      st.time = Math.min(next, GN);
+    }
+    updateCursor();
+    renderDemoLive();
+  }, 100);
+}
+
+function checkCompletionModal() {
+  if (completedCount() === 6 && !st.showCompletionModal) {
+    setTimeout(() => { st.showCompletionModal = true; R('Demo completed \u2013 funnel to real upload'); render(); }, 400);
+  }
+}
+
+function updateCursor() {
+  let m = { x: 50, y: 50 };
+  if (!st.gated) { st.cursor = m; return; }
+  if (st.chapter === 1) m = { x: 50, y: 52 };
+  if (st.chapter === 2) m = { x: 33, y: 42 };
+  if (st.chapter === 3) m = !st.completed.colour ? { x: 28, y: 78 } : { x: st.sliderPos, y: 48 };
+  if (st.chapter === 4) m = st.email.length < 3 ? { x: 50, y: 46 } : { x: 50, y: 72 };
+  if (st.chapter === 5) m = { x: 50 + (Math.random() * 6 - 3), y: 50 + (Math.random() * 6 - 3) };
+  st.cursor = m;
+}
+
+// ---------- interaction handlers ----------
+
+function playPause() {
+  if (st.realVideoUrl && refs.videoEl) {
+    if (st.playing) { refs.videoEl.pause(); st.playing = false; R(`Status: Paused interactive at ${st.speed}x`); }
+    else {
+      if (st.gated) { R('Complete interaction to unlock playback'); render(); return; }
+      refs.videoEl.play().catch(() => {}); st.playing = true; R(`Status: Playing interactive at ${st.speed}x`);
+    }
+  } else {
+    if (st.gated) { R('Complete interaction to unlock playback'); render(); return; }
+    st.playing = !st.playing;
+    R(st.playing ? `Status: Playing interactive at ${st.speed}x` : `Status: Paused at chapter ${st.chapter + 1}`);
+    startTimerIfNeeded();
+  }
+  render();
+}
+
+function advanceAfterGeneric(key) {
+  st.completed[key] = true;
+  st.gated = false;
+  st.celebrating = true;
+  render();
+  setTimeout(() => {
+    st.celebrating = false;
+    if (st.chapter < 5) {
+      st.chapter += 1;
+      st.time = st.chapter * HE;
+      st.playing = true;
+      R(`Advanced to ${CHAPTERS[st.chapter]?.name || 'Complete'}`);
+      startTimerIfNeeded();
+    }
+    render();
+    checkCompletionModal();
+  }, 1100);
+}
+
+function doUpload() {
+  if (st.completed.upload) return;
+  st.completed.upload = true;
+  st.gated = false;
+  st.celebrating = true;
+  R('Upload completed \u2713 \u2013 interaction 1/6');
+  render();
+  setTimeout(() => {
+    st.celebrating = false;
+    st.chapter = 2;
+    st.time = 10;
+    st.playing = true;
+    render();
+    startTimerIfNeeded();
+    checkCompletionModal();
+  }, 1000);
+}
+
+function doDetect() {
+  if (st.completed.detect) return;
+  R('Detection confirmed \u2713 \u2013 interaction 2/6');
+  advanceAfterGeneric('detect');
+}
+
+function setColor(hex, name) {
+  st.color = hex;
+  R(`Color set to ${name} \u2013 ${name === 'Graphite' ? 'interaction 3/6a \u2713' : 'try Graphite'}`);
+  if (name === 'Graphite') {
+    st.completed.colour = true;
+    if (st.completed.slider) {
+      setTimeout(() => {
+        st.celebrating = true; render();
+        setTimeout(() => {
+          st.celebrating = false;
+          st.chapter = 4; st.time = 20; st.playing = true;
+          render(); startTimerIfNeeded(); checkCompletionModal();
+        }, 900);
+      }, 300);
+    }
+  }
+  render();
+}
+
+function sliderPointerDown(e) {
+  st.sliderDragging = true;
+  try { e.target.setPointerCapture(e.pointerId); } catch {}
+  R('Slider dragging \u2013 move >10% to complete');
+}
+function sliderPointerMove(e) {
+  if (!st.sliderDragging) return;
+  if (!refs.sliderTrack) return;
+  const rect = refs.sliderTrack.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const pct = Math.max(5, Math.min(95, x / rect.width * 100));
+  st.sliderPos = pct;
+  if (Math.abs(pct - 65) > 10 && !st.completed.slider) {
+    st.completed.slider = true;
+    R('Slider interaction completed \u2713 \u2013 3/6b');
+    if (st.completed.colour) {
+      st.gated = false;
+      setTimeout(() => {
+        st.celebrating = true; render();
+        setTimeout(() => {
+          st.celebrating = false;
+          st.chapter = 4; st.time = 20; st.playing = true;
+          render(); startTimerIfNeeded(); checkCompletionModal();
+        }, 900);
+      }, 0);
+    }
+  }
+  renderDemoLive();
+}
+function sliderPointerUp() { st.sliderDragging = false; }
+
+async function saveProject() {
+  if (st.email.length < 3) { R('Type at least 3 characters to save'); render(); return; }
+
+  const isRealEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(st.email);
+  if (isRealEmail) {
+    const selected = COLORS.find(c => c.hex === st.color) || COLORS[0];
+    try {
+      const res = await fetch('/api/lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: st.email.split('@')[0],
+          email: st.email,
+          claddingId: selected.id,
+          notes: 'Captured from the interactive guided demo (chapter 4/6 \u2014 Save Project).',
+        })
+      });
+      const data = await res.json();
+      if (res.ok) R(`Project saved \u2713 \u2013 real lead ${data.lead.id} created \u2013 interaction 5/6`);
+      else R(`Project saved \u2013 lead capture error: ${data.error} \u2013 interaction 5/6`);
+    } catch (err) {
+      R('Project saved \u2013 lead capture unreachable \u2013 interaction 5/6');
+    }
+  } else {
+    R('Project saved \u2713 \u2013 interaction 5/6 (type a real email to create an actual lead)');
+  }
+  advanceAfterGeneric('email');
+}
+
+function surveyClick(e) {
+  if (!refs.surveyMap) return;
+  const rect = refs.surveyMap.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width * 100;
+  const y = (e.clientY - rect.top) / rect.height * 100;
+  st.surveyPoints = [...st.surveyPoints, { x, y }].slice(-8);
+  R(`Point ${st.surveyPoints.length} added \u2013 ${st.surveyPoints.length >= 3 ? 'survey ready' : `${3 - st.surveyPoints.length} more`}`);
+  if (st.surveyPoints.length >= 3 && !st.completed.survey) {
+    st.completed.survey = true;
+    st.gated = false;
+    st.celebrating = true;
+    render();
+    setTimeout(() => { st.celebrating = false; render(); checkCompletionModal(); }, 1200);
+  } else render();
+}
+
+function resetDemo() {
+  if (timerHandle) { clearInterval(timerHandle); timerHandle = null; }
+  st.chapter = 0; st.time = 0; st.playing = false; st.gated = false; st.celebrating = false;
+  st.completed = { upload: false, detect: false, colour: false, slider: false, email: false, survey: false };
+  st.sliderPos = 65; st.color = '#2B2D42'; st.email = ''; st.surveyPoints = []; st.showCompletionModal = false;
+  R('Demo reset \u2013 ready to play');
+  render();
+}
+
+function navigate(view, chapterIdx) {
+  if (view === 'landing') {
+    st.view = 'landing';
+    R('View: Landing \u2013 interactive demo overview');
+  } else {
+    st.view = 'demo';
+    if (chapterIdx !== undefined) {
+      if (chapterIdx <= st.chapter || isChapterUnlocked(chapterIdx - 1) || chapterIdx === 0) {
+        st.chapter = chapterIdx;
+        st.time = chapterIdx * HE;
+        st.gated = !isChapterUnlocked(chapterIdx) && chapterIdx !== 0;
+        st.playing = false;
+        R(`Navigated to ${CHAPTERS[chapterIdx].name} \u2013 ${isChapterUnlocked(chapterIdx) ? 'completed' : 'interaction required'}`);
+      } else {
+        R(`Locked \u2013 complete interaction to unlock ${CHAPTERS[chapterIdx].name}`);
+      }
+    } else {
+      R('View: Demo \u2013 interactive guided mode');
+    }
+  }
+  render();
+}
+
+function loadRealVideo(file) {
+  const url = URL.createObjectURL(file);
+  st.realVideoUrl = url;
+  st.view = 'demo';
+  st.chapter = 1;
+  st.time = 5;
+  st.playing = false;
+  st.gated = true;
+  R(`Real video loaded: ${file.name} \u2013 interactive gates active`);
+  render();
+}
+
+function onRealVideoTimeUpdate(e) {
+  const t = e.target.currentTime;
+  const dur = e.target.duration || GN;
+  const q = t / dur * GN;
+  st.time = q;
+  const idx = Math.min(5, Math.floor(q / HE));
+  const chapterEnd = (idx + 1) * HE;
+  if (q >= chapterEnd - 0.2 && idx !== 0 && !isChapterUnlocked(idx)) {
+    e.target.pause();
+    st.playing = false;
+    st.gated = true;
+    st.chapter = idx;
+    R(`Your turn: ${CHAPTERS[idx].action} \u2013 interaction required`);
+    render();
+  } else {
+    updateTimeDisplayOnly();
+  }
+}
+
+function speak() {
+  const text = CHAPTERS[st.chapter].voice;
+  try {
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 1;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+    R('Speaking: voiceover for current chapter...');
+  } catch {
+    R('Speech not supported \u2013 voiceover script visible');
+  }
+  render();
+}
+
+// ---------- render ----------
+
+function render() {
+  root.innerHTML = '';
+  root.appendChild(buildHeader());
+  root.appendChild(st.view === 'landing' ? buildLanding() : buildDemo());
+  if (st.showCompletionModal) root.appendChild(buildCompletionModal());
+  root.appendChild(buildStatusPill());
+}
+
+function buildHeader() {
+  const navItems = [
+    { label: 'Home', view: 'landing' },
+    { label: 'Demo', view: 'demo', ch: undefined },
+    { label: 'Upload', view: 'demo', ch: 1 },
+    { label: 'Visual', view: 'demo', ch: 3 },
+    { label: 'Save', view: 'demo', ch: 4 },
+    { label: 'Survey', view: 'demo', ch: 5 },
+  ];
+  return h('header', { className: 'sticky top-0 z-40 backdrop-blur-xl bg-white/80 border-b border-zinc-200' }, [
+    h('div', { className: 'max-w-6xl mx-auto px-6 h-[64px] flex items-center justify-between' }, [
+      h('div', { className: 'flex items-center gap-3' }, [
+        h('div', { className: 'w-9 h-9 rounded-xl bg-zinc-900 text-white grid place-items-center font-bold tracking-tight' }, 'E'),
+        h('div', { className: 'leading-none' }, [
+          h('div', { className: 'font-semibold tracking-tight text-[15px]' }, 'Facet Pro'),
+          h('div', { className: 'text-[10px] uppercase tracking-[0.18em] text-zinc-500 font-medium' }, 'Interactive Demo'),
+        ]),
+        h('div', { className: 'hidden md:flex ml-6 items-center gap-1 bg-zinc-100 rounded-full p-1' }, navItems.map(item =>
+          h('button', {
+            className: `px-3.5 py-1.5 rounded-full text-[12px] font-medium transition ${st.view === item.view && (item.ch === undefined || st.chapter === item.ch) ? 'bg-white shadow text-zinc-900' : 'text-zinc-500 hover:text-zinc-900'}`,
+            onClick: () => navigate(item.view, item.ch),
+          }, item.label)
+        )),
+      ]),
+      h('div', { className: 'flex items-center gap-2' }, [
+        h('div', { className: 'hidden md:flex items-center gap-2 text-[11px] font-medium text-zinc-500' }, [
+          h('span', { className: 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse' }),
+          'Completion 70% avg',
+        ]),
+        h('button', {
+          className: 'rounded-full bg-zinc-900 text-white px-4 py-2 text-[13px] font-medium hover:bg-black transition',
+          onClick: () => { navigate('demo'); st.playing = true; startTimerIfNeeded(); render(); },
+        }, 'Start Demo'),
+      ]),
+    ]),
+  ]);
+}
+
+function buildLanding() {
+  return h('main', { className: 'max-w-6xl mx-auto px-6 py-16 md:py-24' }, [
+    h('div', { className: 'grid md:grid-cols-[1.15fr_0.85fr] gap-12 items-center' }, [
+      h('div', {}, [
+        h('div', { className: 'inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1 text-[11px] font-medium tracking-wide uppercase' }, [
+          h('span', { className: 'w-1.5 h-1.5 rounded-full bg-zinc-900' }), ' Premium Interactive \u2013 Your Turn Required',
+        ]),
+        h('h1', { className: 'mt-6 text-[40px] md:text-[56px] font-[700] leading-[0.95] tracking-[-0.03em]' }, [
+          'Facet Pro \u2013 Interactive Guided Demo ', h('span', { className: 'text-zinc-400' }, '(Your Turn)'),
+        ]),
+        h('p', { className: 'mt-6 text-[17px] leading-7 text-zinc-600 max-w-[48ch]' },
+          'Most demos auto-play and lose you. Ours pauses, asks you to act inside the video, then continues. Upload, detect, visualize, save, survey \u2013 6 gated interactions with 70% completion.'),
+        h('div', { className: 'mt-8 flex flex-wrap gap-3' }, [
+          h('button', {
+            className: 'rounded-full bg-zinc-900 text-white px-6 py-3 text-[14px] font-semibold hover:bg-black transition',
+            onClick: () => { st.view = 'demo'; st.playing = true; R('Landing \u2192 Demo started, chapter Hook playing'); render(); startTimerIfNeeded(); },
+          }, '\u25B6 Play interactive demo'),
+          h('button', {
+            className: 'rounded-full border border-zinc-300 bg-white px-6 py-3 text-[14px] font-medium hover:border-zinc-900 transition',
+            onClick: () => { refs.fileInput?.click(); R('Landing: Choose MP4 clicked'); },
+          }, 'Upload your home MP4'),
+        ]),
+        h('div', { className: 'mt-10 grid grid-cols-3 gap-6 border-t border-zinc-200 pt-8' }, [
+          statBlock('70%', 'Completion rate with Your Turn gates'),
+          statBlock('6', 'Interactive steps inside video'),
+          statBlock('~30s', 'Guided time to value'),
+        ]),
+      ]),
+      h('div', { className: 'relative' }, [
+        h('div', { className: 'rounded-[28px] bg-zinc-900 p-2 shadow-2xl' }, [
+          h('div', { className: 'rounded-[20px] overflow-hidden bg-slate-900 aspect-[16/11] relative' }, [
+            h('div', { className: 'absolute inset-0 bg-gradient-to-br from-sky-100 via-amber-50 to-orange-100' }),
+            h('div', { className: 'absolute bottom-0 left-1/2 -translate-x-1/2 w-[70%] h-[60%] bg-white rounded-t-[24px] shadow-xl border border-zinc-200' }, [
+              h('div', { className: 'absolute -top-8 left-0 w-full h-12 bg-zinc-800', style: { clipPath: 'polygon(50% 0, 0 100%, 100% 100%)' } }),
+              h('div', { className: 'absolute top-[18%] left-[12%] w-[28%] h-[28%] bg-sky-100 border-2 border-zinc-900 rounded-sm' }),
+              h('div', { className: 'absolute top-[18%] right-[12%] w-[28%] h-[28%] bg-sky-100 border-2 border-zinc-900 rounded-sm' }),
+            ]),
+            h('div', { className: 'absolute top-4 left-4 bg-white/90 backdrop-blur rounded-full px-3 py-1 text-[11px] font-semibold' }, 'Your Turn: Click a window'),
+            h('div', { className: 'absolute bottom-4 left-4 right-4 h-1.5 bg-black/10 rounded-full overflow-hidden' }, [
+              h('div', { className: 'h-full w-[45%] bg-zinc-900 rounded-full' }),
+            ]),
+          ]),
+        ]),
+        h('div', { className: 'absolute -bottom-6 -right-6 bg-white rounded-2xl shadow-xl border border-zinc-200 p-4 w-[220px]' }, [
+          h('div', { className: 'text-[11px] font-semibold uppercase tracking-wide text-zinc-500' }, 'Interactive Checklist'),
+          h('div', { className: 'mt-3 space-y-2' }, ['Upload \u2713', 'Detect \u2713', 'Visualize \u2013 Your Turn'].map((label, i) =>
+            h('div', { className: `flex items-center gap-2 text-[13px] ${i === 2 ? 'font-semibold' : 'text-zinc-500'}` }, [
+              h('div', { className: `w-5 h-5 rounded-full grid place-items-center text-[10px] ${i < 2 ? 'bg-emerald-500 text-white' : 'bg-zinc-900 text-white'}` }, i < 2 ? '\u2713' : '3'),
+              label,
+            ])
+          )),
+        ]),
+      ]),
+    ]),
+    hiddenFileInput(),
+  ]);
+}
+
+function statBlock(value, label) {
+  return h('div', {}, [
+    h('div', { className: 'text-[28px] font-semibold tracking-tight' }, value),
+    h('div', { className: 'text-[12px] text-zinc-500 leading-4 mt-1' }, label),
+  ]);
+}
+
+function hiddenFileInput() {
+  const input = h('input', {
+    type: 'file', accept: 'video/mp4,video/*', className: 'hidden',
+    onChange: (e) => { const f = e.target.files?.[0]; if (f) loadRealVideo(f); },
+  });
+  refs.fileInput = input;
+  return input;
+}
+
+function buildDemo() {
+  const jl = isChapterUnlocked(st.chapter);
+  return h('main', { className: 'max-w-6xl mx-auto px-6 py-8' }, [
+    h('h1', { className: 'text-[24px] md:text-[32px] font-bold tracking-tight leading-none' }, 'Facet Pro \u2013 Interactive Guided Demo (Your Turn)'),
+    h('h2', { className: 'mt-2 text-[13px] font-medium text-zinc-500 tracking-wide uppercase' }, 'Guided demo with 6 gated interactions \u2022 pauses for you \u2022 completion 70%'),
+    h('div', { className: 'mt-8 grid lg:grid-cols-[1.6fr_0.9fr] gap-8 items-start' }, [
+      h('div', { className: 'space-y-4' }, [
+        buildVideoStage(),
+        buildControlsBar(jl),
+      ]),
+      h('div', { className: 'space-y-4' }, [
+        buildChecklistPanel(),
+        buildUploadPanel(),
+        buildVoiceoverPanel(),
+      ]),
+    ]),
+    buildExplainerRow(),
+  ]);
+}
+
+function buildVideoStage() {
+  const kids = [];
+
+  if (st.realVideoUrl) {
+    const video = h('video', {
+      className: 'absolute inset-0 w-full h-full object-cover', playsinline: true, muted: true,
+      onTimeUpdate: onRealVideoTimeUpdate,
+      onEnded: () => { st.playing = false; R('Real video ended \u2013 awaiting interaction'); render(); },
+    });
+    video.src = st.realVideoUrl;
+    refs.videoEl = video;
+    kids.push(video);
+  }
+
+  // mock house illustration layer
+  kids.push(h('div', { className: 'absolute inset-0' }, [
+    h('div', { className: 'absolute inset-0 bg-gradient-to-br from-slate-800 via-slate-900 to-zinc-900' }),
+    h('div', { className: 'absolute inset-0 bg-gradient-to-b from-sky-900/30 via-transparent to-amber-900/20' }),
+    h('div', { className: 'absolute inset-0 flex items-center justify-center' }, [
+      h('div', { className: 'relative w-[56%] aspect-[1.4/1] translate-y-6' }, [
+        h('div', { className: 'absolute -top-[18%] left-0 w-full h-[28%] bg-[#1e293b]', style: { clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' } }),
+        h('div', { className: 'absolute top-[10%] inset-x-[6%] bottom-[8%] bg-[#f8fafc] rounded-t-[6px] shadow-2xl border border-white/20 overflow-hidden' }, [
+          h('div', { className: 'absolute top-[18%] left-[10%] w-[28%] h-[32%] border-[3px] rounded-[4px] transition-colors duration-500', style: { background: st.chapter >= 3 ? st.color : '#dbeafe', borderColor: st.color === '#FFFFFF' ? '#e2e8f0' : st.color } }),
+          h('div', { className: 'absolute top-[18%] right-[10%] w-[28%] h-[32%] border-[3px] rounded-[4px] transition-colors duration-500', style: { background: st.chapter >= 3 ? st.color : '#dbeafe', borderColor: st.color === '#FFFFFF' ? '#e2e8f0' : st.color } }),
+          h('div', { className: 'absolute bottom-[10%] left-1/2 -translate-x-1/2 w-[18%] h-[40%] bg-zinc-800 rounded-t-[4px]' }),
+        ]),
+      ]),
+    ]),
+
+    // Chapter 0 — Hook
+    st.chapter === 0 && h('div', { className: 'absolute inset-0 grid place-items-center' }, [
+      h('div', { className: 'bg-white/10 backdrop-blur-md border border-white/10 rounded-2xl px-6 py-4 text-white text-center' }, [
+        h('div', { className: 'text-[11px] uppercase tracking-widest opacity-70' }, 'Chapter 1 \u2022 Hook'),
+        h('div', { className: 'mt-1 font-semibold' }, 'Scanning exterior\u2026 AI detecting edges'),
+        h('div', { className: 'mt-2 h-1 w-48 bg-white/20 rounded-full overflow-hidden mx-auto' }, [
+          h('div', { className: 'h-full bg-white transition-all duration-100', style: { width: `${(st.time % HE) / HE * 100}%` } }),
+        ]),
+      ]),
+    ]),
+
+    // Chapter 1 — Upload
+    st.chapter === 1 && h('div', { className: 'absolute inset-0 grid place-items-center' }, [
+      h('button', {
+        className: `group/drop relative w-[68%] md:w-[56%] rounded-2xl border-2 border-dashed p-8 md:p-10 text-center backdrop-blur-xl transition-all ${st.gated ? 'border-white bg-white/10 animate-[pulse_1.5s_infinite] shadow-[0_0_0_8px_rgba(255,255,255,0.1)]' : 'border-white/30 bg-white/5'}`,
+        onClick: () => doUpload(),
+        onDragover: (e) => e.preventDefault(),
+        onDrop: (e) => { e.preventDefault(); doUpload(); },
+      }, [
+        h('div', { className: 'w-12 h-12 rounded-full bg-white text-slate-900 grid place-items-center mx-auto text-xl' }, '\u2B06'),
+        h('div', { className: 'mt-4 font-semibold text-white' }, 'Drop your photo here to continue \u2192'),
+        h('div', { className: 'mt-1 text-[12px] text-white/70' }, 'or click to simulate upload (interaction 1/6)'),
+        st.completed.upload && h('div', { className: 'mt-3 inline-flex rounded-full bg-emerald-500 text-white px-3 py-1 text-[11px] font-bold' }, '\u2713 Uploaded'),
+      ]),
+    ]),
+
+    // Chapter 2 — Detection
+    st.chapter === 2 && h('div', { className: 'absolute inset-0' }, [
+      { l: 23, t: 28, w: 18, h: 16 }, { l: 58, t: 28, w: 18, h: 16 },
+    ].map((box, i) => h('button', {
+      style: { left: box.l + '%', top: box.t + '%', width: box.w + '%', height: box.h + '%' },
+      className: `absolute rounded-[6px] border-2 transition-all grid place-items-center group/box ${st.gated && i === 0 ? 'border-yellow-300 bg-yellow-300/20 shadow-[0_0_0_6px_rgba(253,224,71,0.3)] animate-pulse' : 'border-cyan-300 bg-cyan-300/10 hover:bg-cyan-300/20'}`,
+      onClick: () => doDetect(),
+    }, [
+      h('span', { className: 'bg-black/70 text-white text-[10px] px-2 py-0.5 rounded-full font-medium' }, `Window ${92 + i}%`),
+    ]))),
+
+    // Chapter 3 — Visualizer (before/after slider + swatches)
+    st.chapter === 3 && buildVisualizerChapter(),
+
+    // Chapter 4 — Save
+    st.chapter === 4 && h('div', { className: 'absolute inset-0 grid place-items-center' }, [
+      h('div', { className: 'bg-white rounded-2xl shadow-2xl p-6 w-[84%] max-w-[360px]' }, [
+        h('div', { className: 'text-[13px] font-semibold' }, 'Save your project'),
+        h('div', { className: 'text-[12px] text-zinc-500 mt-1' }, 'Get a contractor-ready render link'),
+        h('div', { className: 'mt-4 flex gap-2' }, [
+          h('input', {
+            value: st.email, placeholder: 'you@company.com',
+            className: 'flex-1 rounded-full border border-zinc-200 px-4 py-2.5 text-[13px] outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10',
+            onInput: (e) => { st.email = e.target.value; R(`Typing email: ${e.target.value.length} chars`); updateSaveHintOnly(); },
+          }),
+        ]),
+        h('button', { className: 'mt-3 w-full rounded-full bg-zinc-900 text-white py-2.5 text-[13px] font-semibold hover:bg-black transition', onClick: () => saveProject() }, 'Save Project \u2192'),
+        h('div', { id: 'save-hint', className: 'mt-2 text-[11px] text-zinc-400 text-center' }, st.email.length >= 3 ? 'Ready to save' : 'Type at least 3 characters'),
+      ]),
+    ]),
+
+    // Chapter 5 — Survey
+    st.chapter === 5 && buildSurveyChapter(),
+
+    // gate cursor + banner
+    st.gated && buildGateOverlay(),
+
+    // celebration
+    st.celebrating && h('div', { className: 'absolute inset-0 z-30 bg-emerald-500/10 backdrop-blur-[2px] grid place-items-center' }, [
+      h('div', { className: 'bg-white rounded-2xl px-6 py-4 shadow-2xl flex items-center gap-3 animate-[bounce_0.6s]' }, [
+        h('div', { className: 'w-10 h-10 rounded-full bg-emerald-500 text-white grid place-items-center text-xl font-bold' }, '\u2713'),
+        h('div', {}, [
+          h('div', { className: 'font-semibold text-[14px]' }, '\u2713 Completed \u2013 advancing...'),
+          h('div', { className: 'text-[12px] text-zinc-500' }, `Interaction ${completedCount()}/6 \u2022 ${progressPct()}%`),
+        ]),
+      ]),
+    ]),
+
+    // captions
+    st.captionsOn && h('div', { className: 'absolute bottom-[36px] left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur text-white text-[12px] px-4 py-2 rounded-full max-w-[86%] text-center leading-5 border border-white/10' }, CHAPTERS[st.chapter].caption),
+
+    // progress rail
+    h('div', { className: 'absolute bottom-0 inset-x-0 h-1.5 bg-white/15' }, [
+      h('div', { className: 'h-full bg-white transition-all duration-100', style: { width: `${st.time / GN * 100}%` } }),
+      h('div', { className: 'absolute inset-0 flex' }, [0, 1, 2, 3, 4, 5].map(i =>
+        h('div', { className: 'flex-1 border-r border-white/20 last:border-0 relative' }, [
+          h('div', { className: 'absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] text-white/60 font-medium hidden md:block' }, CHAPTERS[i].name),
+        ])
+      )),
+    ]),
+  ]));
+
+  return h('div', { id: 'video-stage', className: 'relative aspect-video bg-slate-900 rounded-2xl overflow-hidden shadow-[0_20px_60px_-20px_rgba(0,0,0,0.5)] border border-slate-800 group' }, kids);
+}
+
+function buildVisualizerChapter() {
+  const track = h('div', {
+    className: 'absolute inset-0',
+    onPointermove: sliderPointerMove,
+    onPointerup: sliderPointerUp,
+    onPointerleave: sliderPointerUp,
+  }, [
+    h('div', { className: 'absolute inset-0 bg-slate-900/40' }),
+    h('div', { className: 'absolute inset-0 overflow-hidden', style: { width: st.sliderPos + '%' } }, [
+      h('div', { className: 'absolute inset-0 bg-gradient-to-br from-white to-zinc-200 opacity-80' }),
+      h('div', { className: 'absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-1 rounded-full' }, 'BEFORE'),
+    ]),
+    h('div', { className: 'absolute inset-0 overflow-hidden', style: { left: st.sliderPos + '%', width: (100 - st.sliderPos) + '%' } }, [
+      h('div', { className: 'absolute inset-0 bg-[#f1f5f9]' }),
+      h('div', { className: 'absolute top-2 right-2 bg-zinc-900 text-white text-[10px] px-2 py-1 rounded-full' }, `AFTER \u2022 ${COLORS.find(c => c.hex === st.color)?.name || ''}`),
+    ]),
+    h('div', { className: 'absolute top-0 bottom-0 w-[2px] bg-white shadow-[0_0_10px_rgba(0,0,0,0.5)]', style: { left: st.sliderPos + '%' } }, [
+      h('button', {
+        className: 'absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-white shadow-xl border border-zinc-200 grid place-items-center hover:scale-105 transition',
+        onPointerdown: sliderPointerDown,
+      }, [h('span', { className: 'text-[12px]' }, '\u2194')]),
+    ]),
+  ]);
+  refs.sliderTrack = track;
+
+  return h('div', { className: 'absolute inset-0' }, [
+    track,
+    h('div', { className: 'absolute bottom-[14%] left-1/2 -translate-x-1/2 flex gap-2 bg-black/60 backdrop-blur-xl rounded-full p-2 border border-white/10' }, COLORS.map(c =>
+      h('button', {
+        style: c.image ? { backgroundImage: `url(${c.image})`, backgroundSize: 'cover', backgroundPosition: 'center' } : { background: c.hex },
+        className: `w-9 h-9 rounded-full border-2 transition-all grid place-items-center ${c.hex === st.color ? 'border-white scale-110 shadow' : 'border-white/30 hover:border-white'} ${c.name === 'Graphite' && st.gated && !st.completed.colour ? 'ring-4 ring-white/60 animate-pulse' : ''}`,
+        title: `${c.name}${c.pricePerM2 ? ' \u2014 \u00a3' + c.pricePerM2 + '/m\u00b2' : ''}`,
+        onClick: () => setColor(c.hex, c.name),
+      }, [
+        c.name === 'Graphite' && !st.completed.colour && st.gated && h('span', { className: 'w-2 h-2 bg-white rounded-full' }),
+        c.hex === st.color && c.name !== 'Alabaster' && h('span', { className: 'text-[10px] text-white' }, '\u2713'),
+      ])
+    )),
+    h('div', { className: 'absolute bottom-[4%] left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur text-[11px] px-3 py-1 rounded-full font-medium' },
+      `${st.completed.colour ? '\u2713 Graphite selected' : 'Try Graphite \u2013 click the swatch'} \u2022 ${st.completed.slider ? '\u2713 Slider done' : 'Drag slider >10%'}`),
+  ]);
+}
+
+function buildSurveyChapter() {
+  const map = h('div', {
+    className: 'relative w-[84%] max-w-[420px] aspect-[16/10] bg-[#E8EDE6] rounded-2xl overflow-hidden border border-white/20 shadow-2xl cursor-crosshair',
+    onClick: surveyClick,
+  }, [
+    h('div', { className: 'absolute inset-0 opacity-30', style: { backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '18px 18px' } }),
+    (() => {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'absolute inset-0 w-full h-full pointer-events-none');
+      svg.setAttribute('viewBox', '0 0 100 100');
+      svg.setAttribute('preserveAspectRatio', 'none');
+      if (st.surveyPoints.length > 1) {
+        const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+        poly.setAttribute('points', st.surveyPoints.map(p => `${p.x},${p.y}`).join(' '));
+        poly.setAttribute('fill', st.surveyPoints.length >= 3 ? 'rgba(44,45,66,0.18)' : 'none');
+        poly.setAttribute('stroke', '#2B2D42');
+        poly.setAttribute('stroke-width', '2');
+        poly.setAttribute('stroke-dasharray', st.surveyPoints.length < 3 ? '6 6' : '0');
+        svg.appendChild(poly);
+      }
+      return svg;
+    })(),
+    ...st.surveyPoints.map((p, i) => h('div', {
+      style: { left: p.x + '%', top: p.y + '%' },
+      className: 'absolute -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-[#2B2D42] text-white grid place-items-center text-[11px] font-bold shadow-lg border-2 border-white',
+    }, String(i + 1))),
+    h('div', { className: 'absolute bottom-2 left-2 bg-white/90 backdrop-blur rounded-full px-3 py-1 text-[11px] font-medium shadow' }, `Click to add points \u2022 ${st.surveyPoints.length}/3 minimum`),
+    st.surveyPoints.length >= 3 && h('div', { className: 'absolute top-2 right-2 bg-emerald-500 text-white rounded-full px-3 py-1 text-[11px] font-bold' }, '\u2713 Survey ready'),
+  ]);
+  refs.surveyMap = map;
+  return h('div', { className: 'absolute inset-0 grid place-items-center' }, [map]);
+}
+
+function buildGateOverlay() {
+  return h('div', {}, [
+    h('div', { className: 'absolute w-6 h-6 pointer-events-none z-30 transition-all duration-700 ease-out', style: { left: st.cursor.x + '%', top: st.cursor.y + '%', transform: 'translate(-20%, -20%)' } }, [
+      h('div', { className: 'w-6 h-6 bg-white rounded-full border-2 border-zinc-900 shadow-xl grid place-items-center' }, [h('div', { className: 'w-2 h-2 bg-zinc-900 rounded-full' })]),
+      h('div', { className: 'absolute -bottom-1 -right-1 w-3 h-3 bg-white border-2 border-zinc-900 rounded-br-full' }),
+    ]),
+    h('div', { className: 'absolute inset-0 z-20 pointer-events-none' }, [
+      h('div', { className: 'absolute top-[10%] left-1/2 -translate-x-1/2 bg-white rounded-full px-5 py-2.5 shadow-[0_10px_30px_rgba(0,0,0,0.3)] flex items-center gap-3 pointer-events-auto' }, [
+        h('div', { className: 'w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-[12px] font-bold animate-pulse' }, '!'),
+        h('div', { className: 'text-[13px] font-semibold tracking-tight' }, `Your Turn: ${currentActionText()}`),
+        h('div', { className: 'w-6 h-6 rounded-full bg-zinc-100 grid place-items-center' }, '\u2192'),
+      ]),
+      h('div', { className: 'absolute w-16 h-16 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/80 shadow-[0_0_0_12px_rgba(255,255,255,0.15)] animate-ping', style: { left: st.cursor.x + '%', top: st.cursor.y + '%' } }),
+      h('div', { className: 'absolute w-3 h-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white', style: { left: st.cursor.x + '%', top: st.cursor.y + '%' } }),
+    ]),
+  ]);
+}
+
+function buildControlsBar(jl) {
+  return h('div', { className: 'bg-white rounded-2xl border border-zinc-200 p-4 shadow-sm' }, [
+    h('div', { className: 'flex flex-wrap items-center gap-3' }, [
+      h('button', { id: 'play-btn', className: 'w-11 h-11 rounded-full bg-zinc-900 text-white grid place-items-center hover:bg-black transition', onClick: () => playPause() }, st.playing ? '\u275A\u275A' : '\u25B6'),
+      h('button', {
+        className: 'rounded-full border border-zinc-200 px-4 py-2 text-[13px] font-medium hover:border-zinc-900 transition',
+        onClick: () => {
+          if (st.chapter > 0) {
+            st.chapter -= 1; st.time = st.chapter * HE;
+            st.gated = !isChapterUnlocked(st.chapter) && st.chapter !== 0;
+            st.playing = false;
+            R(`Prev chapter: ${CHAPTERS[st.chapter].name}`);
+          } else R('Already at first chapter');
+          render();
+        },
+      }, 'Prev'),
+      h('button', {
+        className: `rounded-full px-4 py-2 text-[13px] font-medium transition ${jl ? 'bg-zinc-900 text-white hover:bg-black' : 'bg-zinc-100 text-zinc-400 cursor-not-allowed'}`,
+        title: !jl ? 'Complete interaction to unlock' : undefined,
+        onClick: () => {
+          if (!jl) { R('Complete interaction to unlock next chapter'); render(); return; }
+          if (st.chapter < 5) {
+            st.chapter += 1; st.time = st.chapter * HE;
+            st.gated = !isChapterUnlocked(st.chapter) && st.chapter !== 0;
+            st.playing = false;
+            R(`Next chapter: ${CHAPTERS[st.chapter].name}`);
+          } else R('Already at last chapter');
+          render();
+        },
+      }, 'Next'),
+      h('div', { className: 'h-6 w-px bg-zinc-200 mx-1 hidden md:block' }),
+      h('div', { className: 'flex items-center gap-2 text-[12px] font-mono' }, [
+        h('span', { id: 'time-display', className: 'bg-zinc-100 rounded-full px-3 py-1.5' }, `${fmtTime(st.time)} / ${fmtTime(GN)}`),
+        h('span', { id: 'chapter-display', className: 'bg-zinc-900 text-white rounded-full px-3 py-1.5 hidden md:inline' }, `Chapter ${st.chapter + 1}/6: ${CHAPTERS[st.chapter].name}`),
+      ]),
+      h('div', { className: 'ml-auto flex items-center gap-1.5' }, [
+        ...[1, 1.5, 2].map(rate => h('button', {
+          className: `rounded-full px-3 py-1.5 text-[12px] font-medium border transition ${st.speed === rate ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 text-zinc-600 hover:border-zinc-900'}`,
+          onClick: () => { st.speed = rate; R(`Speed set to ${rate}x \u2013 status: ${st.playing ? 'Playing' : 'Paused'} interactive at ${rate}x`); render(); },
+        }, `${rate}x`)),
+        h('button', {
+          className: `rounded-full px-3 py-1.5 text-[12px] font-medium border transition ${st.captionsOn ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200'}`,
+          onClick: () => { st.captionsOn = !st.captionsOn; R(`Captions ${st.captionsOn ? 'on' : 'off'} \u2013 CC toggled`); render(); },
+        }, 'CC'),
+        h('button', {
+          className: 'rounded-full px-3 py-1.5 text-[12px] font-medium border border-zinc-200 bg-white hover:border-zinc-900 transition',
+          onClick: () => resetDemo(),
+        }, 'Reset Demo'),
+      ]),
+    ]),
+    h('div', { className: 'mt-4 flex gap-1.5' }, CHAPTERS.map((m, i) => {
+      const isDone = isChapterUnlocked(i) || i === 0;
+      const isCurrent = i === st.chapter;
+      const canClick = i <= st.chapter || isChapterUnlocked(i - 1) || i === 0;
+      return h('button', {
+        className: `flex-1 h-10 rounded-xl border text-[11px] font-medium transition relative overflow-hidden ${isCurrent ? 'border-zinc-900 bg-zinc-900 text-white shadow' : isDone ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-zinc-200 bg-zinc-50 text-zinc-500'} ${canClick ? 'hover:border-zinc-900' : 'opacity-60'}`,
+        onClick: () => {
+          if (!canClick) { R(`Chapter ${m.name} locked \u2013 complete previous interaction`); render(); return; }
+          st.chapter = i; st.time = i * HE;
+          st.gated = !isChapterUnlocked(i) && i !== 0;
+          st.playing = false;
+          R(`Jumped to chapter ${m.name} \u2013 ${isDone ? 'completed' : 'interaction required'}`);
+          render();
+        },
+      }, [
+        h('div', { className: 'absolute top-1 left-2 text-[9px] opacity-60' }, String(i + 1)),
+        h('div', { className: 'mt-2' }, m.name),
+        isDone && h('span', { className: 'absolute top-1 right-2 text-[10px]' }, '\u2713'),
+      ]);
+    })),
+  ]);
+}
+
+function buildChecklistPanel() {
+  const rows = [
+    { k: 'upload', label: 'Upload Photo', ch: 1 },
+    { k: 'detect', label: 'Detect Windows', ch: 2 },
+    { k: 'colour', label: 'Choose Colour', ch: 3 },
+    { k: 'slider', label: 'Adjust Slider', ch: 3 },
+    { k: 'email', label: 'Save Project', ch: 4 },
+    { k: 'survey', label: 'Survey Walls', ch: 5 },
+  ];
+  return h('div', { className: 'bg-white rounded-2xl border border-zinc-200 p-5 shadow-sm' }, [
+    h('h2', { className: 'text-[13px] font-bold uppercase tracking-wide' }, 'Interactive Checklist (6 steps)'),
+    h('div', { className: 'mt-4 space-y-2.5' }, rows.map(row => {
+      const done = st.completed[row.k];
+      const isCurrent = st.chapter === row.ch && !done;
+      return h('div', { className: `flex items-center gap-3 rounded-xl border p-3 transition ${isCurrent ? 'border-zinc-900 bg-zinc-50 ring-2 ring-zinc-900/10' : done ? 'border-emerald-200 bg-emerald-50/50' : 'border-zinc-100 bg-zinc-50/50'}` }, [
+        h('div', { className: `w-7 h-7 rounded-full grid place-items-center text-[12px] font-bold border ${done ? 'bg-emerald-500 border-emerald-500 text-white' : isCurrent ? 'bg-zinc-900 border-zinc-900 text-white' : 'bg-white border-zinc-200 text-zinc-400'}` }, done ? '\u2713' : String(row.ch)),
+        h('div', { className: 'flex-1' }, [
+          h('div', { className: `text-[13px] font-medium leading-none ${done ? 'text-emerald-800' : 'text-zinc-900'}` }, row.label),
+          h('div', { className: 'text-[11px] text-zinc-500 mt-1' }, done ? 'Completed' : isCurrent ? 'Your turn \u2013 required' : 'Waiting'),
+        ]),
+        isCurrent && h('div', { className: 'w-2 h-2 rounded-full bg-amber-400 animate-pulse' }),
+      ]);
+    })),
+    h('div', { className: 'mt-5' }, [
+      h('div', { className: 'flex justify-between text-[11px] font-medium' }, [h('span', {}, 'Overall progress'), h('span', {}, `${progressPct()}%`)]),
+      h('div', { className: 'mt-2 h-2 bg-zinc-100 rounded-full overflow-hidden' }, [h('div', { className: 'h-full bg-zinc-900 rounded-full transition-all duration-700', style: { width: progressPct() + '%' } })]),
+      h('div', { className: 'mt-2 text-[11px] text-zinc-500' }, `${completedCount()}/6 interactions \u2022 ${70 + Math.floor(progressPct() * 0.2)}% predicted completion`),
+    ]),
+  ]);
+}
+
+function buildUploadPanel() {
+  const dropZone = h('div', {
+    className: 'mt-4 rounded-xl border-2 border-dashed border-zinc-200 bg-zinc-50 p-6 text-center hover:border-zinc-900 hover:bg-white transition cursor-pointer group',
+    onClick: () => { refs.fileInput2?.click(); R('Upload zone clicked \u2013 file picker opened'); render(); },
+    onDragover: (e) => e.preventDefault(),
+    onDrop: (e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) loadRealVideo(f); },
+  }, [
+    h('div', { className: 'w-10 h-10 rounded-full bg-zinc-900 text-white grid place-items-center mx-auto group-hover:scale-105 transition' }, '\u2913'),
+    h('div', { className: 'mt-3 text-[13px] font-medium' }, 'Click or drop MP4 here'),
+    h('div', { className: 'mt-1 text-[11px] text-zinc-500' }, st.realVideoUrl ? 'Real video active \u2713' : 'Uses URL.createObjectURL \u2013 no upload'),
+  ]);
+  const input2 = h('input', {
+    type: 'file', accept: 'video/mp4,video/*', className: 'hidden',
+    onChange: (e) => { const f = e.target.files?.[0]; if (f) loadRealVideo(f); },
+  });
+  refs.fileInput2 = input2;
+
+  return h('div', { className: 'bg-white rounded-2xl border border-zinc-200 p-5 shadow-sm' }, [
+    h('h2', { className: 'text-[13px] font-bold uppercase tracking-wide' }, 'Upload MP4'),
+    h('p', { className: 'mt-2 text-[12px] text-zinc-500 leading-5' }, 'Drop a real exterior video. Gates stay active \u2013 video pauses at each Your Turn.'),
+    dropZone,
+    input2,
+    st.realVideoUrl && h('div', { className: 'mt-3 flex items-center gap-2 text-[11px] bg-emerald-50 border border-emerald-200 rounded-full px-3 py-2 text-emerald-800' }, [
+      h('span', { className: 'w-2 h-2 rounded-full bg-emerald-500' }), ' Real video mode \u2013 play() wired to videoRef',
+    ]),
+  ]);
+}
+
+function buildVoiceoverPanel() {
+  return h('div', { className: 'bg-zinc-900 text-white rounded-2xl p-5 shadow-sm' }, [
+    h('div', { className: 'flex items-center justify-between' }, [
+      h('h2', { className: 'text-[13px] font-bold uppercase tracking-wide text-zinc-300' }, 'Voiceover'),
+      h('button', { className: 'rounded-full bg-white text-zinc-900 px-3 py-1.5 text-[11px] font-semibold hover:bg-zinc-100 transition', onClick: () => speak() }, '\u25B6 Speak'),
+    ]),
+    h('div', { className: 'mt-4 rounded-xl bg-white/10 border border-white/10 p-4' }, [
+      h('div', { className: 'text-[11px] uppercase tracking-wide text-zinc-400' }, `Current script \u2013 Ch ${st.chapter + 1}`),
+      h('div', { className: 'mt-2 text-[13px] leading-6 text-zinc-100' }, CHAPTERS[st.chapter].voice),
+    ]),
+    h('div', { className: 'mt-3 text-[11px] text-zinc-500' }, 'Uses speechSynthesis.speak \u2013 updates app-status to Speaking...'),
+  ]);
+}
+
+function buildExplainerRow() {
+  const cards = [
+    { title: 'Why gated?', body: 'Non-gated demos have 12% completion. Gating with Your Turn inside video drives 70% by forcing micro-commitments. Each gate is a dopamine check.' },
+    { title: 'Interaction design', body: 'Cursor leads eye, pill explains, ring pulses, slider requires >10% drag. Next disabled until unlock \u2013 no bypass, creates desire.' },
+    { title: 'Real video mode', body: 'Upload MP4 \u2192 URL.createObjectURL \u2192 video.play() called on Play button. Gates still pause real video via videoRef.current.pause().' },
+  ];
+  return h('div', { className: 'mt-12 grid md:grid-cols-3 gap-6' }, cards.map(c =>
+    h('div', { className: 'bg-white rounded-2xl border border-zinc-200 p-6' }, [
+      h('h2', { className: 'font-semibold' }, c.title),
+      h('p', { className: 'mt-2 text-[13px] text-zinc-600 leading-6' }, c.body),
+    ])
+  ));
+}
+
+function buildCompletionModal() {
+  return h('div', { className: 'fixed inset-0 z-50 grid place-items-center p-6 bg-black/40 backdrop-blur-xl' }, [
+    h('div', { className: 'bg-white rounded-[28px] shadow-2xl p-8 max-w-[420px] w-full border border-zinc-200 text-center' }, [
+      h('div', { className: 'w-14 h-14 rounded-full bg-zinc-900 text-white grid place-items-center text-2xl mx-auto' }, '\uD83C\uDF89'),
+      h('h2', { className: 'mt-5 text-[22px] font-bold tracking-tight leading-tight' }, 'You completed the interactive demo \u2013 Try with your real home \u2192'),
+      h('p', { className: 'mt-3 text-[13px] text-zinc-600 leading-6' }, '6/6 interactions done. Average user drop is 30% \u2013 you beat it. Funnel to real upload now has 3.2x higher intent.'),
+      h('div', { className: 'mt-6 grid grid-cols-3 gap-2 text-[11px]' }, [
+        h('div', { className: 'rounded-xl bg-zinc-50 border border-zinc-200 p-3' }, [h('div', { className: 'font-bold text-[14px]' }, '100%'), h('div', { className: 'text-zinc-500 mt-1 leading-3' }, 'Completion')]),
+        h('div', { className: 'rounded-xl bg-zinc-50 border border-zinc-200 p-3' }, [h('div', { className: 'font-bold text-[14px]' }, '70%'), h('div', { className: 'text-zinc-500 mt-1 leading-3' }, 'Avg benchmark')]),
+        h('div', { className: 'rounded-xl bg-zinc-900 text-white p-3' }, [h('div', { className: 'font-bold text-[14px]' }, '+42s'), h('div', { className: 'text-zinc-400 mt-1 leading-3' }, 'Time on site')]),
+      ]),
+      h('button', {
+        className: 'mt-6 w-full rounded-full bg-zinc-900 text-white py-3 text-[14px] font-semibold hover:bg-black transition',
+        onClick: () => { R('Demo completed \u2013 funnel to real app'); window.location.href = '/'; },
+      }, 'Try with your real home \u2192'),
+      h('button', {
+        className: 'mt-2 w-full rounded-full border border-zinc-200 py-2.5 text-[13px] font-medium hover:border-zinc-900 transition',
+        onClick: () => { st.showCompletionModal = false; resetDemo(); },
+      }, 'Replay demo'),
+    ]),
+  ]);
+}
+
+function buildStatusPill() {
+  return h('div', { id: 'app-status', className: 'fixed bottom-4 left-4 z-40 bg-zinc-900 text-white rounded-full px-4 py-2 text-[11px] font-mono shadow-xl border border-white/10 max-w-[82vw] md:max-w-[560px] truncate' },
+    `${st.status} \u2022 ${st.playing ? 'Playing' : 'Paused'} \u2022 Ch ${st.chapter + 1} \u2022 ${progressPct()}% \u2022 ${fmtTime(st.time)}`);
+}
+
+// ---------- lightweight partial refreshes for hot paths (dragging / typing) ----------
+
+function renderDemoLive() {
+  // full re-render is cheap enough at this scale and keeps state consistent
+  if (st.view === 'demo') render();
+}
+
+function updateTimeDisplayOnly() {
+  const timeEl = document.getElementById('time-display');
+  if (timeEl) timeEl.textContent = `${fmtTime(st.time)} / ${fmtTime(GN)}`;
+  const pill = document.getElementById('app-status');
+  if (pill) pill.textContent = `${st.status} \u2022 ${st.playing ? 'Playing' : 'Paused'} \u2022 Ch ${st.chapter + 1} \u2022 ${progressPct()}% \u2022 ${fmtTime(st.time)}`;
+}
+
+function updateSaveHintOnly() {
+  const hintEl = document.getElementById('save-hint');
+  if (hintEl) hintEl.textContent = st.email.length >= 3 ? 'Ready to save' : 'Type at least 3 characters';
+}
+
+function updateStatusPill() {
+  const pill = document.getElementById('app-status');
+  if (pill) pill.textContent = `${st.status} \u2022 ${st.playing ? 'Playing' : 'Paused'} \u2022 Ch ${st.chapter + 1} \u2022 ${progressPct()}% \u2022 ${fmtTime(st.time)}`;
+}
+
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "facet-pro",
+  "version": "1.0.0",
+  "description": "Facet Pro — UK home exterior visualiser: upload a home photo, detect exterior elements, preview cladding/roof materials, generate a photorealistic render, get a costed estimate, capture the lead.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.5.2",
+    "resend": "^6.16.0"
+  }
+}
