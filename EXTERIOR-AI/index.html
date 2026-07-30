@@ -275,6 +275,8 @@
         <a href="#faq" class="hover:text-zinc-900">Questions</a>
         <a href="#your-photo" class="hover:text-zinc-900">Start your design</a>
         <a href="#trade" class="hover:text-zinc-900">For installers</a>
+        <a href="/privacy" class="hover:text-zinc-900">Privacy notice</a>
+        <a href="/terms" class="hover:text-zinc-900">Terms</a>
       </nav>
     </div>
     <p class="mt-5 text-[11px] leading-5 text-zinc-500 max-w-[80ch]">Facet Pro is a home exterior visualiser for UK homeowners. Figures shown are planning estimates based on typical material, labour, scaffolding and waste costs plus VAT — not fixed quotes. Renders are a visual guide to help you choose and may differ from the finished installation.</p>
@@ -310,6 +312,12 @@ let SWATCHES = [
 
 function findSwatch(id) { return SWATCHES.find(s => s.id === id) || SWATCHES[0]; }
 
+// The exact wording the homeowner agrees to. Sent with the lead and stored, so
+// there's a record of what was consented to and when — bump CONSENT_VERSION
+// whenever CONSENT_WORDING changes, and keep the on-screen label identical.
+const CONSENT_VERSION = '2026-07-30';
+const CONSENT_WORDING = "I agree to Facet Pro's Terms and have read the Privacy Notice. I'm happy for my design and contact details to be passed to installers so they can quote for my job.";
+
 // ---------- app state ----------
 
 const state = {
@@ -327,6 +335,11 @@ const state = {
   leads: [],
   leadsLoaded: false,
   contact: { name: "", email: "", postcode: "", phone: "" },
+  consentGiven: false,
+  installerPassword: sessionStorage.getItem('fp_installer_pw') || '',
+  installerAuthed: false,
+  installerError: '',
+  installerChecking: false,
   postcode: "",
   footprint: null, // {area}
   trimLengthM: null, // fascia/soffit/guttering run length in metres
@@ -377,15 +390,31 @@ async function loadCatalogue() {
   }
 }
 
-async function loadLeads() {
+// Leads hold homeowner contact details, so this is only ever called with an
+// installer password — never on page load.
+async function loadLeads(password) {
+  state.installerChecking = true;
+  state.installerError = '';
   try {
-    const res = await fetch('/api/leads');
-    const data = await res.json();
+    const res = await fetch('/api/leads', { headers: { 'Authorization': `Bearer ${password}` } });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      state.installerAuthed = false;
+      state.leads = [];
+      sessionStorage.removeItem('fp_installer_pw');
+      state.installerError = data.error || (res.status === 401 ? 'Incorrect password.' : 'Could not sign in.');
+      return false;
+    }
     state.leads = data.leads || [];
-  } catch (err) {
-    // server may not be reachable yet — leave empty
-  } finally {
+    state.installerAuthed = true;
     state.leadsLoaded = true;
+    sessionStorage.setItem('fp_installer_pw', password);
+    return true;
+  } catch (err) {
+    state.installerError = 'Could not reach the server.';
+    return false;
+  } finally {
+    state.installerChecking = false;
   }
 }
 
@@ -799,22 +828,85 @@ function buildSaveFraming() {
         field('Postcode', 'postcode', ''),
         field('Phone (optional)', 'phone', '', 'tel'),
       ]),
+      h('label', { className: 'mt-4 flex items-start gap-3 cursor-pointer' }, [
+        h('input', {
+          type: 'checkbox', id: 'consent-box', checked: state.consentGiven,
+          className: 'mt-0.5 w-4 h-4 shrink-0 accent-zinc-900',
+          onChange: (e) => { state.consentGiven = e.target.checked; document.getElementById('consent-error')?.remove(); },
+        }),
+        h('span', { className: 'text-[12px] leading-5 text-zinc-600' }, [
+          "I agree to Facet Pro's ",
+          h('a', { href: '/terms', target: '_blank', rel: 'noopener', className: 'underline hover:text-zinc-900' }, 'Terms'),
+          ' and have read the ',
+          h('a', { href: '/privacy', target: '_blank', rel: 'noopener', className: 'underline hover:text-zinc-900' }, 'Privacy Notice'),
+          ". I'm happy for my design and contact details to be passed to installers so they can quote for my job.",
+        ]),
+      ]),
       h('button', {
         type: 'button',
         className: `mt-4 w-full py-3 rounded-full text-sm font-medium ${state.sendingLead ? 'bg-zinc-300 text-zinc-500' : 'bg-zinc-900 text-white'}`,
         disabled: state.sendingLead,
         onClick: sendDesignPack
       }, state.sendingLead ? 'Saving your design…' : 'Save my design →'),
-      h('p', { className: 'mt-3 text-[11px] leading-5 text-zinc-500' }, 'We use your details to send your design and put you in touch with installers. Nothing else.'),
+      h('p', { className: 'mt-3 text-[11px] leading-5 text-zinc-500' }, [
+        'You can withdraw your consent at any time — see the ',
+        h('a', { href: '/privacy', target: '_blank', rel: 'noopener', className: 'underline hover:text-zinc-700' }, 'Privacy Notice'),
+        ' for how.',
+      ]),
     ]),
   ]);
 }
 
 function buildInstaller() {
+  if (!state.installerAuthed) {
+    const pwInput = h('input', {
+      type: 'password', placeholder: 'Installer password', value: state.installerPassword,
+      'aria-label': 'Installer password', autocomplete: 'current-password',
+      className: 'flex-1 min-w-[180px] px-3 py-2.5 rounded-xl bg-white/5 border border-white/15 text-sm text-white placeholder:text-white/40 outline-none focus:border-white/50',
+      onInput: (e) => { state.installerPassword = e.target.value; },
+    });
+    const submit = async () => {
+      if (!state.installerPassword) { state.installerError = 'Enter your password.'; renderInstallerOnly(); return; }
+      renderInstallerOnly();
+      const ok = await loadLeads(state.installerPassword);
+      renderInstallerOnly();
+      if (ok) U('Signed in — showing homeowner designs');
+    };
+    pwInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+
+    return h('div', { id: 'installer', className: 'rounded-2xl bg-zinc-900 text-white p-5' }, [
+      h('h3', { className: 'text-[11px] tracking-widest uppercase text-white/50' }, 'Installer sign in'),
+      h('p', { className: 'mt-2 text-[13px] leading-6 text-white/60 max-w-[54ch]' }, 'Homeowner designs include personal contact details, so this area is password-protected. Enter your installer password to continue.'),
+      h('div', { className: 'mt-4 flex flex-wrap gap-2' }, [
+        pwInput,
+        h('button', {
+          type: 'button', disabled: state.installerChecking,
+          className: `px-5 py-2.5 rounded-full text-xs font-medium ${state.installerChecking ? 'bg-white/20 text-white/50' : 'bg-white text-zinc-900'}`,
+          onClick: submit,
+        }, state.installerChecking ? 'Checking…' : 'Sign in'),
+      ]),
+      state.installerError
+        ? h('p', { role: 'alert', className: 'mt-3 text-[12px] text-red-300' }, state.installerError)
+        : null,
+    ]);
+  }
+
   return h('div', { id: 'installer', className: 'rounded-2xl bg-zinc-900 text-white p-4' }, [
     h('div', { className: 'flex items-center justify-between gap-3 flex-wrap' }, [
       h('h3', { className: 'text-[11px] tracking-widest uppercase text-white/50' }, 'Homeowner designs'),
-      h('span', { className: 'text-[10px] px-2 py-1 rounded-full bg-white text-zinc-900' }, `${state.leads.length} saved`),
+      h('div', { className: 'flex items-center gap-2' }, [
+        h('span', { className: 'text-[10px] px-2 py-1 rounded-full bg-white text-zinc-900' }, `${state.leads.length} saved`),
+        h('button', {
+          type: 'button',
+          className: 'text-[10px] px-2 py-1 rounded-full border border-white/20 text-white/70 hover:bg-white/10 transition',
+          onClick: () => {
+            sessionStorage.removeItem('fp_installer_pw');
+            state.installerAuthed = false; state.installerPassword = ''; state.leads = []; state.installerError = '';
+            renderInstallerOnly();
+            U('Signed out of the installer area');
+          }
+        }, 'Sign out'),
+      ]),
     ]),
     h('div', { className: 'mt-4 grid gap-2 max-h-[420px] overflow-auto pr-1' },
       state.leads.length === 0
@@ -894,6 +986,15 @@ async function sendDesignPack() {
     U('Please add your name and email so we know where to send it');
     return;
   }
+  if (!state.consentGiven) {
+    U('Please tick the box to agree before we save your design');
+    const box = document.getElementById('consent-box');
+    if (box && !document.getElementById('consent-error')) {
+      box.closest('label')?.after(h('p', { id: 'consent-error', className: 'mt-2 text-[12px] text-red-600' }, 'Please tick this box so we know we can pass your design to installers.'));
+      box.focus();
+    }
+    return;
+  }
   state.sendingLead = true;
   render();
   try {
@@ -913,11 +1014,13 @@ async function sendDesignPack() {
         measurementSource: state.measurementSource,
         detections: state.detections,
         renderUrl: state.renderUrl,
+        consent: { given: true, wording: CONSENT_WORDING, version: CONSENT_VERSION },
       })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Lead submission failed');
-    state.leads = [data.lead, ...state.leads];
+    // Only surface it in the installer list if this tab is actually signed in.
+    if (state.installerAuthed) state.leads = [data.lead, ...state.leads];
     U(`Design saved — reference ${data.lead.id}. We’ll be in touch.`);
   } catch (err) {
     U(`We couldn’t save that: ${err.message}`);
@@ -936,9 +1039,14 @@ document.getElementById('hero-upload')?.addEventListener('click', () => {
 
 (async function init() {
   render();
-  await Promise.all([loadCatalogue(), loadLeads()]);
+  await loadCatalogue();
   await refreshPrice();
   render();
+  // If this tab already signed in to the installer area, restore it quietly.
+  if (state.installerPassword) {
+    await loadLeads(state.installerPassword);
+    renderInstallerOnly();
+  }
 })();
 </script>
 </body>

@@ -2,6 +2,7 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const rateLimit = require('express-rate-limit');
+const crypto = require('crypto');
 const fs = require('fs');
 const store = require('./store');
 
@@ -35,6 +36,51 @@ const leadLimiter = rateLimit({
   standardHeaders: true, legacyHeaders: false,
   message: { error: 'Too many submissions — please wait a minute.' }
 });
+// Slows password guessing against the installer endpoint.
+const installerLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, max: 20,
+  standardHeaders: true, legacyHeaders: false,
+  message: { error: 'Too many attempts — please wait 15 minutes.' }
+});
+
+/* ── INSTALLER AUTH ──
+   Leads hold homeowner names, emails, phone numbers and postcodes, so the
+   endpoint that lists them is password-protected.
+
+   Both sides are SHA-256'd before comparison: that normalises them to 32 bytes
+   so timingSafeEqual can never throw on a length mismatch, and — more to the
+   point — it stops the comparison itself leaking the password's length. The
+   compare is then constant-time, so an attacker learns nothing from how long a
+   rejection takes.
+
+   Fails closed: with no INSTALLER_PASSWORD set, nobody gets in. */
+function constantTimeEquals(a, b) {
+  const ha = crypto.createHash('sha256').update(String(a), 'utf8').digest();
+  const hb = crypto.createHash('sha256').update(String(b), 'utf8').digest();
+  return crypto.timingSafeEqual(ha, hb);
+}
+
+function requireInstallerPassword(req, res, next) {
+  const expected = process.env.INSTALLER_PASSWORD;
+  if (!expected) {
+    console.error('INSTALLER_PASSWORD is not set — refusing to serve /api/leads.');
+    return res.status(503).json({ error: 'Installer access is not configured on this server.' });
+  }
+
+  const header = req.get('authorization') || '';
+  const supplied = header.toLowerCase().startsWith('bearer ')
+    ? header.slice(7).trim()
+    : (req.get('x-installer-password') || '');
+
+  // Run the compare even when nothing was supplied, so the timing of a missing
+  // password matches the timing of a wrong one.
+  const ok = constantTimeEquals(supplied, expected);
+  if (!ok) {
+    res.setHeader('WWW-Authenticate', 'Bearer realm="Facet Pro installers"');
+    return res.status(401).json({ error: 'Incorrect password.' });
+  }
+  next();
+}
 
 /* ── GET /api/catalogue ── */
 // Real cladding/trim/roof swatches + prices, loaded from catalogue.json.
@@ -251,9 +297,14 @@ app.post('/api/render', renderLimiter, async (req, res) => {
    Real lead capture. Recomputes price server-side (never trusts client price),
    stores it, emails the owner via Resend if configured, fires a CRM webhook if configured. */
 app.post('/api/lead', leadLimiter, async (req, res) => {
-  const { name, email, phone, postcode, claddingId, trimId, roofId, footprintM2, trimLengthM, measurementSource, detections, renderUrl, notes } = req.body || {};
+  const { name, email, phone, postcode, claddingId, trimId, roofId, footprintM2, trimLengthM, measurementSource, detections, renderUrl, notes, consent } = req.body || {};
   if (!name || !email) return res.status(400).json({ error: 'name and email are required.' });
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Invalid email address.' });
+  // UK GDPR: consent to pass details to installers must be freely given and
+  // recorded. No tick, no lead — and we store the exact wording agreed to.
+  if (!consent || consent.given !== true) {
+    return res.status(400).json({ error: 'Please tick the box to agree before saving your design.' });
+  }
 
   const price = computePrice({ claddingId, trimId, roofId, footprintM2, trimLengthM });
 
@@ -268,6 +319,12 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
     detectionCount: Array.isArray(detections) ? detections.length : 0,
     renderUrl: renderUrl || null,
     notes: (notes || '').slice(0, 2000),
+    consent: {
+      given: true,
+      at: new Date().toISOString(),
+      wording: String(consent.wording || '').slice(0, 1000),
+      version: String(consent.version || '').slice(0, 40)
+    },
     status: 'New lead'
   };
   await store.append('leads', lead);
@@ -309,11 +366,19 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
 });
 
 /* ── GET /api/leads ──
-   Real leads captured so far, newest first. */
-app.get('/api/leads', async (req, res) => {
+   Leads captured so far, newest first. Password-protected — see
+   requireInstallerPassword above. */
+app.get('/api/leads', installerLimiter, requireInstallerPassword, async (req, res) => {
   const leads = await store.readAll('leads');
   res.json({ leads: leads.slice().reverse() });
 });
+
+/* ── LEGAL PAGES ──
+   Clean URLs for the privacy notice and terms. The files also sit under
+   /legal/ via express.static, so each page carries a canonical tag pointing
+   back here to keep search engines on one URL. */
+app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, 'legal', 'privacy.html')));
+app.get('/terms', (req, res) => res.sendFile(path.join(__dirname, 'legal', 'terms.html')));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Facet Pro server running on http://localhost:${PORT}`));
