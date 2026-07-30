@@ -1,0 +1,42 @@
+{
+  "version": 2,
+  "updated": "2026-07-22",
+  "note": "Based on current UK material and labour rates, including scaffolding, a waste allowance and VAT.",
+  "internalNote": "Real UK material rates and quote methodology, taken from the actual facetpro.co.uk production backend (material_detector.py and quote_generator.py) — not invented placeholders. Not shown to homeowners; `note` is the customer-facing line rendered under the price breakdown.",
+  "source": "homeai/backend/app/services/material_detector.py (ROOF_MATERIALS, CLADDING_MATERIALS) + quote_generator.py (labour rates, scaffolding, waste, VAT)",
+  "cladding": [
+    { "id": "alabaster",   "name": "Alabaster",   "hex": "#F6F3EE", "image": "/assets/swatches/alabaster.jpg",  "materialType": "render",       "materialLabel": "Render",         "pricePerM2": 50 },
+    { "id": "clay-stone",  "name": "Clay Stone",  "hex": "#D9C5B4", "image": "/assets/swatches/clay-stone.jpg", "materialType": "stone",        "materialLabel": "Natural Stone",  "pricePerM2": 120 },
+    { "id": "sage-slate",  "name": "Sage Slate",  "hex": "#9CAF9C", "image": "/assets/swatches/sage-slate.jpg", "materialType": "fiber_cement",  "materialLabel": "Fibre Cement",   "pricePerM2": 60 },
+    { "id": "graphite",    "name": "Graphite",    "hex": "#2F3336", "image": "/assets/swatches/graphite.jpg",   "materialType": "composite",     "materialLabel": "Composite",      "pricePerM2": 70 }
+  ],
+  "trim": [
+    { "id": "coastal-fog", "name": "Coastal Fog", "hex": "#CBD5E1" },
+    { "id": "ink-trim",    "name": "Ink Trim",    "hex": "#111827" },
+    { "id": "cedar",       "name": "Cedar",       "hex": "#8B5A2B" }
+  ],
+  "roof": [
+    { "id": "slate-roof",    "name": "Slate Roof",    "hex": "#475569", "image": "/assets/swatches/slate-roof.jpg",    "materialType": "slate",         "materialLabel": "Slate Tiles",    "pricePerM2": 180 },
+    { "id": "charcoal-roof", "name": "Charcoal Roof", "hex": "#1E293B", "image": "/assets/swatches/charcoal-roof.jpg", "materialType": "concrete_tile", "materialLabel": "Concrete Tile",  "pricePerM2": 90 },
+    { "id": "terracotta",    "name": "Terracotta",    "hex": "#B45309", "image": "/assets/swatches/terracotta.jpg",    "materialType": "clay_tile",     "materialLabel": "Clay Tile",      "pricePerM2": 150 }
+  ],
+  "labour": {
+    "claddingPerM2": 15,
+    "roofPerM2": 25,
+    "note": "Real labour rates from quote_generator.py — £15/m² cladding, £25/m² roof."
+  },
+  "trimRates": {
+    "fasciaPerM": 35,
+    "fasciaLabourPerM": 12,
+    "soffitPerM": 30,
+    "soffitLabourPerM": 12,
+    "gutteringPerM": 40,
+    "gutteringLabourPerM": 15,
+    "note": "Real per-metre rates from quote_generator.py — fascia £35/m + £12/m labour, soffit £30/m + £12/m labour, guttering £40/m + £15/m labour. Colour choice (Coastal Fog/Ink Trim/Cedar) doesn't change the real cost, only the material rates do."
+  },
+  "scaffoldingCost": 800,
+  "wastePct": 0.10,
+  "vatPct": 0.20,
+  "defaultFootprintM2": 95,
+  "defaultTrimLengthM": 24
+}

@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Home Exterior Visualiser &amp; Cladding Cost Estimate | Facet Pro</title>
+<meta name="description" content="See your house with new cladding, render, roof and trim before you commit. Upload one photo, try real colours and get a costed estimate in about a minute. Free, no obligation.">
+<link rel="canonical" href="https://facetpro.co.uk/">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="theme-color" content="#FBF8F3">
+<meta name="author" content="Facet Pro">
+
+<!-- Open Graph / social sharing -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Facet Pro">
+<meta property="og:locale" content="en_GB">
+<meta property="og:url" content="https://facetpro.co.uk/">
+<meta property="og:title" content="See your home's new look before you spend a penny — Facet Pro">
+<meta property="og:description" content="Upload one photo of your house. Try new cladding, roof and trim colours on your own home and get a costed estimate in about a minute.">
+<meta property="og:image" content="https://facetpro.co.uk/assets/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Facet Pro — a home exterior shown before and after new cladding.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="See your home's new look before you spend a penny — Facet Pro">
+<meta name="twitter:description" content="Upload one photo of your house. Try new cladding, roof and trim colours and get a costed estimate in about a minute.">
+<meta name="twitter:image" content="https://facetpro.co.uk/assets/og-image.png">
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='16' fill='%2318181b'/%3E%3Ctext x='16' y='21' font-family='Georgia,serif' font-size='14' fill='%23FBF8F3' text-anchor='middle'%3EFP%3C/text%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&display=swap">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  *{font-family:Geist,sans-serif}
+  .serif{font-family:'Instrument Serif',serif}
+  body{background:#FBF8F3}
+  details > summary{list-style:none;cursor:pointer}
+  details > summary::-webkit-details-marker{display:none}
+  details[open] .chev{transform:rotate(180deg)}
+</style>
+
+<!-- Structured data. Every claim here matches what the product actually does. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://facetpro.co.uk/#organization",
+      "name": "Facet Pro",
+      "url": "https://facetpro.co.uk/",
+      "description": "Facet Pro helps UK homeowners see their house with new cladding, render, roof and trim, and get a costed estimate from one photo.",
+      "areaServed": { "@type": "Country", "name": "United Kingdom" }
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://facetpro.co.uk/#website",
+      "url": "https://facetpro.co.uk/",
+      "name": "Facet Pro",
+      "inLanguage": "en-GB",
+      "publisher": { "@id": "https://facetpro.co.uk/#organization" }
+    },
+    {
+      "@type": "WebApplication",
+      "name": "Facet Pro Home Exterior Visualiser",
+      "url": "https://facetpro.co.uk/",
+      "applicationCategory": "DesignApplication",
+      "operatingSystem": "Any modern web browser",
+      "browserRequirements": "Requires JavaScript",
+      "inLanguage": "en-GB",
+      "publisher": { "@id": "https://facetpro.co.uk/#organization" },
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "GBP" },
+      "featureList": [
+        "Detects windows, doors, roof and cladding from one photo",
+        "Try cladding, roof and trim colours on your own home",
+        "Photorealistic AI render of your house",
+        "Itemised cost estimate including labour, scaffolding, waste and VAT"
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://facetpro.co.uk/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How much does it cost to re-clad a house in the UK?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "It depends on the size of your home and the materials you choose. Facet Pro builds your figure the way an installer would: materials plus labour for the cladding, roof and trim, then scaffolding, a waste allowance and VAT at 20%. You see every line, so you know what you are looking at. It is an estimate to plan with, not a fixed quote."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I need to measure my house first?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. Facet Pro starts from a typical UK home footprint so you get a figure straight away. If you know your wall area in square metres or the length of your fascia and guttering run, you can type them in and the estimate is recalculated around your actual house."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is the after picture really my house?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. The render is generated from the photo you upload, keeping your home's perspective, lighting and shadows, and changing only the cladding, trim colour and roof material. It is a realistic guide to help you choose, not a guarantee of the finished installation."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What happens to my photo?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Your photo is sent to the AI services that analyse your home and create the render. It is not saved to our records and it is not published anywhere. Only your design choices, your estimate and the contact details you type in are kept, so we can get back to you."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How long does it take?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Detecting the windows, doors, roof and cladding takes a few seconds. Colour changes and prices update instantly. A full photorealistic render of your home can take up to a minute."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does Facet Pro do the work?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Facet Pro creates the design and the estimate. When you save your design, it goes to installers who can quote for the job properly and arrange a survey. There is no obligation to go ahead."
+          }
+        }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body class="min-h-screen bg-[#FBF8F3] text-zinc-900 selection:bg-zinc-900 selection:text-white">
+
+<header class="sticky top-0 z-30 backdrop-blur-xl bg-[#FBF8F3]/80 border-b border-zinc-200">
+  <div class="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
+    <a href="/" class="flex items-center gap-3" aria-label="Facet Pro home">
+      <span class="w-8 h-8 rounded-full bg-zinc-900 text-white grid place-items-center text-[11px] tracking-[0.15em] font-semibold" aria-hidden="true">FP</span>
+      <span class="serif text-[19px] tracking-tight">Facet Pro</span>
+    </a>
+    <nav class="flex items-center gap-2" aria-label="Primary">
+      <a href="#how-it-works" class="hidden sm:block text-xs px-3 py-2 rounded-full hover:bg-white transition">How it works</a>
+      <a href="#faq" class="hidden sm:block text-xs px-3 py-2 rounded-full hover:bg-white transition">Questions</a>
+      <a href="#your-photo" class="text-xs px-4 py-2 rounded-full bg-zinc-900 text-white hover:bg-zinc-800 transition">Start with a photo</a>
+    </nav>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-6 py-8 flex flex-col gap-8">
+
+  <section class="rounded-2xl bg-zinc-900 text-[#FBF8F3] overflow-hidden p-8 md:p-12" aria-labelledby="hero-heading">
+    <p class="text-[11px] tracking-[0.25em] uppercase text-white/50">Home exterior visualiser · UK</p>
+    <h1 id="hero-heading" class="mt-4 serif text-[36px] md:text-[56px] leading-[0.95] tracking-[-0.03em]">See your home's new look before you spend a penny.</h1>
+    <p class="mt-5 text-[15px] leading-7 text-white/70 max-w-[56ch]">New cladding, render, roof or trim is a big decision to make from a brochure. Upload one photo of your house and Facet Pro shows you the finished look on your own home — with a costed estimate you can plan around.</p>
+    <ul class="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-white/60">
+      <li>Free to try</li>
+      <li>No measuring up</li>
+      <li>Takes about a minute</li>
+      <li>No obligation</li>
+    </ul>
+    <div class="mt-8 flex flex-wrap gap-3">
+      <button id="hero-upload" type="button" class="px-5 py-3 rounded-full bg-white text-zinc-900 text-sm font-medium hover:bg-zinc-100 transition">Upload a photo of your home</button>
+      <a href="#how-it-works" class="px-5 py-3 rounded-full border border-white/20 text-sm font-medium hover:bg-white/10 transition">See how it works</a>
+    </div>
+  </section>
+
+  <div id="mount-upload"></div>
+  <div id="mount-visualizer"></div>
+  <div id="mount-refine"></div>
+  <div id="mount-lead"></div>
+
+  <section id="how-it-works" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="how-heading">
+    <h2 id="how-heading" class="serif text-[26px] md:text-[32px] tracking-tight">How it works</h2>
+    <p class="mt-2 text-sm text-zinc-600 max-w-[62ch]">Three steps, no site visit, nothing to install.</p>
+    <ol class="mt-8 grid md:grid-cols-3 gap-6">
+      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
+        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">1</span>
+        <h3 class="mt-4 text-[15px] font-medium">Add a photo of your house</h3>
+        <p class="mt-2 text-[13px] leading-6 text-zinc-600">One picture of the front of your home from the pavement is plenty. Facet Pro finds the windows, doors, roof and walls for you.</p>
+      </li>
+      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
+        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">2</span>
+        <h3 class="mt-4 text-[15px] font-medium">Try colours and materials</h3>
+        <p class="mt-2 text-[13px] leading-6 text-zinc-600">Swap cladding, roof tiles and trim and watch the price move with every choice. Slide between before and after to compare.</p>
+      </li>
+      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
+        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">3</span>
+        <h3 class="mt-4 text-[15px] font-medium">Save your design</h3>
+        <p class="mt-2 text-[13px] leading-6 text-zinc-600">Keep your before-and-after and your itemised estimate, and we'll put you in front of installers who can quote it properly.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="honest-heading">
+    <h2 id="honest-heading" class="serif text-[26px] md:text-[32px] tracking-tight">What your estimate actually includes</h2>
+    <p class="mt-2 text-sm text-zinc-600 max-w-[62ch]">Most online calculators give you one number with nothing behind it. Facet Pro shows the whole build-up, the way an installer would price it.</p>
+    <div class="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-3 text-[13px]">
+      <div class="rounded-xl border border-zinc-200 p-4"><strong class="font-medium">Cladding</strong><p class="mt-1 text-zinc-600">Material and the labour to fit it, priced per square metre.</p></div>
+      <div class="rounded-xl border border-zinc-200 p-4"><strong class="font-medium">Roof</strong><p class="mt-1 text-zinc-600">Tiles or slate plus fitting, sized from your roof area.</p></div>
+      <div class="rounded-xl border border-zinc-200 p-4"><strong class="font-medium">Fascia, soffit &amp; guttering</strong><p class="mt-1 text-zinc-600">Priced by the metre of roofline, materials and labour.</p></div>
+      <div class="rounded-xl border border-zinc-200 p-4"><strong class="font-medium">Scaffolding</strong><p class="mt-1 text-zinc-600">The bit that surprises people. It's in your figure from the start.</p></div>
+      <div class="rounded-xl border border-zinc-200 p-4"><strong class="font-medium">Waste allowance</strong><p class="mt-1 text-zinc-600">Offcuts and breakages, so the number holds up on site.</p></div>
+      <div class="rounded-xl border border-zinc-200 p-4"><strong class="font-medium">VAT at 20%</strong><p class="mt-1 text-zinc-600">Shown separately, never hidden in the headline price.</p></div>
+    </div>
+    <p class="mt-5 text-[12px] leading-6 text-zinc-500 max-w-[70ch]">Facet Pro gives you a planning estimate, not a fixed quote. Your final price depends on the condition of your walls and roof, access, and what an installer finds when they survey your home.</p>
+  </section>
+
+  <section id="faq" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="faq-heading">
+    <h2 id="faq-heading" class="serif text-[26px] md:text-[32px] tracking-tight">Questions homeowners ask</h2>
+    <div class="mt-6 divide-y divide-zinc-200 border-y border-zinc-200">
+
+      <details class="group">
+        <summary class="flex items-center justify-between gap-4 py-4"><h3 class="text-[15px] font-medium">How much does it cost to re-clad a house in the UK?</h3><span class="chev text-zinc-400 transition-transform" aria-hidden="true">⌄</span></summary>
+        <p class="pb-4 text-[13px] leading-6 text-zinc-600 max-w-[72ch]">It depends on the size of your home and the materials you choose. Facet Pro builds your figure the way an installer would: materials plus labour for the cladding, roof and trim, then scaffolding, a waste allowance and VAT at 20%. You see every line, so you know what you're looking at. It's an estimate to plan with, not a fixed quote.</p>
+      </details>
+
+      <details class="group">
+        <summary class="flex items-center justify-between gap-4 py-4"><h3 class="text-[15px] font-medium">Do I need to measure my house first?</h3><span class="chev text-zinc-400 transition-transform" aria-hidden="true">⌄</span></summary>
+        <p class="pb-4 text-[13px] leading-6 text-zinc-600 max-w-[72ch]">No. Facet Pro starts from a typical UK home footprint so you get a figure straight away. If you happen to know your wall area in square metres, or the length of your fascia and guttering run, type them in and the estimate is recalculated around your actual house.</p>
+      </details>
+
+      <details class="group">
+        <summary class="flex items-center justify-between gap-4 py-4"><h3 class="text-[15px] font-medium">Is the after picture really my house?</h3><span class="chev text-zinc-400 transition-transform" aria-hidden="true">⌄</span></summary>
+        <p class="pb-4 text-[13px] leading-6 text-zinc-600 max-w-[72ch]">Yes. The render is generated from the photo you upload, keeping your home's perspective, lighting and shadows and changing only the cladding, trim colour and roof material. It's a realistic guide to help you choose, not a guarantee of the finished installation.</p>
+      </details>
+
+      <details class="group">
+        <summary class="flex items-center justify-between gap-4 py-4"><h3 class="text-[15px] font-medium">What happens to my photo?</h3><span class="chev text-zinc-400 transition-transform" aria-hidden="true">⌄</span></summary>
+        <p class="pb-4 text-[13px] leading-6 text-zinc-600 max-w-[72ch]">Your photo is sent to the AI services that analyse your home and create the render. It isn't saved to our records and it isn't published anywhere. Only your design choices, your estimate and the contact details you type in are kept, so we can get back to you.</p>
+      </details>
+
+      <details class="group">
+        <summary class="flex items-center justify-between gap-4 py-4"><h3 class="text-[15px] font-medium">How long does it take?</h3><span class="chev text-zinc-400 transition-transform" aria-hidden="true">⌄</span></summary>
+        <p class="pb-4 text-[13px] leading-6 text-zinc-600 max-w-[72ch]">Finding the windows, doors, roof and cladding takes a few seconds. Colour changes and prices update instantly. A full photorealistic render of your home can take up to a minute.</p>
+      </details>
+
+      <details class="group">
+        <summary class="flex items-center justify-between gap-4 py-4"><h3 class="text-[15px] font-medium">Does Facet Pro do the work?</h3><span class="chev text-zinc-400 transition-transform" aria-hidden="true">⌄</span></summary>
+        <p class="pb-4 text-[13px] leading-6 text-zinc-600 max-w-[72ch]">Facet Pro creates the design and the estimate. When you save your design it goes to installers who can quote for the job properly and arrange a survey. There's no obligation to go ahead.</p>
+      </details>
+
+    </div>
+  </section>
+
+  <details id="trade" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8">
+    <summary class="flex items-center justify-between gap-4">
+      <span>
+        <span class="serif text-[22px] tracking-tight">Are you an installer?</span>
+        <span class="block mt-1 text-[13px] text-zinc-600">See homeowner designs and their estimates as they come in.</span>
+      </span>
+      <span class="chev text-zinc-400 transition-transform text-lg" aria-hidden="true">⌄</span>
+    </summary>
+    <div id="mount-installer" class="mt-6"></div>
+  </details>
+
+</main>
+
+<footer class="max-w-6xl mx-auto px-6 pb-14">
+  <div class="rounded-2xl border border-zinc-200 bg-white p-6">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-[10px] tracking-[0.15em] font-semibold" aria-hidden="true">FP</span>
+        <span class="serif text-[17px] tracking-tight">Facet Pro</span>
+      </div>
+      <nav class="flex flex-wrap gap-x-5 gap-y-2 text-[12px] text-zinc-600" aria-label="Footer">
+        <a href="#how-it-works" class="hover:text-zinc-900">How it works</a>
+        <a href="#faq" class="hover:text-zinc-900">Questions</a>
+        <a href="#your-photo" class="hover:text-zinc-900">Start your design</a>
+        <a href="#trade" class="hover:text-zinc-900">For installers</a>
+      </nav>
+    </div>
+    <p class="mt-5 text-[11px] leading-5 text-zinc-500 max-w-[80ch]">Facet Pro is a home exterior visualiser for UK homeowners. Figures shown are planning estimates based on typical material, labour, scaffolding and waste costs plus VAT — not fixed quotes. Renders are a visual guide to help you choose and may differ from the finished installation.</p>
+  </div>
+</footer>
+
+<script>
+/* ---------------------------------------------------------------
+   Facet Pro — home exterior visualiser.
+   Photo upload -> AI detection (Claude vision) -> catalogue pricing
+   -> AI render (Replicate FLUX Kontext Pro) -> lead capture
+   (stored + emailed + CRM webhook).
+
+   The marketing sections above are plain, crawlable HTML. Only the
+   interactive parts are built here and mounted into the #mount-*
+   slots. Plain JS, no build step; talks to server.js same-origin.
+--------------------------------------------------------------- */
+
+// ---------- swatches (display data; prices come from /api/catalogue) ----------
+
+let SWATCHES = [
+  { id: "alabaster",     name: "Alabaster",     hex: "#F6F3EE", group: "Cladding" },
+  { id: "clay-stone",    name: "Clay Stone",    hex: "#D9C5B4", group: "Cladding" },
+  { id: "sage-slate",    name: "Sage Slate",    hex: "#9CAF9C", group: "Cladding" },
+  { id: "graphite",      name: "Graphite",      hex: "#2F3336", group: "Cladding" },
+  { id: "coastal-fog",   name: "Coastal Fog",   hex: "#CBD5E1", group: "Trim" },
+  { id: "ink-trim",      name: "Ink Trim",      hex: "#111827", group: "Trim" },
+  { id: "cedar",         name: "Cedar",         hex: "#8B5A2B", group: "Trim" },
+  { id: "slate-roof",    name: "Slate Roof",    hex: "#475569", group: "Roof" },
+  { id: "charcoal-roof", name: "Charcoal Roof", hex: "#1E293B", group: "Roof" },
+  { id: "terracotta",    name: "Terracotta",    hex: "#B45309", group: "Roof" },
+];
+
+function findSwatch(id) { return SWATCHES.find(s => s.id === id) || SWATCHES[0]; }
+
+// ---------- app state ----------
+
+const state = {
+  status: "Getting your colours and prices ready…",
+  uploadedImg: null,       // object URL for on-screen preview
+  uploadedBase64: null,    // raw base64 (no data: prefix) for API calls
+  uploadedMimeType: null,
+  detections: [],
+  stage: "landing", // landing | detecting | visualizer
+  detectionStatus: "idle", // idle | detecting | success | error
+  cladding: findSwatch("alabaster"),
+  trim: findSwatch("ink-trim"),
+  roof: findSwatch("slate-roof"),
+  afterPct: 65,
+  leads: [],
+  leadsLoaded: false,
+  contact: { name: "", email: "", postcode: "", phone: "" },
+  postcode: "",
+  footprint: null, // {area}
+  trimLengthM: null, // fascia/soffit/guttering run length in metres
+  measurementSource: "default_footprint",
+  catalogue: null,
+  price: null,        // last computed price breakdown
+  renderUrl: null,    // AI-generated render, once produced
+  rendering: false,
+  sendingLead: false,
+};
+
+// Progress messages appear in a small pill, then fade away — it's a homeowner
+// page, not a console, so nothing lingers in the corner once it's been read.
+let statusHideTimer = null;
+function U(msg) {
+  state.status = msg;
+  const el = document.getElementById('status-text');
+  if (el) el.textContent = state.status;
+  const pill = document.getElementById('app-status');
+  if (pill) {
+    pill.classList.remove('opacity-0', 'pointer-events-none');
+    clearTimeout(statusHideTimer);
+    statusHideTimer = setTimeout(() => pill.classList.add('opacity-0', 'pointer-events-none'), 6000);
+  }
+}
+
+// ---------- API calls ----------
+
+async function loadCatalogue() {
+  try {
+    const res = await fetch('/api/catalogue');
+    state.catalogue = await res.json();
+    // Merge in real photo swatches (image field) from the catalogue —
+    // SWATCHES starts as a plain colour-chip fallback until this loads.
+    const allReal = [...state.catalogue.cladding, ...state.catalogue.trim, ...state.catalogue.roof];
+    SWATCHES = SWATCHES.map(sw => {
+      const real = allReal.find(r => r.id === sw.id);
+      return real ? { ...sw, image: real.image || null } : sw;
+    });
+    // state.cladding/trim/roof were captured by reference before this merge —
+    // re-point them at the fresh (now image-bearing) objects with the same id.
+    state.cladding = findSwatch(state.cladding.id);
+    state.trim = findSwatch(state.trim.id);
+    state.roof = findSwatch(state.roof.id);
+    U('Colours and prices loaded');
+  } catch (err) {
+    U("We couldn't load the colour range just now — please refresh the page.");
+  }
+}
+
+async function loadLeads() {
+  try {
+    const res = await fetch('/api/leads');
+    const data = await res.json();
+    state.leads = data.leads || [];
+  } catch (err) {
+    // server may not be reachable yet — leave empty
+  } finally {
+    state.leadsLoaded = true;
+  }
+}
+
+async function refreshPrice() {
+  if (!state.catalogue) return;
+  try {
+    const res = await fetch('/api/quote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        claddingId: state.cladding.id,
+        trimId: state.trim.id,
+        roofId: state.roof.id,
+        footprintM2: state.footprint?.area || null,
+        trimLengthM: state.trimLengthM || null,
+      })
+    });
+    state.price = await res.json();
+  } catch (err) {
+    state.price = null;
+  }
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result; // data:<mime>;base64,<data>
+      const comma = result.indexOf(',');
+      resolve(result.slice(comma + 1));
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ---------- small DOM helpers ----------
+
+function h(tag, attrs = {}, children = []) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'className') el.className = v;
+    else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
+    else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2).toLowerCase(), v);
+    else if (v !== undefined && v !== null && v !== false) el.setAttribute(k, v === true ? '' : v);
+  }
+  (Array.isArray(children) ? children : [children]).forEach(c => {
+    if (c === null || c === undefined || c === false) return;
+    el.appendChild(typeof c === 'string' || typeof c === 'number' ? document.createTextNode(c) : c);
+  });
+  return el;
+}
+
+function fmtMoney(n) { return "£" + Math.round(n || 0).toLocaleString(); }
+
+// ---------- render ----------
+
+let sharedRefs = {};
+
+const MOUNTS = [
+  ['mount-upload',     buildUploadDetect],
+  ['mount-visualizer', buildVisualizer],
+  ['mount-refine',     buildRefineEstimate],
+  ['mount-lead',       buildSaveFraming],
+  ['mount-installer',  buildInstaller],
+];
+
+function render() {
+  MOUNTS.forEach(([id, build]) => {
+    const slot = document.getElementById(id);
+    if (!slot) return;
+    slot.replaceChildren(build());
+  });
+  ensureStatusPill();
+}
+
+function buildUploadDetect() {
+  const dropArea = h('div', {
+    className: 'aspect-[4/3] rounded-xl border border-dashed border-zinc-300 bg-white grid place-items-center cursor-pointer hover:bg-zinc-50 transition relative overflow-hidden',
+    onClick: () => sharedRefs.fileInput?.click(),
+  });
+
+  if (state.uploadedImg) {
+    dropArea.appendChild(h('img', { src: state.uploadedImg, alt: 'The photo of your home you uploaded', className: 'w-full h-full object-cover' }));
+  } else {
+    dropArea.appendChild(h('div', { className: 'text-center p-8' }, [
+      h('div', { className: 'w-12 h-12 mx-auto rounded-full bg-zinc-900 text-white grid place-items-center' }, '↑'),
+      h('div', { className: 'mt-3 text-sm font-medium' }, 'Drop a photo of the front of your house'),
+      h('div', { className: 'mt-1 text-xs text-zinc-500' }, 'JPG or PNG — one picture from the pavement is enough'),
+    ]));
+  }
+
+  if (state.detections.length > 0) {
+    const overlay = h('div', { className: 'absolute inset-0' });
+    state.detections.forEach(d => {
+      overlay.appendChild(h('div', {
+        className: 'absolute border border-zinc-900/70 bg-zinc-900/10',
+        style: { left: (d.x_pct ?? 0) + '%', top: (d.y_pct ?? 0) + '%', width: (d.w_pct ?? 0) + '%', height: (d.h_pct ?? 0) + '%' },
+      }, [
+        h('span', { className: 'absolute -top-5 left-0 text-[9px] px-1.5 py-0.5 bg-zinc-900 text-white rounded' }, `${d.label} ${Math.round((d.confidence || 0) * 100)}%`),
+      ]));
+    });
+    dropArea.appendChild(overlay);
+  }
+
+  const fileInput = h('input', {
+    type: 'file', accept: 'image/*', className: 'hidden', 'aria-label': 'Upload a photo of your home',
+    onChange: (e) => { const f = e.target.files?.[0]; if (f) handleUpload(f); },
+  });
+  sharedRefs.fileInput = fileInput;
+
+  const detectionBadgeByStatus = {
+    idle:      { className: 'bg-white/10 text-white',   text: 'Waiting for your photo' },
+    detecting: { className: 'bg-amber-400 text-black',  text: 'Looking at your home…' },
+    success:   { className: 'bg-emerald-500 text-white', text: '✓ Your home has been analysed' },
+    error:     { className: 'bg-red-500 text-white',    text: '⚠ We couldn’t read that photo' },
+  };
+  const detectionBadge = detectionBadgeByStatus[state.detectionStatus] || detectionBadgeByStatus.idle;
+
+  return h('section', { id: 'your-photo', className: 'rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24' }, [
+    h('div', { className: 'flex items-center justify-between flex-wrap gap-3' }, [
+      h('div', {}, [
+        h('p', { className: 'text-[11px] tracking-widest uppercase text-zinc-400' }, 'Step 1'),
+        h('h2', { className: 'mt-1 serif text-[26px] md:text-[32px] tracking-tight' }, 'Start with a photo of your home'),
+      ]),
+      h('span', { className: 'text-[10px] tracking-widest uppercase px-2.5 py-1 rounded-full bg-[#FFF7ED] border border-zinc-200' }, 'Takes a few seconds'),
+    ]),
+    h('p', { className: 'mt-2 text-sm text-zinc-600 max-w-[62ch]' }, 'We’ll find your windows, doors, roof and walls automatically, so you don’t have to mark anything up or measure a thing.'),
+    h('div', { className: 'mt-6 grid md:grid-cols-[1.1fr_0.9fr] gap-6' }, [
+      h('div', { className: 'rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-4' }, [
+        fileInput,
+        dropArea,
+        h('div', { className: 'mt-3 flex gap-2' }, [
+          h('button', { type: 'button', className: 'flex-1 px-3 py-2 rounded-full bg-zinc-900 text-white text-xs', onClick: () => sharedRefs.fileInput?.click() }, 'Choose a photo'),
+          h('button', {
+            type: 'button',
+            className: 'px-3 py-2 rounded-full border border-zinc-200 bg-white text-xs',
+            onClick: () => { state.uploadedImg = null; state.uploadedBase64 = null; state.detections = []; state.stage = 'landing'; state.detectionStatus = 'idle'; state.renderUrl = null; U('Photo removed — add another whenever you like'); render(); }
+          }, 'Start again'),
+        ]),
+      ]),
+      h('div', { className: 'rounded-2xl bg-zinc-900 text-white p-5 flex flex-col gap-4' }, [
+        h('div', { className: 'flex items-center justify-between gap-2 flex-wrap' }, [
+          h('div', { className: 'text-[11px] tracking-widest uppercase text-white/50' }, 'What we found'),
+          h('div', { className: `text-[10px] px-2 py-1 rounded-full font-medium ${detectionBadge.className}` }, detectionBadge.text),
+        ]),
+        h('div', { className: 'grid gap-2' }, state.detections.length === 0
+          ? h('div', { className: 'rounded-xl bg-white/5 border border-white/10 p-4 text-xs leading-5 text-white/60' }, 'Nothing yet. Add a photo and we’ll pick out the windows, doors, roof and cladding on your house.')
+          : state.detections.filter(d => d.type !== 'analysis').map(d => h('div', { className: 'flex items-center justify-between rounded-xl bg-white/5 border border-white/10 px-3 py-2.5' }, [
+              h('div', { className: 'flex items-center gap-2' }, [
+                h('div', { className: 'w-1.5 h-1.5 rounded-full bg-emerald-400' }),
+                h('span', { className: 'text-xs' }, d.label),
+                h('span', { className: 'text-[10px] text-white/40 uppercase' }, d.type),
+              ]),
+              h('span', { className: 'text-[10px] text-white/60' }, `${Math.round((d.confidence || 0) * 100)}% sure`),
+            ]))
+        ),
+      ]),
+    ]),
+  ]);
+}
+
+function buildVisualizer() {
+  const price = state.price || { cladding: 0, roof: 0, trim: 0, labour: 0, total: 0 };
+
+  const beforePane = h('div', { className: 'absolute inset-0 bg-[#E8DED0] grid place-items-center' }, [
+    state.uploadedImg
+      ? h('img', { src: state.uploadedImg, alt: 'Your home as it looks today', className: 'w-full h-full object-cover opacity-60 grayscale-[0.2]' })
+      : h('span', { className: 'text-xs text-zinc-500' }, 'Add a photo to see your home here'),
+    h('div', { className: 'absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-white border border-zinc-200' }, 'Before'),
+  ]);
+
+  let afterPane;
+  if (state.renderUrl) {
+    afterPane = h('div', { className: 'absolute inset-0', style: { clipPath: `inset(0 ${100 - state.afterPct}% 0 0)` } }, [
+      h('img', { src: state.renderUrl, alt: `Your home with ${state.cladding.name} cladding, ${state.trim.name} trim and a ${state.roof.name} roof`, className: 'w-full h-full object-cover' }),
+      h('div', { className: 'absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-emerald-600 text-white' }, 'After • your home, rendered'),
+    ]);
+  } else {
+    afterPane = h('div', { className: 'absolute inset-0', style: { clipPath: `inset(0 ${100 - state.afterPct}% 0 0)` } }, [
+      h('div', {
+        className: 'w-full h-full relative',
+        style: state.cladding.image
+          ? { backgroundImage: `url(${state.cladding.image})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+          : { background: state.cladding.hex }
+      }, [
+        h('div', {
+          className: 'absolute inset-x-0 top-0 h-[18%]',
+          style: state.roof.image
+            ? { backgroundImage: `url(${state.roof.image})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+            : { background: state.roof.hex }
+        }),
+        h('div', { className: 'absolute inset-y-0 left-0 right-0 top-[18%]' }, [
+          h('div', { className: 'absolute left-[8%] top-[8%] w-[14%] h-[28%] bg-white/90 border-2', style: { borderColor: state.trim.hex } }),
+          h('div', { className: 'absolute left-[28%] top-[6%] w-[14%] h-[28%] bg-white/90 border-2', style: { borderColor: state.trim.hex } }),
+          h('div', { className: 'absolute left-[52%] top-[24%] w-[12%] h-[38%] bg-zinc-900 border-2', style: { borderColor: state.trim.hex } }),
+          h('div', { className: 'absolute bottom-0 left-0 right-0 h-[3px]', style: { background: state.trim.hex } }),
+        ]),
+        h('div', { className: 'absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-zinc-900 text-white' }, `After • ${state.cladding.name} colour preview`),
+      ]),
+    ]);
+  }
+
+  const slider = h('input', {
+    type: 'range', min: 0, max: 100, value: state.afterPct, 'aria-label': 'Slide between before and after',
+    className: 'absolute bottom-3 left-1/2 -translate-x-1/2 w-[60%] accent-zinc-900',
+  });
+  slider.addEventListener('input', (e) => { state.afterPct = parseInt(e.target.value); renderVisualizerOnly(); });
+
+  const groupLabels = { Cladding: 'Walls & cladding', Trim: 'Fascia, soffit & guttering', Roof: 'Roof' };
+  const groupsRow = ['Cladding', 'Trim', 'Roof'].map(group =>
+    h('div', {}, [
+      h('h3', { className: 'text-[10px] tracking-widest uppercase text-zinc-500' }, groupLabels[group]),
+      h('div', { className: 'mt-2 flex flex-wrap gap-2' }, SWATCHES.filter(s => s.group === group).map(sw => {
+        const active = (group === 'Cladding' && state.cladding.id === sw.id) ||
+                       (group === 'Trim' && state.trim.id === sw.id) ||
+                       (group === 'Roof' && state.roof.id === sw.id);
+        return h('button', {
+          type: 'button',
+          'aria-pressed': active ? 'true' : 'false',
+          className: `flex items-center gap-2 px-3 py-2 rounded-full border text-xs transition ${active ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-900'}`,
+          onClick: async () => {
+            if (group === 'Cladding') state.cladding = sw;
+            if (group === 'Trim') state.trim = sw;
+            if (group === 'Roof') state.roof = sw;
+            state.renderUrl = null; // choice changed — the old render no longer matches
+            U(`${sw.name} selected — updating your estimate`);
+            await refreshPrice();
+            render();
+          }
+        }, [
+          sw.image
+            ? h('img', { src: sw.image, alt: '', className: 'w-5 h-5 rounded-full object-cover border border-black/10' })
+            : h('span', { className: 'w-4 h-4 rounded-full border border-black/10', style: { background: sw.hex } }),
+          sw.name,
+        ]);
+      })),
+    ])
+  );
+
+  function priceRow(label, value, muted) {
+    return h('div', { className: `flex justify-between gap-4 ${muted ? 'text-white/60' : 'text-white'}` }, [
+      h('span', {}, label), h('span', {}, fmtMoney(value)),
+    ]);
+  }
+
+  const renderButtonLabel = state.rendering ? 'Creating your picture…' : (state.renderUrl ? 'Try this look again' : 'Show me this on my home');
+
+  return h('section', { id: 'visualizer-section', className: 'rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24' }, [
+    h('div', { className: 'flex items-center justify-between gap-3 flex-wrap' }, [
+      h('div', {}, [
+        h('p', { className: 'text-[11px] tracking-widest uppercase text-zinc-400' }, 'Step 2'),
+        h('h2', { className: 'mt-1 serif text-[26px] md:text-[32px] tracking-tight' }, 'Try colours and see what it costs'),
+      ]),
+      h('span', { className: 'text-[10px] px-2 py-1 rounded-full bg-zinc-900 text-white' }, 'Price updates as you choose'),
+    ]),
+    h('p', { className: 'mt-2 text-sm text-zinc-600 max-w-[62ch]' }, 'Drag the slider to compare your home now with how it could look. Every colour and material moves the estimate, so there are no surprises later.'),
+    h('div', { className: 'mt-6 grid lg:grid-cols-[1.2fr_0.8fr] gap-6' }, [
+      h('div', { className: 'rounded-2xl overflow-hidden border border-zinc-200 bg-[#FDFCF9]' }, [
+        h('div', { className: 'relative aspect-[16/10] bg-zinc-100 overflow-hidden' }, [
+          beforePane, afterPane, slider,
+          h('div', { className: 'absolute bottom-3 right-3 text-[10px] px-2 py-1 rounded-full bg-white border border-zinc-200' }, `${state.afterPct}% after`),
+        ]),
+        h('div', { className: 'p-4 grid gap-4' }, groupsRow),
+        h('div', { className: 'px-4 pb-4' }, [
+          h('button', {
+            type: 'button',
+            className: `w-full py-2.5 rounded-full text-xs font-medium ${state.uploadedBase64 ? 'bg-zinc-900 text-white' : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'}`,
+            disabled: !state.uploadedBase64 || state.rendering,
+            onClick: generateRealRender,
+          }, renderButtonLabel),
+          !state.uploadedBase64
+            ? h('div', { className: 'mt-2 text-[10px] text-zinc-500 text-center' }, 'Add a photo above first')
+            : h('div', { className: 'mt-2 text-[10px] text-zinc-500 text-center' }, 'Takes up to a minute'),
+        ]),
+      ]),
+      h('div', { className: 'flex flex-col gap-6' }, [
+        h('div', { className: 'rounded-2xl bg-zinc-900 text-white p-5' }, [
+          h('h3', { className: 'text-[11px] tracking-widest uppercase text-white/50' }, 'Your estimate'),
+          h('div', { className: 'mt-4 grid gap-2 text-sm' }, [
+            priceRow('Walls & cladding, fitted', price.cladding),
+            priceRow('Roof, fitted', price.roof),
+            priceRow('Fascia, soffit & guttering', price.trim),
+            priceRow('Scaffolding', price.scaffolding, true),
+            priceRow('Waste allowance', price.waste, true),
+            priceRow('VAT (20%)', price.vat, true),
+            h('div', { className: 'h-px bg-white/10 my-1' }),
+            h('div', { className: 'flex justify-between gap-4 font-medium' }, [h('span', {}, 'Estimated total'), h('span', {}, fmtMoney(price.total))]),
+          ]),
+          h('p', { className: 'mt-4 text-[10px] leading-4 text-white/50' }, catalogue_note()),
+          h('p', { className: 'mt-2 text-[10px] leading-4 text-white/50' }, 'A planning estimate, not a fixed quote — an installer will confirm the price after a survey.'),
+        ]),
+      ]),
+    ]),
+  ]);
+}
+
+function catalogue_note() {
+  return state.catalogue?.note || 'Loading prices…';
+}
+
+async function generateRealRender() {
+  if (!state.uploadedBase64) return;
+  state.rendering = true;
+  U('Creating a picture of your home — this can take up to a minute…');
+  renderVisualizerOnly();
+  try {
+    const res = await fetch('/api/render', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image: state.uploadedBase64,
+        mimeType: state.uploadedMimeType,
+        claddingName: state.cladding.name,
+        trimName: state.trim.name,
+        roofName: state.roof.name,
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Render failed');
+    state.renderUrl = data.url;
+    U('Your new look is ready — drag the slider to compare');
+  } catch (err) {
+    U(`We couldn’t create that picture: ${err.message}`);
+  } finally {
+    state.rendering = false;
+    render();
+  }
+}
+
+function renderVisualizerOnly() {
+  const old = document.getElementById('visualizer-section');
+  if (!old) { render(); return; }
+  old.replaceWith(buildVisualizer());
+}
+
+function buildRefineEstimate() {
+  const summary = state.footprint || state.trimLengthM
+    ? h('div', { className: 'grid gap-1' }, [
+        state.postcode ? h('div', {}, [h('span', { className: 'text-zinc-500' }, 'Postcode: '), state.postcode.toUpperCase()]) : null,
+        state.footprint ? h('div', {}, [h('span', { className: 'text-zinc-500' }, 'Wall area: '), `${state.footprint.area} m²`]) : null,
+        state.trimLengthM ? h('div', {}, [h('span', { className: 'text-zinc-500' }, 'Roofline run: '), `${state.trimLengthM} m`]) : null,
+      ])
+    : h('span', { className: 'text-zinc-500' }, 'Right now we’re using a typical UK home footprint. Add your own numbers and we’ll size the estimate around your house instead.');
+
+  const postcodeInput = h('input', {
+    value: state.postcode, placeholder: 'Your postcode', 'aria-label': 'Your postcode',
+    className: 'flex-1 min-w-[140px] px-3 py-2.5 rounded-xl border border-zinc-200 text-sm outline-none focus:border-zinc-900',
+    onInput: (e) => { state.postcode = e.target.value; },
+  });
+
+  const areaInput = h('input', {
+    type: 'number', placeholder: 'Wall area m²', min: 10, 'aria-label': 'Wall area in square metres',
+    value: state.footprint?.area ?? '',
+    className: 'w-36 px-3 py-2.5 rounded-xl border border-zinc-200 text-sm outline-none focus:border-zinc-900',
+    onInput: (e) => {
+      const v = parseFloat(e.target.value);
+      if (v > 0) { state.footprint = { area: v }; state.measurementSource = 'manual_entry'; }
+    },
+  });
+
+  const trimLengthInput = h('input', {
+    type: 'number', placeholder: 'Roofline m', min: 5, 'aria-label': 'Length of your roofline in metres',
+    value: state.trimLengthM ?? '',
+    className: 'w-36 px-3 py-2.5 rounded-xl border border-zinc-200 text-sm outline-none focus:border-zinc-900',
+    onInput: (e) => {
+      const v = parseFloat(e.target.value);
+      if (v > 0) { state.trimLengthM = v; state.measurementSource = 'manual_entry'; }
+    },
+  });
+
+  return h('section', { id: 'refine-section', className: 'rounded-2xl bg-white border border-zinc-200 p-6 md:p-8' }, [
+    h('h2', { className: 'serif text-[22px] md:text-[26px] tracking-tight' }, 'Know your measurements? Make this sharper.'),
+    h('p', { className: 'mt-2 text-sm text-zinc-600 max-w-[62ch]' }, 'Completely optional — your estimate already works without it. If you have your wall area or the length of your guttering run to hand, pop them in.'),
+    h('div', { className: 'mt-5 flex flex-wrap gap-2' }, [
+      postcodeInput, areaInput, trimLengthInput,
+      h('button', {
+        type: 'button',
+        className: 'px-5 py-2.5 rounded-full bg-zinc-900 text-white text-xs font-medium',
+        onClick: async () => { await refreshPrice(); renderRefineOnly(); renderVisualizerOnly(); U('Estimate updated with your measurements'); }
+      }, 'Update my estimate'),
+    ]),
+    h('div', { className: 'mt-4 rounded-xl bg-[#FDFCF9] border border-zinc-200 p-3 text-xs leading-5' }, summary),
+  ]);
+}
+
+function renderRefineOnly() {
+  const old = document.getElementById('refine-section');
+  if (!old) { render(); return; }
+  old.replaceWith(buildRefineEstimate());
+}
+
+function buildSaveFraming() {
+  function field(placeholder, key, extraClass, type) {
+    return h('input', {
+      type: type || 'text',
+      placeholder, value: state.contact[key], 'aria-label': placeholder,
+      className: `${extraClass} px-3 py-2.5 rounded-xl border border-zinc-200 text-sm outline-none focus:border-zinc-900`,
+      onInput: (e) => { state.contact[key] = e.target.value; }
+    });
+  }
+
+  return h('section', { id: 'save-design', className: 'rounded-2xl bg-[#111111] text-white p-6 md:p-8 scroll-mt-24' }, [
+    h('p', { className: 'text-[11px] tracking-widest uppercase text-white/40' }, 'Step 3'),
+    h('h2', { className: 'mt-1 serif text-[26px] md:text-[32px] tracking-tight' }, 'Where should we send your design?'),
+    h('p', { className: 'mt-3 text-sm leading-6 text-white/60 max-w-[60ch]' }, 'We’ll keep your before-and-after and your itemised estimate together, and pass them to installers who can quote the job properly. No obligation, and you can walk away at any point.'),
+    h('div', { className: 'mt-6 rounded-2xl bg-white text-zinc-900 p-5' }, [
+      h('div', { className: 'grid grid-cols-2 gap-3' }, [
+        field('Your name', 'name', 'col-span-2 md:col-span-1'),
+        field('Email address', 'email', 'col-span-2 md:col-span-1', 'email'),
+        field('Postcode', 'postcode', ''),
+        field('Phone (optional)', 'phone', '', 'tel'),
+      ]),
+      h('button', {
+        type: 'button',
+        className: `mt-4 w-full py-3 rounded-full text-sm font-medium ${state.sendingLead ? 'bg-zinc-300 text-zinc-500' : 'bg-zinc-900 text-white'}`,
+        disabled: state.sendingLead,
+        onClick: sendDesignPack
+      }, state.sendingLead ? 'Saving your design…' : 'Save my design →'),
+      h('p', { className: 'mt-3 text-[11px] leading-5 text-zinc-500' }, 'We use your details to send your design and put you in touch with installers. Nothing else.'),
+    ]),
+  ]);
+}
+
+function buildInstaller() {
+  return h('div', { id: 'installer', className: 'rounded-2xl bg-zinc-900 text-white p-4' }, [
+    h('div', { className: 'flex items-center justify-between gap-3 flex-wrap' }, [
+      h('h3', { className: 'text-[11px] tracking-widest uppercase text-white/50' }, 'Homeowner designs'),
+      h('span', { className: 'text-[10px] px-2 py-1 rounded-full bg-white text-zinc-900' }, `${state.leads.length} saved`),
+    ]),
+    h('div', { className: 'mt-4 grid gap-2 max-h-[420px] overflow-auto pr-1' },
+      state.leads.length === 0
+        ? [h('div', { className: 'text-xs text-white/50 p-3' }, state.leadsLoaded ? 'No designs saved yet.' : 'Loading…')]
+        : state.leads.map(lead =>
+          h('div', { className: 'rounded-xl bg-white/5 border border-white/10 p-3 flex items-center justify-between gap-3' }, [
+            h('div', {}, [
+              h('div', { className: 'flex items-center gap-2' }, [
+                h('span', { className: 'text-xs font-medium' }, lead.name),
+                h('span', { className: 'text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 border border-white/10' }, lead.id),
+              ]),
+              h('div', { className: 'mt-1 text-[11px] text-white/60' }, `${lead.postcode || '—'} • ${lead.selections?.cladding || ''} + ${lead.selections?.roof || ''} • ${fmtMoney(lead.price)} • ${lead.status}`),
+            ]),
+          ])
+        )
+    ),
+  ]);
+}
+
+function renderInstallerOnly() {
+  const old = document.getElementById('installer');
+  if (!old) { render(); return; }
+  old.replaceWith(buildInstaller());
+}
+
+function ensureStatusPill() {
+  if (document.getElementById('app-status')) return;
+  document.body.appendChild(
+    h('div', { id: 'app-status', role: 'status', 'aria-live': 'polite', className: 'fixed bottom-3 left-3 z-[100] max-w-[calc(100vw-24px)] rounded-full bg-zinc-900 text-white text-[11px] px-4 py-2 shadow-[0_10px_30px_rgba(0,0,0,0.25)] border border-white/10 flex items-center gap-2 transition-opacity duration-500' }, [
+      h('span', { className: 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse' }),
+      h('span', { id: 'status-text', className: 'truncate' }, state.status),
+    ])
+  );
+}
+
+// ---------- actions ----------
+
+async function handleUpload(file) {
+  const url = URL.createObjectURL(file);
+  state.uploadedImg = url;
+  state.stage = 'detecting';
+  state.detectionStatus = 'detecting';
+  state.renderUrl = null;
+  U('Looking at your home…');
+  render();
+
+  try {
+    const base64 = await fileToBase64(file);
+    state.uploadedBase64 = base64;
+    state.uploadedMimeType = file.type || 'image/jpeg';
+
+    const res = await fetch('/api/detect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64, mimeType: state.uploadedMimeType })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Detection failed');
+
+    state.detections = data.detections || [];
+    state.stage = 'visualizer';
+    state.detectionStatus = 'success';
+    const found = state.detections.filter(d => d.type !== 'analysis').length;
+    U(`Found ${found} ${found === 1 ? 'part' : 'parts'} of your home — now pick your colours`);
+  } catch (err) {
+    state.stage = 'visualizer';
+    state.detectionStatus = 'error';
+    U(`We couldn’t read that photo: ${err.message}`);
+  }
+  await refreshPrice();
+  render();
+  document.getElementById('visualizer-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function sendDesignPack() {
+  if (!state.contact.name || !state.contact.email) {
+    U('Please add your name and email so we know where to send it');
+    return;
+  }
+  state.sendingLead = true;
+  render();
+  try {
+    const res = await fetch('/api/lead', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: state.contact.name,
+        email: state.contact.email,
+        phone: state.contact.phone,
+        postcode: state.contact.postcode || state.postcode,
+        claddingId: state.cladding.id,
+        trimId: state.trim.id,
+        roofId: state.roof.id,
+        footprintM2: state.footprint?.area || null,
+        trimLengthM: state.trimLengthM || null,
+        measurementSource: state.measurementSource,
+        detections: state.detections,
+        renderUrl: state.renderUrl,
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Lead submission failed');
+    state.leads = [data.lead, ...state.leads];
+    U(`Design saved — reference ${data.lead.id}. We’ll be in touch.`);
+  } catch (err) {
+    U(`We couldn’t save that: ${err.message}`);
+  } finally {
+    state.sendingLead = false;
+    render();
+  }
+}
+
+// ---------- boot ----------
+
+document.getElementById('hero-upload')?.addEventListener('click', () => {
+  document.getElementById('your-photo')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  sharedRefs.fileInput?.click();
+});
+
+(async function init() {
+  render();
+  await Promise.all([loadCatalogue(), loadLeads()]);
+  await refreshPrice();
+  render();
+})();
+</script>
+</body>
+</html>
