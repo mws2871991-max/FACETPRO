@@ -53,6 +53,35 @@ Open http://localhost:3020 (or whatever `PORT` you set).
 - `robots.txt`, `sitemap.xml`, `assets/og-image.png` — SEO and social sharing.
 - `data/` — where leads/detections get stored as JSONL files (gitignored: personal data).
 
+## Spend caps on the paid endpoints
+
+`/api/detect` and `/api/render` call Anthropic and Replicate, so they cost money
+per request. The per-IP rate limiters don't bound that — enough distinct IPs can
+still run up unlimited spend — so there is a **global daily cap** counted per UTC
+day across all callers.
+
+| Variable | Default | Endpoint |
+| --- | --- | --- |
+| `DAILY_DETECT_LIMIT` | 200 | `/api/detect` (Anthropic) |
+| `DAILY_RENDER_LIMIT` | 50 | `/api/render` (Replicate) |
+
+Once a cap is reached the endpoint returns `429 {"error":"Daily limit reached —
+try again tomorrow."}` **without contacting the provider**, along with
+`Retry-After` (seconds to UTC midnight) and `X-Daily-Limit` / `X-Daily-Remaining`
+headers. Set a limit to `0` to switch that endpoint off. An unparseable value
+logs a warning and falls back to the default. The limits in force are printed at
+startup.
+
+The counter lives in `data/usage.json` so a restart doesn't hand out a fresh
+allowance. Two caveats worth knowing:
+
+- **Per process.** A multi-instance deployment gets one allowance each — move the
+  counter to a shared store (Redis, Postgres) if you scale out.
+- **Quota is consumed on dispatch, not on success.** A provider error still
+  counts, because the call may well have been billed.
+
+Quota is checked after request validation, so a malformed request costs nothing.
+
 ## What is publicly served
 
 Static file serving is deny-by-default. Only `index.html`, `guided-demo.html`,

@@ -6,3 +6,6 @@ node_modules/
 
 # Captured homeowner leads and detection logs (contains personal data).
 data/*.jsonl
+
+# Runtime daily-usage counter for the paid endpoints.
+data/usage.json

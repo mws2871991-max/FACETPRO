@@ -82,6 +82,91 @@ const leadLimiter = rateLimit({
   standardHeaders: true, legacyHeaders: false,
   message: { error: 'Too many submissions — please wait a minute.' }
 });
+/* ── DAILY CAP ON PAID ENDPOINTS ──
+   The per-IP rate limiters above don't bound the bill: enough distinct IPs can
+   still run up unlimited Anthropic and Replicate spend. This is a global cap
+   across all callers, counted per UTC day and checked before we call either
+   provider.
+
+   The counter is written to data/usage.json so a restart doesn't reset it —
+   otherwise a crash loop would hand out a fresh allowance each time. Two
+   caveats: it's per process (a multi-instance deployment gets one allowance
+   each, so use a shared store if you scale out), and quota is consumed when a
+   call is dispatched rather than when it succeeds, since a provider error may
+   still have been billed.
+
+   Set either limit to 0 to switch that endpoint off entirely. */
+function envLimit(name, fallback) {
+  const raw = process.env[name];
+  if (raw === undefined || raw.trim() === '') return fallback;
+  const n = Number.parseInt(raw, 10);
+  if (!Number.isFinite(n) || n < 0) {
+    console.warn(`${name}="${raw}" is not a non-negative integer — using default ${fallback}.`);
+    return fallback;
+  }
+  return n;
+}
+
+const DAILY_LIMITS = {
+  detect: envLimit('DAILY_DETECT_LIMIT', 200),
+  render: envLimit('DAILY_RENDER_LIMIT', 50),
+};
+
+const USAGE_FILE = path.join(__dirname, 'data', 'usage.json');
+const utcDay = () => new Date().toISOString().slice(0, 10);
+
+let usage = { day: utcDay(), detect: 0, render: 0 };
+try {
+  const saved = JSON.parse(fs.readFileSync(USAGE_FILE, 'utf8'));
+  if (saved && saved.day === usage.day) {
+    usage = { day: saved.day, detect: saved.detect | 0, render: saved.render | 0 };
+  }
+} catch (_) { /* no usage file yet, or it's from a previous day — start at zero */ }
+
+function persistUsage() {
+  try {
+    fs.mkdirSync(path.dirname(USAGE_FILE), { recursive: true });
+    fs.writeFileSync(USAGE_FILE, JSON.stringify(usage));
+  } catch (err) {
+    // Never fail a request because the counter couldn't be written — the
+    // in-memory count still holds for this process.
+    console.error('Could not write usage counter:', err.message);
+  }
+}
+
+function secondsUntilUtcMidnight() {
+  const now = new Date();
+  const midnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1);
+  return Math.max(1, Math.ceil((midnight - now.getTime()) / 1000));
+}
+
+// Reserves one call against today's allowance. Returns false when the cap is
+// already spent, in which case the caller must not contact the provider.
+function consumeDailyQuota(kind, res) {
+  const today = utcDay();
+  if (usage.day !== today) {
+    usage = { day: today, detect: 0, render: 0 };
+    persistUsage();
+  }
+
+  const limit = DAILY_LIMITS[kind];
+  res.setHeader('X-Daily-Limit', String(limit));
+
+  if (usage[kind] >= limit) {
+    res.setHeader('X-Daily-Remaining', '0');
+    res.setHeader('Retry-After', String(secondsUntilUtcMidnight()));
+    console.warn(`Daily ${kind} limit reached (${usage[kind]}/${limit}) — refusing without calling the provider.`);
+    return false;
+  }
+
+  usage[kind] += 1;
+  persistUsage();
+  res.setHeader('X-Daily-Remaining', String(limit - usage[kind]));
+  return true;
+}
+
+const DAILY_LIMIT_ERROR = { error: 'Daily limit reached — try again tomorrow.' };
+
 // Slows password guessing against the installer endpoint.
 const installerLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, max: 20,
@@ -206,6 +291,9 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set — see .env.example.' });
 
+  // Checked last, after validation, so a malformed request doesn't spend quota.
+  if (!consumeDailyQuota('detect', res)) return res.status(429).json(DAILY_LIMIT_ERROR);
+
   let anthropicRes;
   try {
     anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
@@ -280,6 +368,9 @@ app.post('/api/render', renderLimiter, async (req, res) => {
 
   const replicateKey = process.env.REPLICATE_API_TOKEN;
   if (!replicateKey) return res.status(500).json({ error: 'REPLICATE_API_TOKEN not set — see .env.example.' });
+
+  // Checked last, after validation, so a malformed request doesn't spend quota.
+  if (!consumeDailyQuota('render', res)) return res.status(429).json(DAILY_LIMIT_ERROR);
 
   const cladding = claddingName || 'Alabaster';
   const trim = trimName || 'Ink Trim';
@@ -427,4 +518,8 @@ app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, 'legal', 'pr
 app.get('/terms', (req, res) => res.sendFile(path.join(__dirname, 'legal', 'terms.html')));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Facet Pro server running on http://localhost:${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Facet Pro server running on http://localhost:${PORT}`);
+  console.log(`Daily caps — detect: ${DAILY_LIMITS.detect}, render: ${DAILY_LIMITS.render} ` +
+              `(used today: ${usage.detect}/${usage.render}, UTC day ${usage.day})`);
+});

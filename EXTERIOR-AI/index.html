@@ -734,11 +734,12 @@ async function generateRealRender() {
       })
     });
     const data = await res.json();
+    if (res.status === 429) throw Object.assign(new Error(data.error || 'Busy right now — please try again later.'), { plain: true });
     if (!res.ok) throw new Error(data.error || 'Render failed');
     state.renderUrl = data.url;
     U('Your new look is ready — drag the slider to compare');
   } catch (err) {
-    U(`We couldn’t create that picture: ${err.message}`);
+    U(err.plain ? err.message : `We couldn’t create that picture: ${err.message}`);
   } finally {
     state.rendering = false;
     render();
@@ -964,6 +965,8 @@ async function handleUpload(file) {
       body: JSON.stringify({ image: base64, mimeType: state.uploadedMimeType })
     });
     const data = await res.json();
+    // A quota/rate refusal isn't a problem with their photo — say so plainly.
+    if (res.status === 429) throw Object.assign(new Error(data.error || 'Busy right now — please try again later.'), { plain: true });
     if (!res.ok) throw new Error(data.error || 'Detection failed');
 
     state.detections = data.detections || [];
@@ -974,7 +977,7 @@ async function handleUpload(file) {
   } catch (err) {
     state.stage = 'visualizer';
     state.detectionStatus = 'error';
-    U(`We couldn’t read that photo: ${err.message}`);
+    U(err.plain ? err.message : `We couldn’t read that photo: ${err.message}`);
   }
   await refreshPrice();
   render();
