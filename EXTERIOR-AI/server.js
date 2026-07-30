@@ -378,16 +378,46 @@ function saveDetectionRecord(detections, size) {
   return id;
 }
 
-const CALIBRATION_FACTOR = (() => {
-  const raw = process.env.WALL_CALIBRATION_FACTOR;
-  if (raw === undefined || raw.trim() === '') return measure.DEFAULT_CALIBRATION_FACTOR;
+/* Wall-measurement tuning. The defaults in measure.js come from the prototype
+   survey table; these let you recalibrate per house type without a code
+   change, which is how you'd fold in real surveyed properties. */
+function envPositive(name) {
+  const raw = process.env[name];
+  if (raw === undefined || raw.trim() === '') return undefined;
   const n = Number.parseFloat(raw);
   if (!Number.isFinite(n) || n <= 0) {
-    console.warn(`WALL_CALIBRATION_FACTOR="${raw}" is not a positive number — using ${measure.DEFAULT_CALIBRATION_FACTOR}.`);
-    return measure.DEFAULT_CALIBRATION_FACTOR;
+    console.warn(`${name}="${raw}" is not a positive number — ignoring it and using the built-in default.`);
+    return undefined;
   }
   return n;
+}
+
+const MEASURE_TUNING = (() => {
+  const calibration = {};
+  const coverageCentre = {};
+  for (const type of measure.HOUSE_TYPE_KEYS) {
+    const upper = type.toUpperCase();
+    const factor = envPositive(`WALL_CALIBRATION_${upper}`);
+    const centre = envPositive(`WALL_COVERAGE_${upper}`);
+    if (factor !== undefined) calibration[type] = factor;
+    if (centre !== undefined) coverageCentre[type] = centre;
+  }
+  return {
+    calibration,
+    coverageCentre,
+    coverageTolerance: envPositive('WALL_COVERAGE_TOLERANCE'),
+  };
 })();
+
+function logMeasureTuning() {
+  const parts = measure.HOUSE_TYPE_KEYS.map(type => {
+    const t = measure.tuningFor(type, MEASURE_TUNING);
+    const overridden = MEASURE_TUNING.calibration[type] !== undefined
+      || MEASURE_TUNING.coverageCentre[type] !== undefined ? '*' : '';
+    return `${type} ${t.calibrationFactor}/${t.coverageCentre.toFixed(2)}${overridden}`;
+  });
+  console.log(`Wall measurement (factor/coverage) — ${parts.join(', ')}${parts.some(p => p.includes('*')) ? '   * env override' : ''}`);
+}
 
 /* ── GET /api/catalogue ── */
 // Real cladding/trim/roof swatches + prices, loaded from catalogue.json.
@@ -596,7 +626,7 @@ app.post('/api/measure', (req, res) => {
     detections: record.detections,
     aspectRatio: record.aspectRatio,
     houseType,
-    calibrationFactor: CALIBRATION_FACTOR,
+    tuning: MEASURE_TUNING,
   });
 
   // Remembered against the record so /api/quote and /api/lead can use the
@@ -761,5 +791,6 @@ app.listen(PORT, () => {
   console.log(`Facet Pro server running on http://localhost:${PORT}`);
   console.log(`Daily caps — detect: ${DAILY_LIMITS.detect}, render: ${DAILY_LIMITS.render} ` +
               `(used today: ${usage.detect}/${usage.render}, UTC day ${usage.day})`);
+  logMeasureTuning();
   checkEmailConfig();
 });

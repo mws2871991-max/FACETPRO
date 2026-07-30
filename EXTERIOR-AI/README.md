@@ -72,12 +72,35 @@ Two methods, in `measure.js`:
    leaving `area = aspect × 1.98² × (wallW% × wallH%) / doorH%²` — so it is
    independent of how far away the homeowner stood, which matters because
    framing varies wildly.
-2. **Coverage (fallback, no door found).** Wall share of the frame ×
-   `WALL_CALIBRATION_FACTOR`, rejected if coverage falls outside the band
-   expected for the house type.
+2. **Coverage (fallback, no door found).** Wall share of the frame × that
+   house type's calibration factor, rejected if coverage falls outside the
+   band expected for the type.
 
 Both are then clamped against house-type priors (detached 130, semi 85,
 terrace 50 m²) and fall back to the prior when out of band.
+
+### Calibration, per house type
+
+From the prototype survey table, and env-overridable so you can fold in your
+own surveyed properties without a code change:
+
+| House type | `WALL_CALIBRATION_*` | `WALL_COVERAGE_*` | Implied m² (centre × factor) |
+| --- | --- | --- | --- |
+| Terraced | `TERRACE` 277 | `TERRACE` 0.18 | ≈ 50 |
+| Semi-detached | `SEMI` 303 | `SEMI` 0.28 | ≈ 85 |
+| Detached | `DETACHED` 342 | `DETACHED` 0.38 | ≈ 130 |
+
+`WALL_COVERAGE_TOLERANCE` (default `0.04`) sets how far either side of the
+centre still counts as well framed — a semi is accepted between 24% and 32%
+coverage. Anything invalid is ignored with a warning, and the effective
+figures are printed at startup with `*` marking env overrides:
+
+```
+Wall measurement (factor/coverage) — detached 342/0.38, semi 303/0.28, terrace 277/0.18
+```
+
+The table is internally consistent: each type's mid-band coverage times its
+factor lands on that type's prior, which a test asserts.
 
 ### Which area sizes the quote
 
@@ -101,14 +124,18 @@ with the Anthropic call stubbed (19 tests, offline, no API cost).
 
 Read these before putting a number in front of a homeowner.
 
-- **Only one calibration figure is real.** The semi coverage band (25–31%)
-  came from the prototype. The detached and terrace bands, the three
-  `frontToTotal` multipliers and the 300 calibration factor are reasoned
-  defaults, not measured. They need validating against surveyed properties.
+- **⚠ The front-to-total multipliers are still unvalidated guesses.** Terrace
+  1.7, semi 2.4 and detached 3.2 were back-derived from the priors, not
+  measured against anything. **They are not from the survey table**, unlike
+  the calibration factors and coverage centres. Every door-method result is
+  multiplied by one of them, which makes them the largest remaining source of
+  systematic error in the feature — a 20% error here is a 20% error in the
+  quote. They need calibrating against surveyed properties with known wall
+  areas before this figure is trusted commercially.
 - **One photo shows one elevation.** Whole-house area is the front elevation
-  × a per-type multiplier (terrace 1.7, semi 2.4, detached 3.2). A property
-  with an extension, an unusual footprint or a rear elevation unlike its front
-  will be wrong, and nothing in the photo can reveal that.
+  × that multiplier. A property with an extension, an unusual footprint or a
+  rear elevation unlike its front will be wrong, and nothing in the photo can
+  reveal that.
 - **It inherits every detection error.** A wall box that includes the
   neighbour's house, or a garage read as cladding, feeds straight through.
 - **The door assumption fails on non-standard doors.** A tall Victorian or

@@ -31,29 +31,48 @@ const DOOR_HEIGHT_M = 1.98;   // standard UK external door leaf
    `wallM2` is typical total exterior wall area for the whole property, and
    `band` is the range outside which a computed figure is treated as wrong.
 
+   `calibrationFactor` and `coverageCentre` come from the prototype's survey
+   table. They are mutually consistent — centre × factor lands on the prior
+   for all three types (0.18×277≈50, 0.28×303≈85, 0.38×342≈130), which is a
+   good sign the table is internally sound.
+
    `frontToTotal` converts the front elevation (all a single photo can show)
    into whole-house wall area: a terrace has two exposed elevations, a semi
-   three, a detached four, and rear elevations are rarely as wide as the
-   front. These multipliers are derived from the priors rather than measured.
+   three, a detached four, and rear elevations are rarely as wide as the front.
 
-   `coverageBand` is the share of the frame the walls should occupy in a
-   well-framed photo, used to reject an implausible coverage-method result.
-
-   !! Only the semi coverage band (0.25–0.31) comes from the prototype's
-   validation table. The detached and terrace bands, and all three
-   frontToTotal multipliers, are reasoned defaults and want replacing with
-   the prototype's real calibration numbers. All are env-overridable. */
+   !! UNVALIDATED: the three frontToTotal multipliers below are reasoned
+   guesses back-derived from the priors, NOT survey figures. Unlike the
+   calibration factors and coverage centres, nothing has measured them
+   against real properties. They scale every door-method result directly, so
+   they are the largest remaining source of systematic error here and need
+   calibrating against surveyed homes. See the README. */
 const HOUSE_TYPE_PRIORS = {
-  detached: { label: 'Detached',      wallM2: 130, band: [90, 200], frontToTotal: 3.2, coverageBand: [0.26, 0.36] },
-  semi:     { label: 'Semi-detached', wallM2: 85,  band: [55, 130], frontToTotal: 2.4, coverageBand: [0.25, 0.31] },
-  terrace:  { label: 'Terraced',      wallM2: 50,  band: [32, 80],  frontToTotal: 1.7, coverageBand: [0.22, 0.30] },
+  detached: { label: 'Detached',      wallM2: 130, band: [90, 200], frontToTotal: 3.2, calibrationFactor: 342, coverageCentre: 0.38 },
+  semi:     { label: 'Semi-detached', wallM2: 85,  band: [55, 130], frontToTotal: 2.4, calibrationFactor: 303, coverageCentre: 0.28 },
+  terrace:  { label: 'Terraced',      wallM2: 50,  band: [32, 80],  frontToTotal: 1.7, calibrationFactor: 277, coverageCentre: 0.18 },
 };
 
 const DEFAULT_HOUSE_TYPE = 'semi';
 
-// Coverage method: estimatedM2 = coverage × calibrationFactor. Chosen so a
-// semi at the middle of its coverage band (~0.28) lands on its 85 m² prior.
-const DEFAULT_CALIBRATION_FACTOR = 300;
+// How far either side of the coverage centre still counts as well framed.
+const DEFAULT_COVERAGE_TOLERANCE = 0.04;
+
+/* Per-type tuning, with env overrides applied by the caller. Returns the
+   effective numbers for one house type so the rest of the module never has
+   to think about where a value came from. */
+function tuningFor(type, tuning) {
+  const prior = HOUSE_TYPE_PRIORS[type];
+  const factor = Number(tuning?.calibration?.[type]);
+  const centre = Number(tuning?.coverageCentre?.[type]);
+  const tolerance = Number(tuning?.coverageTolerance);
+  const effCentre = Number.isFinite(centre) && centre > 0 ? centre : prior.coverageCentre;
+  const effTolerance = Number.isFinite(tolerance) && tolerance > 0 ? tolerance : DEFAULT_COVERAGE_TOLERANCE;
+  return {
+    calibrationFactor: Number.isFinite(factor) && factor > 0 ? factor : prior.calibrationFactor,
+    coverageCentre: effCentre,
+    coverageBand: [Math.max(0, effCentre - effTolerance), effCentre + effTolerance],
+  };
+}
 
 // How wide a range to show, by method. The door method is geometric and
 // tighter; the prior is a population average and deserves to look vague.
@@ -161,22 +180,22 @@ function measureByDoor({ detections, aspectRatio }) {
    Only used when no door was found. Assumes a typical framing distance, so
    it is checked against the house type's expected coverage band and
    discarded when the photo is clearly framed too close or too far. */
-function measureByCoverage({ detections, houseType, calibrationFactor }) {
+function measureByCoverage({ detections, tuned }) {
   const wall = wallExtent(detections);
   if (!wall) return null;
 
   const coverage = (wall.w * wall.h) / 10000;   // share of the frame, 0–1
-  const prior = HOUSE_TYPE_PRIORS[houseType];
-  const [lo, hi] = prior.coverageBand;
+  const [lo, hi] = tuned.coverageBand;
   const framingOk = coverage >= lo && coverage <= hi;
 
   return {
     method: 'coverage',
     coverage,
     framingOk,
+    coverageBand: tuned.coverageBand,
     // Coverage is calibrated straight to whole-house wall area, so unlike the
     // door method it needs no frontToTotal step.
-    totalM2: coverage * calibrationFactor,
+    totalM2: coverage * tuned.calibrationFactor,
   };
 }
 
@@ -186,16 +205,18 @@ function measureByCoverage({ detections, houseType, calibrationFactor }) {
  * @param {object[]} detections   /api/detect output (server's own copy)
  * @param {number}   aspectRatio  image width / height, read from the image
  * @param {string}   houseType    'detached' | 'semi' | 'terrace'
- * @param {number}   calibrationFactor  coverage-method constant
+ * @param {object}   tuning       optional env overrides:
+ *                                { calibration: {semi: 303, …},
+ *                                  coverageCentre: {semi: 0.28, …},
+ *                                  coverageTolerance: 0.04 }
  * @returns {{m2:number, low:number, high:number, method:string,
  *            houseType:string, confidence:string, notes:string[]}}
  */
-function estimateWallArea({ detections, aspectRatio, houseType, calibrationFactor } = {}) {
+function estimateWallArea({ detections, aspectRatio, houseType, tuning } = {}) {
   const list = Array.isArray(detections) ? detections : [];
   const type = houseTypeKey(houseType);
   const prior = HOUSE_TYPE_PRIORS[type];
-  const factor = isFiniteNumber(calibrationFactor) && calibrationFactor > 0
-    ? calibrationFactor : DEFAULT_CALIBRATION_FACTOR;
+  const tuned = tuningFor(type, tuning);
 
   const notes = [];
   let m2 = null;
@@ -208,13 +229,13 @@ function estimateWallArea({ detections, aspectRatio, houseType, calibrationFacto
     notes.push(`Scaled from the front door (${byDoor.doorHeightPct.toFixed(1)}% of image height, assumed ${DOOR_HEIGHT_M} m).`);
     notes.push(`Front elevation ≈ ${Math.round(byDoor.frontElevationM2)} m² after subtracting windows and doors; ×${prior.frontToTotal} for a ${prior.label.toLowerCase()} property.`);
   } else {
-    const byCoverage = measureByCoverage({ detections: list, houseType: type, calibrationFactor: factor });
+    const byCoverage = measureByCoverage({ detections: list, tuned });
     if (byCoverage && byCoverage.framingOk) {
       m2 = byCoverage.totalM2;
       method = 'coverage';
       notes.push(`No front door detected, so this is based on the walls filling ${(byCoverage.coverage * 100).toFixed(1)}% of the photo.`);
     } else if (byCoverage) {
-      notes.push(`The walls fill ${(byCoverage.coverage * 100).toFixed(1)}% of the photo, outside the ${(prior.coverageBand[0] * 100).toFixed(0)}–${(prior.coverageBand[1] * 100).toFixed(0)}% expected for a ${prior.label.toLowerCase()} — the photo is probably framed too close or too far.`);
+      notes.push(`The walls fill ${(byCoverage.coverage * 100).toFixed(1)}% of the photo, outside the ${(tuned.coverageBand[0] * 100).toFixed(0)}–${(tuned.coverageBand[1] * 100).toFixed(0)}% expected for a ${prior.label.toLowerCase()} — the photo is probably framed too close or too far.`);
     } else {
       notes.push('No walls were detected in the photo.');
     }
@@ -310,9 +331,11 @@ function imageSize(buffer) {
 module.exports = {
   estimateWallArea,
   imageSize,
+  tuningFor,
   HOUSE_TYPE_PRIORS,
+  HOUSE_TYPE_KEYS: Object.keys(HOUSE_TYPE_PRIORS),
   DEFAULT_HOUSE_TYPE,
-  DEFAULT_CALIBRATION_FACTOR,
+  DEFAULT_COVERAGE_TOLERANCE,
   DOOR_HEIGHT_M,
   // exported for tests
   _internals: { measureByDoor, measureByCoverage, wallExtent, doorReference, box },
