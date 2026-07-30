@@ -108,7 +108,7 @@ function envLimit(name, fallback) {
 }
 
 const DAILY_LIMITS = {
-  detect: envLimit('DAILY_DETECT_LIMIT', 200),
+  detect: envLimit('DAILY_DETECT_LIMIT', 50),
   render: envLimit('DAILY_RENDER_LIMIT', 50),
 };
 

@@ -62,7 +62,7 @@ day across all callers.
 
 | Variable | Default | Endpoint |
 | --- | --- | --- |
-| `DAILY_DETECT_LIMIT` | 200 | `/api/detect` (Anthropic) |
+| `DAILY_DETECT_LIMIT` | 50 | `/api/detect` (Anthropic) |
 | `DAILY_RENDER_LIMIT` | 50 | `/api/render` (Replicate) |
 
 Once a cap is reached the endpoint returns `429 {"error":"Daily limit reached —
