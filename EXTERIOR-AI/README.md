@@ -53,6 +53,71 @@ Open http://localhost:3020 (or whatever `PORT` you set).
 - `robots.txt`, `sitemap.xml`, `assets/og-image.png` — SEO and social sharing.
 - `data/` — where leads/detections get stored as JSONL files (gitignored: personal data).
 
+## Measure my walls (optional)
+
+`POST /api/measure` estimates exterior wall area from a photo already analysed
+by `/api/detect`, so the quote can be sized to the actual house instead of
+`catalogue.json`'s default footprint. It is **optional and off the critical
+path** — detect → visualise → price works exactly as before if it's ignored.
+
+**No AI call.** It is geometry over the boxes `/api/detect` already returned,
+which is why it does not consume the daily cap. If a segmentation model is
+ever added here, it must go through `consumeDailyQuota` like detect and render.
+
+Two methods, in `measure.js`:
+
+1. **Door reference (primary).** A UK front door is ~1.98 m, so the door's
+   height in frame gives metres-per-pixel, which scales the wall bounding box.
+   Windows and doors are subtracted. Algebraically the image height cancels,
+   leaving `area = aspect × 1.98² × (wallW% × wallH%) / doorH%²` — so it is
+   independent of how far away the homeowner stood, which matters because
+   framing varies wildly.
+2. **Coverage (fallback, no door found).** Wall share of the frame ×
+   `WALL_CALIBRATION_FACTOR`, rejected if coverage falls outside the band
+   expected for the house type.
+
+Both are then clamped against house-type priors (detached 130, semi 85,
+terrace 50 m²) and fall back to the prior when out of band.
+
+### Which area sizes the quote
+
+1. A figure the homeowner typed — their house, their number, and the Terms
+   make the manual entry the override.
+2. A measurement **this server** produced, looked up by `detectionId`.
+3. The generic default footprint.
+
+The client never sends an area. `/api/detect` keeps its own copy of the
+detections keyed by an unguessable `detectionId` and the client passes only
+that id back, for the same reason `computePrice` never trusts a client price —
+otherwise a tampered request could invent a wall area and move the price. The
+image aspect ratio is read from the uploaded bytes for the same reason.
+Detection records are in-memory, 2-hour TTL, capped at 500; a restart just
+means re-uploading before measuring.
+
+`npm test` covers the geometry and the full detect → measure → quote chain
+with the Anthropic call stubbed (19 tests, offline, no API cost).
+
+### Accuracy caveats
+
+Read these before putting a number in front of a homeowner.
+
+- **Only one calibration figure is real.** The semi coverage band (25–31%)
+  came from the prototype. The detached and terrace bands, the three
+  `frontToTotal` multipliers and the 300 calibration factor are reasoned
+  defaults, not measured. They need validating against surveyed properties.
+- **One photo shows one elevation.** Whole-house area is the front elevation
+  × a per-type multiplier (terrace 1.7, semi 2.4, detached 3.2). A property
+  with an extension, an unusual footprint or a rear elevation unlike its front
+  will be wrong, and nothing in the photo can reveal that.
+- **It inherits every detection error.** A wall box that includes the
+  neighbour's house, or a garage read as cladding, feeds straight through.
+- **The door assumption fails on non-standard doors.** A tall Victorian or
+  arched door is not 1.98 m, and there's no way to tell from the image.
+- **Coverage is much weaker than the door method** — it assumes typical
+  framing distance. That's why it's a fallback and shown as "rough".
+- **Presentation is part of the accuracy.** It is a planning estimate, always
+  shown as a range with a survey caveat. Do not surface the midpoint alone.
+
 ## Lead notifications
 
 A saved lead is **always** written to `data/leads.jsonl` first, so an email

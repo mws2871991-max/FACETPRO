@@ -5,6 +5,7 @@ const rateLimit = require('express-rate-limit');
 const crypto = require('crypto');
 const fs = require('fs');
 const store = require('./store');
+const measure = require('./measure');
 
 const catalogue = JSON.parse(fs.readFileSync(path.join(__dirname, 'catalogue.json'), 'utf8'));
 
@@ -336,6 +337,58 @@ function requireInstallerPassword(req, res, next) {
   next();
 }
 
+/* ── DETECTION RECORDS ──
+   /api/measure works out a wall area from the boxes /api/detect returned, and
+   that area feeds the quote. If the client sent the boxes back, a tampered
+   request could invent a wall area and move the price — the same reason
+   computePrice never trusts a client-sent price.
+
+   So /api/detect keeps its own copy, keyed by an unguessable id, and the
+   client only ever passes the id back. The image aspect ratio is read from
+   the uploaded bytes for the same reason: it is a direct multiplier on the
+   computed area.
+
+   In memory and per process: a restart drops these, which costs the homeowner
+   a re-upload before they can measure, nothing more. Bounded so a flood of
+   uploads can't grow it without limit. */
+const DETECTION_TTL_MS = 2 * 60 * 60 * 1000;   // 2 hours
+const DETECTION_MAX = 500;
+const detectionRecords = new Map();
+
+function pruneDetectionRecords() {
+  const cutoff = Date.now() - DETECTION_TTL_MS;
+  for (const [id, rec] of detectionRecords) {
+    if (rec.at < cutoff) detectionRecords.delete(id);
+  }
+  // Map preserves insertion order, so the oldest are first.
+  while (detectionRecords.size > DETECTION_MAX) {
+    detectionRecords.delete(detectionRecords.keys().next().value);
+  }
+}
+
+function saveDetectionRecord(detections, size) {
+  pruneDetectionRecords();
+  const id = crypto.randomUUID();
+  detectionRecords.set(id, {
+    at: Date.now(),
+    detections,
+    aspectRatio: size && size.height > 0 ? size.width / size.height : null,
+    measurement: null,
+  });
+  return id;
+}
+
+const CALIBRATION_FACTOR = (() => {
+  const raw = process.env.WALL_CALIBRATION_FACTOR;
+  if (raw === undefined || raw.trim() === '') return measure.DEFAULT_CALIBRATION_FACTOR;
+  const n = Number.parseFloat(raw);
+  if (!Number.isFinite(n) || n <= 0) {
+    console.warn(`WALL_CALIBRATION_FACTOR="${raw}" is not a positive number — using ${measure.DEFAULT_CALIBRATION_FACTOR}.`);
+    return measure.DEFAULT_CALIBRATION_FACTOR;
+  }
+  return n;
+})();
+
 /* ── GET /api/catalogue ── */
 // Real cladding/trim/roof swatches + prices, loaded from catalogue.json.
 // `internalNote` and `source` are developer provenance notes (they name internal
@@ -395,12 +448,40 @@ function computePrice({ claddingId, trimId, roofId, footprintM2, trimLengthM }) 
   };
 }
 
+/* Which wall area sizes the quote, in priority order:
+
+     1. A figure the homeowner typed in. Their own house, their own number —
+        and the Terms say the manual entry is the override.
+     2. A measurement this server produced for their photo, looked up by
+        detectionId so the client can't send an area of its own.
+     3. The generic default footprint from catalogue.json.
+
+   Returns the source as well, so the lead records how the figure was arrived
+   at rather than presenting an estimate as if it were measured. */
+function resolveFootprint({ footprintM2, detectionId }) {
+  const manual = Number(footprintM2);
+  if (Number.isFinite(manual) && manual > 0) {
+    return { m2: manual, source: 'manual_entry', measurement: null };
+  }
+  const record = detectionId ? detectionRecords.get(String(detectionId)) : null;
+  if (record && record.measurement) {
+    return { m2: record.measurement.m2, source: `photo_${record.measurement.method}`, measurement: record.measurement };
+  }
+  return { m2: null, source: 'default_footprint', measurement: null };
+}
+
 /* ── POST /api/quote ── */
 // Recomputes a price live from catalogue data as the user changes swatches —
 // no AI call, instant. Real numbers (from catalogue.json), not a client guess.
 app.post('/api/quote', (req, res) => {
-  const { claddingId, trimId, roofId, footprintM2, trimLengthM } = req.body || {};
-  res.json(computePrice({ claddingId, trimId, roofId, footprintM2, trimLengthM }));
+  const { claddingId, trimId, roofId, footprintM2, trimLengthM, detectionId } = req.body || {};
+  const footprint = resolveFootprint({ footprintM2, detectionId });
+  const price = computePrice({ claddingId, trimId, roofId, footprintM2: footprint.m2, trimLengthM });
+  res.json({
+    ...price,
+    footprintSource: footprint.source,
+    measurement: footprint.measurement,
+  });
 });
 
 /* ── POST /api/detect ──
@@ -477,7 +558,55 @@ Finally add: {"type":"analysis","summary":"2-3 sentence overview of the property
   const elementCount = detections.filter(d => d.type !== 'analysis').length;
   await store.append('detections', { ts: new Date().toISOString(), sessionId: sessionId || null, elementCount, mimeType });
 
-  res.json({ detections });
+  // Aspect ratio comes from the image itself, never from the client.
+  let size = null;
+  try { size = measure.imageSize(Buffer.from(image, 'base64')); } catch (_) { /* unreadable header — measuring falls back */ }
+  const detectionId = saveDetectionRecord(detections, size);
+
+  // canMeasure tells the UI whether to offer the step at all, so we don't
+  // invite someone to measure a photo we already know we can't scale.
+  const hasDoor = detections.some(d => d.type === 'door-front');
+  const hasWall = detections.some(d => d.type === 'cladding');
+
+  res.json({ detections, detectionId, canMeasure: hasWall, scaleReference: hasDoor && !!size });
+});
+
+/* ── POST /api/measure ──
+   Optional. Estimates exterior wall area from a photo already analysed by
+   /api/detect, so the quote can be sized to the actual house instead of the
+   generic default footprint.
+
+   No AI call: this is geometry over the boxes /api/detect already returned,
+   which is why it is not routed through the daily cap. If a segmentation
+   model is ever added here, it must consume the cap like detect and render do.
+
+   Always a planning estimate — the response carries a range and a caveat, and
+   the UI must present it as such. */
+app.post('/api/measure', (req, res) => {
+  const { detectionId, houseType } = req.body || {};
+  if (!detectionId) return res.status(400).json({ error: 'detectionId required.' });
+
+  const record = detectionRecords.get(String(detectionId));
+  if (!record) {
+    return res.status(404).json({ error: 'That photo has expired — please upload it again to measure.' });
+  }
+  record.at = Date.now();   // still in use, keep it alive
+
+  const result = measure.estimateWallArea({
+    detections: record.detections,
+    aspectRatio: record.aspectRatio,
+    houseType,
+    calibrationFactor: CALIBRATION_FACTOR,
+  });
+
+  // Remembered against the record so /api/quote and /api/lead can use the
+  // figure without the client being able to send one of its own.
+  record.measurement = result;
+
+  res.json({
+    ...result,
+    caveat: 'A planning estimate from your photo, not a survey. An installer confirms exact measurements on site.',
+  });
 });
 
 /* ── POST /api/render ──
@@ -557,7 +686,7 @@ app.post('/api/render', renderLimiter, async (req, res) => {
    Real lead capture. Recomputes price server-side (never trusts client price),
    stores it, emails the owner via Resend if configured, fires a CRM webhook if configured. */
 app.post('/api/lead', leadLimiter, async (req, res) => {
-  const { name, email, phone, postcode, claddingId, trimId, roofId, footprintM2, trimLengthM, measurementSource, detections, renderUrl, notes, consent } = req.body || {};
+  const { name, email, phone, postcode, claddingId, trimId, roofId, footprintM2, trimLengthM, measurementSource, detections, renderUrl, notes, consent, detectionId } = req.body || {};
   if (!name || !email) return res.status(400).json({ error: 'name and email are required.' });
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Invalid email address.' });
   // UK GDPR: consent to pass details to installers must be freely given and
@@ -566,7 +695,8 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
     return res.status(400).json({ error: 'Please tick the box to agree before saving your design.' });
   }
 
-  const price = computePrice({ claddingId, trimId, roofId, footprintM2, trimLengthM });
+  const footprint = resolveFootprint({ footprintM2, detectionId });
+  const price = computePrice({ claddingId, trimId, roofId, footprintM2: footprint.m2, trimLengthM });
 
   const lead = {
     ts: new Date().toISOString(),
@@ -575,7 +705,11 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
     selections: price.selections,
     price: price.total,
     priceBreakdown: price,
-    measurementSource: measurementSource || 'default_footprint',
+    // Server's own view of where the area came from — the client-sent
+    // measurementSource is kept only as a record of what the UI believed.
+    measurementSource: footprint.source,
+    clientMeasurementSource: measurementSource || null,
+    wallMeasurement: footprint.measurement,
     detectionCount: Array.isArray(detections) ? detections.length : 0,
     renderUrl: renderUrl || null,
     notes: (notes || '').slice(0, 2000),

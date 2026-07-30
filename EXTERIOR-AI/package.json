@@ -4,7 +4,8 @@
   "description": "Facet Pro — UK home exterior visualiser: upload a home photo, detect exterior elements, preview cladding/roof materials, generate a photorealistic render, get a costed estimate, capture the lead.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test --test-force-exit \"test/*.test.js\""
   },
   "license": "ISC",
   "dependencies": {
