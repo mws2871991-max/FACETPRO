@@ -53,6 +53,98 @@ Open http://localhost:3020 (or whatever `PORT` you set).
 - `robots.txt`, `sitemap.xml`, `assets/og-image.png` — SEO and social sharing.
 - `data/` — where leads/detections get stored as JSONL files (gitignored: personal data).
 
+## Measure my walls (optional)
+
+`POST /api/measure` estimates exterior wall area from a photo already analysed
+by `/api/detect`, so the quote can be sized to the actual house instead of
+`catalogue.json`'s default footprint. It is **optional and off the critical
+path** — detect → visualise → price works exactly as before if it's ignored.
+
+**No AI call.** It is geometry over the boxes `/api/detect` already returned,
+which is why it does not consume the daily cap. If a segmentation model is
+ever added here, it must go through `consumeDailyQuota` like detect and render.
+
+Two methods, in `measure.js`:
+
+1. **Door reference (primary).** A UK front door is ~1.98 m, so the door's
+   height in frame gives metres-per-pixel, which scales the wall bounding box.
+   Windows and doors are subtracted. Algebraically the image height cancels,
+   leaving `area = aspect × 1.98² × (wallW% × wallH%) / doorH%²` — so it is
+   independent of how far away the homeowner stood, which matters because
+   framing varies wildly.
+2. **Coverage (fallback, no door found).** Wall share of the frame × that
+   house type's calibration factor, rejected if coverage falls outside the
+   band expected for the type.
+
+Both are then clamped against house-type priors (detached 130, semi 85,
+terrace 50 m²) and fall back to the prior when out of band.
+
+### Calibration, per house type
+
+From the prototype survey table, and env-overridable so you can fold in your
+own surveyed properties without a code change:
+
+| House type | `WALL_CALIBRATION_*` | `WALL_COVERAGE_*` | Implied m² (centre × factor) |
+| --- | --- | --- | --- |
+| Terraced | `TERRACE` 277 | `TERRACE` 0.18 | ≈ 50 |
+| Semi-detached | `SEMI` 303 | `SEMI` 0.28 | ≈ 85 |
+| Detached | `DETACHED` 342 | `DETACHED` 0.38 | ≈ 130 |
+
+`WALL_COVERAGE_TOLERANCE` (default `0.04`) sets how far either side of the
+centre still counts as well framed — a semi is accepted between 24% and 32%
+coverage. Anything invalid is ignored with a warning, and the effective
+figures are printed at startup with `*` marking env overrides:
+
+```
+Wall measurement (factor/coverage) — detached 342/0.38, semi 303/0.28, terrace 277/0.18
+```
+
+The table is internally consistent: each type's mid-band coverage times its
+factor lands on that type's prior, which a test asserts.
+
+### Which area sizes the quote
+
+1. A figure the homeowner typed — their house, their number, and the Terms
+   make the manual entry the override.
+2. A measurement **this server** produced, looked up by `detectionId`.
+3. The generic default footprint.
+
+The client never sends an area. `/api/detect` keeps its own copy of the
+detections keyed by an unguessable `detectionId` and the client passes only
+that id back, for the same reason `computePrice` never trusts a client price —
+otherwise a tampered request could invent a wall area and move the price. The
+image aspect ratio is read from the uploaded bytes for the same reason.
+Detection records are in-memory, 2-hour TTL, capped at 500; a restart just
+means re-uploading before measuring.
+
+`npm test` covers the geometry and the full detect → measure → quote chain
+with the Anthropic call stubbed (19 tests, offline, no API cost).
+
+### Accuracy caveats
+
+Read these before putting a number in front of a homeowner.
+
+- **⚠ The front-to-total multipliers are still unvalidated guesses.** Terrace
+  1.7, semi 2.4 and detached 3.2 were back-derived from the priors, not
+  measured against anything. **They are not from the survey table**, unlike
+  the calibration factors and coverage centres. Every door-method result is
+  multiplied by one of them, which makes them the largest remaining source of
+  systematic error in the feature — a 20% error here is a 20% error in the
+  quote. They need calibrating against surveyed properties with known wall
+  areas before this figure is trusted commercially.
+- **One photo shows one elevation.** Whole-house area is the front elevation
+  × that multiplier. A property with an extension, an unusual footprint or a
+  rear elevation unlike its front will be wrong, and nothing in the photo can
+  reveal that.
+- **It inherits every detection error.** A wall box that includes the
+  neighbour's house, or a garage read as cladding, feeds straight through.
+- **The door assumption fails on non-standard doors.** A tall Victorian or
+  arched door is not 1.98 m, and there's no way to tell from the image.
+- **Coverage is much weaker than the door method** — it assumes typical
+  framing distance. That's why it's a fallback and shown as "rough".
+- **Presentation is part of the accuracy.** It is a planning estimate, always
+  shown as a range with a survey caveat. Do not surface the midpoint alone.
+
 ## Lead notifications
 
 A saved lead is **always** written to `data/leads.jsonl` first, so an email

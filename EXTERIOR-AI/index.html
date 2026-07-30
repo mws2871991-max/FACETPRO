@@ -336,6 +336,13 @@ const state = {
   leadsLoaded: false,
   contact: { name: "", email: "", postcode: "", phone: "" },
   consentGiven: false,
+  detectionId: null,      // server's handle on our detections — measuring needs it
+  canMeasure: false,      // walls were found, so measuring is worth offering
+  scaleReference: false,  // a door was found too, so the good method is available
+  houseType: 'semi',
+  measurement: null,      // { m2, low, high, method, confidence, notes, caveat }
+  measuring: false,
+  useMeasurement: false,  // whether the measured area is currently sizing the quote
   installerPassword: sessionStorage.getItem('fp_installer_pw') || '',
   installerAuthed: false,
   installerError: '',
@@ -430,6 +437,9 @@ async function refreshPrice() {
         roofId: state.roof.id,
         footprintM2: state.footprint?.area || null,
         trimLengthM: state.trimLengthM || null,
+        // Only sent once they've chosen to use it — the server looks the
+        // measurement up itself, we never send an area.
+        detectionId: state.useMeasurement ? state.detectionId : null,
       })
     });
     state.price = await res.json();
@@ -500,10 +510,18 @@ function buildUploadDetect() {
   if (state.uploadedImg) {
     dropArea.appendChild(h('img', { src: state.uploadedImg, alt: 'The photo of your home you uploaded', className: 'w-full h-full object-cover' }));
   } else {
-    dropArea.appendChild(h('div', { className: 'text-center p-8' }, [
+    // Framing guide. How the photo is framed is the single biggest factor in
+    // whether we can estimate wall area from it, so ask for it up front
+    // rather than explaining afterwards why the number looks wrong.
+    dropArea.appendChild(h('div', { className: 'absolute inset-[8%] border-2 border-dashed border-zinc-300 rounded-lg pointer-events-none' }, [
+      h('span', { className: 'absolute -top-2.5 left-3 px-1.5 bg-white text-[9px] tracking-widest uppercase text-zinc-400' }, 'Fit the whole house in here'),
+    ]));
+    dropArea.appendChild(h('div', { className: 'text-center p-8 relative' }, [
       h('div', { className: 'w-12 h-12 mx-auto rounded-full bg-zinc-900 text-white grid place-items-center' }, '↑'),
       h('div', { className: 'mt-3 text-sm font-medium' }, 'Drop a photo of the front of your house'),
       h('div', { className: 'mt-1 text-xs text-zinc-500' }, 'JPG or PNG — one picture from the pavement is enough'),
+      h('div', { className: 'mt-3 text-[11px] leading-5 text-zinc-500 max-w-[34ch] mx-auto' },
+        'Stand back far enough to get the whole front in, with the front door visible. That lets us estimate your wall area too.'),
     ]));
   }
 
@@ -753,13 +771,27 @@ function renderVisualizerOnly() {
 }
 
 function buildRefineEstimate() {
-  const summary = state.footprint || state.trimLengthM
-    ? h('div', { className: 'grid gap-1' }, [
-        state.postcode ? h('div', {}, [h('span', { className: 'text-zinc-500' }, 'Postcode: '), state.postcode.toUpperCase()]) : null,
-        state.footprint ? h('div', {}, [h('span', { className: 'text-zinc-500' }, 'Wall area: '), `${state.footprint.area} m²`]) : null,
-        state.trimLengthM ? h('div', {}, [h('span', { className: 'text-zinc-500' }, 'Roofline run: '), `${state.trimLengthM} m`]) : null,
-      ])
-    : h('span', { className: 'text-zinc-500' }, 'Right now we’re using a typical UK home footprint. Add your own numbers and we’ll size the estimate around your house instead.');
+  // Say plainly which figure is actually sizing the quote right now — the
+  // server decides that, so read it back rather than guessing from the inputs.
+  const sourceLabel = {
+    manual_entry: 'the figure you typed in',
+    photo_door: 'measured from your photo',
+    photo_coverage: 'roughly measured from your photo',
+    photo_prior: 'a typical figure for your house type',
+    default_footprint: 'a typical UK home',
+  }[state.price?.footprintSource] || 'a typical UK home';
+
+  const summary = h('div', { className: 'grid gap-1' }, [
+    h('div', {}, [
+      h('span', { className: 'text-zinc-500' }, 'Sizing your estimate: '),
+      `${state.price?.footprintM2 ?? '—'} m² — ${sourceLabel}`,
+    ]),
+    state.postcode ? h('div', {}, [h('span', { className: 'text-zinc-500' }, 'Postcode: '), state.postcode.toUpperCase()]) : null,
+    state.trimLengthM ? h('div', {}, [h('span', { className: 'text-zinc-500' }, 'Roofline run: '), `${state.trimLengthM} m`]) : null,
+    state.footprint && state.useMeasurement
+      ? h('div', { className: 'text-zinc-500' }, 'Your typed figure overrides the measurement.')
+      : null,
+  ]);
 
   const postcodeInput = h('input', {
     value: state.postcode, placeholder: 'Your postcode', 'aria-label': 'Your postcode',
@@ -788,8 +820,11 @@ function buildRefineEstimate() {
   });
 
   return h('section', { id: 'refine-section', className: 'rounded-2xl bg-white border border-zinc-200 p-6 md:p-8' }, [
-    h('h2', { className: 'serif text-[22px] md:text-[26px] tracking-tight' }, 'Know your measurements? Make this sharper.'),
-    h('p', { className: 'mt-2 text-sm text-zinc-600 max-w-[62ch]' }, 'Completely optional — your estimate already works without it. If you have your wall area or the length of your guttering run to hand, pop them in.'),
+    h('h2', { className: 'serif text-[22px] md:text-[26px] tracking-tight' }, 'Make your estimate sharper'),
+    h('p', { className: 'mt-2 text-sm text-zinc-600 max-w-[62ch]' }, 'All optional — your estimate already works without any of this. Measure your walls from the photo, or type in figures you already know.'),
+    buildMeasureBlock(),
+    h('h3', { className: 'mt-8 text-[13px] font-medium' }, 'Know your own measurements?'),
+    h('p', { className: 'mt-1 text-[13px] text-zinc-600 max-w-[62ch]' }, 'Anything you enter here takes priority over everything else.'),
     h('div', { className: 'mt-5 flex flex-wrap gap-2' }, [
       postcodeInput, areaInput, trimLengthInput,
       h('button', {
@@ -800,6 +835,119 @@ function buildRefineEstimate() {
     ]),
     h('div', { className: 'mt-4 rounded-xl bg-[#FDFCF9] border border-zinc-200 p-3 text-xs leading-5' }, summary),
   ]);
+}
+
+/* The optional "measure my walls" step.
+
+   Deliberately never on the critical path: it appears only once a photo has
+   been analysed, and the detect -> visualise -> price flow works untouched if
+   the homeowner ignores it. A range is shown rather than a single number,
+   because a single number invites people to treat it as surveyed. */
+function buildMeasureBlock() {
+  if (!state.canMeasure) {
+    return h('div', { className: 'mt-6 rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5' }, [
+      h('h3', { className: 'text-[13px] font-medium' }, 'Measure my walls'),
+      h('p', { className: 'mt-1 text-[13px] leading-6 text-zinc-600 max-w-[62ch]' }, state.detections.length
+        ? 'We couldn’t pick out the walls in that photo, so we can’t size them from it. A shot of the whole front of the house, taken from the pavement, usually works.'
+        : 'Add a photo of your home above and we can estimate your wall area from it.'),
+    ]);
+  }
+
+  const houseTypes = [
+    { id: 'detached', label: 'Detached' },
+    { id: 'semi',     label: 'Semi-detached' },
+    { id: 'terrace',  label: 'Terraced' },
+  ];
+
+  const typeButtons = h('div', { className: 'mt-2 flex flex-wrap gap-2' }, houseTypes.map(t =>
+    h('button', {
+      type: 'button',
+      'aria-pressed': state.houseType === t.id ? 'true' : 'false',
+      className: `px-3 py-2 rounded-full border text-xs transition ${state.houseType === t.id ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-900'}`,
+      onClick: () => {
+        state.houseType = t.id;
+        state.measurement = null;      // the prior and multiplier both change
+        state.useMeasurement = false;
+        renderRefineOnly();
+      },
+    }, t.label)
+  ));
+
+  const m = state.measurement;
+  const result = m ? h('div', { className: 'mt-4 rounded-xl bg-zinc-900 text-white p-4' }, [
+    h('div', { className: 'flex items-baseline justify-between gap-3 flex-wrap' }, [
+      h('div', {}, [
+        h('div', { className: 'text-[11px] tracking-widest uppercase text-white/50' }, 'Estimated wall area'),
+        h('div', { className: 'mt-1 serif text-[28px] leading-none' }, `≈ ${m.low}–${m.high} m²`),
+      ]),
+      h('span', { className: 'text-[10px] px-2 py-1 rounded-full bg-white/10 border border-white/15' },
+        m.method === 'door' ? 'Scaled from your front door' : m.method === 'coverage' ? 'Rough — no door found' : 'Typical for this house type'),
+    ]),
+    h('p', { className: 'mt-3 text-[11px] leading-5 text-white/60' }, m.caveat),
+    m.notes?.length ? h('details', { className: 'mt-3' }, [
+      h('summary', { className: 'text-[11px] text-white/50 cursor-pointer' }, 'How we worked this out'),
+      h('ul', { className: 'mt-2 grid gap-1' }, m.notes.map(n => h('li', { className: 'text-[11px] leading-5 text-white/60' }, `• ${n}`))),
+    ]) : null,
+    h('div', { className: 'mt-4 flex flex-wrap gap-2' }, [
+      h('button', {
+        type: 'button',
+        className: `px-4 py-2 rounded-full text-xs font-medium ${state.useMeasurement ? 'bg-emerald-500 text-white' : 'bg-white text-zinc-900'}`,
+        onClick: async () => {
+          state.useMeasurement = !state.useMeasurement;
+          if (state.useMeasurement) state.footprint = null;   // measurement takes over unless they type one
+          await refreshPrice();
+          renderRefineOnly();
+          renderVisualizerOnly();
+          U(state.useMeasurement ? 'Estimate now sized to your home' : 'Back to a typical home size');
+        },
+      }, state.useMeasurement ? '✓ Using this in your estimate' : 'Use this in my estimate'),
+    ]),
+  ]) : null;
+
+  return h('div', { className: 'mt-6 rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5' }, [
+    h('div', { className: 'flex items-center justify-between gap-3 flex-wrap' }, [
+      h('h3', { className: 'text-[13px] font-medium' }, 'Measure my walls from the photo'),
+      h('span', { className: 'text-[10px] tracking-widest uppercase text-zinc-400' }, 'Optional'),
+    ]),
+    h('p', { className: 'mt-1 text-[13px] leading-6 text-zinc-600 max-w-[62ch]' },
+      state.scaleReference
+        ? 'We can use your front door as a ruler to estimate how much wall there is to cover.'
+        : 'We couldn’t find a front door to measure against, so this will be a rougher figure based on how much of the photo your walls fill.'),
+    h('div', { className: 'mt-4' }, [
+      h('div', { className: 'text-[10px] tracking-widest uppercase text-zinc-500' }, 'What kind of house is it?'),
+      typeButtons,
+    ]),
+    h('button', {
+      type: 'button',
+      disabled: state.measuring,
+      className: `mt-4 px-5 py-2.5 rounded-full text-xs font-medium ${state.measuring ? 'bg-zinc-200 text-zinc-400' : 'bg-zinc-900 text-white'}`,
+      onClick: runMeasurement,
+    }, state.measuring ? 'Measuring…' : (m ? 'Measure again' : 'Estimate my wall area')),
+    result,
+  ]);
+}
+
+async function runMeasurement() {
+  if (!state.detectionId) { U('Add a photo first so we have something to measure'); return; }
+  state.measuring = true;
+  renderRefineOnly();
+  try {
+    const res = await fetch('/api/measure', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ detectionId: state.detectionId, houseType: state.houseType }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not measure that photo');
+    state.measurement = data;
+    U(`Your walls look like about ${data.low}–${data.high} m²`);
+  } catch (err) {
+    state.measurement = null;
+    U(err.message);
+  } finally {
+    state.measuring = false;
+    renderRefineOnly();
+  }
 }
 
 function renderRefineOnly() {
@@ -970,6 +1118,11 @@ async function handleUpload(file) {
     if (!res.ok) throw new Error(data.error || 'Detection failed');
 
     state.detections = data.detections || [];
+    state.detectionId = data.detectionId || null;
+    state.canMeasure = !!data.canMeasure;
+    state.scaleReference = !!data.scaleReference;
+    state.measurement = null;
+    state.useMeasurement = false;
     state.stage = 'visualizer';
     state.detectionStatus = 'success';
     const found = state.detections.filter(d => d.type !== 'analysis').length;
@@ -1015,6 +1168,7 @@ async function sendDesignPack() {
         footprintM2: state.footprint?.area || null,
         trimLengthM: state.trimLengthM || null,
         measurementSource: state.measurementSource,
+        detectionId: state.useMeasurement ? state.detectionId : null,
         detections: state.detections,
         renderUrl: state.renderUrl,
         consent: { given: true, wording: CONSENT_WORDING, version: CONSENT_VERSION },
