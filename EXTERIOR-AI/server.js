@@ -167,6 +167,129 @@ function consumeDailyQuota(kind, res) {
 
 const DAILY_LIMIT_ERROR = { error: 'Daily limit reached — try again tomorrow.' };
 
+/* ── LEAD NOTIFICATION ──
+   Three things were wrong here and each one silently lost leads:
+
+   1. The sender was hard-coded to onboarding@resend.dev, Resend's test
+      address, which only ever delivers to the Resend account owner.
+   2. The recipient fell back to `email` — the homeowner's own address — when
+      LEAD_NOTIFY_EMAIL wasn't set, so the internal "New lead" email, quote
+      total and all, went to the customer instead of to you.
+   3. The Resend SDK resolves with { data: null, error } on an API failure
+      rather than throwing, so the try/catch around it caught nothing and a
+      rejected send looked exactly like a successful one.
+
+   The lead is always stored first, so a notification failure can never lose
+   it, and failures are now recorded durably as well as logged. */
+const RESEND_TEST_SENDER = 'onboarding@resend.dev';
+const LEAD_FROM_EMAIL = process.env.LEAD_FROM_EMAIL || `Facet Pro <${RESEND_TEST_SENDER}>`;
+const LEAD_NOTIFY_EMAIL = process.env.LEAD_NOTIFY_EMAIL || '';
+
+function checkEmailConfig() {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('RESEND_API_KEY not set — leads will be stored but nobody will be emailed.');
+    return;
+  }
+  if (!LEAD_NOTIFY_EMAIL) {
+    console.error('RESEND_API_KEY is set but LEAD_NOTIFY_EMAIL is not — lead emails will be SKIPPED. ' +
+                  'Set LEAD_NOTIFY_EMAIL to the address that should receive new leads.');
+  }
+  if (LEAD_FROM_EMAIL.includes(RESEND_TEST_SENDER)) {
+    console.warn(`LEAD_FROM_EMAIL uses Resend's test sender (${RESEND_TEST_SENDER}), which only ` +
+                 'delivers to your own Resend account address. Verify a domain at ' +
+                 'https://resend.com/domains and set LEAD_FROM_EMAIL to an address on it.');
+  }
+}
+
+const escapeHtml = (v) => String(v ?? '')
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+function leadEmailHtml(lead, price) {
+  const row = (label, value) =>
+    `<tr><td style="padding:8px 0;color:#6B6E78;width:120px">${label}</td><td style="padding:8px 0">${value}</td></tr>`;
+  const email = escapeHtml(lead.email);
+  return `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;color:#0F1012">
+    <h2 style="font-size:20px;margin-bottom:16px">New lead from Facet Pro</h2>
+    <table style="width:100%;border-collapse:collapse;font-size:14px">
+      ${row('Reference', escapeHtml(lead.id))}
+      ${row('Name', `<strong>${escapeHtml(lead.name)}</strong>`)}
+      ${row('Email', `<a href="mailto:${encodeURIComponent(lead.email)}">${email}</a>`)}
+      ${row('Phone', escapeHtml(lead.phone) || '—')}
+      ${row('Postcode', escapeHtml(lead.postcode) || '—')}
+      ${row('Selections', escapeHtml(`${price.selections.cladding} / ${price.selections.trim} / ${price.selections.roof}`))}
+      ${row('Quote total', `<strong>£${price.total.toLocaleString()}</strong>`)}
+    </table>
+  </div>`;
+}
+
+/* A lead that couldn't be delivered goes to its own file, so there's a durable
+   list to work through rather than a console line nobody reads. Written with fs
+   directly rather than through store.js: that module only knows a fixed set of
+   table names, and routing this through it would also mean the failure log
+   disappearing exactly when the database is the thing that's broken. */
+const NOTIFICATION_FAILURES_FILE = path.join(__dirname, 'data', 'notification-failures.jsonl');
+
+function recordNotificationFailure(lead, notification) {
+  try {
+    fs.mkdirSync(path.dirname(NOTIFICATION_FAILURES_FILE), { recursive: true });
+    fs.appendFileSync(NOTIFICATION_FAILURES_FILE, JSON.stringify({
+      ts: new Date().toISOString(),
+      leadId: lead.id,
+      name: lead.name,
+      email: lead.email,
+      phone: lead.phone,
+      postcode: lead.postcode,
+      price: lead.price,
+      reason: notification.reason,
+    }) + '\n');
+    console.error(`Lead ${lead.id} recorded in data/notification-failures.jsonl — follow it up manually.`);
+  } catch (err) {
+    console.error(`Could not record the failed notification for lead ${lead.id}:`, err.message);
+  }
+}
+
+// Returns a small status object that gets attached to the stored lead, so a
+// failed notification is visible rather than lost to a console line.
+async function notifyNewLead(lead, price) {
+  const resendKey = process.env.RESEND_API_KEY;
+  if (!resendKey) return { attempted: false, sent: false, reason: 'RESEND_API_KEY not set' };
+  if (!LEAD_NOTIFY_EMAIL) {
+    console.error(`Lead ${lead.id} stored but NOT emailed: LEAD_NOTIFY_EMAIL is not set.`);
+    return { attempted: false, sent: false, reason: 'LEAD_NOTIFY_EMAIL not set' };
+  }
+
+  try {
+    const { Resend } = require('resend');
+    const resend = new Resend(resendKey);
+
+    // The SDK has no timeout of its own; without this a hung request would
+    // hold the homeowner's "Save my design" spinner open indefinitely.
+    const result = await Promise.race([
+      resend.emails.send({
+        from: LEAD_FROM_EMAIL,
+        to: LEAD_NOTIFY_EMAIL,
+        replyTo: lead.email,
+        subject: `New lead: ${lead.name} — ${lead.postcode || 'no postcode'}`,
+        html: leadEmailHtml(lead, price),
+      }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timed out after 15s')), 15000)),
+    ]);
+
+    // Resend reports API errors in the resolved value, not by throwing.
+    if (result && result.error) {
+      const msg = result.error.message || JSON.stringify(result.error);
+      console.error(`Lead ${lead.id} email FAILED: ${msg}`);
+      return { attempted: true, sent: false, reason: msg };
+    }
+    console.log(`Lead ${lead.id} emailed to ${LEAD_NOTIFY_EMAIL}.`);
+    return { attempted: true, sent: true, id: result?.data?.id || null };
+  } catch (err) {
+    console.error(`Lead ${lead.id} email FAILED: ${err.message}`);
+    return { attempted: true, sent: false, reason: err.message };
+  }
+}
+
 // Slows password guessing against the installer endpoint.
 const installerLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, max: 20,
@@ -464,31 +587,13 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
     },
     status: 'New lead'
   };
+  // Stored first, unconditionally — a notification problem must never cost a lead.
   await store.append('leads', lead);
 
-  const resendKey = process.env.RESEND_API_KEY;
-  if (resendKey) {
-    try {
-      const { Resend } = require('resend');
-      const resend = new Resend(resendKey);
-      await resend.emails.send({
-        from: 'Facet Pro <onboarding@resend.dev>',
-        to: process.env.LEAD_NOTIFY_EMAIL || email,
-        subject: `New lead: ${name} — ${postcode || 'no postcode'}`,
-        html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;color:#0F1012">
-          <h2 style="font-size:20px;margin-bottom:16px">New lead from Facet Pro</h2>
-          <table style="width:100%;border-collapse:collapse;font-size:14px">
-            <tr><td style="padding:8px 0;color:#6B6E78;width:120px">Name</td><td style="padding:8px 0;font-weight:600">${name}</td></tr>
-            <tr><td style="padding:8px 0;color:#6B6E78">Email</td><td style="padding:8px 0"><a href="mailto:${email}">${email}</a></td></tr>
-            <tr><td style="padding:8px 0;color:#6B6E78">Phone</td><td style="padding:8px 0">${phone || '—'}</td></tr>
-            <tr><td style="padding:8px 0;color:#6B6E78">Postcode</td><td style="padding:8px 0">${postcode || '—'}</td></tr>
-            <tr><td style="padding:8px 0;color:#6B6E78">Selections</td><td style="padding:8px 0">${price.selections.cladding} / ${price.selections.trim} / ${price.selections.roof}</td></tr>
-            <tr><td style="padding:8px 0;color:#6B6E78">Quote total</td><td style="padding:8px 0;font-weight:600">£${price.total.toLocaleString()}</td></tr>
-          </table>
-        </div>`
-      });
-    } catch (e) { console.error('Lead email error:', e.message); }
-  }
+  const notification = await notifyNewLead(lead, price);
+  lead.notification = notification;
+
+  if (notification.attempted && !notification.sent) recordNotificationFailure(lead, notification);
 
   const crmWebhook = process.env.CRM_WEBHOOK_URL;
   if (crmWebhook) {
@@ -522,4 +627,5 @@ app.listen(PORT, () => {
   console.log(`Facet Pro server running on http://localhost:${PORT}`);
   console.log(`Daily caps — detect: ${DAILY_LIMITS.detect}, render: ${DAILY_LIMITS.render} ` +
               `(used today: ${usage.detect}/${usage.render}, UTC day ${usage.day})`);
+  checkEmailConfig();
 });

@@ -53,6 +53,37 @@ Open http://localhost:3020 (or whatever `PORT` you set).
 - `robots.txt`, `sitemap.xml`, `assets/og-image.png` — SEO and social sharing.
 - `data/` — where leads/detections get stored as JSONL files (gitignored: personal data).
 
+## Lead notifications
+
+A saved lead is **always** written to `data/leads.jsonl` first, so an email
+problem can never lose one. The email is then attempted and its outcome stored
+on the lead as `notification: { attempted, sent, reason }`.
+
+| Variable | Required for email | Notes |
+| --- | --- | --- |
+| `RESEND_API_KEY` | yes | Without it, leads are stored and nothing is sent. |
+| `LEAD_NOTIFY_EMAIL` | yes | Where new-lead emails go. **No fallback** — if unset the email is skipped and logged. |
+| `LEAD_FROM_EMAIL` | no | Defaults to Resend's test sender, which only delivers to your own Resend account address. Verify a domain at resend.com/domains and set this to an address on it. |
+
+`checkEmailConfig()` prints a warning at startup for each of these that would
+stop delivery, so a misconfiguration is visible before the first lead arrives
+rather than after.
+
+If a send fails, the lead is appended to `data/notification-failures.jsonl`
+with the reason, giving you a durable list to work through. That file is
+written with `fs` directly rather than through `store.js`, so it still works
+when the database is the thing that's broken.
+
+Three bugs this replaced, each of which silently lost leads:
+
+- The recipient fell back to the **homeowner's own address** when
+  `LEAD_NOTIFY_EMAIL` was unset, so the internal "New lead" email — quote total
+  included — went to the customer instead of to you.
+- The Resend SDK resolves with `{ data: null, error }` on an API failure rather
+  than throwing, so the `try/catch` around the send caught nothing and a
+  rejected send was indistinguishable from a delivered one.
+- Lead fields were interpolated into the email HTML unescaped.
+
 ## Spend caps on the paid endpoints
 
 `/api/detect` and `/api/render` call Anthropic and Replicate, so they cost money
