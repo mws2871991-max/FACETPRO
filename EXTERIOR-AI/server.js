@@ -10,6 +10,27 @@ const emails = require('./emails');
 
 const catalogue = JSON.parse(fs.readFileSync(path.join(__dirname, 'catalogue.json'), 'utf8'));
 
+/* These are real supplier and labour rates, not placeholders, which makes
+   staleness the risk rather than obvious wrongness: quoting this year's jobs
+   on last year's material prices looks entirely plausible and is silently
+   wrong. Warn once at startup rather than let it drift unnoticed. */
+const CATALOGUE_STALE_AFTER_DAYS = 180;
+
+function checkCatalogueAge(now = new Date()) {
+  const updated = Date.parse(catalogue.updated);
+  if (!Number.isFinite(updated)) {
+    console.warn(`catalogue.json has no usable "updated" date ("${catalogue.updated}") — can't tell how current these prices are.`);
+    return;
+  }
+  const days = Math.floor((now.getTime() - updated) / 86400000);
+  if (days > CATALOGUE_STALE_AFTER_DAYS) {
+    console.warn(`Catalogue prices were last updated ${catalogue.updated} (${days} days ago). ` +
+                 'These are real rates and they move — review catalogue.json and bump "updated".');
+  } else {
+    console.log(`Catalogue v${catalogue.version}, prices updated ${catalogue.updated} (${days} days ago).`);
+  }
+}
+
 const app = express();
 app.set('trust proxy', 1);
 
@@ -834,6 +855,7 @@ app.listen(PORT, () => {
   console.log(`Facet Pro server running on http://localhost:${PORT}`);
   console.log(`Daily caps — detect: ${DAILY_LIMITS.detect}, render: ${DAILY_LIMITS.render} ` +
               `(used today: ${usage.detect}/${usage.render}, UTC day ${usage.day})`);
+  checkCatalogueAge();
   logMeasureTuning();
   checkEmailConfig();
 });

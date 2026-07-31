@@ -10,10 +10,10 @@ Independent of any other project on this machine (`homeai`, `delivery`,
 
 ## What's real right now
 
-- **Catalogue pricing** — real, server-computed prices from `catalogue.json`. Prices
-  are currently **estimated placeholders** (no public cladding/roofing price list
-  exists on facetpro.co.uk to pull real numbers from) — edit `catalogue.json` directly
-  whenever you have real supplier/installer pricing.
+- **Catalogue pricing** — real. Server-computed from `catalogue.json`, using real UK
+  material and labour rates and the same quote methodology as the production
+  facetpro.co.uk backend: materials + labour per m², plus fixed scaffolding, a waste
+  allowance and VAT. Not placeholders. See "Keeping prices current" below.
 - **Lead capture** — real. Submissions are saved to `data/leads.jsonl`, with the price
   always recomputed server-side (a tampered client request can't fake a quote).
 - **AI detection** (Claude vision) and **AI render** (Replicate FLUX Kontext Pro) —
@@ -230,6 +230,29 @@ Read these before putting a number in front of a homeowner.
   framing distance. That's why it's a fallback and shown as "rough".
 - **Presentation is part of the accuracy.** It is a planning estimate, always
   shown as a range with a survey caveat. Do not surface the midpoint alone.
+
+## Keeping prices current
+
+`catalogue.json` holds real UK material and labour rates, not placeholders, so
+the failure mode is staleness rather than obvious wrongness — quoting this
+year's jobs on last year's prices looks entirely plausible and is silently
+wrong. The server prints the catalogue version and age at startup, and warns
+once the rates are more than 180 days old:
+
+```
+Catalogue v2, prices updated 2026-07-22 (9 days ago).
+Catalogue prices were last updated 2025-01-10 (568 days ago). These are real
+rates and they move — review catalogue.json and bump "updated".
+```
+
+When you revise pricing: edit the rates, then bump both `version` and
+`updated` so the age check stays meaningful.
+
+Note that "real rates" and "planning estimate" are not in conflict, and the
+site says both. The rates are real; the *total* is still an estimate because
+it can't know the condition of the walls and roof, access, or what a survey
+will turn up. Nothing in the customer-facing copy needs to change now these
+are confirmed real — it never claimed they were provisional.
 
 ## Emails
 
