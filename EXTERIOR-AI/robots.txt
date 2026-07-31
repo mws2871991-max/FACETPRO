@@ -4,5 +4,6 @@ Allow: /
 # API endpoints have nothing to index, and /api/leads holds homeowner details.
 Disallow: /api/
 Disallow: /data/
+Disallow: /healthz
 
 Sitemap: https://facetpro.co.uk/sitemap.xml

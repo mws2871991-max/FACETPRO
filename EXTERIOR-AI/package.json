@@ -15,5 +15,8 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.5.2",
     "resend": "^6.16.0"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
