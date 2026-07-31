@@ -83,14 +83,18 @@ test('measure returns a range, a method and a caveat', async () => {
   assert.strictEqual(body.method, 'door');
   assert.ok(body.low < body.m2 && body.m2 < body.high, `${body.low}/${body.m2}/${body.high}`);
   assert.match(body.caveat, /not a survey/i);
-  // Ground truth for this house: (42 - 1.78 - 5.76) × 2.4 ≈ 82.7 m²
-  assert.ok(Math.abs(body.m2 - 82.7) < 2, `m2 was ${body.m2}`);
+  // Net front elevation is 42 - 1.78 - 5.76 = 34.46 m². The multiplier comes
+  // from measure.js rather than being restated here: measure.test.js pins the
+  // calibration, and this test is about the endpoint returning it correctly.
+  const expected = 34.46 * require('../measure').HOUSE_TYPE_PRIORS.semi.frontToTotal;
+  assert.ok(Math.abs(body.m2 - expected) < 2, `m2 was ${body.m2}, expected ≈ ${expected.toFixed(1)}`);
 });
 
 test('the quote uses the measured area once measuring has run', async () => {
   const { body } = await post('/api/quote', { claddingId: 'sage-slate', roofId: 'terracotta', trimId: 'cedar', detectionId });
   assert.strictEqual(body.footprintSource, 'photo_door');
-  assert.ok(Math.abs(body.footprintM2 - 82.7) < 2, `footprint was ${body.footprintM2}`);
+  const expected = 34.46 * require('../measure').HOUSE_TYPE_PRIORS.semi.frontToTotal;
+  assert.ok(Math.abs(body.footprintM2 - expected) < 2, `footprint was ${body.footprintM2}, expected ≈ ${expected.toFixed(1)}`);
 });
 
 test('a manual figure overrides the measurement', async () => {

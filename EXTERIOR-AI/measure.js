@@ -27,6 +27,48 @@
 
 const DOOR_HEIGHT_M = 1.98;   // standard UK external door leaf
 
+/* ── PLAN GEOMETRY → front-to-total multiplier ──
+   A photo shows one elevation; the quote needs whole-house wall area. The
+   multiplier between them is not a fudge factor, it is plan geometry:
+
+     total wall     = exposed perimeter × wall height
+     front elevation = frontage width   × wall height
+
+   Wall height cancels. So frontToTotal = exposedPerimeter / frontageWidth,
+   and it depends only on the plan shape — no assumption about storey height
+   is needed, which removes the biggest thing that could have been wrong.
+
+   Exposed perimeter by type, with W = frontage, D = depth:
+     mid-terrace   both side walls are party walls   → 2W        (exactly 2.0)
+     end-terrace   one side wall exposed             → 2W + D
+     semi          one side wall exposed             → 2W + D
+     detached      all four sides exposed            → 2W + 2D
+
+   D is derived from floor area: footprint = floorArea / storeys, D = footprint / W.
+
+   Inputs are English Housing Survey 2018-19 mean floor areas (detached 149,
+   semi 97, terraced 88 m²) and typical UK plot frontages (terrace 5–6 m,
+   semi 6–8 m). Sources are in the README.
+
+   These replace the earlier back-derived guesses of 1.7/2.4/3.2, which this
+   derivation shows were low by 15–25%. Still not the same thing as measuring
+   real properties — see `npm run validate` and the README caveats. */
+const PLAN_GEOMETRY = {
+  detached:   { floorAreaM2: 149, storeys: 2, frontageM: 9.0, exposed: '2W+2D' },
+  semi:       { floorAreaM2: 97,  storeys: 2, frontageM: 6.8, exposed: '2W+D'  },
+  endTerrace: { floorAreaM2: 88,  storeys: 2, frontageM: 5.5, exposed: '2W+D'  },
+  terrace:    { floorAreaM2: 88,  storeys: 2, frontageM: 5.5, exposed: '2W'    },
+};
+
+function frontToTotalFrom(plan) {
+  const depthM = (plan.floorAreaM2 / plan.storeys) / plan.frontageM;
+  const dw = depthM / plan.frontageM;
+  if (plan.exposed === '2W') return 2;
+  if (plan.exposed === '2W+D') return 2 + dw;
+  if (plan.exposed === '2W+2D') return 2 + 2 * dw;
+  throw new Error(`Unknown exposed-perimeter formula: ${plan.exposed}`);
+}
+
 /* House-type priors.
    `wallM2` is typical total exterior wall area for the whole property, and
    `band` is the range outside which a computed figure is treated as wrong.
@@ -36,21 +78,28 @@ const DOOR_HEIGHT_M = 1.98;   // standard UK external door leaf
    for all three types (0.18×277≈50, 0.28×303≈85, 0.38×342≈130), which is a
    good sign the table is internally sound.
 
-   `frontToTotal` converts the front elevation (all a single photo can show)
-   into whole-house wall area: a terrace has two exposed elevations, a semi
-   three, a detached four, and rear elevations are rarely as wide as the front.
+   `frontToTotal` is computed from PLAN_GEOMETRY above rather than stated, so
+   the number is always traceable to the frontage and depth it came from.
 
-   !! UNVALIDATED: the three frontToTotal multipliers below are reasoned
-   guesses back-derived from the priors, NOT survey figures. Unlike the
-   calibration factors and coverage centres, nothing has measured them
-   against real properties. They scale every door-method result directly, so
-   they are the largest remaining source of systematic error here and need
-   calibrating against surveyed homes. See the README. */
+   End-of-terrace is a separate type because the geometry differs enormously:
+   a mid-terrace has two party walls and a multiplier of exactly 2.0, an
+   end-terrace has one and lands near 3.45. Treating one as the other is a
+   ~70% error, far larger than any other approximation here.
+
+   !! Its calibrationFactor and coverageCentre are DERIVED, not from the
+   survey table, which covers only the three original types. */
 const HOUSE_TYPE_PRIORS = {
-  detached: { label: 'Detached',      wallM2: 130, band: [90, 200], frontToTotal: 3.2, calibrationFactor: 342, coverageCentre: 0.38 },
-  semi:     { label: 'Semi-detached', wallM2: 85,  band: [55, 130], frontToTotal: 2.4, calibrationFactor: 303, coverageCentre: 0.28 },
-  terrace:  { label: 'Terraced',      wallM2: 50,  band: [32, 80],  frontToTotal: 1.7, calibrationFactor: 277, coverageCentre: 0.18 },
+  detached:   { label: 'Detached',       wallM2: 130, band: [90, 200], calibrationFactor: 342, coverageCentre: 0.38, calibrationSource: 'survey table' },
+  semi:       { label: 'Semi-detached',  wallM2: 85,  band: [55, 130], calibrationFactor: 303, coverageCentre: 0.28, calibrationSource: 'survey table' },
+  endTerrace: { label: 'End of terrace', wallM2: 80,  band: [50, 120], calibrationFactor: 444, coverageCentre: 0.18, calibrationSource: 'derived' },
+  terrace:    { label: 'Mid-terrace',    wallM2: 50,  band: [32, 80],  calibrationFactor: 277, coverageCentre: 0.18, calibrationSource: 'survey table' },
 };
+
+// Attach the geometry-derived multiplier to each type.
+for (const [type, prior] of Object.entries(HOUSE_TYPE_PRIORS)) {
+  prior.plan = PLAN_GEOMETRY[type];
+  prior.frontToTotal = frontToTotalFrom(PLAN_GEOMETRY[type]);
+}
 
 const DEFAULT_HOUSE_TYPE = 'semi';
 
@@ -64,11 +113,13 @@ function tuningFor(type, tuning) {
   const prior = HOUSE_TYPE_PRIORS[type];
   const factor = Number(tuning?.calibration?.[type]);
   const centre = Number(tuning?.coverageCentre?.[type]);
+  const ratio = Number(tuning?.frontToTotal?.[type]);
   const tolerance = Number(tuning?.coverageTolerance);
   const effCentre = Number.isFinite(centre) && centre > 0 ? centre : prior.coverageCentre;
   const effTolerance = Number.isFinite(tolerance) && tolerance > 0 ? tolerance : DEFAULT_COVERAGE_TOLERANCE;
   return {
     calibrationFactor: Number.isFinite(factor) && factor > 0 ? factor : prior.calibrationFactor,
+    frontToTotal: Number.isFinite(ratio) && ratio > 0 ? ratio : prior.frontToTotal,
     coverageCentre: effCentre,
     coverageBand: [Math.max(0, effCentre - effTolerance), effCentre + effTolerance],
   };
@@ -224,10 +275,10 @@ function estimateWallArea({ detections, aspectRatio, houseType, tuning } = {}) {
 
   const byDoor = measureByDoor({ detections: list, aspectRatio });
   if (byDoor) {
-    m2 = byDoor.frontElevationM2 * prior.frontToTotal;
+    m2 = byDoor.frontElevationM2 * tuned.frontToTotal;
     method = 'door';
     notes.push(`Scaled from the front door (${byDoor.doorHeightPct.toFixed(1)}% of image height, assumed ${DOOR_HEIGHT_M} m).`);
-    notes.push(`Front elevation ≈ ${Math.round(byDoor.frontElevationM2)} m² after subtracting windows and doors; ×${prior.frontToTotal} for a ${prior.label.toLowerCase()} property.`);
+    notes.push(`Front elevation ≈ ${Math.round(byDoor.frontElevationM2)} m² after subtracting windows and doors; ×${tuned.frontToTotal.toFixed(2)} for the other walls of a ${prior.label.toLowerCase()} property.`);
   } else {
     const byCoverage = measureByCoverage({ detections: list, tuned });
     if (byCoverage && byCoverage.framingOk) {
@@ -332,6 +383,8 @@ module.exports = {
   estimateWallArea,
   imageSize,
   tuningFor,
+  frontToTotalFrom,
+  PLAN_GEOMETRY,
   HOUSE_TYPE_PRIORS,
   HOUSE_TYPE_KEYS: Object.keys(HOUSE_TYPE_PRIORS),
   DEFAULT_HOUSE_TYPE,

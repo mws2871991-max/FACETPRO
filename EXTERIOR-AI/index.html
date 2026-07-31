@@ -853,10 +853,14 @@ function buildMeasureBlock() {
     ]);
   }
 
+  // Mid-terrace and end-of-terrace are separate because their wall areas
+  // differ by roughly 70% — a mid-terrace has two party walls, an end has one.
+  // Getting this wrong matters more than anything else the homeowner tells us.
   const houseTypes = [
-    { id: 'detached', label: 'Detached' },
-    { id: 'semi',     label: 'Semi-detached' },
-    { id: 'terrace',  label: 'Terraced' },
+    { id: 'detached',   label: 'Detached' },
+    { id: 'semi',       label: 'Semi-detached' },
+    { id: 'endTerrace', label: 'End of terrace' },
+    { id: 'terrace',    label: 'Mid-terrace' },
   ];
 
   const typeButtons = h('div', { className: 'mt-2 flex flex-wrap gap-2' }, houseTypes.map(t =>

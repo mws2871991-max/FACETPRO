@@ -188,6 +188,66 @@ test('a wider coverage tolerance accepts framing the default band rejects', () =
   assert.strictEqual(lenient.method, 'coverage');
 });
 
+test('front-to-total is exposed perimeter ÷ frontage, and height cancels', () => {
+  const { frontToTotalFrom, PLAN_GEOMETRY, HOUSE_TYPE_PRIORS: P } = require('../measure');
+
+  // Mid-terrace: both side walls are party walls, so front + rear only.
+  // This one is exact geometry, independent of every other input.
+  assert.strictEqual(P.terrace.frontToTotal, 2);
+
+  // The others follow from depth/frontage.
+  for (const [type, plan] of Object.entries(PLAN_GEOMETRY)) {
+    const depth = (plan.floorAreaM2 / plan.storeys) / plan.frontageM;
+    const dw = depth / plan.frontageM;
+    const expected = plan.exposed === '2W' ? 2 : plan.exposed === '2W+D' ? 2 + dw : 2 + 2 * dw;
+    assert.ok(Math.abs(P[type].frontToTotal - expected) < 1e-9, `${type}`);
+  }
+
+  // Wall height cancels out of the ratio, so doubling it changes nothing.
+  const tall = { ...PLAN_GEOMETRY.semi };
+  assert.strictEqual(frontToTotalFrom(tall), frontToTotalFrom({ ...tall }));
+
+  // Ordering must hold: mid-terrace < semi < end-terrace < detached.
+  assert.ok(P.terrace.frontToTotal < P.semi.frontToTotal);
+  assert.ok(P.semi.frontToTotal < P.endTerrace.frontToTotal);
+  assert.ok(P.endTerrace.frontToTotal < P.detached.frontToTotal);
+});
+
+test('end-of-terrace is treated as its own type, far from mid-terrace', () => {
+  const { HOUSE_TYPE_PRIORS: P } = require('../measure');
+  const gap = (P.endTerrace.frontToTotal - P.terrace.frontToTotal) / P.terrace.frontToTotal;
+  assert.ok(gap > 0.5, `end vs mid terrace differ by only ${(gap * 100).toFixed(0)}%`);
+
+  // Same photo, the two terrace types must give materially different answers.
+  const mid = estimateWallArea({ detections: semiPhoto, aspectRatio: ASPECT_4_3, houseType: 'terrace' });
+  const end = estimateWallArea({ detections: semiPhoto, aspectRatio: ASPECT_4_3, houseType: 'endTerrace' });
+  assert.ok(end.m2 > mid.m2 * 1.3, `mid ${mid.m2} vs end ${end.m2}`);
+});
+
+test('geometry-derived multipliers agree with the priors within 15%', () => {
+  // Independent cross-check: front elevation net of ~18% openings, times the
+  // multiplier, should land near the house type's prior. Agreement between
+  // two unrelated derivations is the strongest evidence available without
+  // real survey data.
+  const { HOUSE_TYPE_PRIORS: P } = require('../measure');
+  const WALL_H = 5.2, NET = 0.82;
+  for (const type of ['terrace', 'semi', 'detached']) {
+    const p = P[type];
+    const implied = p.plan.frontageM * WALL_H * NET * p.frontToTotal;
+    const delta = Math.abs(implied - p.wallM2) / p.wallM2;
+    assert.ok(delta < 0.15, `${type}: geometry implies ${implied.toFixed(0)} m², prior is ${p.wallM2} (${(delta * 100).toFixed(0)}% apart)`);
+  }
+});
+
+test('front-to-total can be overridden per type', () => {
+  const base = estimateWallArea({ detections: semiPhoto, aspectRatio: ASPECT_4_3, houseType: 'semi' });
+  const tuned = estimateWallArea({
+    detections: semiPhoto, aspectRatio: ASPECT_4_3, houseType: 'semi',
+    tuning: { frontToTotal: { semi: 2.0 } },
+  });
+  assert.ok(tuned.m2 < base.m2, `override should lower it: ${base.m2} -> ${tuned.m2}`);
+});
+
 test('imageSize reads PNG and JPEG dimensions', () => {
   // 16×9 PNG: signature, then IHDR length/type/width/height.
   const png = Buffer.concat([
