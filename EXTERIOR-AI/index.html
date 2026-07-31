@@ -40,6 +40,16 @@
   details > summary{list-style:none;cursor:pointer}
   details > summary::-webkit-details-marker{display:none}
   details[open] .chev{transform:rotate(180deg)}
+
+  /* On a phone the photo and before/after panes are set by aspect ratio, which
+     at ~342px of usable width makes them 256px and 214px tall. Stacked, that
+     pushes the estimate off the bottom of the screen — the one thing the
+     homeowner came for. max-height overrides aspect-ratio, so the box shrinks
+     and the image crops rather than letterboxing. */
+  @media (max-width: 640px) {
+    .media-cap { max-height: 220px; }
+    .media-cap img { height: 100%; object-fit: cover; }
+  }
 </style>
 
 <!-- Structured data. Every claim here matches what the product actually does. -->
@@ -519,7 +529,7 @@ function render() {
 
 function buildUploadDetect() {
   const dropArea = h('div', {
-    className: 'aspect-[4/3] rounded-xl border border-dashed border-zinc-300 bg-white grid place-items-center cursor-pointer hover:bg-zinc-50 transition relative overflow-hidden',
+    className: 'media-cap aspect-[4/3] rounded-xl border border-dashed border-zinc-300 bg-white grid place-items-center cursor-pointer hover:bg-zinc-50 transition relative overflow-hidden',
     onClick: () => sharedRefs.fileInput?.click(),
   });
 
@@ -708,7 +718,7 @@ function buildVisualizer() {
     h('p', { className: 'mt-2 text-sm text-zinc-600 max-w-[62ch]' }, 'Drag the slider to compare your home now with how it could look. Every colour and material moves the estimate, so there are no surprises later.'),
     h('div', { className: 'mt-6 grid lg:grid-cols-[1.2fr_0.8fr] gap-6' }, [
       h('div', { className: 'rounded-2xl overflow-hidden border border-zinc-200 bg-[#FDFCF9]' }, [
-        h('div', { className: 'relative aspect-[16/10] bg-zinc-100 overflow-hidden' }, [
+        h('div', { className: 'media-cap relative aspect-[16/10] bg-zinc-100 overflow-hidden' }, [
           beforePane, afterPane, slider,
           h('div', { className: 'absolute bottom-3 right-3 text-[10px] px-2 py-1 rounded-full bg-white border border-zinc-200' }, `${state.afterPct}% after`),
         ]),
@@ -744,9 +754,12 @@ function buildHouseTypePicker({ short } = {}) {
     h('button', {
       type: 'button',
       'aria-pressed': state.houseType === t.id ? 'true' : 'false',
-      className: `px-3 py-2 rounded-full border text-xs transition ${state.houseType === t.id
-        ? 'bg-white text-zinc-900 border-white'
-        : 'bg-white/5 border-white/20 text-white/80 hover:border-white/60'}`,
+      // Subtle border at rest, filled dark when chosen — the same visual
+      // language as the colour swatches, so "selected" reads the same way
+      // everywhere on the page.
+      className: `px-3.5 py-2 rounded-full border text-xs font-medium transition ${state.houseType === t.id
+        ? 'bg-zinc-900 text-white border-zinc-900'
+        : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400 hover:text-zinc-900'}`,
       onClick: async () => {
         if (state.houseType === t.id) return;
         state.houseType = t.id;
@@ -777,8 +790,10 @@ function buildPricePanel(price, priceRow) {
     return h('div', { className: 'rounded-2xl bg-zinc-900 text-white p-5' }, [
       h('h3', { className: 'text-[11px] tracking-widest uppercase text-white/50' }, 'Your estimate'),
 
-      h('div', { className: 'mt-4' }, [
-        h('div', { className: 'text-[11px] text-white/50' }, 'What kind of home is it?'),
+      // Light card so the dark-filled selected chip has something to read
+      // against inside the dark estimate panel.
+      h('div', { className: 'mt-4 rounded-xl bg-[#FDFCF9] border border-zinc-200 p-3' }, [
+        h('div', { className: 'text-[10px] tracking-widest uppercase text-zinc-500' }, 'What kind of home is it?'),
         h('div', { className: 'mt-2' }, buildHouseTypePicker({ short: true })),
       ]),
 
@@ -991,8 +1006,8 @@ function buildMeasureBlock() {
       state.scaleReference
         ? 'We can use your front door as a ruler to estimate how much wall there is to cover.'
         : 'We couldn’t find a front door to measure against, so this will be a rougher figure based on how much of the photo your walls fill.'),
-    h('div', { className: 'mt-4 rounded-xl bg-zinc-900 p-3' }, [
-      h('div', { className: 'text-[10px] tracking-widest uppercase text-white/40' }, 'What kind of house is it?'),
+    h('div', { className: 'mt-4' }, [
+      h('div', { className: 'text-[10px] tracking-widest uppercase text-zinc-500' }, 'What kind of house is it?'),
       h('div', { className: 'mt-2' }, buildHouseTypePicker()),
     ]),
     h('button', {
