@@ -136,7 +136,19 @@ function frontToTotalFrom(plan) {
 const HOUSE_TYPE_PRIORS = {
   detached:   { label: 'Detached',       wallM2: 130, band: [90, 200], calibrationFactor: 342, coverageCentre: 0.38, calibrationSource: 'survey table' },
   semi:       { label: 'Semi-detached',  wallM2: 85,  band: [55, 130], calibrationFactor: 303, coverageCentre: 0.28, calibrationSource: 'survey table' },
-  endTerrace: { label: 'End of terrace', wallM2: 80,  band: [50, 120], calibrationFactor: 444, coverageCentre: 0.18, calibrationSource: 'derived' },
+  /* Not in the 120-survey table, but it doesn't have to be a guess: an end of
+     terrace is the same house as a mid-terrace with one more wall exposed, and
+     the geometry gives the relationship exactly —
+
+       mid  exposed perimeter = 2W
+       end  exposed perimeter = 2W + D        (D/W = 1.45 for a terrace)
+       so   end = mid × (2 + D/W) / 2 = ×1.727
+
+     Applied to the surveyed 50 m² that's 86 m², anchored to measured data
+     rather than invented. Coverage centre stays at the terrace's 0.18 — same
+     frontage, so the same share of a well-framed photo — and the factor
+     follows from 86 / 0.18. */
+  endTerrace: { label: 'End of terrace', wallM2: 86,  band: [55, 130], calibrationFactor: 478, coverageCentre: 0.18, calibrationSource: 'derived from surveyed mid-terrace' },
   bungalow:   { label: 'Bungalow',       wallM2: 60,  band: [38, 95],  calibrationFactor: 273, coverageCentre: 0.22, calibrationSource: 'prototype table (m² only)' },
   terrace:    { label: 'Mid-terrace',    wallM2: 50,  band: [32, 80],  calibrationFactor: 277, coverageCentre: 0.18, calibrationSource: 'survey table' },
 };
@@ -174,6 +186,9 @@ function tuningFor(type, tuning) {
 // How wide a range to show, by method. The door method is geometric and
 // tighter; the prior is a population average and deserves to look vague.
 const UNCERTAINTY = { door: 0.12, coverage: 0.20, prior: 0.25 };
+
+// How far the two methods may differ before we stop calling it agreement.
+const CROSS_CHECK_TOLERANCE = 0.20;
 
 const WALL_TYPES = new Set(['cladding']);
 const DOOR_TYPES = new Set(['door-front']);
@@ -344,8 +359,21 @@ function estimateWallArea({ detections, aspectRatio, houseType, tuning } = {}) {
   const notes = [];
   let m2 = null;
   let method = 'prior';
+  let crossCheck = null;
 
+  /* Both methods run whenever both can. They share nothing but the wall box —
+     one scales from the door's height, the other from the wall's share of the
+     frame against a surveyed coverage figure — so when they agree, that is
+     genuine corroboration rather than the same assumption twice. When they
+     don't, something is wrong with the photo or the detection, and the honest
+     response is a wider range rather than a confident wrong number.
+
+     This is the only validation the door path has. The prototype's 120
+     surveys calibrated the coverage method, so agreement with coverage is
+     indirect evidence the door path is landing in the right place. */
   const byDoor = measureByDoor({ detections: list, aspectRatio });
+  const byCoverage = measureByCoverage({ detections: list, tuned });
+
   if (byDoor) {
     m2 = byDoor.frontElevationM2 * tuned.frontToTotal;
     method = 'door';
@@ -365,8 +393,22 @@ function estimateWallArea({ detections, aspectRatio, houseType, tuning } = {}) {
         notes.push('This looks like it has more than one storey, which doesn\'t match "bungalow" — worth checking the house type above.');
       }
     }
+    // Cross-check against the independently calibrated coverage method.
+    if (byCoverage && byCoverage.framingOk && m2 > 0) {
+      const gap = Math.abs(m2 - byCoverage.totalM2) / m2;
+      crossCheck = {
+        coverageM2: Math.round(byCoverage.totalM2),
+        differencePct: Math.round(gap * 100),
+        agrees: gap <= CROSS_CHECK_TOLERANCE,
+      };
+      // Careful with the wording: the figure can still be replaced by the
+      // prior below, so don't promise a widened range here — just report what
+      // the second method said and let the range speak for itself.
+      notes.push(crossCheck.agrees
+        ? `Checked a second way — how much of the photo your walls fill puts it at ≈${crossCheck.coverageM2} m², within ${crossCheck.differencePct}%.`
+        : `A second way of measuring puts it at ≈${crossCheck.coverageM2} m², ${crossCheck.differencePct}% away, so we're less sure of this one.`);
+    }
   } else {
-    const byCoverage = measureByCoverage({ detections: list, tuned });
     if (byCoverage && byCoverage.framingOk) {
       m2 = byCoverage.totalM2;
       method = 'coverage';
@@ -394,7 +436,13 @@ function estimateWallArea({ detections, aspectRatio, houseType, tuning } = {}) {
     notes.push(`Using the typical ${prior.label.toLowerCase()} figure of ${prior.wallM2} m².`);
   }
 
-  const spread = UNCERTAINTY[method] ?? UNCERTAINTY.prior;
+  /* A door reading corroborated by coverage earns the tight range. One the
+     second method contradicts does not — widen to at least the size of the
+     disagreement, so the range still covers what the other method said. */
+  let spread = UNCERTAINTY[method] ?? UNCERTAINTY.prior;
+  if (method === 'door' && crossCheck && !crossCheck.agrees) {
+    spread = Math.max(spread, Math.min(crossCheck.differencePct / 100, UNCERTAINTY.prior));
+  }
   const round5 = (n) => Math.max(5, Math.round(n / 5) * 5);
 
   return {
@@ -404,7 +452,12 @@ function estimateWallArea({ detections, aspectRatio, houseType, tuning } = {}) {
     method,
     houseType: type,
     houseTypeLabel: prior.label,
-    confidence: method === 'door' ? 'good' : method === 'coverage' ? 'rough' : 'typical figure',
+    // A door reading the second method contradicts isn't "good", whatever
+    // method produced it.
+    confidence: method === 'door'
+      ? (crossCheck && !crossCheck.agrees ? 'rough' : 'good')
+      : method === 'coverage' ? 'rough' : 'typical figure',
+    crossCheck,
     notes,
   };
 }

@@ -315,6 +315,59 @@ test('a two-storey photo warns when bungalow is selected', () => {
   assert.ok(r.notes.some(n => /more than one storey/i.test(n)), r.notes.join(' | '));
 });
 
+test('the two methods cross-check each other when both are available', () => {
+  const r = estimateWallArea({ detections: semiPhoto, aspectRatio: ASPECT_4_3, houseType: 'semi' });
+  assert.strictEqual(r.method, 'door');
+  assert.ok(r.crossCheck, 'coverage should also have been computed');
+  assert.ok(r.crossCheck.coverageM2 > 0);
+  assert.strictEqual(r.crossCheck.agrees, true, `methods differ by ${r.crossCheck.differencePct}%`);
+  assert.strictEqual(r.confidence, 'good');
+  assert.ok(r.notes.some(n => /second way/i.test(n)), r.notes.join(' | '));
+});
+
+test('a door reading the second method contradicts is not called "good"', () => {
+  // Just the wall and a door: no windows are subtracted, so the door method
+  // overshoots while coverage stays where it was. In-band, so the clamp
+  // doesn't mask the disagreement.
+  const FRAME_H = 10, aspect = ASPECT_4_3, FRAME_W = FRAME_H * aspect;
+  const w = (m) => (m / FRAME_W) * 100, hh = (m) => (m / FRAME_H) * 100;
+  const sparse = [
+    { type: 'cladding',   x_pct: w(3.2), y_pct: hh(3.4), w_pct: w(7),   h_pct: hh(6), confidence: 0.9 },
+    { type: 'door-front', x_pct: w(6.2), y_pct: hh(7.4), w_pct: w(0.9), h_pct: hh(1.98), confidence: 0.95 },
+  ];
+  const r = estimateWallArea({ detections: sparse, aspectRatio: aspect, houseType: 'semi' });
+  assert.strictEqual(r.method, 'door');
+  assert.strictEqual(r.crossCheck.agrees, false);
+  assert.strictEqual(r.confidence, 'rough', 'a contradicted reading must not claim good confidence');
+
+  // And the range must widen enough to still cover what the other method said.
+  const agreed = estimateWallArea({ detections: semiPhoto, aspectRatio: aspect, houseType: 'semi' });
+  const spreadOf = (x) => (x.high - x.low) / x.m2;
+  assert.ok(spreadOf(r) > spreadOf(agreed), 'disagreement should widen the range');
+  assert.ok(r.low <= r.crossCheck.coverageM2 && r.crossCheck.coverageM2 <= r.high,
+    `range ${r.low}-${r.high} should cover the other method's ${r.crossCheck.coverageM2}`);
+});
+
+test('no cross-check is claimed when only one method could run', () => {
+  // No door, so nothing to cross-check against.
+  const noDoor = [{ type: 'cladding', x_pct: 20, y_pct: 25, w_pct: 53, h_pct: 53, confidence: 0.9 }];
+  const r = estimateWallArea({ detections: noDoor, aspectRatio: ASPECT_4_3, houseType: 'semi' });
+  assert.strictEqual(r.method, 'coverage');
+  assert.strictEqual(r.crossCheck, null);
+});
+
+test('end-of-terrace is anchored to the surveyed mid-terrace, not guessed', () => {
+  const { HOUSE_TYPE_PRIORS: P, PLAN_GEOMETRY: G } = require('../measure');
+  // Same house, one more exposed wall: end = mid × (2 + D/W) / 2.
+  const t = G.terrace;
+  const dw = ((t.floorAreaM2 / t.storeys) / t.frontageM) / t.frontageM;
+  const expected = P.terrace.wallM2 * (2 + dw) / 2;
+  assert.ok(Math.abs(P.endTerrace.wallM2 - expected) < 1.5,
+    `expected ≈${expected.toFixed(1)} from the surveyed ${P.terrace.wallM2}, got ${P.endTerrace.wallM2}`);
+  // And the table stays self-consistent.
+  assert.ok(Math.abs(P.endTerrace.coverageCentre * P.endTerrace.calibrationFactor - P.endTerrace.wallM2) <= 1);
+});
+
 test('imageSize reads PNG and JPEG dimensions', () => {
   // 16×9 PNG: signature, then IHDR length/type/width/height.
   const png = Buffer.concat([

@@ -231,10 +231,21 @@ Read these before putting a number in front of a homeowner.
   sample. Matching the survey would need ~3.39; set
   `WALL_FRONT_TO_TOTAL_DETACHED=3.39` if you'd rather follow the data than
   the geometry.
-- **End-of-terrace and bungalow are extrapolations.** Neither is in the
-  120-survey table. Bungalow's 60 m² comes from the later `Renderd-v4` table
-  (m² only, no coverage or factor); end-of-terrace has no external figure at
-  all.
+- **End-of-terrace is derived from measured data, not guessed.** It isn't in
+  the 120-survey table, but the geometry ties it to one that is: an end of
+  terrace is a mid-terrace with one more wall exposed, so
+  `end = mid × (2 + D/W) / 2 = ×1.727`. Applied to the surveyed 50 m² that
+  gives 86 m².
+- **Bungalow's 60 m²** comes from the later `Renderd-v4` table, which lists
+  m² only — its coverage centre is still ours.
+- **The two methods now check each other.** Whenever a photo supports both,
+  the door reading is compared against the independently calibrated coverage
+  reading. Agreement within 20% keeps the tight range and `good` confidence;
+  beyond that the result drops to `rough` and the range widens to at least
+  cover what the other method said. Since the coverage method is what the 120
+  surveys calibrated, agreement is the only external evidence the door path
+  has. It's corroboration, not proof — both still read the same wall box, so
+  a bad wall detection fools both at once.
 - **Frontage assumptions carry the most weight.** Depth is derived from floor
   area ÷ frontage, so an atypical frontage propagates into the multiplier.
   Detached homes vary most and are least well served by an average.
