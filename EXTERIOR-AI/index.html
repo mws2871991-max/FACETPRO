@@ -148,6 +148,7 @@
     </a>
     <nav class="flex items-center gap-2" aria-label="Primary">
       <a href="#whole-house" class="hidden sm:block text-xs px-3 py-2 rounded-full hover:bg-white transition">Finishes</a>
+      <a href="#conservatory" class="hidden lg:block text-xs px-3 py-2 rounded-full hover:bg-white transition">Conservatories</a>
       <a href="#how-it-works" class="hidden sm:block text-xs px-3 py-2 rounded-full hover:bg-white transition">How it works</a>
       <a href="#faq" class="hidden sm:block text-xs px-3 py-2 rounded-full hover:bg-white transition">Questions</a>
       <a href="#your-photo" class="text-xs px-4 py-2 rounded-full bg-zinc-900 text-white hover:bg-zinc-800 transition">Start with a photo</a>
@@ -176,6 +177,7 @@
   <div id="mount-upload"></div>
   <div id="mount-visualizer"></div>
   <div id="mount-wholehouse"></div>
+  <div id="mount-conservatory"></div>
   <div id="mount-refine"></div>
   <div id="mount-lead"></div>
 
@@ -351,6 +353,7 @@ const state = {
   // Whole-house finishes: a quicker walls-only path alongside the detailed
   // visualiser. Prices here are the catalogue's illustrative figures.
   wh: { finishId: null, roofColourId: null, windowColourId: null, areaM2: null, result: null, loading: false },
+  conservatoryId: null,   // which style they're drawn to; goes with the lead
   installerPassword: sessionStorage.getItem('fp_installer_pw') || '',
   installerAuthed: false,
   installerError: '',
@@ -509,6 +512,7 @@ const MOUNTS = [
   ['mount-upload',     buildUploadDetect],
   ['mount-visualizer', buildVisualizer],
   ['mount-wholehouse', buildWholeHouse],
+  ['mount-conservatory', buildConservatory],
   ['mount-refine',     buildRefineEstimate],
   ['mount-lead',       buildSaveFraming],
   ['mount-installer',  buildInstaller],
@@ -832,6 +836,93 @@ function buildPricePanel(price, priceRow) {
     h('p', { className: 'mt-3 text-[10px] leading-4 text-white/50' }, `Based on ${price.footprintM2} m² of wall.`),
     h('p', { className: 'mt-3 text-[10px] leading-4 text-white/50' }, catalogue_note()),
     h('p', { className: 'mt-2 text-[10px] leading-4 text-white/50' }, 'A planning estimate, not a fixed quote — an installer will confirm the price after a survey.'),
+  ]);
+}
+
+/* ── Conservatory styles ──
+   Unlike everything else on the page this computes nothing: the catalogue
+   gives guide price RANGES, and its own note says they are placeholders not
+   sourced from production data. So it's a chooser, not a quote — the honest
+   thing a range can do is help someone work out which style suits them.
+   Picking one is remembered and travels with the lead. */
+function renderConservatoryOnly() {
+  const old = document.getElementById('conservatory');
+  if (!old) { render(); return; }
+  old.replaceWith(buildConservatory());
+}
+
+function buildConservatory() {
+  const c = state.catalogue?.conservatories;
+  if (!c || !c.styles?.length) return h('div', {});
+
+  const card = (s) => {
+    const active = state.conservatoryId === s.id;
+    return h('div', {
+      className: `rounded-2xl border p-4 transition ${active ? 'border-zinc-900 bg-[#FDFCF9] ring-1 ring-zinc-900' : 'border-zinc-200 bg-white'}`,
+    }, [
+      h('div', { className: 'flex items-start justify-between gap-3' }, [
+        h('div', { className: 'min-w-0' }, [
+          h('h3', { className: 'text-[15px] font-medium' }, s.name),
+          h('p', { className: 'mt-0.5 text-[11px] text-zinc-500' }, `${s.bestFor} · ${s.footprint}`),
+        ]),
+        h('div', { className: 'text-right shrink-0' }, [
+          h('div', { className: 'text-[13px] font-medium whitespace-nowrap' }, `${fmtMoney(s.priceMin)}–${fmtMoney(s.priceMax)}`),
+          h('div', { className: 'text-[10px] text-zinc-400' }, 'guide range'),
+        ]),
+      ]),
+
+      h('p', { className: 'mt-3 text-[12px] leading-5 text-zinc-600' }, s.description),
+
+      // lightPct is in the data and is what people actually care about:
+      // how bright the room will be.
+      h('div', { className: 'mt-3 flex items-center gap-2' }, [
+        h('span', { className: 'text-[10px] tracking-widest uppercase text-zinc-400 shrink-0' }, 'Light'),
+        h('span', { className: 'flex-1 h-1.5 rounded-full bg-zinc-100 overflow-hidden' }, [
+          h('span', { className: 'block h-full rounded-full bg-amber-400', style: { width: `${s.lightPct}%` } }),
+        ]),
+        h('span', { className: 'text-[10px] text-zinc-500 tabular-nums shrink-0' }, `${s.lightPct}%`),
+      ]),
+
+      (s.pros?.length || s.cons?.length) ? h('details', { className: 'mt-3 group' }, [
+        h('summary', { className: 'flex items-center justify-between text-[11px] text-zinc-500 cursor-pointer' }, [
+          h('span', {}, 'Pros and cons'),
+          h('span', { className: 'chev transition-transform' }, '⌄'),
+        ]),
+        h('div', { className: 'mt-2 grid gap-1' }, [
+          ...(s.pros || []).map(p => h('div', { className: 'text-[11px] leading-5 text-zinc-600' }, `✓ ${p}`)),
+          ...(s.cons || []).map(p => h('div', { className: 'text-[11px] leading-5 text-zinc-500' }, `− ${p}`)),
+        ]),
+      ]) : null,
+
+      h('button', {
+        type: 'button',
+        'aria-pressed': active ? 'true' : 'false',
+        className: `mt-4 w-full py-2 rounded-full text-xs font-medium border transition ${active ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-900'}`,
+        onClick: () => {
+          state.conservatoryId = active ? null : s.id;
+          renderConservatoryOnly();
+          U(active ? 'Conservatory style cleared' : `${s.name} noted — we’ll mention it when we’re in touch`);
+        },
+      }, active ? '✓ This is the one' : 'I like this one'),
+    ]);
+  };
+
+  return h('section', { id: 'conservatory', className: 'rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24' }, [
+    h('div', { className: 'flex items-start justify-between gap-3 flex-wrap' }, [
+      h('div', {}, [
+        h('p', { className: 'text-[11px] tracking-widest uppercase text-zinc-400' }, 'Also considering'),
+        h('h2', { className: 'mt-1 serif text-[26px] md:text-[32px] tracking-tight' }, 'Thinking about a conservatory?'),
+      ]),
+      h('span', { className: 'text-[10px] tracking-widest uppercase px-2.5 py-1 rounded-full bg-[#FFF7ED] border border-zinc-200' }, 'Guide prices'),
+    ]),
+    h('p', { className: 'mt-2 text-sm leading-6 text-zinc-600 max-w-[64ch]' },
+      'Eight styles, what each is good for, and roughly what people pay. Tell us which one appeals and we’ll bring it up when we’re in touch.'),
+
+    h('div', { className: 'mt-6 grid md:grid-cols-2 xl:grid-cols-3 gap-4' }, c.styles.map(card)),
+
+    h('p', { className: 'mt-6 text-[11px] leading-5 text-zinc-500 max-w-[74ch]' },
+      'These are broad guide ranges to help you compare styles, not quotes — a conservatory’s price depends on size, glazing, groundworks and access. ' +
+      'Unlike the cladding, roof and trim prices on this page, they aren’t drawn from our supplier catalogue.'),
   ]);
 }
 
@@ -1408,6 +1499,8 @@ async function sendDesignPack() {
         trimLengthM: state.trimLengthM || null,
         measurementSource: state.measurementSource,
         detectionId: state.useMeasurement ? state.detectionId : null,
+        // Just the id — the server looks up the style and its price range.
+        conservatoryStyleId: state.conservatoryId,
         detections: state.detections,
         renderUrl: state.renderUrl,
         consent: { given: true, wording: CONSENT_WORDING, version: CONSENT_VERSION },

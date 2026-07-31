@@ -723,6 +723,21 @@ Finally add: {"type":"analysis","summary":"2-3 sentence overview of the property
   res.json({ detections, detectionId, canMeasure: hasWall, scaleReference: hasDoor && !!size });
 });
 
+/* Conservatory styles are guide price RANGES, not a computed quote — there is
+   nothing to calculate, so there's no endpoint for them; /api/catalogue serves
+   the list and the page renders it.
+
+   What does need care is the lead: resolve the style from our own catalogue by
+   id so a submission can't attach an invented price to itself, the same rule
+   computePrice follows. */
+function resolveConservatory(styleId) {
+  const styles = catalogue.conservatories?.styles;
+  if (!styles || !styleId) return null;
+  const style = styles.find(s => s.id === styleId);
+  if (!style) return null;
+  return { id: style.id, name: style.name, priceMin: style.priceMin, priceMax: style.priceMax, indicative: true };
+}
+
 /* ── POST /api/whole-house ──
    A quicker path than the detailed visualiser: pick one finish for the whole
    house and see what it costs. The catalogue data for this has existed since
@@ -890,7 +905,7 @@ app.post('/api/render', renderLimiter, async (req, res) => {
    Real lead capture. Recomputes price server-side (never trusts client price),
    stores it, emails the owner via Resend if configured, fires a CRM webhook if configured. */
 app.post('/api/lead', leadLimiter, async (req, res) => {
-  const { name, email, phone, postcode, claddingId, trimId, roofId, footprintM2, trimLengthM, measurementSource, detections, renderUrl, notes, consent, detectionId } = req.body || {};
+  const { name, email, phone, postcode, claddingId, trimId, roofId, footprintM2, trimLengthM, measurementSource, detections, renderUrl, notes, consent, detectionId, conservatoryStyleId } = req.body || {};
   if (!name || !email) return res.status(400).json({ error: 'name and email are required.' });
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Invalid email address.' });
   // UK GDPR: consent to pass details to installers must be freely given and
@@ -914,6 +929,9 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
     measurementSource: footprint.source,
     clientMeasurementSource: measurementSource || null,
     wallMeasurement: footprint.measurement,
+    // Present only if they showed interest in one — useful for the installer,
+    // and priced from our catalogue rather than whatever the client sent.
+    conservatory: resolveConservatory(conservatoryStyleId),
     detectionCount: Array.isArray(detections) ? detections.length : 0,
     renderUrl: renderUrl || null,
     notes: (notes || '').slice(0, 2000),
