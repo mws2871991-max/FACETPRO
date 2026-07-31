@@ -395,16 +395,20 @@ function envPositive(name) {
 const MEASURE_TUNING = (() => {
   const calibration = {};
   const coverageCentre = {};
+  const frontToTotal = {};
   for (const type of measure.HOUSE_TYPE_KEYS) {
     const upper = type.toUpperCase();
     const factor = envPositive(`WALL_CALIBRATION_${upper}`);
     const centre = envPositive(`WALL_COVERAGE_${upper}`);
+    const ratio = envPositive(`WALL_FRONT_TO_TOTAL_${upper}`);
     if (factor !== undefined) calibration[type] = factor;
     if (centre !== undefined) coverageCentre[type] = centre;
+    if (ratio !== undefined) frontToTotal[type] = ratio;
   }
   return {
     calibration,
     coverageCentre,
+    frontToTotal,
     coverageTolerance: envPositive('WALL_COVERAGE_TOLERANCE'),
   };
 })();
@@ -413,10 +417,11 @@ function logMeasureTuning() {
   const parts = measure.HOUSE_TYPE_KEYS.map(type => {
     const t = measure.tuningFor(type, MEASURE_TUNING);
     const overridden = MEASURE_TUNING.calibration[type] !== undefined
-      || MEASURE_TUNING.coverageCentre[type] !== undefined ? '*' : '';
-    return `${type} ${t.calibrationFactor}/${t.coverageCentre.toFixed(2)}${overridden}`;
+      || MEASURE_TUNING.coverageCentre[type] !== undefined
+      || MEASURE_TUNING.frontToTotal[type] !== undefined ? '*' : '';
+    return `${type} ${t.calibrationFactor}/${t.coverageCentre.toFixed(2)}/×${t.frontToTotal.toFixed(2)}${overridden}`;
   });
-  console.log(`Wall measurement (factor/coverage) — ${parts.join(', ')}${parts.some(p => p.includes('*')) ? '   * env override' : ''}`);
+  console.log(`Wall measurement (factor/coverage/front-to-total) — ${parts.join(', ')}${parts.some(p => p.includes('*')) ? '   * env override' : ''}`);
 }
 
 /* ── GET /api/catalogue ── */

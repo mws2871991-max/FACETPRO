@@ -1,0 +1,37 @@
+[
+  {
+    "comment": "TEMPLATE — copy this file to data/survey-samples.json and replace these entries with real properties whose wall area you know from a survey. Entries with a `comment` key are ignored, so this header stays out of the results. Run: npm run validate"
+  },
+  {
+    "comment": "FULL SAMPLE — a real photo's /api/detect output plus the surveyed answer. This exercises the whole pipeline, detection quality included. Paste the `detections` array straight from the API response, and set aspectRatio to the photo's width/height.",
+    "label": "12 Example Road (full)",
+    "houseType": "semi",
+    "knownWallAreaM2": 92,
+    "aspectRatio": 1.3333,
+    "frontageM": 6.9,
+    "depthM": 7.2,
+    "storeys": 2,
+    "wallHeightM": 5.3,
+    "detections": [
+      { "type": "cladding",   "label": "Front wall", "confidence": 0.92, "x_pct": 24, "y_pct": 34, "w_pct": 52.5, "h_pct": 60 },
+      { "type": "door-front", "label": "Front door", "confidence": 0.95, "x_pct": 46.5, "y_pct": 74, "w_pct": 6.75, "h_pct": 19.8 },
+      { "type": "window",     "label": "Window",     "confidence": 0.9,  "x_pct": 30, "y_pct": 76, "w_pct": 9, "h_pct": 12 },
+      { "type": "window",     "label": "Window",     "confidence": 0.9,  "x_pct": 60, "y_pct": 76, "w_pct": 9, "h_pct": 12 },
+      { "type": "window",     "label": "Window",     "confidence": 0.9,  "x_pct": 30, "y_pct": 44, "w_pct": 9, "h_pct": 12 },
+      { "type": "window",     "label": "Window",     "confidence": 0.9,  "x_pct": 60, "y_pct": 44, "w_pct": 9, "h_pct": 12 }
+    ]
+  },
+  {
+    "comment": "GEOMETRY-ONLY SAMPLE — no photo needed. Checks the front-to-total multiplier on its own, without detection error in the way. Useful when you have a floor plan or a surveyor's figures but no usable photo. wallHeightM is optional and defaults to storeys x 2.6 m.",
+    "label": "3 Example Terrace (plan only)",
+    "houseType": "terrace",
+    "knownWallAreaM2": 54,
+    "frontageM": 5.4,
+    "depthM": 8.1,
+    "storeys": 2,
+    "wallHeightM": 5.2
+  },
+  {
+    "comment": "houseType must be one of: detached, semi, endTerrace, terrace. Note that mid-terrace and end-of-terrace differ by roughly 70% in wall area, so recording which one it is matters more than any other field here."
+  }
+]

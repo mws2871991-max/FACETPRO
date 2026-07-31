@@ -79,6 +79,59 @@ Two methods, in `measure.js`:
 Both are then clamped against house-type priors (detached 130, semi 85,
 terrace 50 m²) and fall back to the prior when out of band.
 
+### Front-to-total multiplier
+
+A photo shows one elevation; the quote needs whole-house wall area. The
+multiplier between them is plan geometry, not a fudge factor:
+
+```
+total wall      = exposed perimeter × wall height
+front elevation = frontage width    × wall height
+```
+
+Wall height cancels, so `frontToTotal = exposedPerimeter / frontageWidth` and
+**no storey-height assumption is involved**. Exposed perimeter by type, with
+W = frontage and D = depth:
+
+| Type | Party walls | Exposed perimeter | Multiplier |
+| --- | --- | --- | --- |
+| Mid-terrace | both sides | `2W` | **2.00** (exact) |
+| Semi-detached | one side | `2W + D` | 3.05 |
+| End of terrace | one side | `2W + D` | 3.45 |
+| Detached | none | `2W + 2D` | 3.84 |
+
+D comes from floor area: `footprint = floorArea / storeys`, `D = footprint / W`.
+Inputs are English Housing Survey 2018-19 mean floor areas (detached 149,
+semi 97, terraced 88 m²) and typical UK plot frontages.
+
+These replace earlier back-derived guesses of 1.7 / 2.4 / 3.2, **which were low
+by 15–25%** — measured areas rose 18–27% as a result. Overridable per type with
+`WALL_FRONT_TO_TOTAL_*`.
+
+**End of terrace is a separate house type** because a mid-terrace has two party
+walls and an end has one: 2.00 vs 3.45, a ~70% difference. Confusing the two is
+a bigger error than anything else in this feature, which is why the UI asks.
+
+### Validating the calibration
+
+```bash
+npm run validate            # data/survey-samples.json
+npm run validate -- path/to/other.json
+```
+
+The calibration above is *derived* — from plan geometry and published
+housing-stock averages — not *measured*. To validate it properly, collect
+properties whose wall area you know from a survey, copy
+`data/survey-samples.example.json` to `data/survey-samples.json`, and run the
+above. Samples can be either a real `/api/detect` output plus the surveyed area
+(tests the whole pipeline, detection quality included) or just
+frontage/depth/storeys (tests the multiplier in isolation).
+
+It reports per-property error, overall bias and spread, how often the true
+figure fell inside the quoted range, and — most usefully — the multiplier each
+property *implies* versus the one in use. A consistent gap there means the
+multiplier is wrong rather than the photo.
+
 ### Calibration, per house type
 
 From the prototype survey table, and env-overridable so you can fold in your
@@ -124,14 +177,19 @@ with the Anthropic call stubbed (19 tests, offline, no API cost).
 
 Read these before putting a number in front of a homeowner.
 
-- **⚠ The front-to-total multipliers are still unvalidated guesses.** Terrace
-  1.7, semi 2.4 and detached 3.2 were back-derived from the priors, not
-  measured against anything. **They are not from the survey table**, unlike
-  the calibration factors and coverage centres. Every door-method result is
-  multiplied by one of them, which makes them the largest remaining source of
-  systematic error in the feature — a 20% error here is a 20% error in the
-  quote. They need calibrating against surveyed properties with known wall
-  areas before this figure is trusted commercially.
+- **⚠ The multipliers are derived, not measured.** They now come from plan
+  geometry and published housing-stock averages rather than being guessed, and
+  two independent routes agree closely for terrace (47 vs 50 m²) and semi
+  (88 vs 85) — but **no real property has been measured against them**.
+  Detached is the weakest: geometry implies ~147 m² where the prototype's
+  prior says 130, a 13% disagreement that only survey data can settle.
+  Use `npm run validate` once you have some.
+- **Frontage assumptions carry the most weight.** Depth is derived from floor
+  area ÷ frontage, so an atypical frontage propagates into the multiplier.
+  Detached homes vary most and are least well served by an average.
+- **Storeys are assumed to be 2.** Bungalows and three-storey townhouses have
+  a different depth-to-frontage relationship and are not modelled. A bungalow
+  will read as too small.
 - **One photo shows one elevation.** Whole-house area is the front elevation
   × that multiplier. A property with an extension, an unusual footprint or a
   rear elevation unlike its front will be wrong, and nothing in the photo can
