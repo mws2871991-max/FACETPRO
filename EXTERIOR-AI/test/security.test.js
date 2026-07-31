@@ -223,7 +223,9 @@ test('the detect cap stops calling Anthropic once spent', async () => {
 
   const { status, body } = await post('/api/detect', payload);
   assert.strictEqual(status, 429);
-  assert.match(body.error, /daily limit/i);
+  // Assert the machine-readable reason, not the wording — the copy is written
+  // to keep the homeowner going and is expected to change.
+  assert.strictEqual(body.reason, 'daily_limit');
   assert.strictEqual(upstream.anthropic, before + DAILY_DETECT, 'a capped call must NOT reach the provider');
 });
 
@@ -238,6 +240,27 @@ test('the render cap is counted separately from detect', async () => {
   const second = await post('/api/render', payload);
   assert.strictEqual(second.status, 429, 'render has its own limit of 1 here');
   assert.strictEqual(upstream.replicate, before + 1, 'a capped render must NOT reach the provider');
+});
+
+test('a spent cap keeps the journey open rather than dead-ending', async () => {
+  // Both caps are exhausted by the tests above. The refusal has to say which
+  // capability is unavailable and that the rest still works — a homeowner who
+  // reads "try again tomorrow" leaves, and the lost lead costs more than the
+  // API call would have.
+  const detect = await post('/api/detect', { image: tinyJpeg(), mimeType: 'image/jpeg' });
+  const render = await post('/api/render', { image: tinyJpeg(), mimeType: 'image/jpeg' });
+  for (const [name, r] of [['detect', detect], ['render', render]]) {
+    assert.strictEqual(r.status, 429, name);
+    assert.strictEqual(r.body.reason, 'daily_limit', `${name} should be identifiable as a cap`);
+    assert.strictEqual(r.body.canContinue, true, `${name} should say the journey continues`);
+    assert.ok(!/try again tomorrow/i.test(r.body.error), `${name} should not dead-end`);
+    assert.match(r.body.error, /still/i, `${name} should say what still works`);
+  }
+
+  // And the unpaid parts of the journey must genuinely still work.
+  const quote = await post('/api/quote', { claddingId: 'sage-slate', roofId: 'terracotta', trimId: 'cedar', houseType: 'semi' });
+  assert.strictEqual(quote.status, 200);
+  assert.ok(quote.body.total > 0, 'an estimate is still available with both caps spent');
 });
 
 test('a malformed request does not spend quota', async () => {
