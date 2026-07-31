@@ -376,5 +376,197 @@
         ]
       }
     ]
+  },
+  "windowsDoors": {
+    "note": "Style and colour preview only — window/door pricing depends on frame size, glazing spec, and installation, so no price range is shown here. Use the cladding/roof/trim visualizer above for a real priced quote.",
+    "windowStyles": [
+      {
+        "id": "casement",
+        "name": "Casement",
+        "detail": "Cross bar",
+        "description": "Side-hinged opening pane with a classic cross-bar divide. The most common UK window style."
+      },
+      {
+        "id": "flush",
+        "name": "Flush",
+        "detail": "Flat",
+        "description": "Flat, flush-fitting sash that sits within the frame for a clean, modern, low-profile look."
+      },
+      {
+        "id": "sliding-sash",
+        "name": "Sliding Sash",
+        "detail": "2 panels",
+        "description": "Two vertically sliding panels in a traditional box frame — period character with modern double glazing."
+      },
+      {
+        "id": "bay",
+        "name": "Bay",
+        "detail": "Angled",
+        "description": "Angled multi-pane projection that adds floor space and lets in light from three directions."
+      }
+    ],
+    "doorStyles": [
+      {
+        "id": "composite",
+        "name": "Composite Door",
+        "detail": "Solid panel",
+        "description": "Solid, high-security composite panel door — durable, low-maintenance, and available in any colour."
+      },
+      {
+        "id": "bifold",
+        "name": "Bifold",
+        "detail": "3-panel fold",
+        "description": "Folding panels that stack to one side, opening the full width onto a garden or patio."
+      }
+    ],
+    "colours": [
+      {
+        "id": "anthracite",
+        "name": "Anthracite",
+        "hex": "#2B2D42"
+      },
+      {
+        "id": "agate-grey",
+        "name": "Agate Grey",
+        "hex": "#8A8D8F"
+      },
+      {
+        "id": "white",
+        "name": "White",
+        "hex": "#FFFFFF"
+      },
+      {
+        "id": "chartwell-green",
+        "name": "Chartwell Green",
+        "hex": "#5B7C5B"
+      },
+      {
+        "id": "black",
+        "name": "Black",
+        "hex": "#1C1C1C"
+      },
+      {
+        "id": "cream",
+        "name": "Cream",
+        "hex": "#F5F0E6"
+      }
+    ]
+  },
+  "fsgc": {
+    "note": "ESTIMATED per-metre guide prices for style comparison only — these are NOT the same numbers as the real, sourced trim rates used in the quote engine above (fascia £35/m + £12/m labour, soffit £30/m + £12/m labour, guttering £40/m + £15/m labour, from quote_generator.py), and cladding here is priced per linear metre for illustration whereas the real cladding catalogue is priced per m² of wall area. Don't treat these as a real quote — use the visualizer above for that.",
+    "fascia": [
+      {
+        "id": "flat-18mm",
+        "name": "Flat 18mm",
+        "pricePerM": 45,
+        "tagline": "Modern, clean lines",
+        "colours": [
+          "White",
+          "Anthracite",
+          "Black",
+          "Chartwell"
+        ],
+        "guaranteeYears": 25
+      },
+      {
+        "id": "ogee",
+        "name": "Ogee",
+        "pricePerM": 52,
+        "tagline": "Decorative, traditional profile",
+        "colours": [
+          "White",
+          "Rosewood",
+          "Oak"
+        ]
+      },
+      {
+        "id": "bullnose-22mm",
+        "name": "Bullnose 22mm",
+        "pricePerM": 58,
+        "tagline": "Premium rounded profile",
+        "colours": [
+          "White",
+          "Anthracite",
+          "Grey"
+        ],
+        "guaranteeYears": 30
+      }
+    ],
+    "soffit": [
+      {
+        "id": "plain",
+        "name": "Plain",
+        "pricePerM": 32,
+        "tagline": "Solid board — for insulated roofs"
+      },
+      {
+        "id": "vented",
+        "name": "Vented",
+        "pricePerM": 38,
+        "tagline": "Punched vents for roof airflow",
+        "bestseller": true
+      },
+      {
+        "id": "hollow-300mm",
+        "name": "Hollow 300mm",
+        "pricePerM": 42,
+        "tagline": "Tongue & groove, premium finish"
+      }
+    ],
+    "guttering": [
+      {
+        "id": "half-round",
+        "name": "Half Round",
+        "pricePerM": 28,
+        "tagline": "Classic 112mm profile"
+      },
+      {
+        "id": "square-line",
+        "name": "Square Line",
+        "pricePerM": 32,
+        "tagline": "Modern, higher capacity"
+      },
+      {
+        "id": "ogee-gutter",
+        "name": "Ogee",
+        "pricePerM": 38,
+        "tagline": "Cast-iron look, decorative"
+      },
+      {
+        "id": "aluminium-seamless",
+        "name": "Aluminium Seamless",
+        "pricePerM": 68,
+        "tagline": "No joints — coastal/premium",
+        "guaranteeYears": 40
+      }
+    ],
+    "cladding": [
+      {
+        "id": "vinyl",
+        "name": "Vinyl",
+        "pricePerM": 55,
+        "tagline": "Ship-lap light — budget refresh"
+      },
+      {
+        "id": "fibre-cement",
+        "name": "Fibre Cement",
+        "pricePerM": 85,
+        "tagline": "Flat panels, fire rated",
+        "guaranteeYears": 50
+      },
+      {
+        "id": "wood-effect-composite",
+        "name": "Wood Effect Composite",
+        "pricePerM": 92,
+        "tagline": "Zero maintenance, warm look"
+      },
+      {
+        "id": "brick-slip",
+        "name": "Brick Slip",
+        "pricePerM": 110,
+        "tagline": "Real brick, insulated — heritage",
+        "guaranteeYears": 60
+      }
+    ]
   }
 }

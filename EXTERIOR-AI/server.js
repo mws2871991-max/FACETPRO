@@ -730,6 +730,49 @@ Finally add: {"type":"analysis","summary":"2-3 sentence overview of the property
    What does need care is the lead: resolve the style from our own catalogue by
    id so a submission can't attach an invented price to itself, the same rule
    computePrice follows. */
+/* Window, door and roofline preferences. None of these change the quote —
+   the pricing engine treats trim as a single sourced rate regardless of
+   profile, and window/door pricing isn't modelled at all. They're captured
+   because they tell the installer what the homeowner actually wants.
+
+   Resolved from our own catalogue by id, so a lead can't invent a product or
+   a price, and unknown ids drop out rather than being echoed back. */
+function pick(list, id, fields) {
+  if (!Array.isArray(list) || !id) return null;
+  const found = list.find(x => x.id === id);
+  if (!found) return null;
+  return Object.fromEntries(fields.filter(f => found[f] !== undefined).map(f => [f, found[f]]));
+}
+
+function resolvePreferences(body) {
+  const wd = catalogue.windowsDoors;
+  const fs_ = catalogue.fsgc;
+  const named = ['id', 'name'];
+  const priced = ['id', 'name', 'pricePerM', 'guaranteeYears'];
+
+  const windows = wd ? {
+    style: pick(wd.windowStyles, body.windowStyleId, [...named, 'detail']),
+    door: pick(wd.doorStyles, body.doorStyleId, [...named, 'detail']),
+    colour: pick(wd.colours, body.windowDoorColourId, [...named, 'hex']),
+  } : null;
+
+  const roofline = fs_ ? {
+    fascia: pick(fs_.fascia, body.fasciaId, priced),
+    soffit: pick(fs_.soffit, body.soffitId, priced),
+    guttering: pick(fs_.guttering, body.gutteringId, priced),
+    cladding: pick(fs_.cladding, body.rooflineCladdingId, priced),
+  } : null;
+
+  const any = (o) => o && Object.values(o).some(Boolean);
+  if (!any(windows) && !any(roofline)) return null;
+  return {
+    windows: any(windows) ? windows : null,
+    roofline: any(roofline) ? roofline : null,
+    // These are style choices, not a priced specification.
+    note: 'Preferences only — the estimate uses our standard sourced specification.',
+  };
+}
+
 function resolveConservatory(styleId) {
   const styles = catalogue.conservatories?.styles;
   if (!styles || !styleId) return null;
@@ -932,6 +975,7 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
     // Present only if they showed interest in one — useful for the installer,
     // and priced from our catalogue rather than whatever the client sent.
     conservatory: resolveConservatory(conservatoryStyleId),
+    preferences: resolvePreferences(req.body || {}),
     detectionCount: Array.isArray(detections) ? detections.length : 0,
     renderUrl: renderUrl || null,
     notes: (notes || '').slice(0, 2000),

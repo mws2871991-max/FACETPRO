@@ -177,6 +177,18 @@
   <div id="mount-upload"></div>
   <div id="mount-visualizer"></div>
   <div id="mount-wholehouse"></div>
+  <details id="details-options" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24">
+    <summary class="flex items-center justify-between gap-4">
+      <span>
+        <span class="text-[11px] tracking-widest uppercase text-zinc-400 block">Optional</span>
+        <span class="serif text-[22px] md:text-[26px] tracking-tight">Windows, doors and roofline</span>
+        <span class="block mt-1 text-[13px] text-zinc-600">Tell us what you'd like and we'll pass it on. Doesn't change your estimate.</span>
+      </span>
+      <span class="chev text-zinc-400 transition-transform text-lg" aria-hidden="true">⌄</span>
+    </summary>
+    <div id="mount-details" class="mt-6"></div>
+  </details>
+
   <div id="mount-conservatory"></div>
   <div id="mount-refine"></div>
   <div id="mount-lead"></div>
@@ -354,6 +366,10 @@ const state = {
   // visualiser. Prices here are the catalogue's illustrative figures.
   wh: { finishId: null, roofColourId: null, windowColourId: null, areaM2: null, result: null, loading: false },
   conservatoryId: null,   // which style they're drawn to; goes with the lead
+  // Window/door and roofline preferences. Recorded for the installer; they
+  // never move the price, because the quote uses one sourced trim rate.
+  prefs: { windowStyleId: null, doorStyleId: null, windowDoorColourId: null,
+           fasciaId: null, soffitId: null, gutteringId: null, rooflineCladdingId: null },
   installerPassword: sessionStorage.getItem('fp_installer_pw') || '',
   installerAuthed: false,
   installerError: '',
@@ -512,6 +528,7 @@ const MOUNTS = [
   ['mount-upload',     buildUploadDetect],
   ['mount-visualizer', buildVisualizer],
   ['mount-wholehouse', buildWholeHouse],
+  ['mount-details',     buildDetailOptions],
   ['mount-conservatory', buildConservatory],
   ['mount-refine',     buildRefineEstimate],
   ['mount-lead',       buildSaveFraming],
@@ -836,6 +853,118 @@ function buildPricePanel(price, priceRow) {
     h('p', { className: 'mt-3 text-[10px] leading-4 text-white/50' }, `Based on ${price.footprintM2} m² of wall.`),
     h('p', { className: 'mt-3 text-[10px] leading-4 text-white/50' }, catalogue_note()),
     h('p', { className: 'mt-2 text-[10px] leading-4 text-white/50' }, 'A planning estimate, not a fixed quote — an installer will confirm the price after a survey.'),
+  ]);
+}
+
+/* ── Windows, doors and roofline ──
+   Two catalogue sections that never had a UI. Neither changes the price:
+   window and door costs depend on frame size and glazing spec, which we
+   don't model, and the quote engine prices trim at one sourced rate whatever
+   profile is chosen. So this captures preference, not specification.
+
+   The fsgc per-metre figures are the catalogue's guide rates and its note is
+   explicit that they aren't the sourced ones used in the quote. Shown as
+   "guide" and used for comparison between profiles, which is what they're
+   good for — Ogee costs more than Flat, seamless aluminium more again. The
+   guarantee years are the genuinely useful bit and appear nowhere else. */
+function renderDetailsOnly() {
+  const old = document.getElementById('detail-options');
+  if (!old) { render(); return; }
+  old.replaceWith(buildDetailOptions());
+}
+
+function buildDetailOptions() {
+  const wd = state.catalogue?.windowsDoors;
+  const fs = state.catalogue?.fsgc;
+  if (!wd && !fs) return h('div', { id: 'detail-options' });
+
+  const setPref = (key, id) => {
+    state.prefs[key] = state.prefs[key] === id ? null : id;
+    renderDetailsOnly();
+  };
+
+  // Style/profile card: name, what it is, and — where we have them — the
+  // guide rate and guarantee.
+  const optionCard = (item, key, opts = {}) => {
+    const active = state.prefs[key] === item.id;
+    return h('button', {
+      type: 'button',
+      'aria-pressed': active ? 'true' : 'false',
+      className: `text-left p-3 rounded-xl border transition ${active ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-400'}`,
+      onClick: () => setPref(key, item.id),
+    }, [
+      h('div', { className: 'flex items-baseline justify-between gap-2' }, [
+        h('span', { className: 'text-xs font-medium' }, item.name),
+        item.pricePerM
+          ? h('span', { className: `text-[11px] ${active ? 'text-white/70' : 'text-zinc-500'}` }, `~£${item.pricePerM}/m`)
+          : null,
+      ]),
+      h('div', { className: `mt-1 text-[11px] leading-4 ${active ? 'text-white/60' : 'text-zinc-500'}` },
+        item.tagline || item.detail || ''),
+      item.guaranteeYears
+        ? h('div', { className: `mt-1.5 text-[10px] ${active ? 'text-emerald-300' : 'text-emerald-600'}` }, `${item.guaranteeYears}-year guarantee`)
+        : null,
+      opts.bestseller && item.bestseller
+        ? h('div', { className: `mt-1 text-[10px] ${active ? 'text-amber-300' : 'text-amber-600'}` }, '★ Most chosen')
+        : null,
+    ]);
+  };
+
+  const group = (title, list, key, opts) => h('div', {}, [
+    h('h4', { className: 'text-[10px] tracking-widest uppercase text-zinc-500' }, title),
+    h('div', { className: 'mt-2 grid sm:grid-cols-2 gap-2' }, list.map(i => optionCard(i, key, opts))),
+  ]);
+
+  const colourRow = (list, key) => h('div', {}, [
+    h('h4', { className: 'text-[10px] tracking-widest uppercase text-zinc-500' }, 'Frame colour'),
+    h('div', { className: 'mt-2 flex flex-wrap gap-2' }, list.map(c => {
+      const active = state.prefs[key] === c.id;
+      return h('button', {
+        type: 'button', title: c.name, 'aria-label': c.name, 'aria-pressed': active ? 'true' : 'false',
+        className: `flex items-center gap-2 px-3 py-2 rounded-full border text-xs transition ${active ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-400'}`,
+        onClick: () => setPref(key, c.id),
+      }, [
+        h('span', { className: 'w-4 h-4 rounded-full border border-black/20', style: { background: c.hex } }),
+        c.name,
+      ]);
+    })),
+  ]);
+
+  const chosen = Object.values(state.prefs).filter(Boolean).length;
+
+  return h('div', { id: 'detail-options', className: 'grid gap-8' }, [
+    wd ? h('div', {}, [
+      h('h3', { className: 'text-[15px] font-medium' }, 'Windows & doors'),
+      h('p', { className: 'mt-1 text-[12px] leading-5 text-zinc-600 max-w-[68ch]' },
+        'Style and colour only — we can’t price windows and doors from a photo, because it depends on frame sizes and glazing spec. Your installer will quote these separately.'),
+      h('div', { className: 'mt-4 grid gap-5' }, [
+        group('Window style', wd.windowStyles, 'windowStyleId'),
+        group('Door style', wd.doorStyles, 'doorStyleId'),
+        colourRow(wd.colours, 'windowDoorColourId'),
+      ]),
+    ]) : null,
+
+    fs ? h('div', { className: wd ? 'pt-8 border-t border-zinc-200' : '' }, [
+      h('h3', { className: 'text-[15px] font-medium' }, 'Roofline & cladding profiles'),
+      h('p', { className: 'mt-1 text-[12px] leading-5 text-zinc-600 max-w-[68ch]' },
+        'Your estimate already includes fascia, soffit and guttering at our standard specification. These are the profiles you can choose between — the per-metre figures are a guide for comparing them, not the sourced rates behind your quote.'),
+      h('div', { className: 'mt-4 grid gap-5' }, [
+        group('Fascia', fs.fascia, 'fasciaId'),
+        group('Soffit', fs.soffit, 'soffitId', { bestseller: true }),
+        group('Guttering', fs.guttering, 'gutteringId'),
+        group('Cladding profile', fs.cladding, 'rooflineCladdingId'),
+      ]),
+    ]) : null,
+
+    h('div', { className: 'rounded-xl bg-[#FDFCF9] border border-zinc-200 p-4 flex items-center justify-between gap-3 flex-wrap' }, [
+      h('span', { className: 'text-[12px] text-zinc-600' },
+        chosen ? `${chosen} preference${chosen === 1 ? '' : 's'} noted — we’ll pass these on with your design.` : 'Nothing chosen yet. Anything you pick travels with your design.'),
+      chosen ? h('button', {
+        type: 'button',
+        className: 'text-[11px] px-3 py-1.5 rounded-full border border-zinc-200 hover:border-zinc-900 transition',
+        onClick: () => { Object.keys(state.prefs).forEach(k => state.prefs[k] = null); renderDetailsOnly(); },
+      }, 'Clear all') : null,
+    ]),
   ]);
 }
 
@@ -1499,8 +1628,10 @@ async function sendDesignPack() {
         trimLengthM: state.trimLengthM || null,
         measurementSource: state.measurementSource,
         detectionId: state.useMeasurement ? state.detectionId : null,
-        // Just the id — the server looks up the style and its price range.
+        // Just the ids — the server looks up every product from its own
+        // catalogue, so nothing here can carry an invented price.
         conservatoryStyleId: state.conservatoryId,
+        ...state.prefs,
         detections: state.detections,
         renderUrl: state.renderUrl,
         consent: { given: true, wording: CONSENT_WORDING, version: CONSENT_VERSION },
