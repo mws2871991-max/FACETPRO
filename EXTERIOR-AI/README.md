@@ -119,11 +119,23 @@ npm run validate            # data/survey-samples.json
 npm run validate -- path/to/other.json
 ```
 
-The calibration above is *derived* — from plan geometry and published
-housing-stock averages — not *measured*. To validate it properly, collect
-properties whose wall area you know from a survey, copy
-`data/survey-samples.example.json` to `data/survey-samples.json`, and run the
-above. Samples can be either a real `/api/detect` output plus the surveyed area
+**Status: the method is confirmed, the numbers are not.**
+
+BRE's RdSAP manual — the UK's official domestic energy assessment method —
+defines wall area as "the room height ... multiplied by the heat loss
+perimeter" (the exposed wall perimeter), and for "a dwelling joined onto
+another dwelling (semi-detached and terraced houses) the measurement is to the
+midpoint of the party wall". Party walls excluded, exposed perimeter × height:
+that is exactly the model above, and it independently confirms mid-terrace =
+2.00. It says nothing about whether the frontage and depth figures used here
+are right for your customers' housing stock.
+
+No published source gives per-archetype wall areas, so the calibration is
+*derived* — from plan geometry and published housing-stock averages — not
+*measured*. To validate it properly, collect properties whose wall area you
+know from a survey, copy `data/survey-samples.example.json` to
+`data/survey-samples.json`, and run the above. (The real file is gitignored:
+it will contain addresses.) Samples can be either a real `/api/detect` output plus the surveyed area
 (tests the whole pipeline, detection quality included) or just
 frontage/depth/storeys (tests the multiplier in isolation).
 

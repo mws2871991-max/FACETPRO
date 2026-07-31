@@ -38,6 +38,15 @@ const DOOR_HEIGHT_M = 1.98;   // standard UK external door leaf
    and it depends only on the plan shape — no assumption about storey height
    is needed, which removes the biggest thing that could have been wrong.
 
+   This matches how the UK actually measures domestic wall area. BRE's RdSAP
+   manual defines wall area as "the room height ... multiplied by the heat
+   loss perimeter", where the heat loss perimeter is the exposed wall
+   perimeter, and for "a dwelling joined onto another dwelling (semi-detached
+   and terraced houses) the measurement is to the midpoint of the party wall"
+   — i.e. party walls are excluded, exactly as below. That confirms the
+   method, and independently confirms mid-terrace = 2.0. It does NOT confirm
+   the frontage and depth figures used here; only surveyed properties can.
+
    Exposed perimeter by type, with W = frontage, D = depth:
      mid-terrace   both side walls are party walls   → 2W        (exactly 2.0)
      end-terrace   one side wall exposed             → 2W + D

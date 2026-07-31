@@ -9,3 +9,7 @@ data/*.jsonl
 
 # Runtime daily-usage counter for the paid endpoints.
 data/usage.json
+
+# Real surveyed properties — contains addresses. The committed template is
+# data/survey-samples.example.json.
+data/survey-samples.json
