@@ -60,8 +60,26 @@ const DOOR_HEIGHT_M = 1.98;   // standard UK external door leaf
    semi 6–8 m). Sources are in the README.
 
    These replace the earlier back-derived guesses of 1.7/2.4/3.2, which this
-   derivation shows were low by 15–25%. Still not the same thing as measuring
-   real properties — see `npm run validate` and the README caveats. */
+   derivation shows were low by 15–25%.
+
+   They now survive a check against measured data. The prototype's priors come
+   from 120 surveys, so dividing each surveyed wall area by its multiplier
+   gives the front elevation that multiplier implies, which can be compared
+   with the geometry above:
+
+     terrace    50 m² ÷ 2.00 = 25.0 m² implied   vs 23.5 m² geometry    -6%
+     semi       85 m² ÷ 3.05 = 27.9 m² implied   vs 29.0 m² geometry    +4%
+     detached  130 m² ÷ 3.84 = 33.9 m² implied   vs 38.4 m² geometry   +13%
+
+   Terrace and semi agree closely. Detached does not, and the likeliest cause
+   is the 9.0 m frontage assumed here being too wide for the properties in
+   that survey — matching it would need a multiplier nearer 3.39. Left as the
+   geometry gives it rather than fitted to one number, and flagged in the
+   README. Set WALL_FRONT_TO_TOTAL_DETACHED=3.39 to follow the survey instead.
+
+   Still not the same as measuring properties end to end — the door-reference
+   path has no external validation at all, since the prototype only ever used
+   the coverage method. See `npm run validate`. */
 const PLAN_GEOMETRY = {
   detached:   { floorAreaM2: 149, storeys: 2, frontageM: 9.0,  exposed: '2W+2D' },
   semi:       { floorAreaM2: 97,  storeys: 2, frontageM: 6.8,  exposed: '2W+D'  },
@@ -89,10 +107,21 @@ function frontToTotalFrom(plan) {
    `wallM2` is typical total exterior wall area for the whole property, and
    `band` is the range outside which a computed figure is treated as wrong.
 
-   `calibrationFactor` and `coverageCentre` come from the prototype's survey
-   table. They are mutually consistent — centre × factor lands on the prior
-   for all three types (0.18×277≈50, 0.28×303≈85, 0.38×342≈130), which is a
-   good sign the table is internally sound.
+   `wallM2`, `calibrationFactor` and `coverageCentre` come from the prototype's
+   calibration table (Renderd-V4-11), which labels itself "avg from 120
+   surveys" — so for terrace, semi and detached these are measured figures,
+   not assumptions. Its own rows, verbatim:
+
+     terrace   m2:50   coverage:0.18  factor:277   "2-bed, 2-storey"
+     semi      m2:85   coverage:0.28  factor:303   "3-bed, 2-storey"
+     detached  m2:130  coverage:0.38  factor:342   "4-bed, 2-storey"
+
+   They are mutually consistent — centre × factor lands on the prior for all
+   three (0.18×277≈50, 0.28×303≈85, 0.38×342≈130).
+
+   endTerrace is not in that table and remains an extrapolation. bungalow's
+   60 m² comes from the later Renderd-v4 table, which lists m² only, so its
+   coverage centre is still ours (factor follows from 60 / 0.22).
 
    `frontToTotal` is computed from PLAN_GEOMETRY above rather than stated, so
    the number is always traceable to the frontage and depth it came from.
@@ -108,7 +137,7 @@ const HOUSE_TYPE_PRIORS = {
   detached:   { label: 'Detached',       wallM2: 130, band: [90, 200], calibrationFactor: 342, coverageCentre: 0.38, calibrationSource: 'survey table' },
   semi:       { label: 'Semi-detached',  wallM2: 85,  band: [55, 130], calibrationFactor: 303, coverageCentre: 0.28, calibrationSource: 'survey table' },
   endTerrace: { label: 'End of terrace', wallM2: 80,  band: [50, 120], calibrationFactor: 444, coverageCentre: 0.18, calibrationSource: 'derived' },
-  bungalow:   { label: 'Bungalow',       wallM2: 72,  band: [45, 110], calibrationFactor: 327, coverageCentre: 0.22, calibrationSource: 'derived' },
+  bungalow:   { label: 'Bungalow',       wallM2: 60,  band: [38, 95],  calibrationFactor: 273, coverageCentre: 0.22, calibrationSource: 'prototype table (m² only)' },
   terrace:    { label: 'Mid-terrace',    wallM2: 50,  band: [32, 80],  calibrationFactor: 277, coverageCentre: 0.18, calibrationSource: 'survey table' },
 };
 

@@ -217,13 +217,24 @@ Tests run serially (`--test-concurrency=1`) because the files share
 
 Read these before putting a number in front of a homeowner.
 
-- **⚠ The multipliers are derived, not measured.** They now come from plan
-  geometry and published housing-stock averages rather than being guessed, and
-  two independent routes agree closely for terrace (47 vs 50 m²) and semi
-  (88 vs 85) — but **no real property has been measured against them**.
-  Detached is the weakest: geometry implies ~147 m² where the prototype's
-  prior says 130, a 13% disagreement that only survey data can settle.
-  Use `npm run validate` once you have some.
+- **The priors are measured; the multipliers are not.** The prototype's
+  calibration table (`Renderd-V4-11`, `~/Downloads`) labels itself *"avg from
+  120 surveys"*, so the 50 / 85 / 130 m² figures for terrace, semi and
+  detached are real. The front-to-total multipliers are still ours — the
+  prototype only ever used the coverage method, so the door-reference path has
+  no external validation at all.
+- **The multipliers do stand up to a check against those surveys.** Dividing
+  each surveyed wall area by its multiplier gives the front elevation it
+  implies: terrace 25.0 m² vs 23.5 geometry (−6%), semi 27.9 vs 29.0 (+4%),
+  detached 33.9 vs 38.4 (**+13%**). Detached is the outlier, most likely
+  because the 9.0 m frontage assumed for it is too wide for that survey
+  sample. Matching the survey would need ~3.39; set
+  `WALL_FRONT_TO_TOTAL_DETACHED=3.39` if you'd rather follow the data than
+  the geometry.
+- **End-of-terrace and bungalow are extrapolations.** Neither is in the
+  120-survey table. Bungalow's 60 m² comes from the later `Renderd-v4` table
+  (m² only, no coverage or factor); end-of-terrace has no external figure at
+  all.
 - **Frontage assumptions carry the most weight.** Depth is derived from floor
   area ÷ frontage, so an atypical frontage propagates into the multiplier.
   Detached homes vary most and are least well served by an average.
