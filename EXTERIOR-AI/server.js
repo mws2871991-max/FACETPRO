@@ -506,8 +506,16 @@ function logMeasureTuning() {
    booleans about our own behaviour — no keys, no addresses. Exists so the
    lead form can promise a design-pack email only when one will actually be
    sent, rather than saying it and hoping. */
+/* Beta is the default, deliberately. Everything on this site is honest about
+   its own uncertainty — estimates are planning figures, renders are a guide,
+   the wall measurement is calibrated but unproven against real properties —
+   and saying "beta" out loud is the plainest version of that. Set
+   SITE_MODE=live to remove it once you're confident, rather than the reverse:
+   forgetting to add a beta badge is worse than forgetting to remove one. */
+const SITE_MODE = (process.env.SITE_MODE || 'beta').toLowerCase() === 'live' ? 'live' : 'beta';
+
 app.get('/api/config', (req, res) => {
-  res.json({ designPackEmail: DESIGN_PACK_ENABLED });
+  res.json({ designPackEmail: DESIGN_PACK_ENABLED, beta: SITE_MODE === 'beta' });
 });
 
 /* ── GET /api/catalogue ── */
@@ -1104,6 +1112,9 @@ app.listen(PORT, () => {
   console.log(`Daily caps — detect: ${DAILY_LIMITS.detect}, render: ${DAILY_LIMITS.render} ` +
               `(used today: ${usage.detect}/${usage.render}, UTC day ${usage.day})`);
   checkCatalogueAge();
+  console.log(SITE_MODE === 'beta'
+    ? 'Site mode: BETA — the badge and notice are shown. Set SITE_MODE=live to remove them.'
+    : 'Site mode: LIVE — no beta badge.');
   logMeasureTuning();
   checkEmailConfig();
 });

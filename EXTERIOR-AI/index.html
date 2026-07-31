@@ -156,6 +156,7 @@
     <a href="/" class="flex items-center gap-3" aria-label="Facet Pro home">
       <span class="w-8 h-8 rounded-full bg-zinc-900 text-white grid place-items-center text-[11px] tracking-[0.15em] font-semibold" aria-hidden="true">FP</span>
       <span class="serif text-[19px] tracking-tight">Facet Pro</span>
+      <span id="beta-badge" hidden class="text-[10px] tracking-widest uppercase px-2 py-0.5 rounded-full bg-amber-100 border border-amber-300 text-amber-900">Beta</span>
     </a>
     <nav class="flex items-center gap-2" aria-label="Primary">
       <a href="#whole-house" class="hidden sm:block text-xs px-3 py-2 rounded-full hover:bg-white transition">Finishes</a>
@@ -168,6 +169,17 @@
 </header>
 
 <main class="max-w-6xl mx-auto px-6 py-8 flex flex-col gap-8">
+
+  <!-- Shown only when the server reports beta mode, so one env var controls it. -->
+  <aside id="beta-notice" hidden class="rounded-2xl border border-amber-300 bg-amber-50 p-5">
+    <p class="text-[13px] leading-6 text-amber-900">
+      <strong>Facet Pro is in beta.</strong>
+      Everything here works and the prices come from real supplier and labour rates — but we're still
+      refining how we measure a house from a photo, so treat the figures as a starting point rather
+      than a quote. If something looks wrong for your home, tell us when you save your design; that's
+      exactly what we're trying to get right.
+    </p>
+  </aside>
 
   <section class="rounded-2xl bg-zinc-900 text-[#FBF8F3] overflow-hidden p-8 md:p-12" aria-labelledby="hero-heading">
     <p class="text-[11px] tracking-[0.25em] uppercase text-white/50">Home exterior visualiser · UK</p>
@@ -306,6 +318,10 @@
         <a href="/terms" class="hover:text-zinc-900">Terms</a>
       </nav>
     </div>
+    <p id="beta-footer" hidden class="mt-5 text-[11px] leading-5 text-amber-900 bg-amber-50 border border-amber-200 rounded-xl p-3 max-w-[80ch]">
+      <strong>Beta.</strong> We're still calibrating how we measure a house from a photo against
+      surveyed properties. Figures may change, and an installer confirms everything on site.
+    </p>
     <p class="mt-5 text-[11px] leading-5 text-zinc-500 max-w-[80ch]">Facet Pro is a home exterior visualiser for UK homeowners. Figures shown are planning estimates based on typical material, labour, scaffolding and waste costs plus VAT — not fixed quotes. Renders are a visual guide to help you choose and may differ from the finished installation.</p>
   </div>
 </footer>
@@ -373,6 +389,7 @@ const state = {
   // Server tells us whether it can email the homeowner their design, so the
   // form only promises it when it's true.
   designPackEmail: false,
+  beta: true,   // assume beta until the server says otherwise
   // Whole-house finishes: a quicker walls-only path alongside the detailed
   // visualiser. Prices here are the catalogue's illustrative figures.
   wh: { finishId: null, roofColourId: null, windowColourId: null, areaM2: null, result: null, loading: false },
@@ -424,8 +441,22 @@ async function loadConfig() {
     const res = await fetch('/api/config');
     const cfg = await res.json();
     state.designPackEmail = !!cfg.designPackEmail;
+    state.beta = !!cfg.beta;
   } catch (err) {
     state.designPackEmail = false;   // promise nothing if we can't tell
+    // If we can't reach the server, assume beta: overstating readiness is the
+    // worse mistake of the two.
+    state.beta = true;
+  }
+  applyBetaMode();
+}
+
+// The badge and notice ship hidden and are revealed by the server's answer,
+// so nothing has to be edited in two places to switch mode.
+function applyBetaMode() {
+  for (const id of ['beta-badge', 'beta-notice', 'beta-footer']) {
+    const el = document.getElementById(id);
+    if (el) el.hidden = !state.beta;
   }
 }
 

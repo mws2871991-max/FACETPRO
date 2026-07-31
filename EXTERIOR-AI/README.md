@@ -288,6 +288,18 @@ it can't know the condition of the walls and roof, access, or what a survey
 will turn up. Nothing in the customer-facing copy needs to change now these
 are confirmed real — it never claimed they were provisional.
 
+## Beta mode
+
+`SITE_MODE` defaults to `beta`, which shows a badge beside the wordmark, a
+notice above the hero and a line in the footer — all explaining that the
+figures are a starting point while the measurement is calibrated against real
+properties. `GET /api/config` reports it and the page reveals the markup,
+so one variable controls all three.
+
+Set `SITE_MODE=live` to remove them. The default is deliberately the honest
+one: forgetting to add a beta badge is worse than forgetting to remove one,
+and if the page can't reach the server it assumes beta for the same reason.
+
 ## Emails
 
 Two emails, two audiences, and they must not be confused. Templates live in
