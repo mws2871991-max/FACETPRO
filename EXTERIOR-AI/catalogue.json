@@ -231,5 +231,150 @@
     "areaMinM2": 60,
     "areaMaxM2": 200,
     "areaDefaultM2": 95
+  },
+  "conservatories": {
+    "note": "ESTIMATED placeholder price ranges — unlike cladding/roof/trim above, these are NOT sourced from any real production data. Replace with real supplier/installer pricing whenever you have it.",
+    "styles": [
+      {
+        "id": "edwardian",
+        "name": "Edwardian",
+        "priceMin": 12000,
+        "priceMax": 18000,
+        "bestFor": "Modern homes",
+        "footprint": "3-facet rectangle",
+        "lightPct": 85,
+        "description": "Clean rectangular footprint maximising usable floor space. Timeless flat-fronted elevation with strong symmetry.",
+        "pros": [
+          "Maximum floor area",
+          "Furniture friendly",
+          "Cost effective"
+        ],
+        "cons": [
+          "Less ornate than Victorian"
+        ]
+      },
+      {
+        "id": "victorian",
+        "name": "Victorian",
+        "priceMin": 14000,
+        "priceMax": 22000,
+        "bestFor": "Period homes",
+        "footprint": "5-facet bay (3-front)",
+        "lightPct": 88,
+        "description": "Iconic faceted bay front adding character and wide-angle views. The classic UK conservatory silhouette.",
+        "pros": [
+          "Period-appropriate character",
+          "Wide views",
+          "Adds kerb appeal"
+        ],
+        "cons": [
+          "More complex roof, higher cost than a simple rectangle"
+        ]
+      },
+      {
+        "id": "lean-to",
+        "name": "Lean-to",
+        "priceMin": 10000,
+        "priceMax": 16000,
+        "bestFor": "Bungalows / small gardens",
+        "footprint": "Single slope",
+        "lightPct": 82,
+        "description": "Simple single-pitch roof leaning against the house. Lowest height, ideal for restricted spaces and contemporary bungalows.",
+        "pros": [
+          "Cheapest option",
+          "Fits low eaves/restricted height",
+          "Simple, fast build"
+        ],
+        "cons": [
+          "Least dramatic roofline"
+        ]
+      },
+      {
+        "id": "gable",
+        "name": "Gable",
+        "priceMin": 16000,
+        "priceMax": 26000,
+        "bestFor": "Large detached homes",
+        "footprint": "Triangle front, high roof",
+        "lightPct": 90,
+        "description": "High gable front with a full-height triangular frame. Cathedral-like feel, with the most light and volume of the simpler styles.",
+        "pros": [
+          "Most light and headroom",
+          "Dramatic look"
+        ],
+        "cons": [
+          "Needs sufficient wall height/space to suit the proportions"
+        ]
+      },
+      {
+        "id": "p-shaped",
+        "name": "P-shaped",
+        "priceMin": 20000,
+        "priceMax": 35000,
+        "bestFor": "Big gardens",
+        "footprint": "Lean-to + Victorian L",
+        "lightPct": 92,
+        "description": "Combines a lean-to and Victorian bay to wrap around a corner. Creates two distinct living zones in one structure.",
+        "pros": [
+          "Two usable zones",
+          "Flexible layout"
+        ],
+        "cons": [
+          "Larger footprint needed, higher cost"
+        ]
+      },
+      {
+        "id": "t-shaped",
+        "name": "T-shaped",
+        "priceMin": 22000,
+        "priceMax": 38000,
+        "bestFor": "Large homes",
+        "footprint": "Central projection",
+        "lightPct": 94,
+        "description": "A central projection creates a symmetrical T shape, with a dramatic central avenue and wings either side.",
+        "pros": [
+          "Most light of all styles",
+          "Striking symmetrical design"
+        ],
+        "cons": [
+          "Highest complexity/cost among glass-roof styles"
+        ]
+      },
+      {
+        "id": "orangery",
+        "name": "Orangery",
+        "priceMin": 25000,
+        "priceMax": 45000,
+        "bestFor": "Premium builds",
+        "footprint": "Brick pillars + lantern",
+        "lightPct": 86,
+        "description": "Brick or stone pillars with a flat perimeter roof and a central roof lantern. A luxury solid-roof hybrid between an extension and a conservatory.",
+        "pros": [
+          "Feels like a permanent extension",
+          "Better year-round insulation than an all-glass roof"
+        ],
+        "cons": [
+          "Most expensive option",
+          "Less roof glazing than a full glass-roof style"
+        ]
+      },
+      {
+        "id": "garden-room",
+        "name": "Garden Room",
+        "priceMin": 18000,
+        "priceMax": 30000,
+        "bestFor": "Year-round use",
+        "footprint": "Full tiled roof + bi-folds",
+        "lightPct": 78,
+        "description": "Fully tiled, lightweight roof with bi-fold doors across the front. A true year-round room that feels like a proper extension.",
+        "pros": [
+          "Best insulated, usable year-round",
+          "Feels like a real room, not a conservatory"
+        ],
+        "cons": [
+          "Least roof glazing/natural light of the 8 styles"
+        ]
+      }
+    ]
   }
 }
