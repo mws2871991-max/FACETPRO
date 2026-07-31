@@ -76,7 +76,19 @@ const INSERT_PARAMS = {
   waitlist: o => [o.ts, o.email, o.role],
   feedback: o => [o.ts, o.sessionId, o.rating, o.elementCount, o.comment],
   detections: o => [o.ts, o.sessionId, o.elementCount, o.mimeType],
-  leads: o => [o.ts, o.action, o.name, o.email, o.phone, o.postcode, o.message, o.source, o.status, JSON.stringify(o.design||{})]
+  /* The scalar columns are for querying; `design` carries the WHOLE lead.
+     This used to pass o.design, which no lead has ever had — so with
+     DATABASE_URL set, thirteen fields were dropped on every insert: the id,
+     the price and its breakdown, the selections, the measurement, the
+     conservatory and preference choices, the render URL, and the consent
+     record.
+
+     The consent record is the one that matters most. It holds the exact
+     wording the homeowner agreed to and when, which is the evidence of
+     lawful basis under UK GDPR — losing it silently is worse than not
+     having a database at all. `action`, `message` and `source` are legacy
+     columns from an older shape and are simply not part of a lead. */
+  leads: o => [o.ts, null, o.name, o.email, o.phone, o.postcode, null, null, o.status, JSON.stringify(o)]
 };
 
 const SELECT_SQL = {
@@ -84,7 +96,9 @@ const SELECT_SQL = {
   waitlist: `SELECT ts, email, role FROM waitlist ORDER BY id ASC`,
   feedback: `SELECT ts, session_id AS "sessionId", rating, element_count AS "elementCount", comment FROM feedback ORDER BY id ASC`,
   detections: `SELECT ts, session_id AS "sessionId", element_count AS "elementCount", mime_type AS "mimeType" FROM detections ORDER BY id ASC`,
-  leads: `SELECT ts, action, name, email, phone, postcode, message, source, status, design FROM leads ORDER BY id ASC`
+  // `design` holds the full lead, so read it back rather than reassembling a
+  // partial one from the scalar columns.
+  leads: `SELECT design FROM leads ORDER BY id ASC`
 };
 
 async function append(table, obj) {
@@ -98,6 +112,10 @@ async function append(table, obj) {
 async function readAll(table) {
   if (pool) {
     const { rows } = await pool.query(SELECT_SQL[table]);
+    // Leads are stored whole in the `design` JSONB column, so unwrap them —
+    // callers expect the same shape the JSONL path returns, not a row with a
+    // nested object. Anything without it falls back to the row itself.
+    if (table === 'leads') return rows.map(r => r.design || r);
     return rows;
   }
   return readLines(FILE_NAMES[table]);
