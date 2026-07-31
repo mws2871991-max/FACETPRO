@@ -514,6 +514,27 @@ function logMeasureTuning() {
    forgetting to add a beta badge is worse than forgetting to remove one. */
 const SITE_MODE = (process.env.SITE_MODE || 'beta').toLowerCase() === 'live' ? 'live' : 'beta';
 
+/* ── GET /healthz ──
+   For the host's health check. Deliberately says almost nothing: whether the
+   process is up, and whether the disk it needs is actually writable — which
+   is the failure this deployment is most likely to hit, since a host without
+   a mounted volume looks perfectly healthy right up until the first lead is
+   silently lost. */
+app.get('/healthz', (req, res) => {
+  let storageWritable = false;
+  try {
+    fs.mkdirSync(path.join(__dirname, 'data'), { recursive: true });
+    fs.accessSync(path.join(__dirname, 'data'), fs.constants.W_OK);
+    storageWritable = true;
+  } catch (_) { /* reported below */ }
+
+  res.status(storageWritable ? 200 : 503).json({
+    ok: storageWritable,
+    mode: SITE_MODE,
+    storageWritable,
+  });
+});
+
 app.get('/api/config', (req, res) => {
   res.json({ designPackEmail: DESIGN_PACK_ENABLED, beta: SITE_MODE === 'beta' });
 });

@@ -1,0 +1,58 @@
+# Render blueprint. Commit this at the REPOSITORY ROOT if you deploy from
+# Render's blueprint flow — it currently sits inside EXTERIOR-AI/ alongside the
+# app, so either move it up a level or set the root directory in the dashboard.
+#
+# The disk is the part that matters. Without it Render gives you an ephemeral
+# filesystem, and this app keeps leads, the detection records and the daily
+# spend counter under data/ — all of which would vanish on every deploy and
+# restart, silently.
+services:
+  - type: web
+    name: facetpro
+    runtime: node
+    plan: starter          # a paid plan is required for a persistent disk
+    rootDir: EXTERIOR-AI
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /healthz
+    autoDeploy: false      # deploy deliberately, not on every push to main
+
+    disk:
+      name: facetpro-data
+      mountPath: /opt/render/project/src/EXTERIOR-AI/data
+      sizeGB: 1
+
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: SITE_MODE
+        value: beta
+      - key: SITE_URL
+        value: https://www.facetpro.co.uk
+
+      # Required. Without this the installer area returns 503 and serves nothing.
+      - key: INSTALLER_PASSWORD
+        sync: false
+
+      # Required for detection and renders. Without them both endpoints return
+      # a clear error rather than crashing.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: REPLICATE_API_TOKEN
+        sync: false
+
+      # Lead email. Without a verified sending domain nothing is delivered —
+      # see DEPLOY.md.
+      - key: RESEND_API_KEY
+        sync: false
+      - key: LEAD_NOTIFY_EMAIL
+        sync: false
+      - key: LEAD_FROM_EMAIL
+        sync: false
+
+      # Spend caps. These are the only thing bounding the Anthropic and
+      # Replicate bill — set them deliberately.
+      - key: DAILY_DETECT_LIMIT
+        value: "50"
+      - key: DAILY_RENDER_LIMIT
+        value: "50"

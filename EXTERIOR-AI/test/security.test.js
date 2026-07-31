@@ -209,6 +209,22 @@ test('the optional sections keep the figures they actually display', async () =>
   assert.ok(body.windowsDoors.colours.every(c => c.hex), 'colour chips need their hex');
 });
 
+test('/healthz reports storage, and says nothing else', async () => {
+  // The host's health check. It exists mainly to catch a deploy with no
+  // volume mounted — the failure that otherwise looks perfectly healthy
+  // right up until the first lead is silently lost.
+  const { status, body } = await get('/healthz');
+  assert.strictEqual(status, 200);
+  assert.strictEqual(body.ok, true);
+  assert.strictEqual(body.storageWritable, true);
+  // Must not become an information endpoint.
+  assert.deepStrictEqual(Object.keys(body).sort(), ['mode', 'ok', 'storageWritable']);
+  const text = JSON.stringify(body);
+  for (const marker of ['PASSWORD', 'sk-', 'r8', 're_', '/Users/', 'node_modules']) {
+    assert.ok(!text.includes(marker), `/healthz leaked "${marker}"`);
+  }
+});
+
 /* ── daily spend caps ── */
 
 test('the detect cap stops calling Anthropic once spent', async () => {
