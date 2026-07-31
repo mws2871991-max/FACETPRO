@@ -389,7 +389,8 @@ const state = {
   // Server tells us whether it can email the homeowner their design, so the
   // form only promises it when it's true.
   designPackEmail: false,
-  beta: true,   // assume beta until the server says otherwise
+  beta: true,          // assume beta until the server says otherwise
+  leadCapture: true,   // the server decides; see LEAD_CAPTURE
   // Whole-house finishes: a quicker walls-only path alongside the detailed
   // visualiser. Prices here are the catalogue's illustrative figures.
   wh: { finishId: null, roofColourId: null, windowColourId: null, areaM2: null, result: null, loading: false },
@@ -442,6 +443,7 @@ async function loadConfig() {
     const cfg = await res.json();
     state.designPackEmail = !!cfg.designPackEmail;
     state.beta = !!cfg.beta;
+    state.leadCapture = cfg.leadCapture !== false;
   } catch (err) {
     state.designPackEmail = false;   // promise nothing if we can't tell
     // If we can't reach the server, assume beta: overstating readiness is the
@@ -1510,6 +1512,24 @@ function buildSaveFraming() {
       className: `${extraClass} px-3 py-2.5 rounded-xl border border-zinc-200 text-sm outline-none focus:border-zinc-900`,
       onInput: (e) => { state.contact[key] = e.target.value; }
     });
+  }
+
+  /* With capture off, don't render the form at all. A disabled form still
+     invites someone to type their details in, and the whole point of the
+     switch is that nothing personal is entered — let alone sent. */
+  if (!state.leadCapture) {
+    return h('section', { id: 'save-design', className: 'rounded-2xl bg-[#111111] text-white p-6 md:p-8 scroll-mt-24' }, [
+      h('p', { className: 'text-[11px] tracking-widest uppercase text-white/55' }, 'Step 3'),
+      h('h2', { className: 'mt-1 serif text-[26px] md:text-[32px] tracking-tight' }, 'Saving your design is coming shortly'),
+      h('p', { className: 'mt-3 text-sm leading-6 text-white/60 max-w-[60ch]' },
+        'We’re not taking anyone’s details just yet — we’re finishing our privacy policy first, and we’d rather do that properly than collect your information before it’s ready.'),
+      h('p', { className: 'mt-3 text-sm leading-6 text-white/60 max-w-[60ch]' },
+        'Everything else on this page works, so do try the colours and the estimate. Come back shortly and you’ll be able to save what you’ve designed.'),
+      h('div', { className: 'mt-6 rounded-2xl bg-white/5 border border-white/10 p-4' }, [
+        h('p', { className: 'text-[12px] leading-5 text-white/60' },
+          'Nothing you do on this page is stored or sent anywhere while this notice is up.'),
+      ]),
+    ]);
   }
 
   return h('section', { id: 'save-design', className: 'rounded-2xl bg-[#111111] text-white p-6 md:p-8 scroll-mt-24' }, [
