@@ -5,20 +5,88 @@
   "internalNote": "Real UK material rates and quote methodology, taken from the actual facetpro.co.uk production backend (material_detector.py and quote_generator.py) — not invented placeholders. Not shown to homeowners; `note` is the customer-facing line rendered under the price breakdown.",
   "source": "homeai/backend/app/services/material_detector.py (ROOF_MATERIALS, CLADDING_MATERIALS) + quote_generator.py (labour rates, scaffolding, waste, VAT)",
   "cladding": [
-    { "id": "alabaster",   "name": "Alabaster",   "hex": "#F6F3EE", "image": "/assets/swatches/alabaster.jpg",  "materialType": "render",       "materialLabel": "Render",         "pricePerM2": 50 },
-    { "id": "clay-stone",  "name": "Clay Stone",  "hex": "#D9C5B4", "image": "/assets/swatches/clay-stone.jpg", "materialType": "stone",        "materialLabel": "Natural Stone",  "pricePerM2": 120 },
-    { "id": "sage-slate",  "name": "Sage Slate",  "hex": "#9CAF9C", "image": "/assets/swatches/sage-slate.jpg", "materialType": "fiber_cement",  "materialLabel": "Fibre Cement",   "pricePerM2": 60 },
-    { "id": "graphite",    "name": "Graphite",    "hex": "#2F3336", "image": "/assets/swatches/graphite.jpg",   "materialType": "composite",     "materialLabel": "Composite",      "pricePerM2": 70 }
+    {
+      "id": "alabaster",
+      "name": "Alabaster",
+      "hex": "#F6F3EE",
+      "image": "/assets/swatches/alabaster.jpg",
+      "materialType": "render",
+      "materialLabel": "Render",
+      "pricePerM2": 50
+    },
+    {
+      "id": "clay-stone",
+      "name": "Clay Stone",
+      "hex": "#D9C5B4",
+      "image": "/assets/swatches/clay-stone.jpg",
+      "materialType": "stone",
+      "materialLabel": "Natural Stone",
+      "pricePerM2": 120
+    },
+    {
+      "id": "sage-slate",
+      "name": "Sage Slate",
+      "hex": "#9CAF9C",
+      "image": "/assets/swatches/sage-slate.jpg",
+      "materialType": "fiber_cement",
+      "materialLabel": "Fibre Cement",
+      "pricePerM2": 60
+    },
+    {
+      "id": "graphite",
+      "name": "Graphite",
+      "hex": "#2F3336",
+      "image": "/assets/swatches/graphite.jpg",
+      "materialType": "composite",
+      "materialLabel": "Composite",
+      "pricePerM2": 70
+    }
   ],
   "trim": [
-    { "id": "coastal-fog", "name": "Coastal Fog", "hex": "#CBD5E1" },
-    { "id": "ink-trim",    "name": "Ink Trim",    "hex": "#111827" },
-    { "id": "cedar",       "name": "Cedar",       "hex": "#8B5A2B" }
+    {
+      "id": "coastal-fog",
+      "name": "Coastal Fog",
+      "hex": "#CBD5E1"
+    },
+    {
+      "id": "ink-trim",
+      "name": "Ink Trim",
+      "hex": "#111827"
+    },
+    {
+      "id": "cedar",
+      "name": "Cedar",
+      "hex": "#8B5A2B"
+    }
   ],
   "roof": [
-    { "id": "slate-roof",    "name": "Slate Roof",    "hex": "#475569", "image": "/assets/swatches/slate-roof.jpg",    "materialType": "slate",         "materialLabel": "Slate Tiles",    "pricePerM2": 180 },
-    { "id": "charcoal-roof", "name": "Charcoal Roof", "hex": "#1E293B", "image": "/assets/swatches/charcoal-roof.jpg", "materialType": "concrete_tile", "materialLabel": "Concrete Tile",  "pricePerM2": 90 },
-    { "id": "terracotta",    "name": "Terracotta",    "hex": "#B45309", "image": "/assets/swatches/terracotta.jpg",    "materialType": "clay_tile",     "materialLabel": "Clay Tile",      "pricePerM2": 150 }
+    {
+      "id": "slate-roof",
+      "name": "Slate Roof",
+      "hex": "#475569",
+      "image": "/assets/swatches/slate-roof.jpg",
+      "materialType": "slate",
+      "materialLabel": "Slate Tiles",
+      "pricePerM2": 180
+    },
+    {
+      "id": "charcoal-roof",
+      "name": "Charcoal Roof",
+      "hex": "#1E293B",
+      "image": "/assets/swatches/charcoal-roof.jpg",
+      "materialType": "concrete_tile",
+      "materialLabel": "Concrete Tile",
+      "pricePerM2": 90
+    },
+    {
+      "id": "terracotta",
+      "name": "Terracotta",
+      "hex": "#B45309",
+      "image": "/assets/swatches/terracotta.jpg",
+      "materialType": "clay_tile",
+      "materialLabel": "Clay Tile",
+      "pricePerM2": 150
+    }
   ],
   "labour": {
     "claddingPerM2": 15,
@@ -35,8 +103,133 @@
     "note": "Real per-metre rates from quote_generator.py — fascia £35/m + £12/m labour, soffit £30/m + £12/m labour, guttering £40/m + £15/m labour. Colour choice (Coastal Fog/Ink Trim/Cedar) doesn't change the real cost, only the material rates do."
   },
   "scaffoldingCost": 800,
-  "wastePct": 0.10,
-  "vatPct": 0.20,
+  "wastePct": 0.1,
+  "vatPct": 0.2,
   "defaultFootprintM2": 95,
-  "defaultTrimLengthM": 24
+  "defaultTrimLengthM": 24,
+  "wholeHouse": {
+    "note": "Estimated illustrative finish prices, CSS textures only (no photos) — not the real quote. Two things worth knowing: 'White Render' and 'Cream Render' here (£45/m²) are close to but different from the real Alabaster render swatch already priced at £50/m² in the cladding catalogue above, and 'Brick Slips' here (£85/m² of wall area) is a different product and unit than 'Brick Slip' in the Roofline & Cladding tab (£110 per linear metre of trim). Use the real cladding/roof/trim visualizer for a sourced quote.",
+    "finishes": [
+      {
+        "id": "white-render",
+        "name": "White Render",
+        "textureType": "flat",
+        "hex": "#F5F5F0",
+        "pricePerM2": 45,
+        "lightScore": 90,
+        "bestFor": "1930s-1970s homes",
+        "bestseller": true
+      },
+      {
+        "id": "grey-render",
+        "name": "Grey Render",
+        "textureType": "flat",
+        "hex": "#6B6E70",
+        "pricePerM2": 48,
+        "lightScore": 60,
+        "bestFor": "Contemporary/modern homes"
+      },
+      {
+        "id": "brick-slips",
+        "name": "Brick Slips",
+        "textureType": "brick",
+        "hex": "#A8553B",
+        "pricePerM2": 85,
+        "lightScore": 55,
+        "bestFor": "Character/period homes"
+      },
+      {
+        "id": "stone-cladding",
+        "name": "Stone Cladding",
+        "textureType": "stone",
+        "hex": "#C9C0AE",
+        "pricePerM2": 95,
+        "lightScore": 65,
+        "bestFor": "Premium/large detached homes"
+      },
+      {
+        "id": "timber-clad",
+        "name": "Timber Clad",
+        "textureType": "timber",
+        "hex": "#B08454",
+        "pricePerM2": 75,
+        "lightScore": 58,
+        "bestFor": "Scandinavian/contemporary homes"
+      },
+      {
+        "id": "cream-render",
+        "name": "Cream Render",
+        "textureType": "flat",
+        "hex": "#EDE3D0",
+        "pricePerM2": 45,
+        "lightScore": 82,
+        "bestFor": "Warm traditional homes"
+      },
+      {
+        "id": "charcoal-render",
+        "name": "Charcoal Render",
+        "textureType": "flat",
+        "hex": "#2B2B2B",
+        "pricePerM2": 48,
+        "lightScore": 40,
+        "bestFor": "Dramatic, modern statement homes"
+      },
+      {
+        "id": "pebbledash-removal",
+        "name": "Pebble Dash Removal",
+        "textureType": "pebble",
+        "hex": "#DCD3C3",
+        "pricePerM2": 55,
+        "lightScore": 88,
+        "bestFor": "Transforming dated pebbledash"
+      }
+    ],
+    "roofColours": [
+      {
+        "id": "slate-grey",
+        "name": "Slate Grey",
+        "hex": "#475569"
+      },
+      {
+        "id": "terracotta",
+        "name": "Terracotta",
+        "hex": "#B45309"
+      },
+      {
+        "id": "black",
+        "name": "Black",
+        "hex": "#1C1C1C"
+      },
+      {
+        "id": "brown",
+        "name": "Brown",
+        "hex": "#5C4326"
+      }
+    ],
+    "windowColours": [
+      {
+        "id": "white",
+        "name": "White",
+        "hex": "#FFFFFF"
+      },
+      {
+        "id": "anthracite",
+        "name": "Anthracite",
+        "hex": "#2B2D42"
+      },
+      {
+        "id": "black",
+        "name": "Black",
+        "hex": "#1C1C1C"
+      },
+      {
+        "id": "chartwell-green",
+        "name": "Chartwell Green",
+        "hex": "#5B7C5B"
+      }
+    ],
+    "areaMinM2": 60,
+    "areaMaxM2": 200,
+    "areaDefaultM2": 95
+  }
 }

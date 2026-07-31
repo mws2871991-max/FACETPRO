@@ -723,6 +723,58 @@ Finally add: {"type":"analysis","summary":"2-3 sentence overview of the property
   res.json({ detections, detectionId, canMeasure: hasWall, scaleReference: hasDoor && !!size });
 });
 
+/* ── POST /api/whole-house ──
+   A quicker path than the detailed visualiser: pick one finish for the whole
+   house and see what it costs. The catalogue data for this has existed since
+   July but nothing ever rendered it.
+
+   The finish prices are the catalogue's own illustrative figures, and its note
+   says so plainly — "White Render" at £45/m² is close to but not the same as
+   the real Alabaster render at £50/m². The response carries that note and an
+   `illustrative` flag so the UI can never present these as a sourced quote.
+
+   The build-up around them is the real methodology though — same labour rate,
+   scaffolding, waste and VAT as computePrice — because a bare materials figure
+   would look far cheaper than the main quote for the same job and read as a
+   better deal rather than a different calculation. */
+app.post('/api/whole-house', (req, res) => {
+  const wh = catalogue.wholeHouse;
+  if (!wh) return res.status(503).json({ error: 'Whole-house finishes are not configured.' });
+
+  const { finishId, areaM2, roofColourId, windowColourId } = req.body || {};
+  const finish = wh.finishes.find(f => f.id === finishId) || wh.finishes[0];
+  const roofColour = wh.roofColours.find(c => c.id === roofColourId) || wh.roofColours[0];
+  const windowColour = wh.windowColours.find(c => c.id === windowColourId) || wh.windowColours[0];
+
+  // Clamp rather than reject: the slider bounds are the sane range, and a
+  // request outside them is a tampered or stale client, not a real house.
+  const requested = Number(areaM2);
+  const area = Number.isFinite(requested)
+    ? Math.min(wh.areaMaxM2, Math.max(wh.areaMinM2, requested))
+    : wh.areaDefaultM2;
+
+  const materials = finish.pricePerM2 * area;
+  const labour = catalogue.labour.claddingPerM2 * area;
+  const scaffolding = catalogue.scaffoldingCost;
+  const waste = materials * catalogue.wastePct;
+  const subtotal = materials + labour + scaffolding + waste;
+  const vat = subtotal * catalogue.vatPct;
+
+  res.json({
+    finish: { id: finish.id, name: finish.name, hex: finish.hex, pricePerM2: finish.pricePerM2, lightScore: finish.lightScore, bestFor: finish.bestFor, textureType: finish.textureType },
+    roofColour, windowColour,
+    areaM2: area,
+    materials: Math.round(materials),
+    labour: Math.round(labour),
+    scaffolding: Math.round(scaffolding),
+    waste: Math.round(waste),
+    vat: Math.round(vat),
+    total: Math.round(subtotal + vat),
+    illustrative: true,
+    note: wh.note,
+  });
+});
+
 /* ── POST /api/measure ──
    Optional. Estimates exterior wall area from a photo already analysed by
    /api/detect, so the quote can be sized to the actual house instead of the
