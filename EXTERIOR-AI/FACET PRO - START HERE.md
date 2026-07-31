@@ -17,10 +17,18 @@ Features:
 ## Demo Video (Option C)
 - `guided-demo.html` — upload your screen recording MP4
 - Chapters at 0s/12s/28s/45s/68s/82s, captions, voiceover speak, speed 1x/1.5x/2x, CC toggle
+- Not linked from the site and marked noindex: it's a sales/demo tool, reachable
+  by direct URL only
 
-## Full Stack Deploy
-- See frontend/README.md and backend/README.md
-- docker-compose up
+## Deploy
+This is a single Node service — `server.js` serves both the API and the site.
+`npm install && npm start`, set the environment variables from `.env.example`,
+and put it behind your host of choice.
+
+There is no separate frontend or backend to build. Earlier versions of this
+folder carried a Next.js/FastAPI scaffold and a docker-compose file for it;
+none of it was ever implemented (no Dockerfiles existed, so `docker-compose up`
+could not have worked) and it has been removed.
 
 ## Branding
 Named FACET PRO (facetpro.co.uk). Was briefly renamed to EXTERIOR AI, now back to

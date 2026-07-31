@@ -5,8 +5,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test --test-force-exit \"test/*.test.js\"",
-    "validate": "node scripts/validate-measurements.js"
+    "test": "node --test --test-force-exit --test-concurrency=1 \"test/*.test.js\"",
+    "validate": "node scripts/validate-measurements.js",
+    "set-domain": "node scripts/set-domain.js"
   },
   "license": "ISC",
   "dependencies": {

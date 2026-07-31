@@ -1,0 +1,245 @@
+/* Tests for the paths that protect data and money: installer auth, the
+   static-file allowlist, the daily spend caps, and lead notification.
+
+   These were all fixed by hand and verified with one-off curl runs. That is
+   exactly the kind of work a refactor silently undoes — re-exposing
+   data/leads.jsonl, or turning a 429 back into a paid API call — so it is
+   pinned here.
+
+   Runs offline: the Anthropic and Replicate calls are stubbed, and the
+   assertions are about what the server does BEFORE reaching them. */
+
+'use strict';
+
+const { test } = require('node:test');
+const assert = require('node:assert');
+const fs = require('fs');
+const path = require('path');
+
+const PORT = 3097;
+const BASE = `http://127.0.0.1:${PORT}`;
+const PASSWORD = 'correct-horse-battery-staple';
+const DAILY_DETECT = 2;
+const DAILY_RENDER = 1;
+
+// Count upstream calls so we can prove a capped request never makes one.
+const upstream = { anthropic: 0, replicate: 0 };
+const realFetch = globalThis.fetch;
+globalThis.fetch = async (url, opts) => {
+  const u = String(url);
+  if (u.includes('api.anthropic.com')) {
+    upstream.anthropic++;
+    return { ok: true, status: 200, json: async () => ({ content: [{ type: 'text', text: '[]' }] }) };
+  }
+  if (u.includes('api.replicate.com')) {
+    upstream.replicate++;
+    return { ok: true, status: 200, json: async () => ({ status: 'succeeded', output: 'https://example.test/r.jpg' }) };
+  }
+  return realFetch(u, opts);
+};
+
+const DATA_DIR = path.join(__dirname, '..', 'data');
+fs.rmSync(path.join(DATA_DIR, 'usage.json'), { force: true });
+
+process.env.PORT = String(PORT);
+process.env.ANTHROPIC_API_KEY = 'sk-ant-test';
+process.env.REPLICATE_API_TOKEN = 'r8-test';
+process.env.INSTALLER_PASSWORD = PASSWORD;
+process.env.DAILY_DETECT_LIMIT = String(DAILY_DETECT);
+process.env.DAILY_RENDER_LIMIT = String(DAILY_RENDER);
+delete process.env.RESEND_API_KEY;
+
+require('../server');
+
+const get = async (p, headers = {}) => {
+  const res = await realFetch(BASE + p, { headers });
+  const text = await res.text();
+  let body; try { body = JSON.parse(text); } catch (_) { body = text; }
+  return { status: res.status, body, headers: res.headers };
+};
+const post = async (p, payload) => {
+  const res = await realFetch(BASE + p, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+  });
+  return { status: res.status, body: await res.json().catch(() => ({})) };
+};
+const tinyJpeg = () => {
+  const sof = Buffer.alloc(11);
+  sof.writeUInt16BE(0xffc0, 0); sof.writeUInt16BE(8, 2); sof[4] = 8;
+  sof.writeUInt16BE(480, 5); sof.writeUInt16BE(640, 7);
+  return Buffer.concat([Buffer.from([0xff, 0xd8]), sof, Buffer.alloc(32)]).toString('base64');
+};
+
+/* ── installer auth ── */
+
+test('GET /api/leads refuses every wrong or missing credential', async () => {
+  const cases = [
+    ['no credentials',        {}],
+    ['empty bearer',          { Authorization: 'Bearer ' }],
+    ['wrong password',        { Authorization: 'Bearer wrong' }],
+    ['much shorter password', { Authorization: 'Bearer x' }],
+    ['much longer password',  { Authorization: `Bearer ${'x'.repeat(500)}` }],
+    ['prefix of the real one', { Authorization: `Bearer ${PASSWORD.slice(0, -1)}` }],
+    ['wrong header name',     { 'X-Password': PASSWORD }],
+  ];
+  for (const [label, headers] of cases) {
+    const { status, body } = await get('/api/leads', headers);
+    assert.strictEqual(status, 401, `${label} should be 401, got ${status}`);
+    assert.ok(!('leads' in body), `${label} must not return leads`);
+  }
+});
+
+test('GET /api/leads accepts the password by either header', async () => {
+  for (const headers of [
+    { Authorization: `Bearer ${PASSWORD}` },
+    { 'x-installer-password': PASSWORD },
+  ]) {
+    const { status, body } = await get('/api/leads', headers);
+    assert.strictEqual(status, 200);
+    assert.ok(Array.isArray(body.leads));
+  }
+});
+
+test('a rejected request advertises how to authenticate, and leaks nothing', async () => {
+  const { status, body, headers } = await get('/api/leads');
+  assert.strictEqual(status, 401);
+  assert.match(headers.get('www-authenticate') || '', /Bearer/);
+  // The error must not hint at the password's length or content.
+  const text = JSON.stringify(body);
+  assert.ok(!text.includes(PASSWORD));
+  assert.ok(!/\d{2,}/.test(text), `error should not mention lengths: ${text}`);
+});
+
+/* ── static file allowlist ── */
+
+test('source, data and config files are not served', async () => {
+  const blocked = [
+    '/server.js', '/store.js', '/measure.js',
+    '/data/leads.jsonl', '/data/usage.json', '/data/survey-samples.json',
+    '/catalogue.json', '/package.json', '/package-lock.json',
+    '/README.md', '/.env', '/.gitignore',
+    '/scripts/set-domain.js', '/scripts/validate-measurements.js',
+    '/test/security.test.js',
+    '/assets/swatches/CREDITS.md',
+  ];
+  for (const p of blocked) {
+    const { status } = await get(p);
+    assert.strictEqual(status, 404, `${p} must not be served, got ${status}`);
+  }
+});
+
+test('path traversal cannot escape the allowlist', async () => {
+  // A prefix check alone would wave these through: they normalise to files
+  // that really do sit inside the project root.
+  const attempts = [
+    '/assets/../server.js',
+    '/legal/../package.json',
+    '/assets/%2e%2e/server.js',
+    '/assets/..%2fserver.js',
+    '/assets/./../../EXTERIOR-AI/server.js',
+    '/legal/../data/leads.jsonl',
+  ];
+  for (const p of attempts) {
+    const res = await realFetch(BASE + p);
+    assert.strictEqual(res.status, 404, `${p} must not be served, got ${res.status}`);
+  }
+});
+
+test('the genuinely public files are still served', async () => {
+  for (const p of ['/', '/index.html', '/guided-demo.html', '/robots.txt', '/sitemap.xml', '/privacy', '/terms', '/legal/privacy.html']) {
+    const { status } = await get(p);
+    assert.strictEqual(status, 200, `${p} should be served, got ${status}`);
+  }
+});
+
+test('no wildcard CORS header is sent', async () => {
+  for (const p of ['/', '/api/catalogue']) {
+    const { headers } = await get(p);
+    assert.strictEqual(headers.get('access-control-allow-origin'), null, `${p} should send no CORS header`);
+  }
+});
+
+test('/api/catalogue does not leak internal provenance fields', async () => {
+  const { body } = await get('/api/catalogue');
+  assert.ok(!('internalNote' in body), 'internalNote must be stripped');
+  assert.ok(!('source' in body), 'source must be stripped');
+  assert.ok(!JSON.stringify(body).includes('services/'), 'no internal file paths');
+  assert.ok(Array.isArray(body.cladding), 'but the catalogue itself is still served');
+});
+
+/* ── daily spend caps ── */
+
+test('the detect cap stops calling Anthropic once spent', async () => {
+  const before = upstream.anthropic;
+  const payload = { image: tinyJpeg(), mimeType: 'image/jpeg' };
+
+  for (let i = 0; i < DAILY_DETECT; i++) {
+    const { status } = await post('/api/detect', payload);
+    assert.strictEqual(status, 200, `call ${i + 1} should succeed`);
+  }
+  assert.strictEqual(upstream.anthropic, before + DAILY_DETECT, 'each allowed call reaches the provider');
+
+  const { status, body } = await post('/api/detect', payload);
+  assert.strictEqual(status, 429);
+  assert.match(body.error, /daily limit/i);
+  assert.strictEqual(upstream.anthropic, before + DAILY_DETECT, 'a capped call must NOT reach the provider');
+});
+
+test('the render cap is counted separately from detect', async () => {
+  const before = upstream.replicate;
+  const payload = { image: tinyJpeg(), mimeType: 'image/jpeg', claddingName: 'Alabaster' };
+
+  const first = await post('/api/render', payload);
+  assert.strictEqual(first.status, 200);
+  assert.strictEqual(upstream.replicate, before + 1);
+
+  const second = await post('/api/render', payload);
+  assert.strictEqual(second.status, 429, 'render has its own limit of 1 here');
+  assert.strictEqual(upstream.replicate, before + 1, 'a capped render must NOT reach the provider');
+});
+
+test('a malformed request does not spend quota', async () => {
+  // Validation runs before the cap, so junk costs nothing. Both endpoints are
+  // already capped out by now, and a 400 proves the check ran first.
+  const { status } = await post('/api/detect', {});
+  assert.strictEqual(status, 400);
+});
+
+/* ── lead capture ── */
+
+test('a lead without consent is refused', async () => {
+  const { status, body } = await post('/api/lead', { name: 'A', email: 'a@example.com' });
+  assert.strictEqual(status, 400);
+  assert.match(body.error, /tick the box|agree/i);
+});
+
+test('a lead is stored even when it cannot be emailed, and says so', async () => {
+  const { status, body } = await post('/api/lead', {
+    name: 'Jane', email: 'jane@example.com',
+    claddingId: 'sage-slate', roofId: 'terracotta', trimId: 'cedar',
+    consent: { given: true, wording: 'w', version: 'v' },
+  });
+  assert.strictEqual(status, 200);
+  assert.ok(body.lead.id, 'the lead is saved regardless');
+  // No RESEND_API_KEY in this run, so it must report that rather than pretend.
+  assert.strictEqual(body.lead.notification.sent, false);
+  assert.match(body.lead.notification.reason, /RESEND_API_KEY/);
+});
+
+test('the price on a lead is recomputed, never taken from the client', async () => {
+  const { body } = await post('/api/lead', {
+    name: 'Mallory', email: 'm@example.com',
+    claddingId: 'sage-slate', roofId: 'terracotta', trimId: 'cedar',
+    price: 1, total: 1, priceBreakdown: { total: 1 },   // all ignored
+    consent: { given: true, wording: 'w', version: 'v' },
+  });
+  assert.ok(body.lead.price > 1000, `price should be server-computed, got ${body.lead.price}`);
+});
+
+test('an invalid email is refused', async () => {
+  const { status } = await post('/api/lead', {
+    name: 'A', email: 'not-an-email',
+    consent: { given: true, wording: 'w', version: 'v' },
+  });
+  assert.strictEqual(status, 400);
+});

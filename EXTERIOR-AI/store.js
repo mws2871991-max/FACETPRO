@@ -3,7 +3,19 @@ const path = require('path');
 
 let pool = null;
 if (process.env.DATABASE_URL) {
-  const { Pool } = require('pg');
+  // `pg` is not a dependency — the JSONL fallback covers local use, and most
+  // deployments never set DATABASE_URL. Setting it without installing pg used
+  // to fail with a bare MODULE_NOT_FOUND at require time; say what to do.
+  let Pool;
+  try {
+    ({ Pool } = require('pg'));
+  } catch (err) {
+    throw new Error(
+      'DATABASE_URL is set but the "pg" package is not installed. ' +
+      'Run `npm install pg` to use Postgres, or unset DATABASE_URL to store data ' +
+      'as JSONL files under data/.'
+    );
+  }
   pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }

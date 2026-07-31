@@ -42,8 +42,13 @@ Open http://localhost:3020 (or whatever `PORT` you set).
 
 - `server.js` — Express backend: `/api/detect`, `/api/render`, `/api/quote`,
   `/api/lead`, `/api/leads`, `/api/catalogue`.
-- `store.js` — simple JSONL file storage (falls back to Postgres if `DATABASE_URL`
-  is set — not required for local use).
+- `store.js` — simple JSONL file storage. Uses Postgres instead if `DATABASE_URL`
+  is set, which additionally requires `npm install pg` (not a dependency, since
+  the file fallback covers local use); it now says so plainly rather than
+  failing with a bare module-not-found.
+- `scripts/set-domain.js` — rewrites the canonical domain across every file that
+  hard-codes it. `npm run set-domain -- --check` reports the current value and
+  fails if the files disagree.
 - `catalogue.json` — cladding/trim/roof swatches + prices. Edit this to update
   pricing.
 - `index.html` — the homeowner-facing site (plain JS, no build step, no framework).
@@ -182,8 +187,19 @@ image aspect ratio is read from the uploaded bytes for the same reason.
 Detection records are in-memory, 2-hour TTL, capped at 500; a restart just
 means re-uploading before measuring.
 
-`npm test` covers the geometry and the full detect → measure → quote chain
-with the Anthropic call stubbed (19 tests, offline, no API cost).
+`npm test` runs 43 tests, offline and at no API cost — the Anthropic and
+Replicate calls are stubbed:
+
+- `test/measure.test.js` — the geometry, calibration and fallbacks.
+- `test/api.test.js` — the detect → measure → quote chain end to end.
+- `test/security.test.js` — installer auth (including wrong-length and
+  prefix passwords), the static-file allowlist and path traversal, no-CORS,
+  catalogue provenance stripping, both daily caps (asserting a capped request
+  makes **no** upstream call), and lead capture: consent required, price
+  recomputed server-side, lead stored even when the email fails.
+
+Tests run serially (`--test-concurrency=1`) because the files share
+`data/usage.json` and the daily-cap counter.
 
 ### Accuracy caveats
 
@@ -321,9 +337,8 @@ any lead submitted without consent.
 
 ## SEO notes
 
-- Canonical domain is hard-coded as `https://facetpro.co.uk` in `index.html`,
-  `guided-demo.html`, `robots.txt` and `sitemap.xml`. Change all four if the domain
-  differs.
+- Canonical domain: `npm run set-domain -- https://your-domain.co.uk` updates all
+  seven files that reference it. `-- --check` verifies they agree.
 - `index.html` carries Organization, WebSite, WebApplication and FAQPage structured
   data. Every claim in it matches what the product actually does — no invented
   ratings, review counts or testimonials. Keep it that way: fake `AggregateRating`
