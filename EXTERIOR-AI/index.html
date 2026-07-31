@@ -157,6 +157,7 @@
       <span class="serif text-[19px] tracking-tight">Facet Pro</span>
     </a>
     <nav class="flex items-center gap-2" aria-label="Primary">
+      <a href="#whole-house" class="hidden sm:block text-xs px-3 py-2 rounded-full hover:bg-white transition">Finishes</a>
       <a href="#how-it-works" class="hidden sm:block text-xs px-3 py-2 rounded-full hover:bg-white transition">How it works</a>
       <a href="#faq" class="hidden sm:block text-xs px-3 py-2 rounded-full hover:bg-white transition">Questions</a>
       <a href="#your-photo" class="text-xs px-4 py-2 rounded-full bg-zinc-900 text-white hover:bg-zinc-800 transition">Start with a photo</a>
@@ -184,6 +185,7 @@
 
   <div id="mount-upload"></div>
   <div id="mount-visualizer"></div>
+  <div id="mount-wholehouse"></div>
   <div id="mount-refine"></div>
   <div id="mount-lead"></div>
 
@@ -356,6 +358,9 @@ const state = {
   // Server tells us whether it can email the homeowner their design, so the
   // form only promises it when it's true.
   designPackEmail: false,
+  // Whole-house finishes: a quicker walls-only path alongside the detailed
+  // visualiser. Prices here are the catalogue's illustrative figures.
+  wh: { finishId: null, roofColourId: null, windowColourId: null, areaM2: null, result: null, loading: false },
   installerPassword: sessionStorage.getItem('fp_installer_pw') || '',
   installerAuthed: false,
   installerError: '',
@@ -513,6 +518,7 @@ let sharedRefs = {};
 const MOUNTS = [
   ['mount-upload',     buildUploadDetect],
   ['mount-visualizer', buildVisualizer],
+  ['mount-wholehouse', buildWholeHouse],
   ['mount-refine',     buildRefineEstimate],
   ['mount-lead',       buildSaveFraming],
   ['mount-installer',  buildInstaller],
@@ -841,6 +847,158 @@ function buildPricePanel(price, priceRow) {
     h('p', { className: 'mt-3 text-[10px] leading-4 text-white/50' }, `Based on ${price.footprintM2} m² of wall.`),
     h('p', { className: 'mt-3 text-[10px] leading-4 text-white/50' }, catalogue_note()),
     h('p', { className: 'mt-2 text-[10px] leading-4 text-white/50' }, 'A planning estimate, not a fixed quote — an installer will confirm the price after a survey.'),
+  ]);
+}
+
+/* ── Whole-house finishes ──
+   One finish across the whole house, priced instantly. Walls only, and the
+   catalogue's own prices for these are illustrative — both stated plainly,
+   because the total lands well below the detailed quote for the same property
+   and the reason is scope, not a better deal. */
+async function refreshWholeHouse() {
+  const wh = state.catalogue?.wholeHouse;
+  if (!wh) return;
+  state.wh.loading = true;
+  try {
+    const res = await fetch('/api/whole-house', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        finishId: state.wh.finishId,
+        areaM2: state.wh.areaM2,
+        roofColourId: state.wh.roofColourId,
+        windowColourId: state.wh.windowColourId,
+      }),
+    });
+    state.wh.result = await res.json();
+  } catch (err) {
+    state.wh.result = null;
+  } finally {
+    state.wh.loading = false;
+  }
+}
+
+function renderWholeHouseOnly() {
+  const old = document.getElementById('whole-house');
+  if (!old) { render(); return; }
+  old.replaceWith(buildWholeHouse());
+}
+
+function buildWholeHouse() {
+  const wh = state.catalogue?.wholeHouse;
+  if (!wh) return h('div', {});
+
+  const r = state.wh.result;
+  const finish = wh.finishes.find(f => f.id === state.wh.finishId) || wh.finishes[0];
+
+  const finishChips = h('div', { className: 'mt-3 grid sm:grid-cols-2 gap-2' }, wh.finishes.map(f => {
+    const active = finish.id === f.id;
+    return h('button', {
+      type: 'button',
+      'aria-pressed': active ? 'true' : 'false',
+      className: `flex items-center gap-3 p-3 rounded-xl border text-left transition ${active ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-400'}`,
+      onClick: async () => { state.wh.finishId = f.id; await refreshWholeHouse(); renderWholeHouseOnly(); },
+    }, [
+      h('span', { className: 'w-8 h-8 rounded-lg shrink-0 border border-black/10', style: { background: f.hex } }),
+      h('span', { className: 'min-w-0' }, [
+        h('span', { className: 'block text-xs font-medium truncate' }, [f.name, f.bestseller ? h('span', { className: `ml-1.5 ${active ? 'text-amber-300' : 'text-amber-500'}` }, '★') : null]),
+        h('span', { className: `block text-[11px] truncate ${active ? 'text-white/60' : 'text-zinc-500'}` }, `£${f.pricePerM2}/m² · ${f.bestFor}`),
+      ]),
+    ]);
+  }));
+
+  function colourRow(label, list, key) {
+    const current = state.wh[key] || list[0].id;
+    return h('div', {}, [
+      h('div', { className: 'text-[10px] tracking-widest uppercase text-zinc-500' }, label),
+      h('div', { className: 'mt-2 flex flex-wrap gap-2' }, list.map(c => h('button', {
+        type: 'button',
+        title: c.name,
+        'aria-label': c.name,
+        'aria-pressed': current === c.id ? 'true' : 'false',
+        className: `flex items-center gap-2 px-3 py-2 rounded-full border text-xs transition ${current === c.id ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-400'}`,
+        onClick: async () => { state.wh[key] = c.id; await refreshWholeHouse(); renderWholeHouseOnly(); },
+      }, [
+        h('span', { className: 'w-4 h-4 rounded-full border border-black/20', style: { background: c.hex } }),
+        c.name,
+      ]))),
+    ]);
+  }
+
+  const areaNow = r?.areaM2 ?? state.wh.areaM2 ?? wh.areaDefaultM2;
+  const areaSlider = h('input', {
+    type: 'range', min: wh.areaMinM2, max: wh.areaMaxM2, step: 5, value: areaNow,
+    'aria-label': 'Wall area in square metres',
+    className: 'w-full accent-zinc-900',
+  });
+  areaSlider.addEventListener('input', (e) => {
+    state.wh.areaM2 = parseInt(e.target.value, 10);
+    const badge = document.getElementById('wh-area');
+    if (badge) badge.textContent = `${state.wh.areaM2} m²`;
+  });
+  areaSlider.addEventListener('change', async () => { await refreshWholeHouse(); renderWholeHouseOnly(); });
+
+  return h('section', { id: 'whole-house', className: 'rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24' }, [
+    h('div', { className: 'flex items-start justify-between gap-3 flex-wrap' }, [
+      h('div', {}, [
+        h('p', { className: 'text-[11px] tracking-widest uppercase text-zinc-400' }, 'Quicker option'),
+        h('h2', { className: 'mt-1 serif text-[26px] md:text-[32px] tracking-tight' }, 'One finish, whole house'),
+      ]),
+      h('span', { className: 'text-[10px] tracking-widest uppercase px-2.5 py-1 rounded-full bg-[#FFF7ED] border border-zinc-200' }, 'Walls only'),
+    ]),
+    h('p', { className: 'mt-2 text-sm leading-6 text-zinc-600 max-w-[62ch]' },
+      'Not sure where to start? Pick one finish for the whole house and see roughly what it costs. No photo needed.'),
+
+    h('div', { className: 'mt-6 grid lg:grid-cols-[1.15fr_0.85fr] gap-6' }, [
+      h('div', {}, [
+        h('div', { className: 'text-[10px] tracking-widest uppercase text-zinc-500' }, 'Choose a finish'),
+        finishChips,
+        h('div', { className: 'mt-5 grid sm:grid-cols-2 gap-5' }, [
+          colourRow('Roof colour', wh.roofColours, 'roofColourId'),
+          colourRow('Window colour', wh.windowColours, 'windowColourId'),
+        ]),
+        h('div', { className: 'mt-5' }, [
+          h('div', { className: 'flex items-center justify-between' }, [
+            h('span', { className: 'text-[10px] tracking-widest uppercase text-zinc-500' }, 'Roughly how much wall?'),
+            h('span', { id: 'wh-area', className: 'text-xs font-medium' }, `${areaNow} m²`),
+          ]),
+          h('div', { className: 'mt-2' }, areaSlider),
+          h('div', { className: 'flex justify-between text-[10px] text-zinc-400' }, [
+            h('span', {}, `${wh.areaMinM2} m²`), h('span', {}, `${wh.areaMaxM2} m²`),
+          ]),
+        ]),
+      ]),
+
+      h('div', { className: 'rounded-2xl bg-zinc-900 text-white p-5 self-start' }, [
+        h('h3', { className: 'text-[11px] tracking-widest uppercase text-white/50' }, 'Rough cost'),
+        r
+          ? h('div', {}, [
+              h('div', { className: 'mt-3 serif text-[30px] leading-none' }, fmtMoney(r.total)),
+              h('div', { className: 'mt-2 text-[11px] text-white/50' }, `${r.finish.name} · ${r.areaM2} m² of wall`),
+              h('div', { className: 'mt-4 grid gap-1.5 text-[11px] text-white/60' }, [
+                h('div', { className: 'flex justify-between gap-3' }, [h('span', {}, 'Finish'), h('span', {}, fmtMoney(r.materials))]),
+                h('div', { className: 'flex justify-between gap-3' }, [h('span', {}, 'Fitting'), h('span', {}, fmtMoney(r.labour))]),
+                h('div', { className: 'flex justify-between gap-3' }, [h('span', {}, 'Scaffolding'), h('span', {}, fmtMoney(r.scaffolding))]),
+                h('div', { className: 'flex justify-between gap-3' }, [h('span', {}, 'Waste'), h('span', {}, fmtMoney(r.waste))]),
+                h('div', { className: 'flex justify-between gap-3' }, [h('span', {}, 'VAT (20%)'), h('span', {}, fmtMoney(r.vat))]),
+              ]),
+              h('div', { className: 'mt-4 rounded-xl bg-amber-400/10 border border-amber-300/25 p-3' }, [
+                h('p', { className: 'text-[11px] leading-5 text-amber-100' }, [
+                  h('strong', {}, 'Walls only. '),
+                  'This doesn’t include a new roof or new fascia, soffit and guttering — that’s why it comes out below the estimate above, which covers all three.',
+                ]),
+              ]),
+              h('p', { className: 'mt-3 text-[10px] leading-4 text-white/40' },
+                'Indicative finish prices for exploring. The visualiser above prices your actual choices from our sourced catalogue.'),
+            ])
+          : h('p', { className: 'mt-3 text-[11px] text-white/50' }, state.wh.loading ? 'Working it out…' : 'Choose a finish to see a rough cost.'),
+        h('button', {
+          type: 'button',
+          className: 'mt-5 w-full py-2.5 rounded-full bg-white text-zinc-900 text-xs font-medium',
+          onClick: () => document.getElementById('your-photo')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+        }, 'See it on my own home →'),
+      ]),
+    ]),
   ]);
 }
 
@@ -1296,7 +1454,12 @@ document.getElementById('hero-upload')?.addEventListener('click', () => {
 (async function init() {
   render();
   await Promise.all([loadCatalogue(), loadConfig()]);
-  await refreshPrice();
+  // Seed the whole-house area from whatever currently sizes the estimate, so
+  // the two sections agree instead of one defaulting to a generic figure.
+  if (state.catalogue?.wholeHouse && state.wh.areaM2 === null) {
+    state.wh.areaM2 = state.price?.footprintM2 || state.catalogue.wholeHouse.areaDefaultM2;
+  }
+  await Promise.all([refreshPrice(), refreshWholeHouse()]);
   render();
   // If this tab already signed in to the installer area, restore it quietly.
   if (state.installerPassword) {
