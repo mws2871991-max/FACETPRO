@@ -231,7 +231,40 @@ Read these before putting a number in front of a homeowner.
 - **Presentation is part of the accuracy.** It is a planning estimate, always
   shown as a range with a survey caveat. Do not surface the midpoint alone.
 
-## Lead notifications
+## Emails
+
+Two emails, two audiences, and they must not be confused. Templates live in
+`emails.js` as pure functions so their wording and escaping are tested
+directly (`test/emails.test.js`).
+
+### The homeowner's design pack
+
+What the site had always implied but never sent. On saving a design the
+homeowner gets their render, the finishes they chose, the itemised estimate,
+the planning-estimate caveat stated plainly rather than buried, what happens
+next, and how to withdraw consent.
+
+| Variable | Effect |
+| --- | --- |
+| `DESIGN_PACK_EMAIL` | `off` disables it; anything else leaves it on |
+| `SITE_URL` | base URL for the privacy/terms links inside the email |
+
+It sends only when `RESEND_API_KEY` is set **and** `LEAD_FROM_EMAIL` is on a
+verified domain. It is refused outright on Resend's test sender, which can
+only deliver to your own account — sending customer mail through it would fail
+for every real homeowner while looking configured. The startup log states
+which mode you're in, in every configuration.
+
+`GET /api/config` reports `designPackEmail`, and the lead form uses it to
+decide whether to promise an email at all. With it off the copy says we'll
+keep the design; with it on, that we'll email it. The confirmation message
+likewise reports what actually happened, from `lead.designPack.sent`.
+
+Render URLs and `SITE_URL` are validated before going into the markup, so a
+`javascript:` or `data:` URL can't be embedded, and every interpolated field
+is escaped.
+
+### Lead notifications
 
 A saved lead is **always** written to `data/leads.jsonl` first, so an email
 problem can never lose one. The email is then attempted and its outcome stored

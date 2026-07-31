@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const store = require('./store');
 const measure = require('./measure');
+const emails = require('./emails');
 
 const catalogue = JSON.parse(fs.readFileSync(path.join(__dirname, 'catalogue.json'), 'utf8'));
 
@@ -185,8 +186,27 @@ const DAILY_LIMIT_ERROR = { error: 'Daily limit reached — try again tomorrow.'
 const RESEND_TEST_SENDER = 'onboarding@resend.dev';
 const LEAD_FROM_EMAIL = process.env.LEAD_FROM_EMAIL || `Facet Pro <${RESEND_TEST_SENDER}>`;
 const LEAD_NOTIFY_EMAIL = process.env.LEAD_NOTIFY_EMAIL || '';
+const SITE_URL = process.env.SITE_URL || 'https://facetpro.co.uk';
+
+/* The homeowner's copy of their design. Off unless email is configured, and
+   refused outright on Resend's test sender, which can only deliver to your own
+   account — sending homeowner mail through it would fail for every real
+   customer while looking configured. The site asks the server whether this is
+   on (see /api/config) so the form never promises an email we can't send. */
+const DESIGN_PACK_ENABLED =
+  process.env.DESIGN_PACK_EMAIL !== 'off' &&
+  !!process.env.RESEND_API_KEY &&
+  !LEAD_FROM_EMAIL.includes(RESEND_TEST_SENDER);
 
 function checkEmailConfig() {
+  // Logged first and unconditionally: "is the customer getting their design?"
+  // should be answerable from the startup output in every configuration.
+  console.log(DESIGN_PACK_ENABLED
+    ? `Homeowner design-pack emails: ON (from ${LEAD_FROM_EMAIL}, links to ${SITE_URL})`
+    : `Homeowner design-pack emails: OFF${process.env.DESIGN_PACK_EMAIL === 'off'
+        ? ' (DESIGN_PACK_EMAIL=off)'
+        : ' — needs RESEND_API_KEY and a LEAD_FROM_EMAIL on a verified domain'}`);
+
   if (!process.env.RESEND_API_KEY) {
     console.warn('RESEND_API_KEY not set — leads will be stored but nobody will be emailed.');
     return;
@@ -202,27 +222,44 @@ function checkEmailConfig() {
   }
 }
 
-const escapeHtml = (v) => String(v ?? '')
-  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-
-function leadEmailHtml(lead, price) {
-  const row = (label, value) =>
-    `<tr><td style="padding:8px 0;color:#6B6E78;width:120px">${label}</td><td style="padding:8px 0">${value}</td></tr>`;
-  const email = escapeHtml(lead.email);
-  return `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;color:#0F1012">
-    <h2 style="font-size:20px;margin-bottom:16px">New lead from Facet Pro</h2>
-    <table style="width:100%;border-collapse:collapse;font-size:14px">
-      ${row('Reference', escapeHtml(lead.id))}
-      ${row('Name', `<strong>${escapeHtml(lead.name)}</strong>`)}
-      ${row('Email', `<a href="mailto:${encodeURIComponent(lead.email)}">${email}</a>`)}
-      ${row('Phone', escapeHtml(lead.phone) || '—')}
-      ${row('Postcode', escapeHtml(lead.postcode) || '—')}
-      ${row('Selections', escapeHtml(`${price.selections.cladding} / ${price.selections.trim} / ${price.selections.roof}`))}
-      ${row('Quote total', `<strong>£${price.total.toLocaleString()}</strong>`)}
-    </table>
-  </div>`;
+/* One place that actually talks to Resend, so both emails get the same
+   timeout and the same error handling. The SDK reports API failures in the
+   resolved value rather than throwing, which is easy to miss once, let alone
+   twice. */
+async function sendEmail({ to, subject, html, text, replyTo }) {
+  const { Resend } = require('resend');
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const result = await Promise.race([
+    resend.emails.send({ from: LEAD_FROM_EMAIL, to, replyTo, subject, html, text }),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('timed out after 15s')), 15000)),
+  ]);
+  if (result && result.error) {
+    throw new Error(result.error.message || JSON.stringify(result.error));
+  }
+  return result?.data?.id || null;
 }
+
+// The homeowner's design pack. Never blocks storing the lead.
+async function sendDesignPack(lead, price) {
+  if (!DESIGN_PACK_ENABLED) {
+    return { attempted: false, sent: false, reason: 'design pack email not configured' };
+  }
+  try {
+    const id = await sendEmail({
+      to: lead.email,
+      replyTo: LEAD_NOTIFY_EMAIL || undefined,
+      subject: emails.designPackSubject(lead),
+      html: emails.designPackHtml(lead, price, SITE_URL),
+      text: emails.designPackText(lead, price, SITE_URL),
+    });
+    console.log(`Lead ${lead.id}: design pack sent to the homeowner.`);
+    return { attempted: true, sent: true, id };
+  } catch (err) {
+    console.error(`Lead ${lead.id}: design pack FAILED: ${err.message}`);
+    return { attempted: true, sent: false, reason: err.message };
+  }
+}
+
 
 /* A lead that couldn't be delivered goes to its own file, so there's a durable
    list to work through rather than a console line nobody reads. Written with fs
@@ -231,11 +268,12 @@ function leadEmailHtml(lead, price) {
    disappearing exactly when the database is the thing that's broken. */
 const NOTIFICATION_FAILURES_FILE = path.join(__dirname, 'data', 'notification-failures.jsonl');
 
-function recordNotificationFailure(lead, notification) {
+function recordNotificationFailure(lead, notification, kind = 'lead-notification') {
   try {
     fs.mkdirSync(path.dirname(NOTIFICATION_FAILURES_FILE), { recursive: true });
     fs.appendFileSync(NOTIFICATION_FAILURES_FILE, JSON.stringify({
       ts: new Date().toISOString(),
+      kind,
       leadId: lead.id,
       name: lead.name,
       email: lead.email,
@@ -261,30 +299,14 @@ async function notifyNewLead(lead, price) {
   }
 
   try {
-    const { Resend } = require('resend');
-    const resend = new Resend(resendKey);
-
-    // The SDK has no timeout of its own; without this a hung request would
-    // hold the homeowner's "Save my design" spinner open indefinitely.
-    const result = await Promise.race([
-      resend.emails.send({
-        from: LEAD_FROM_EMAIL,
-        to: LEAD_NOTIFY_EMAIL,
-        replyTo: lead.email,
-        subject: `New lead: ${lead.name} — ${lead.postcode || 'no postcode'}`,
-        html: leadEmailHtml(lead, price),
-      }),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('timed out after 15s')), 15000)),
-    ]);
-
-    // Resend reports API errors in the resolved value, not by throwing.
-    if (result && result.error) {
-      const msg = result.error.message || JSON.stringify(result.error);
-      console.error(`Lead ${lead.id} email FAILED: ${msg}`);
-      return { attempted: true, sent: false, reason: msg };
-    }
+    const id = await sendEmail({
+      to: LEAD_NOTIFY_EMAIL,
+      replyTo: lead.email,
+      subject: `New lead: ${lead.name} — ${lead.postcode || 'no postcode'}`,
+      html: emails.leadNotificationHtml(lead, price),
+    });
     console.log(`Lead ${lead.id} emailed to ${LEAD_NOTIFY_EMAIL}.`);
-    return { attempted: true, sent: true, id: result?.data?.id || null };
+    return { attempted: true, sent: true, id };
   } catch (err) {
     console.error(`Lead ${lead.id} email FAILED: ${err.message}`);
     return { attempted: true, sent: false, reason: err.message };
@@ -423,6 +445,15 @@ function logMeasureTuning() {
   });
   console.log(`Wall measurement (factor/coverage/front-to-total) — ${parts.join(', ')}${parts.some(p => p.includes('*')) ? '   * env override' : ''}`);
 }
+
+/* ── GET /api/config ──
+   What the front end needs to know about how this server is set up. Only
+   booleans about our own behaviour — no keys, no addresses. Exists so the
+   lead form can promise a design-pack email only when one will actually be
+   sent, rather than saying it and hoping. */
+app.get('/api/config', (req, res) => {
+  res.json({ designPackEmail: DESIGN_PACK_ENABLED });
+});
 
 /* ── GET /api/catalogue ── */
 // Real cladding/trim/roof swatches + prices, loaded from catalogue.json.
@@ -759,10 +790,17 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
   // Stored first, unconditionally — a notification problem must never cost a lead.
   await store.append('leads', lead);
 
-  const notification = await notifyNewLead(lead, price);
+  // Both emails run together: neither is allowed to delay the other, and
+  // neither can fail the request — the lead is already saved.
+  const [notification, designPack] = await Promise.all([
+    notifyNewLead(lead, price),
+    sendDesignPack(lead, price),
+  ]);
   lead.notification = notification;
+  lead.designPack = designPack;
 
-  if (notification.attempted && !notification.sent) recordNotificationFailure(lead, notification);
+  if (notification.attempted && !notification.sent) recordNotificationFailure(lead, notification, 'lead-notification');
+  if (designPack.attempted && !designPack.sent) recordNotificationFailure(lead, designPack, 'design-pack');
 
   const crmWebhook = process.env.CRM_WEBHOOK_URL;
   if (crmWebhook) {

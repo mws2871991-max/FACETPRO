@@ -343,6 +343,9 @@ const state = {
   measurement: null,      // { m2, low, high, method, confidence, notes, caveat }
   measuring: false,
   useMeasurement: false,  // whether the measured area is currently sizing the quote
+  // Server tells us whether it can email the homeowner their design, so the
+  // form only promises it when it's true.
+  designPackEmail: false,
   installerPassword: sessionStorage.getItem('fp_installer_pw') || '',
   installerAuthed: false,
   installerError: '',
@@ -374,6 +377,16 @@ function U(msg) {
 }
 
 // ---------- API calls ----------
+
+async function loadConfig() {
+  try {
+    const res = await fetch('/api/config');
+    const cfg = await res.json();
+    state.designPackEmail = !!cfg.designPackEmail;
+  } catch (err) {
+    state.designPackEmail = false;   // promise nothing if we can't tell
+  }
+}
 
 async function loadCatalogue() {
   try {
@@ -973,7 +986,9 @@ function buildSaveFraming() {
   return h('section', { id: 'save-design', className: 'rounded-2xl bg-[#111111] text-white p-6 md:p-8 scroll-mt-24' }, [
     h('p', { className: 'text-[11px] tracking-widest uppercase text-white/40' }, 'Step 3'),
     h('h2', { className: 'mt-1 serif text-[26px] md:text-[32px] tracking-tight' }, 'Where should we send your design?'),
-    h('p', { className: 'mt-3 text-sm leading-6 text-white/60 max-w-[60ch]' }, 'We’ll keep your before-and-after and your itemised estimate together, and pass them to installers who can quote the job properly. No obligation, and you can walk away at any point.'),
+    h('p', { className: 'mt-3 text-sm leading-6 text-white/60 max-w-[60ch]' }, state.designPackEmail
+      ? 'We’ll email you your before-and-after and your itemised estimate to keep, and pass them to installers who can quote the job properly. No obligation, and you can walk away at any point.'
+      : 'We’ll keep your before-and-after and your itemised estimate together, and pass them to installers who can quote the job properly. No obligation, and you can walk away at any point.'),
     h('div', { className: 'mt-6 rounded-2xl bg-white text-zinc-900 p-5' }, [
       h('div', { className: 'grid grid-cols-2 gap-3' }, [
         field('Your name', 'name', 'col-span-2 md:col-span-1'),
@@ -1182,7 +1197,10 @@ async function sendDesignPack() {
     if (!res.ok) throw new Error(data.error || 'Lead submission failed');
     // Only surface it in the installer list if this tab is actually signed in.
     if (state.installerAuthed) state.leads = [data.lead, ...state.leads];
-    U(`Design saved — reference ${data.lead.id}. We’ll be in touch.`);
+    // Report what actually happened, not what we hoped would happen.
+    U(data.lead.designPack?.sent
+      ? `Design saved — reference ${data.lead.id}. Check your inbox, it’s on its way.`
+      : `Design saved — reference ${data.lead.id}. We’ll be in touch.`);
   } catch (err) {
     U(`We couldn’t save that: ${err.message}`);
   } finally {
@@ -1200,7 +1218,7 @@ document.getElementById('hero-upload')?.addEventListener('click', () => {
 
 (async function init() {
   render();
-  await loadCatalogue();
+  await Promise.all([loadCatalogue(), loadConfig()]);
   await refreshPrice();
   render();
   // If this tab already signed in to the installer area, restore it quietly.
