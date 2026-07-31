@@ -514,6 +514,15 @@ function logMeasureTuning() {
    forgetting to add a beta badge is worse than forgetting to remove one. */
 const SITE_MODE = (process.env.SITE_MODE || 'beta').toLowerCase() === 'live' ? 'live' : 'beta';
 
+/* Lead capture can be switched off so the site can be shown publicly before
+   the privacy notice and terms are finished. The whole journey still
+   demonstrates — photo, colours, estimate, render — but no name, email, phone
+   or postcode is collected, which is the part that needs real legal pages.
+
+   Defaults to on: a site that has quietly stopped capturing leads is its own
+   kind of failure, so turning it off has to be deliberate. */
+const LEAD_CAPTURE = (process.env.LEAD_CAPTURE || 'on').toLowerCase() !== 'off';
+
 /* ── GET /healthz ──
    For the host's health check. Deliberately says almost nothing: whether the
    process is up, and whether the disk it needs is actually writable — which
@@ -536,7 +545,11 @@ app.get('/healthz', (req, res) => {
 });
 
 app.get('/api/config', (req, res) => {
-  res.json({ designPackEmail: DESIGN_PACK_ENABLED, beta: SITE_MODE === 'beta' });
+  res.json({
+    designPackEmail: DESIGN_PACK_ENABLED,
+    beta: SITE_MODE === 'beta',
+    leadCapture: LEAD_CAPTURE,
+  });
 });
 
 /* ── GET /api/catalogue ── */
@@ -1046,6 +1059,16 @@ app.post('/api/render', renderLimiter, async (req, res) => {
    Real lead capture. Recomputes price server-side (never trusts client price),
    stores it, emails the owner via Resend if configured, fires a CRM webhook if configured. */
 app.post('/api/lead', leadLimiter, async (req, res) => {
+  /* Refused before anything is read, so nothing the homeowner typed is
+     logged, stored or even parsed into a lead object. The point of the
+     switch is that no personal data is handled at all. */
+  if (!LEAD_CAPTURE) {
+    return res.status(503).json({
+      error: 'We’re not taking details just yet — we’re finishing our privacy policy first. Everything else here works, so do have a look around.',
+      reason: 'lead_capture_off',
+    });
+  }
+
   const { name, email, phone, postcode, claddingId, trimId, roofId, footprintM2, trimLengthM, measurementSource, detections, renderUrl, notes, consent, detectionId, conservatoryStyleId } = req.body || {};
   if (!name || !email) return res.status(400).json({ error: 'name and email are required.' });
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Invalid email address.' });

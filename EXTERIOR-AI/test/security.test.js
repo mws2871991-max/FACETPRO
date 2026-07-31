@@ -288,6 +288,13 @@ test('a malformed request does not spend quota', async () => {
 
 /* ── lead capture ── */
 
+test('lead capture is on by default', async () => {
+  // The switch has to fail safe in the other direction too: a site that has
+  // quietly stopped capturing leads is its own kind of failure.
+  const { body } = await get('/api/config');
+  assert.strictEqual(body.leadCapture, true, 'LEAD_CAPTURE is unset here, so capture should be on');
+});
+
 test('a lead without consent is refused', async () => {
   const { status, body } = await post('/api/lead', { name: 'A', email: 'a@example.com' });
   assert.strictEqual(status, 400);
