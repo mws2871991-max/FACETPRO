@@ -79,10 +79,13 @@ test('the price is recomputed server-side, never taken from the client', async (
 test('the response is flagged illustrative and carries the catalogue caveat', async () => {
   const { body } = await post({ finishId: 'brick-slips', areaM2: 95 });
   assert.strictEqual(body.illustrative, true);
-  assert.match(body.note, /illustrative/i);
-  // The note must keep pointing at the sourced visualiser, since these finish
-  // prices differ from the real cladding catalogue.
+  // The note returned to the client is the customer-facing one — the detailed
+  // provenance names internal files and is stripped. It must still say the
+  // prices are indicative and point at the sourced visualiser, since these
+  // finish rates differ from the real cladding catalogue.
+  assert.match(body.note, /indicative|illustrative|guide/i);
   assert.match(body.note, /visualizer|visualiser/i);
+  assert.ok(!body.note.includes('.py'), 'no internal file names in a public response');
 });
 
 test('the build-up uses the same rates as the main quote', async () => {

@@ -64,7 +64,13 @@ test('windows and doors carry no pricing, by design', () => {
 });
 
 test('the fsgc note keeps flagging that its rates are not the sourced ones', () => {
-  assert.match(catalogue.fsgc.note, /NOT the same numbers|ESTIMATED/);
+  // The detailed comparison names quote_generator.py and spells out the
+  // material/labour split, so it lives in internalNote and is stripped from
+  // the public response. The customer-facing note still has to make clear
+  // these are a guide rather than the quote.
+  assert.match(catalogue.fsgc.internalNote, /NOT the same numbers|ESTIMATED/);
+  assert.match(catalogue.fsgc.note, /guide/i);
+  assert.match(catalogue.fsgc.note, /standard|estimate/i);
   // And the real rates must still exist separately for the quote engine.
   const t = catalogue.trimRates;
   assert.ok(t.fasciaPerM > 0 && t.soffitPerM > 0 && t.gutteringPerM > 0);

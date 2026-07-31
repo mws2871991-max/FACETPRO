@@ -91,7 +91,8 @@
   "labour": {
     "claddingPerM2": 15,
     "roofPerM2": 25,
-    "note": "Real labour rates from quote_generator.py — £15/m² cladding, £25/m² roof."
+    "note": "Fitting rates per square metre.",
+    "internalNote": "Real labour rates from quote_generator.py — £15/m² cladding, £25/m² roof."
   },
   "trimRates": {
     "fasciaPerM": 35,
@@ -100,7 +101,8 @@
     "soffitLabourPerM": 12,
     "gutteringPerM": 40,
     "gutteringLabourPerM": 15,
-    "note": "Real per-metre rates from quote_generator.py — fascia £35/m + £12/m labour, soffit £30/m + £12/m labour, guttering £40/m + £15/m labour. Colour choice (Coastal Fog/Ink Trim/Cedar) doesn't change the real cost, only the material rates do."
+    "note": "Fascia, soffit and guttering rates per metre of roofline.",
+    "internalNote": "Real per-metre rates from quote_generator.py — fascia £35/m + £12/m labour, soffit £30/m + £12/m labour, guttering £40/m + £15/m labour. Colour choice (Coastal Fog/Ink Trim/Cedar) doesn't change the real cost, only the material rates do."
   },
   "scaffoldingCost": 800,
   "wastePct": 0.1,
@@ -108,7 +110,7 @@
   "defaultFootprintM2": 95,
   "defaultTrimLengthM": 24,
   "wholeHouse": {
-    "note": "Estimated illustrative finish prices, CSS textures only (no photos) — not the real quote. Two things worth knowing: 'White Render' and 'Cream Render' here (£45/m²) are close to but different from the real Alabaster render swatch already priced at £50/m² in the cladding catalogue above, and 'Brick Slips' here (£85/m² of wall area) is a different product and unit than 'Brick Slip' in the Roofline & Cladding tab (£110 per linear metre of trim). Use the real cladding/roof/trim visualizer for a sourced quote.",
+    "note": "Indicative finish prices for exploring options. The visualiser prices your actual choices from our sourced catalogue.",
     "finishes": [
       {
         "id": "white-render",
@@ -230,10 +232,11 @@
     ],
     "areaMinM2": 60,
     "areaMaxM2": 200,
-    "areaDefaultM2": 95
+    "areaDefaultM2": 95,
+    "internalNote": "Estimated illustrative finish prices, CSS textures only (no photos) — not the real quote. Two things worth knowing: 'White Render' and 'Cream Render' here (£45/m²) are close to but different from the real Alabaster render swatch already priced at £50/m² in the cladding catalogue above, and 'Brick Slips' here (£85/m² of wall area) is a different product and unit than 'Brick Slip' in the Roofline & Cladding tab (£110 per linear metre of trim). Use the real cladding/roof/trim visualizer for a sourced quote."
   },
   "conservatories": {
-    "note": "ESTIMATED placeholder price ranges — unlike cladding/roof/trim above, these are NOT sourced from any real production data. Replace with real supplier/installer pricing whenever you have it.",
+    "note": "Broad guide ranges to help compare styles. A conservatory is priced on size, glazing, groundworks and access.",
     "styles": [
       {
         "id": "edwardian",
@@ -375,10 +378,11 @@
           "Least roof glazing/natural light of the 8 styles"
         ]
       }
-    ]
+    ],
+    "internalNote": "ESTIMATED placeholder price ranges — unlike cladding/roof/trim above, these are NOT sourced from any real production data. Replace with real supplier/installer pricing whenever you have it."
   },
   "windowsDoors": {
-    "note": "Style and colour preview only — window/door pricing depends on frame size, glazing spec, and installation, so no price range is shown here. Use the cladding/roof/trim visualizer above for a real priced quote.",
+    "note": "Style and colour preview. Windows and doors are quoted separately, on frame size and glazing spec.",
     "windowStyles": [
       {
         "id": "casement",
@@ -450,10 +454,11 @@
         "name": "Cream",
         "hex": "#F5F0E6"
       }
-    ]
+    ],
+    "internalNote": "Style and colour preview only — window/door pricing depends on frame size, glazing spec, and installation, so no price range is shown here. Use the cladding/roof/trim visualizer above for a real priced quote."
   },
   "fsgc": {
-    "note": "ESTIMATED per-metre guide prices for style comparison only — these are NOT the same numbers as the real, sourced trim rates used in the quote engine above (fascia £35/m + £12/m labour, soffit £30/m + £12/m labour, guttering £40/m + £15/m labour, from quote_generator.py), and cladding here is priced per linear metre for illustration whereas the real cladding catalogue is priced per m² of wall area. Don't treat these as a real quote — use the visualizer above for that.",
+    "note": "Guide per-metre prices for comparing profiles. Your estimate uses our standard sourced specification.",
     "fascia": [
       {
         "id": "flat-18mm",
@@ -567,6 +572,7 @@
         "tagline": "Real brick, insulated — heritage",
         "guaranteeYears": 60
       }
-    ]
+    ],
+    "internalNote": "ESTIMATED per-metre guide prices for style comparison only — these are NOT the same numbers as the real, sourced trim rates used in the quote engine above (fascia £35/m + £12/m labour, soffit £30/m + £12/m labour, guttering £40/m + £15/m labour, from quote_generator.py), and cladding here is priced per linear metre for illustration whereas the real cladding catalogue is priced per m² of wall area. Don't treat these as a real quote — use the visualizer above for that."
   }
 }

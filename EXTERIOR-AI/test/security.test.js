@@ -163,8 +163,50 @@ test('/api/catalogue does not leak internal provenance fields', async () => {
   const { body } = await get('/api/catalogue');
   assert.ok(!('internalNote' in body), 'internalNote must be stripped');
   assert.ok(!('source' in body), 'source must be stripped');
-  assert.ok(!JSON.stringify(body).includes('services/'), 'no internal file paths');
   assert.ok(Array.isArray(body.cladding), 'but the catalogue itself is still served');
+
+  // Nested notes used to carry these too, at any depth.
+  const serialised = JSON.stringify(body);
+  for (const marker of ['services/', 'quote_generator', 'material_detector', '.py', 'internalNote']) {
+    assert.ok(!serialised.includes(marker), `public catalogue must not mention "${marker}"`);
+  }
+});
+
+test('/api/catalogue does not publish the cost model', async () => {
+  // Labour rates, the material-vs-labour split on trim, the waste allowance
+  // and the scaffolding charge are the basis of every quote. The page never
+  // reads them — prices come from /api/quote — so they have no business
+  // being in a public response where a competitor can read the margin.
+  const { body } = await get('/api/catalogue');
+  for (const key of ['labour', 'trimRates', 'wastePct', 'scaffoldingCost', 'vatPct', 'defaultFootprintM2', 'defaultTrimLengthM']) {
+    assert.ok(!(key in body), `${key} must not be public`);
+  }
+  const serialised = JSON.stringify(body);
+  for (const marker of ['LabourPerM', 'claddingPerM2', 'roofPerM2', 'fasciaPerM']) {
+    assert.ok(!serialised.includes(marker), `cost-model field "${marker}" leaked`);
+  }
+
+  // Swatches keep only what gets drawn — no per-material rates. Trim swatches
+  // are colour-only and carry no image, so allow a subset rather than an
+  // exact set.
+  const allowed = new Set(['id', 'name', 'hex', 'image']);
+  for (const item of [...body.cladding, ...body.trim, ...body.roof]) {
+    for (const key of Object.keys(item)) {
+      assert.ok(allowed.has(key), `swatch ${item.id} exposes "${key}"`);
+    }
+    assert.ok(item.id && item.name, `swatch ${item.id} still needs id and name`);
+  }
+});
+
+test('the optional sections keep the figures they actually display', async () => {
+  // The hardening is an allowlist, so it could just as easily strip too much.
+  const { body } = await get('/api/catalogue');
+  assert.ok(body.wholeHouse.finishes.every(f => f.pricePerM2 > 0), 'finish prices are rendered');
+  assert.ok(body.conservatories.styles.every(s => s.priceMin && s.priceMax), 'guide ranges are rendered');
+  assert.ok(body.fsgc.fascia.every(f => f.pricePerM > 0), 'guide rates are rendered');
+  assert.ok(body.fsgc.cladding.some(f => f.guaranteeYears), 'guarantees are rendered');
+  assert.ok(body.cladding.every(s => s.image), 'swatch images are needed to draw the preview');
+  assert.ok(body.windowsDoors.colours.every(c => c.hex), 'colour chips need their hex');
 });
 
 /* ── daily spend caps ── */

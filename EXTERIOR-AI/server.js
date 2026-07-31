@@ -497,10 +497,65 @@ app.get('/api/config', (req, res) => {
 });
 
 /* ── GET /api/catalogue ── */
-// Real cladding/trim/roof swatches + prices, loaded from catalogue.json.
-// `internalNote` and `source` are developer provenance notes (they name internal
-// file paths) — strip them so they never reach the public response.
-const { internalNote, source, ...publicCatalogue } = catalogue;
+/* Built by allowlist, not by deleting known-bad keys.
+
+   Stripping `internalNote` and `source` from the top level wasn't enough: the
+   response was also publishing the whole cost model — labour rates, the
+   material-versus-labour split on every trim item, the waste allowance and the
+   scaffolding charge — none of which the page reads. That hands a competitor
+   the exact basis of every quote, and tells a customer what the margin on
+   their job looks like.
+
+   The nested notes carried it too ("fascia £35/m + £12/m labour, from
+   quote_generator.py"), naming an internal file into the bargain.
+
+   So: send what the interface actually renders and nothing else. Same reasoning
+   as the static-file allowlist — enumerate what's public rather than guess at
+   what isn't, so the next section added here is private until someone says
+   otherwise. */
+const swatchFields = ({ id, name, hex, image }) => ({ id, name, hex, image });
+
+function buildPublicCatalogue(c) {
+  const pick = (obj, keys) => obj ? Object.fromEntries(keys.filter(k => obj[k] !== undefined).map(k => [k, obj[k]])) : undefined;
+
+  return {
+    version: c.version,
+    updated: c.updated,
+    note: c.note,
+    // Swatches: what to draw. Prices come from /api/quote, computed here.
+    cladding: (c.cladding || []).map(swatchFields),
+    trim: (c.trim || []).map(swatchFields),
+    roof: (c.roof || []).map(swatchFields),
+    // The optional sections do display their own figures, so those stay —
+    // but only the fields the cards render.
+    wholeHouse: c.wholeHouse && {
+      note: c.wholeHouse.note,
+      areaMinM2: c.wholeHouse.areaMinM2, areaMaxM2: c.wholeHouse.areaMaxM2, areaDefaultM2: c.wholeHouse.areaDefaultM2,
+      finishes: c.wholeHouse.finishes.map(f => pick(f, ['id', 'name', 'hex', 'textureType', 'pricePerM2', 'lightScore', 'bestFor', 'bestseller'])),
+      roofColours: c.wholeHouse.roofColours.map(x => pick(x, ['id', 'name', 'hex'])),
+      windowColours: c.wholeHouse.windowColours.map(x => pick(x, ['id', 'name', 'hex'])),
+    },
+    conservatories: c.conservatories && {
+      note: c.conservatories.note,
+      styles: c.conservatories.styles.map(s => pick(s, ['id', 'name', 'priceMin', 'priceMax', 'bestFor', 'footprint', 'lightPct', 'description', 'pros', 'cons'])),
+    },
+    windowsDoors: c.windowsDoors && {
+      note: c.windowsDoors.note,
+      windowStyles: c.windowsDoors.windowStyles.map(s => pick(s, ['id', 'name', 'detail', 'description'])),
+      doorStyles: c.windowsDoors.doorStyles.map(s => pick(s, ['id', 'name', 'detail', 'description'])),
+      colours: c.windowsDoors.colours.map(x => pick(x, ['id', 'name', 'hex'])),
+    },
+    fsgc: c.fsgc && Object.fromEntries([
+      ['note', c.fsgc.note],
+      ...['fascia', 'soffit', 'guttering', 'cladding'].map(k => [
+        k, (c.fsgc[k] || []).map(i => pick(i, ['id', 'name', 'pricePerM', 'tagline', 'colours', 'guaranteeYears', 'bestseller'])),
+      ]),
+    ]),
+  };
+}
+
+const publicCatalogue = buildPublicCatalogue(catalogue);
+
 app.get('/api/catalogue', (req, res) => {
   res.json(publicCatalogue);
 });
