@@ -46,9 +46,13 @@ test('all eight styles are present and complete', () => {
 
 test('the catalogue keeps saying these prices are not sourced', () => {
   // The whole UI treatment rests on this being a placeholder range rather
-  // than a real quote. If the note is ever dropped, the copy is misleading.
-  assert.match(catalogue.conservatories.note, /placeholder|estimated/i);
-  assert.match(catalogue.conservatories.note, /not sourced|NOT sourced/i);
+  // than a real quote. The provenance now lives in internalNote — it names
+  // internal files, so it is stripped from the public response — while `note`
+  // is what a customer could see. Both must keep carrying the caveat.
+  assert.match(catalogue.conservatories.internalNote, /placeholder|estimated/i);
+  assert.match(catalogue.conservatories.internalNote, /not sourced|NOT sourced/i);
+  assert.match(catalogue.conservatories.note, /guide/i,
+    'the customer-facing note must still say these are guide ranges');
 });
 
 test('the ordering matches the story the copy tells', () => {
