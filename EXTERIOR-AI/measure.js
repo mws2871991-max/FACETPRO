@@ -145,9 +145,32 @@ const OPENING_TYPES = new Set(['window', 'door-front']);
 const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
 const isFiniteNumber = (n) => typeof n === 'number' && Number.isFinite(n);
 
+/* Resolve whatever the caller said into a canonical type key.
+
+   This lowercased the input and looked it up directly, which meant the
+   camelCase key `endTerrace` could never match: every end-of-terrace request
+   silently became a semi, understating wall area by around 30%. Comparing
+   normalised forms on both sides removes the whole class of problem, and the
+   aliases mean a caller can send "End of terrace" or "mid terrace" and be
+   understood. */
+const normaliseType = (s) => String(s || '').toLowerCase().replace(/[^a-z]/g, '');
+
+const TYPE_LOOKUP = new Map(Object.keys(HOUSE_TYPE_PRIORS).map(k => [normaliseType(k), k]));
+for (const [alias, canonical] of [
+  ['semidetached', 'semi'],
+  ['endofterrace', 'endTerrace'],
+  ['endterraced', 'endTerrace'],
+  ['end', 'endTerrace'],
+  ['midterrace', 'terrace'],
+  ['midterraced', 'terrace'],
+  ['terraced', 'terrace'],
+  ['detatched', 'detached'],   // common misspelling
+]) {
+  TYPE_LOOKUP.set(alias, canonical);
+}
+
 function houseTypeKey(input) {
-  const key = String(input || '').toLowerCase().trim();
-  return Object.prototype.hasOwnProperty.call(HOUSE_TYPE_PRIORS, key) ? key : DEFAULT_HOUSE_TYPE;
+  return TYPE_LOOKUP.get(normaliseType(input)) || DEFAULT_HOUSE_TYPE;
 }
 
 /* A detection box is in percentages of image width/height. Returns null for

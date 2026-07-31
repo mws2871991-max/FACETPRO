@@ -218,10 +218,41 @@ test('end-of-terrace is treated as its own type, far from mid-terrace', () => {
   const gap = (P.endTerrace.frontToTotal - P.terrace.frontToTotal) / P.terrace.frontToTotal;
   assert.ok(gap > 0.5, `end vs mid terrace differ by only ${(gap * 100).toFixed(0)}%`);
 
-  // Same photo, the two terrace types must give materially different answers.
   const mid = estimateWallArea({ detections: semiPhoto, aspectRatio: ASPECT_4_3, houseType: 'terrace' });
   const end = estimateWallArea({ detections: semiPhoto, aspectRatio: ASPECT_4_3, houseType: 'endTerrace' });
   assert.ok(end.m2 > mid.m2 * 1.3, `mid ${mid.m2} vs end ${end.m2}`);
+
+  // The earlier version of this test asserted only that end > mid, which
+  // passed while endTerrace was silently resolving to semi — semi is also
+  // bigger than mid-terrace. Assert the identity, not just the magnitude.
+  assert.strictEqual(end.houseType, 'endTerrace', 'must not silently become another type');
+  assert.strictEqual(end.houseTypeLabel, 'End of terrace');
+  const semi = estimateWallArea({ detections: semiPhoto, aspectRatio: ASPECT_4_3, houseType: 'semi' });
+  assert.notStrictEqual(end.m2, semi.m2, 'end-of-terrace must not equal semi');
+});
+
+test('every house type resolves to itself, whatever the casing or spacing', () => {
+  const { HOUSE_TYPE_PRIORS: P } = require('../measure');
+  // Round-trip each canonical key: the bug above was a key that could never
+  // match itself.
+  for (const key of Object.keys(P)) {
+    const r = estimateWallArea({ detections: semiPhoto, aspectRatio: ASPECT_4_3, houseType: key });
+    assert.strictEqual(r.houseType, key, `${key} must resolve to itself`);
+  }
+  const aliases = {
+    'endTerrace': ['endTerrace', 'end terrace', 'End of Terrace', 'END-TERRACE', 'end_terrace'],
+    'terrace': ['terrace', 'Terraced', 'mid-terrace', 'Mid Terrace'],
+    'semi': ['semi', 'Semi-detached', 'SEMI DETACHED'],
+    'detached': ['detached', 'Detached', 'detatched'],
+  };
+  for (const [canonical, forms] of Object.entries(aliases)) {
+    for (const form of forms) {
+      const r = estimateWallArea({ detections: semiPhoto, aspectRatio: ASPECT_4_3, houseType: form });
+      assert.strictEqual(r.houseType, canonical, `"${form}" should resolve to ${canonical}`);
+    }
+  }
+  // Genuinely unknown input still falls back rather than throwing.
+  assert.strictEqual(estimateWallArea({ houseType: 'houseboat' }).houseType, 'semi');
 });
 
 test('geometry-derived multipliers agree with the priors within 15%', () => {
