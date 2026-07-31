@@ -103,7 +103,19 @@ W = frontage and D = depth:
 | Mid-terrace | both sides | `2W` | **2.00** (exact) |
 | Semi-detached | one side | `2W + D` | 3.05 |
 | End of terrace | one side | `2W + D` | 3.45 |
+| Bungalow | none, single storey | `2W + 2D` | 3.54 |
 | Detached | none | `2W + 2D` | 3.84 |
+
+Bungalows are a separate type because every other entry derives depth assuming
+two storeys; applying that to a single-storey home halves its footprint and
+badly understates the walls. Floor area 77 m² is EHS 2018-19, the 10 m frontage
+is assumed as with the other types, and the calibration factor and coverage
+centre are derived rather than from the survey table.
+
+The wall's height in door-heights also gives a free read on storeys — roughly 3
+for two storeys, 1.3 for a bungalow. When that disagrees with the type the
+homeowner picked, the result says so, since the multiplier depends on it and
+they're the one who can correct it.
 
 D comes from floor area: `footprint = floorArea / storeys`, `D = footprint / W`.
 Inputs are English Housing Survey 2018-19 mean floor areas (detached 149,
@@ -340,8 +352,13 @@ startup.
 The counter lives in `data/usage.json` so a restart doesn't hand out a fresh
 allowance. Two caveats worth knowing:
 
-- **Per process.** A multi-instance deployment gets one allowance each — move the
-  counter to a shared store (Redis, Postgres) if you scale out.
+- **Shared per host, not across hosts.** The counter is re-read from
+  `data/usage.json` before each decision, so several workers on one machine
+  share a single allowance rather than each getting a full one. It isn't
+  atomic — two workers can read the same value and both spend it, so the cap
+  can be exceeded by roughly the number of workers, which is a rounding error
+  against a daily budget. Separate hosts don't share a filesystem and will each
+  get their own allowance: use Redis or Postgres if you scale that way.
 - **Quota is consumed on dispatch, not on success.** A provider error still
   counts, because the call may well have been billed.
 

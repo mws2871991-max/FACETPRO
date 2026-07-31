@@ -138,13 +138,17 @@ const DAILY_LIMITS = {
 const USAGE_FILE = path.join(__dirname, 'data', 'usage.json');
 const utcDay = () => new Date().toISOString().slice(0, 10);
 
-let usage = { day: utcDay(), detect: 0, render: 0 };
-try {
-  const saved = JSON.parse(fs.readFileSync(USAGE_FILE, 'utf8'));
-  if (saved && saved.day === usage.day) {
-    usage = { day: saved.day, detect: saved.detect | 0, render: saved.render | 0 };
-  }
-} catch (_) { /* no usage file yet, or it's from a previous day — start at zero */ }
+function readUsageFile() {
+  try {
+    const saved = JSON.parse(fs.readFileSync(USAGE_FILE, 'utf8'));
+    if (saved && saved.day === utcDay()) {
+      return { day: saved.day, detect: saved.detect | 0, render: saved.render | 0 };
+    }
+  } catch (_) { /* no file yet, unreadable, or from a previous day */ }
+  return null;
+}
+
+let usage = readUsageFile() || { day: utcDay(), detect: 0, render: 0 };
 
 function persistUsage() {
   try {
@@ -170,6 +174,22 @@ function consumeDailyQuota(kind, res) {
   if (usage.day !== today) {
     usage = { day: today, detect: 0, render: 0 };
     persistUsage();
+  }
+
+  /* Re-read before deciding, so several workers on the same host share one
+     allowance instead of each being handed a full one — the common shape when
+     a process manager runs a worker per core. Taking the higher of disk and
+     memory means an unwritable file degrades to per-process enforcement
+     rather than to no enforcement.
+
+     Not atomic: two workers can read the same value and both spend it, so the
+     cap can be exceeded by roughly the number of workers. That is a rounding
+     error against a daily budget, and this is a safety net rather than
+     billing. Separate hosts still need a shared store — see the README. */
+  const onDisk = readUsageFile();
+  if (onDisk && onDisk.day === usage.day) {
+    usage.detect = Math.max(usage.detect, onDisk.detect);
+    usage.render = Math.max(usage.render, onDisk.render);
   }
 
   const limit = DAILY_LIMITS[kind];

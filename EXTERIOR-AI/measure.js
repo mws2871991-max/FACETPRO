@@ -63,10 +63,17 @@ const DOOR_HEIGHT_M = 1.98;   // standard UK external door leaf
    derivation shows were low by 15–25%. Still not the same thing as measuring
    real properties — see `npm run validate` and the README caveats. */
 const PLAN_GEOMETRY = {
-  detached:   { floorAreaM2: 149, storeys: 2, frontageM: 9.0, exposed: '2W+2D' },
-  semi:       { floorAreaM2: 97,  storeys: 2, frontageM: 6.8, exposed: '2W+D'  },
-  endTerrace: { floorAreaM2: 88,  storeys: 2, frontageM: 5.5, exposed: '2W+D'  },
-  terrace:    { floorAreaM2: 88,  storeys: 2, frontageM: 5.5, exposed: '2W'    },
+  detached:   { floorAreaM2: 149, storeys: 2, frontageM: 9.0,  exposed: '2W+2D' },
+  semi:       { floorAreaM2: 97,  storeys: 2, frontageM: 6.8,  exposed: '2W+D'  },
+  endTerrace: { floorAreaM2: 88,  storeys: 2, frontageM: 5.5,  exposed: '2W+D'  },
+  terrace:    { floorAreaM2: 88,  storeys: 2, frontageM: 5.5,  exposed: '2W'    },
+  // Single storey, so the whole floor area is the footprint. Bungalows are
+  // wide and shallow rather than tall, which is why they need their own entry:
+  // every other type derives depth assuming two storeys, and applying that to
+  // a bungalow halves its footprint and badly understates the walls.
+  // Floor area 77 m² is EHS 2018-19; the 10 m frontage is assumed, as with the
+  // other types. Treated as detached, which most bungalows are.
+  bungalow:   { floorAreaM2: 77,  storeys: 1, frontageM: 10.0, exposed: '2W+2D' },
 };
 
 function frontToTotalFrom(plan) {
@@ -101,6 +108,7 @@ const HOUSE_TYPE_PRIORS = {
   detached:   { label: 'Detached',       wallM2: 130, band: [90, 200], calibrationFactor: 342, coverageCentre: 0.38, calibrationSource: 'survey table' },
   semi:       { label: 'Semi-detached',  wallM2: 85,  band: [55, 130], calibrationFactor: 303, coverageCentre: 0.28, calibrationSource: 'survey table' },
   endTerrace: { label: 'End of terrace', wallM2: 80,  band: [50, 120], calibrationFactor: 444, coverageCentre: 0.18, calibrationSource: 'derived' },
+  bungalow:   { label: 'Bungalow',       wallM2: 72,  band: [45, 110], calibrationFactor: 327, coverageCentre: 0.22, calibrationSource: 'derived' },
   terrace:    { label: 'Mid-terrace',    wallM2: 50,  band: [32, 80],  calibrationFactor: 277, coverageCentre: 0.18, calibrationSource: 'survey table' },
 };
 
@@ -256,6 +264,9 @@ function measureByDoor({ detections, aspectRatio }) {
     openingsM2,
     doorHeightPct: door.b.h,
     doorConfidence: door.confidence,
+    // How many door-heights tall the wall is — a proxy for storeys that comes
+    // free with the geometry. Two storeys is around 3, a bungalow around 1.3.
+    wallToDoorHeight: wall.h / door.b.h,
   };
 }
 
@@ -311,6 +322,20 @@ function estimateWallArea({ detections, aspectRatio, houseType, tuning } = {}) {
     method = 'door';
     notes.push(`Scaled from the front door (${byDoor.doorHeightPct.toFixed(1)}% of image height, assumed ${DOOR_HEIGHT_M} m).`);
     notes.push(`Front elevation ≈ ${Math.round(byDoor.frontElevationM2)} m² after subtracting windows and doors; ×${tuned.frontToTotal.toFixed(2)} for the other walls of a ${prior.label.toLowerCase()} property.`);
+
+    /* The wall's height in door-heights tells us roughly how many storeys we
+       are looking at, and every type except bungalow assumes two. If the photo
+       disagrees with the type they picked, say so — the multiplier is derived
+       from that assumption, so a mismatch is a large error, and the homeowner
+       is the one who can correct it. */
+    const storeysLook = byDoor.wallToDoorHeight;
+    if (Number.isFinite(storeysLook)) {
+      if (type !== 'bungalow' && storeysLook < 1.9) {
+        notes.push('This looks like a single-storey home. If it\'s a bungalow, choose that above — we\'d otherwise assume two storeys and overstate the walls.');
+      } else if (type === 'bungalow' && storeysLook > 2.4) {
+        notes.push('This looks like it has more than one storey, which doesn\'t match "bungalow" — worth checking the house type above.');
+      }
+    }
   } else {
     const byCoverage = measureByCoverage({ detections: list, tuned });
     if (byCoverage && byCoverage.framingOk) {

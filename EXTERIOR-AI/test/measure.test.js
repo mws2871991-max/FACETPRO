@@ -279,6 +279,42 @@ test('front-to-total can be overridden per type', () => {
   assert.ok(tuned.m2 < base.m2, `override should lower it: ${base.m2} -> ${tuned.m2}`);
 });
 
+test('bungalows are modelled as single storey, not half a house', () => {
+  const { PLAN_GEOMETRY: G, HOUSE_TYPE_PRIORS: P } = require('../measure');
+  assert.strictEqual(G.bungalow.storeys, 1, 'the whole floor area is the footprint');
+
+  // Treating a bungalow's floor area as two storeys would halve the footprint
+  // and understate the walls. Check the single-storey depth is what's used.
+  const depth = G.bungalow.floorAreaM2 / G.bungalow.storeys / G.bungalow.frontageM;
+  assert.ok(Math.abs(depth - 7.7) < 0.1, `depth was ${depth.toFixed(2)}`);
+  assert.ok(Math.abs(P.bungalow.frontToTotal - (2 + 2 * depth / G.bungalow.frontageM)) < 1e-9);
+
+  // A bungalow has less wall than a two-storey detached, more than a mid-terrace.
+  assert.ok(P.bungalow.wallM2 < P.detached.wallM2);
+  assert.ok(P.bungalow.wallM2 > P.terrace.wallM2);
+  assert.strictEqual(estimateWallArea({ houseType: 'Bungalow' }).houseType, 'bungalow');
+});
+
+test('a single-storey photo warns when a two-storey type is selected', () => {
+  // Same 7 m frontage, but the wall is only ~2.5 m tall — a bungalow shape.
+  const FRAME_H = 10, aspect = ASPECT_4_3, FRAME_W = FRAME_H * aspect;
+  const w = (m) => (m / FRAME_W) * 100, hh = (m) => (m / FRAME_H) * 100;
+  const singleStorey = [
+    { type: 'cladding',   x_pct: w(3), y_pct: hh(6),   w_pct: w(10), h_pct: hh(2.5), confidence: 0.9 },
+    { type: 'door-front', x_pct: w(7), y_pct: hh(6.5), w_pct: w(0.9), h_pct: hh(1.98), confidence: 0.95 },
+  ];
+  const asSemi = estimateWallArea({ detections: singleStorey, aspectRatio: aspect, houseType: 'semi' });
+  assert.ok(asSemi.notes.some(n => /single-storey/i.test(n)), asSemi.notes.join(' | '));
+
+  const asBungalow = estimateWallArea({ detections: singleStorey, aspectRatio: aspect, houseType: 'bungalow' });
+  assert.ok(!asBungalow.notes.some(n => /single-storey/i.test(n)), 'no warning when the type already matches');
+});
+
+test('a two-storey photo warns when bungalow is selected', () => {
+  const r = estimateWallArea({ detections: semiPhoto, aspectRatio: ASPECT_4_3, houseType: 'bungalow' });
+  assert.ok(r.notes.some(n => /more than one storey/i.test(n)), r.notes.join(' | '));
+});
+
 test('imageSize reads PNG and JPEG dimensions', () => {
   // 16×9 PNG: signature, then IHDR length/type/width/height.
   const png = Buffer.concat([
