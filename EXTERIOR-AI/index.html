@@ -29,6 +29,7 @@
 
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='16' fill='%2318181b'/%3E%3Ctext x='16' y='21' font-family='Georgia,serif' font-size='14' fill='%23FBF8F3' text-anchor='middle'%3EFP%3C/text%3E%3C/svg%3E">
 
+<link rel="preconnect" href="https://cdn.tailwindcss.com">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&display=swap">
@@ -376,6 +377,12 @@ const state = {
   // visualiser. Prices here are the catalogue's illustrative figures.
   wh: { finishId: null, roofColourId: null, windowColourId: null, areaM2: null, result: null, loading: false },
   conservatoryId: null,   // which style they're drawn to; goes with the lead
+  // Set when the daily cap is spent. Neither stops the journey: without
+  // detection they can still choose colours and price a house type, without a
+  // render they still have the colour preview. The UI says which is
+  // unavailable rather than leaving them on an error.
+  detectUnavailable: false,
+  renderUnavailable: false,
   // Window/door and roofline preferences. Recorded for the installer; they
   // never move the price, because the quote uses one sourced trim rate.
   prefs: { windowStyleId: null, doorStyleId: null, windowDoorColourId: null,
@@ -597,11 +604,24 @@ function buildUploadDetect() {
   });
   sharedRefs.fileInput = fileInput;
 
+  // A capped detection is not a rejected photo. Keep it visible, explain what
+  // still works, and point at the step that does.
+  const capNotice = state.detectUnavailable
+    ? h('div', { className: 'mt-4 rounded-xl bg-[#FFF7ED] border border-amber-200 p-4' }, [
+        h('p', { className: 'text-[13px] leading-6 text-amber-900' }, [
+          h('strong', {}, 'We can’t analyse photos right now. '),
+          'We’ve had a lot of them today. Your photo is still here, and everything else works — pick your colours below, choose your house type for an estimate, and save your design. An installer will pick it up from there.',
+        ]),
+      ])
+    : null;
+
   const detectionBadgeByStatus = {
     idle:      { className: 'bg-white/10 text-white',   text: 'Waiting for your photo' },
     detecting: { className: 'bg-amber-400 text-black',  text: 'Looking at your home…' },
     success:   { className: 'bg-emerald-500 text-white', text: '✓ Your home has been analysed' },
-    error:     { className: 'bg-red-500 text-white',    text: '⚠ We couldn’t read that photo' },
+    error:     state.detectUnavailable
+      ? { className: 'bg-amber-400 text-black', text: 'Busy — colours still work' }
+      : { className: 'bg-red-500 text-white',   text: '⚠ We couldn’t read that photo' },
   };
   const detectionBadge = detectionBadgeByStatus[state.detectionStatus] || detectionBadgeByStatus.idle;
 
@@ -614,6 +634,7 @@ function buildUploadDetect() {
       h('span', { className: 'text-[10px] tracking-widest uppercase px-2.5 py-1 rounded-full bg-[#FFF7ED] border border-zinc-200' }, 'Takes a few seconds'),
     ]),
     h('p', { className: 'mt-2 text-sm text-zinc-600 max-w-[62ch]' }, 'We’ll find your windows, doors, roof and walls automatically, so you don’t have to mark anything up or measure a thing.'),
+    capNotice,
     h('div', { className: 'mt-6 grid md:grid-cols-[1.1fr_0.9fr] gap-6' }, [
       h('div', { className: 'rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-4' }, [
         fileInput,
@@ -638,7 +659,7 @@ function buildUploadDetect() {
               h('div', { className: 'flex items-center gap-2' }, [
                 h('div', { className: 'w-1.5 h-1.5 rounded-full bg-emerald-400' }),
                 h('span', { className: 'text-xs' }, d.label),
-                h('span', { className: 'text-[10px] text-white/40 uppercase' }, d.type),
+                h('span', { className: 'text-[10px] text-white/55 uppercase' }, d.type),
               ]),
               h('span', { className: 'text-[10px] text-white/60' }, `${Math.round((d.confidence || 0) * 100)}% sure`),
             ]))
@@ -750,17 +771,34 @@ function buildVisualizer() {
           h('div', { className: 'absolute bottom-3 right-3 text-[10px] px-2 py-1 rounded-full bg-white border border-zinc-200' }, `${state.afterPct}% after`),
         ]),
         h('div', { className: 'p-4 grid gap-4' }, groupsRow),
-        h('div', { className: 'px-4 pb-4' }, [
-          h('button', {
-            type: 'button',
-            className: `w-full py-2.5 rounded-full text-xs font-medium ${state.uploadedBase64 ? 'bg-zinc-900 text-white' : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'}`,
-            disabled: !state.uploadedBase64 || state.rendering,
-            onClick: generateRealRender,
-          }, renderButtonLabel),
-          !state.uploadedBase64
-            ? h('div', { className: 'mt-2 text-[10px] text-zinc-500 text-center' }, 'Add a photo above first')
-            : h('div', { className: 'mt-2 text-[10px] text-zinc-500 text-center' }, 'Takes up to a minute'),
-        ]),
+        h('div', { className: 'px-4 pb-4' }, state.renderUnavailable
+          // Cap spent: don't offer a button that can only fail. The colour
+          // preview above is still live, and saving the design still works,
+          // so point at that rather than at tomorrow.
+          ? [
+              h('div', { className: 'rounded-xl bg-[#FFF7ED] border border-amber-200 p-3' }, [
+                h('p', { className: 'text-[12px] leading-5 text-amber-900' }, [
+                  h('strong', {}, 'Photorealistic pictures are busy right now. '),
+                  'The colour preview above is live and your estimate is unaffected — save your design and an installer will take it from there.',
+                ]),
+              ]),
+              h('button', {
+                type: 'button',
+                className: 'mt-2 w-full py-2.5 rounded-full bg-zinc-900 text-white text-xs font-medium',
+                onClick: () => document.getElementById('save-design')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+              }, 'Save my design →'),
+            ]
+          : [
+              h('button', {
+                type: 'button',
+                className: `w-full py-2.5 rounded-full text-xs font-medium ${state.uploadedBase64 ? 'bg-zinc-900 text-white' : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'}`,
+                disabled: !state.uploadedBase64 || state.rendering,
+                onClick: generateRealRender,
+              }, renderButtonLabel),
+              !state.uploadedBase64
+                ? h('div', { className: 'mt-2 text-[10px] text-zinc-500 text-center' }, 'Add a photo above first')
+                : h('div', { className: 'mt-2 text-[10px] text-zinc-500 text-center' }, 'Takes up to a minute'),
+            ]),
       ]),
       h('div', { className: 'flex flex-col gap-6' }, [buildPricePanel(price, priceRow)]),
     ]),
@@ -832,7 +870,7 @@ function buildPricePanel(price, priceRow) {
       ]),
 
       h('div', { className: 'mt-5 rounded-xl bg-white/5 border border-white/10 p-3' }, [
-        h('div', { className: 'text-[10px] tracking-widest uppercase text-white/40' }, 'Includes'),
+        h('div', { className: 'text-[10px] tracking-widest uppercase text-white/55' }, 'Includes'),
         h('div', { className: 'mt-2 grid gap-1 text-[11px] text-white/60' }, [
           'Walls & cladding, fitted',
           'Roof, fitted',
@@ -845,7 +883,7 @@ function buildPricePanel(price, priceRow) {
 
       h('p', { className: 'mt-4 text-[11px] leading-5 text-white/70' },
         'This is a typical figure for that kind of house — not yours yet. Add a photo above and we’ll size it to your home.'),
-      h('p', { className: 'mt-3 text-[10px] leading-4 text-white/40' }, catalogue_note()),
+      h('p', { className: 'mt-3 text-[10px] leading-4 text-white/55' }, catalogue_note()),
     ]);
   }
 
@@ -1208,7 +1246,7 @@ function buildWholeHouse() {
                   'This doesn’t include a new roof or new fascia, soffit and guttering — that’s why it comes out below the estimate above, which covers all three.',
                 ]),
               ]),
-              h('p', { className: 'mt-3 text-[10px] leading-4 text-white/40' },
+              h('p', { className: 'mt-3 text-[10px] leading-4 text-white/55' },
                 'Indicative finish prices for exploring. The visualiser above prices your actual choices from our sourced catalogue.'),
             ])
           : h('p', { className: 'mt-3 text-[11px] text-white/50' }, state.wh.loading ? 'Working it out…' : 'Choose a finish to see a rough cost.'),
@@ -1244,8 +1282,13 @@ async function generateRealRender() {
       })
     });
     const data = await res.json();
-    if (res.status === 429) throw Object.assign(new Error(data.error || 'Busy right now — please try again later.'), { plain: true });
+    if (res.status === 429) {
+      // The colour preview is unaffected — don't strand them on an error.
+      state.renderUnavailable = data.reason === 'daily_limit';
+      throw Object.assign(new Error(data.error || 'Busy right now — please try again later.'), { plain: true });
+    }
     if (!res.ok) throw new Error(data.error || 'Render failed');
+    state.renderUnavailable = false;
     state.renderUrl = data.url;
     U('Your new look is ready — drag the slider to compare');
   } catch (err) {
@@ -1439,7 +1482,7 @@ function buildSaveFraming() {
   }
 
   return h('section', { id: 'save-design', className: 'rounded-2xl bg-[#111111] text-white p-6 md:p-8 scroll-mt-24' }, [
-    h('p', { className: 'text-[11px] tracking-widest uppercase text-white/40' }, 'Step 3'),
+    h('p', { className: 'text-[11px] tracking-widest uppercase text-white/55' }, 'Step 3'),
     h('h2', { className: 'mt-1 serif text-[26px] md:text-[32px] tracking-tight' }, 'Where should we send your design?'),
     h('p', { className: 'mt-3 text-sm leading-6 text-white/60 max-w-[60ch]' }, state.designPackEmail
       ? 'We’ll email you your before-and-after and your itemised estimate to keep, and pass them to installers who can quote the job properly. No obligation, and you can walk away at any point.'
@@ -1485,7 +1528,7 @@ function buildInstaller() {
     const pwInput = h('input', {
       type: 'password', placeholder: 'Installer password', value: state.installerPassword,
       'aria-label': 'Installer password', autocomplete: 'current-password',
-      className: 'flex-1 min-w-[180px] px-3 py-2.5 rounded-xl bg-white/5 border border-white/15 text-sm text-white placeholder:text-white/40 outline-none focus:border-white/50',
+      className: 'flex-1 min-w-[180px] px-3 py-2.5 rounded-xl bg-white/5 border border-white/15 text-sm text-white placeholder:text-white/55 outline-none focus:border-white/50',
       onInput: (e) => { state.installerPassword = e.target.value; },
     });
     const submit = async () => {
@@ -1587,9 +1630,15 @@ async function handleUpload(file) {
       body: JSON.stringify({ image: base64, mimeType: state.uploadedMimeType })
     });
     const data = await res.json();
-    // A quota/rate refusal isn't a problem with their photo — say so plainly.
-    if (res.status === 429) throw Object.assign(new Error(data.error || 'Busy right now — please try again later.'), { plain: true });
+    // A quota refusal isn't a problem with their photo, and it doesn't end the
+    // journey: they can still choose colours and price a house type. Say so,
+    // keep the photo on screen, and carry on.
+    if (res.status === 429) {
+      state.detectUnavailable = data.reason === 'daily_limit';
+      throw Object.assign(new Error(data.error || 'Busy right now — please try again later.'), { plain: true });
+    }
     if (!res.ok) throw new Error(data.error || 'Detection failed');
+    state.detectUnavailable = false;
 
     state.detections = data.detections || [];
     state.detectionId = data.detectionId || null;

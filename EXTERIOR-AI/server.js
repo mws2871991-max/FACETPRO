@@ -208,7 +208,21 @@ function consumeDailyQuota(kind, res) {
   return true;
 }
 
-const DAILY_LIMIT_ERROR = { error: 'Daily limit reached — try again tomorrow.' };
+/* Hitting the cap costs nothing if the homeowner just leaves — but it costs a
+   lead, which is worse than the API call would have been. Neither endpoint is
+   load-bearing for the rest of the journey: without detection they can still
+   pick colours, price a house type and save a design; without a render they
+   still have the colour preview. So the refusal says which capability is
+   unavailable and that the journey continues, and the page keeps going rather
+   than dead-ending on "try again tomorrow". */
+const dailyLimitBody = (kind) => ({
+  error: kind === 'render'
+    ? 'We can’t create photorealistic pictures right now — but your colour preview and estimate still work.'
+    : 'We can’t analyse photos right now — but you can still choose colours and get an estimate.',
+  reason: 'daily_limit',
+  kind,
+  canContinue: true,
+});
 
 /* ── LEAD NOTIFICATION ──
    Three things were wrong here and each one silently lost leads:
@@ -703,7 +717,7 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
   if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set — see .env.example.' });
 
   // Checked last, after validation, so a malformed request doesn't spend quota.
-  if (!consumeDailyQuota('detect', res)) return res.status(429).json(DAILY_LIMIT_ERROR);
+  if (!consumeDailyQuota('detect', res)) return res.status(429).json(dailyLimitBody('detect'));
 
   let anthropicRes;
   try {
@@ -939,7 +953,7 @@ app.post('/api/render', renderLimiter, async (req, res) => {
   if (!replicateKey) return res.status(500).json({ error: 'REPLICATE_API_TOKEN not set — see .env.example.' });
 
   // Checked last, after validation, so a malformed request doesn't spend quota.
-  if (!consumeDailyQuota('render', res)) return res.status(429).json(DAILY_LIMIT_ERROR);
+  if (!consumeDailyQuota('render', res)) return res.status(429).json(dailyLimitBody('render'));
 
   const cladding = claddingName || 'Alabaster';
   const trim = trimName || 'Ink Trim';
