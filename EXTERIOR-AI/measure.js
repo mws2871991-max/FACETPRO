@@ -415,6 +415,7 @@ module.exports = {
   estimateWallArea,
   imageSize,
   tuningFor,
+  houseTypeKey,
   frontToTotalFrom,
   PLAN_GEOMETRY,
   HOUSE_TYPE_PRIORS,

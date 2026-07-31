@@ -545,29 +545,74 @@ function computePrice({ claddingId, trimId, roofId, footprintM2, trimLengthM }) 
 
    Returns the source as well, so the lead records how the figure was arrived
    at rather than presenting an estimate as if it were measured. */
-function resolveFootprint({ footprintM2, detectionId }) {
+function resolveFootprint({ footprintM2, detectionId, houseType }) {
   const manual = Number(footprintM2);
   if (Number.isFinite(manual) && manual > 0) {
-    return { m2: manual, source: 'manual_entry', measurement: null };
+    return { m2: manual, source: 'manual_entry', measurement: null, exact: true };
   }
   const record = detectionId ? detectionRecords.get(String(detectionId)) : null;
   if (record && record.measurement) {
-    return { m2: record.measurement.m2, source: `photo_${record.measurement.method}`, measurement: record.measurement };
+    return {
+      m2: record.measurement.m2,
+      source: `photo_${record.measurement.method}`,
+      measurement: record.measurement,
+      exact: true,
+    };
   }
-  return { m2: null, source: 'default_footprint', measurement: null };
+  // Before we've seen the house, a house type is a far better basis than one
+  // generic footprint: catalogue.defaultFootprintM2 is 95 m², which matches
+  // none of our own priors (terrace 50, end 80, semi 85, detached 130) and so
+  // is a precise-looking figure for no particular house. Not exact, so the
+  // caller shows a range rather than a single number.
+  if (houseType !== undefined && houseType !== null && String(houseType) !== '') {
+    const key = measure.houseTypeKey(houseType);
+    const prior = measure.HOUSE_TYPE_PRIORS[key];
+    return {
+      m2: prior.wallM2,
+      source: 'house_type_prior',
+      houseType: key,
+      houseTypeLabel: prior.label,
+      measurement: null,
+      exact: false,
+    };
+  }
+  return { m2: null, source: 'default_footprint', measurement: null, exact: false };
+}
+
+/* When the wall area is a typical figure rather than this house's, quote a
+   range. Price isn't proportional to area — scaffolding is fixed and VAT
+   rides on top — so recompute at each end rather than scaling the total.
+   ±25% matches the uncertainty measure.js already attaches to a prior. */
+const PRIOR_AREA_UNCERTAINTY = 0.25;
+
+function priceRange(selections, m2) {
+  const area = m2 && m2 > 0 ? m2 : catalogue.defaultFootprintM2;
+  const at = (a) => computePrice({ ...selections, footprintM2: a }).total;
+  const round500 = (n) => Math.round(n / 500) * 500;
+  return {
+    low: round500(at(area * (1 - PRIOR_AREA_UNCERTAINTY))),
+    high: round500(at(area * (1 + PRIOR_AREA_UNCERTAINTY))),
+  };
 }
 
 /* ── POST /api/quote ── */
 // Recomputes a price live from catalogue data as the user changes swatches —
 // no AI call, instant. Real numbers (from catalogue.json), not a client guess.
 app.post('/api/quote', (req, res) => {
-  const { claddingId, trimId, roofId, footprintM2, trimLengthM, detectionId } = req.body || {};
-  const footprint = resolveFootprint({ footprintM2, detectionId });
+  const { claddingId, trimId, roofId, footprintM2, trimLengthM, detectionId, houseType } = req.body || {};
+  const footprint = resolveFootprint({ footprintM2, detectionId, houseType });
   const price = computePrice({ claddingId, trimId, roofId, footprintM2: footprint.m2, trimLengthM });
   res.json({
     ...price,
     footprintSource: footprint.source,
     measurement: footprint.measurement,
+    houseType: footprint.houseType || null,
+    houseTypeLabel: footprint.houseTypeLabel || null,
+    // Only when the area is a typical figure rather than this house's. The
+    // front end shows this instead of the exact total, so a number that looks
+    // precise is never attached to a house we haven't seen.
+    exact: footprint.exact,
+    range: footprint.exact ? null : priceRange({ claddingId, trimId, roofId, trimLengthM }, footprint.m2),
   });
 });
 

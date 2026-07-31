@@ -453,6 +453,9 @@ async function refreshPrice() {
         // Only sent once they've chosen to use it — the server looks the
         // measurement up itself, we never send an area.
         detectionId: state.useMeasurement ? state.detectionId : null,
+        // Before we've seen the house this is what sizes the estimate, and
+        // the server returns a range rather than a single figure.
+        houseType: state.houseType,
       })
     });
     state.price = await res.json();
@@ -722,24 +725,106 @@ function buildVisualizer() {
             : h('div', { className: 'mt-2 text-[10px] text-zinc-500 text-center' }, 'Takes up to a minute'),
         ]),
       ]),
-      h('div', { className: 'flex flex-col gap-6' }, [
-        h('div', { className: 'rounded-2xl bg-zinc-900 text-white p-5' }, [
-          h('h3', { className: 'text-[11px] tracking-widest uppercase text-white/50' }, 'Your estimate'),
-          h('div', { className: 'mt-4 grid gap-2 text-sm' }, [
-            priceRow('Walls & cladding, fitted', price.cladding),
-            priceRow('Roof, fitted', price.roof),
-            priceRow('Fascia, soffit & guttering', price.trim),
-            priceRow('Scaffolding', price.scaffolding, true),
-            priceRow('Waste allowance', price.waste, true),
-            priceRow('VAT (20%)', price.vat, true),
-            h('div', { className: 'h-px bg-white/10 my-1' }),
-            h('div', { className: 'flex justify-between gap-4 font-medium' }, [h('span', {}, 'Estimated total'), h('span', {}, fmtMoney(price.total))]),
-          ]),
-          h('p', { className: 'mt-4 text-[10px] leading-4 text-white/50' }, catalogue_note()),
-          h('p', { className: 'mt-2 text-[10px] leading-4 text-white/50' }, 'A planning estimate, not a fixed quote — an installer will confirm the price after a survey.'),
-        ]),
-      ]),
+      h('div', { className: 'flex flex-col gap-6' }, [buildPricePanel(price, priceRow)]),
     ]),
+  ]);
+}
+
+const HOUSE_TYPES = [
+  { id: 'detached',   label: 'Detached',      short: 'Detached' },
+  { id: 'semi',       label: 'Semi-detached', short: 'Semi' },
+  { id: 'endTerrace', label: 'End of terrace', short: 'End terrace' },
+  { id: 'terrace',    label: 'Mid-terrace',   short: 'Mid terrace' },
+];
+
+/* Picker used in two places — here and in the measure step — both writing to
+   state.houseType, so they can never disagree. */
+function buildHouseTypePicker({ short } = {}) {
+  return h('div', { className: 'flex flex-wrap gap-2' }, HOUSE_TYPES.map(t =>
+    h('button', {
+      type: 'button',
+      'aria-pressed': state.houseType === t.id ? 'true' : 'false',
+      className: `px-3 py-2 rounded-full border text-xs transition ${state.houseType === t.id
+        ? 'bg-white text-zinc-900 border-white'
+        : 'bg-white/5 border-white/20 text-white/80 hover:border-white/60'}`,
+      onClick: async () => {
+        if (state.houseType === t.id) return;
+        state.houseType = t.id;
+        state.measurement = null;      // prior and multiplier both change
+        state.useMeasurement = false;
+        await refreshPrice();
+        renderVisualizerOnly();
+        renderRefineOnly();
+        U(`Estimate updated for a ${t.label.toLowerCase()}`);
+      },
+    }, short ? t.short : t.label)
+  ));
+}
+
+/* Before a photo we're pricing a typical home, not theirs, so the panel shows
+   a range and says what it's assuming. Once we've measured or they've typed a
+   figure, it switches to the itemised breakdown with a single total. The
+   estimate visibly sharpens as we learn more, which is also the argument for
+   uploading a photo. */
+function buildPricePanel(price, priceRow) {
+  const exact = state.price?.exact;
+  const range = state.price?.range;
+  const typeLabel = state.price?.houseTypeLabel
+    || HOUSE_TYPES.find(t => t.id === state.houseType)?.label
+    || 'typical home';
+
+  if (!exact && range) {
+    return h('div', { className: 'rounded-2xl bg-zinc-900 text-white p-5' }, [
+      h('h3', { className: 'text-[11px] tracking-widest uppercase text-white/50' }, 'Your estimate'),
+
+      h('div', { className: 'mt-4' }, [
+        h('div', { className: 'text-[11px] text-white/50' }, 'What kind of home is it?'),
+        h('div', { className: 'mt-2' }, buildHouseTypePicker({ short: true })),
+      ]),
+
+      h('div', { className: 'mt-5' }, [
+        h('div', { className: 'serif text-[30px] leading-none' }, `${fmtMoney(range.low)} – ${fmtMoney(range.high)}`),
+        h('div', { className: 'mt-2 text-[11px] text-white/50' },
+          `Typical ${typeLabel.toLowerCase()} · about ${price.footprintM2} m² of wall`),
+      ]),
+
+      h('div', { className: 'mt-5 rounded-xl bg-white/5 border border-white/10 p-3' }, [
+        h('div', { className: 'text-[10px] tracking-widest uppercase text-white/40' }, 'Includes'),
+        h('div', { className: 'mt-2 grid gap-1 text-[11px] text-white/60' }, [
+          'Walls & cladding, fitted',
+          'Roof, fitted',
+          'Fascia, soffit & guttering',
+          'Scaffolding',
+          'Waste allowance',
+          'VAT (20%)',
+        ].map(item => h('div', {}, `• ${item}`))),
+      ]),
+
+      h('p', { className: 'mt-4 text-[11px] leading-5 text-white/70' },
+        'This is a typical figure for that kind of house — not yours yet. Add a photo above and we’ll size it to your home.'),
+      h('p', { className: 'mt-3 text-[10px] leading-4 text-white/40' }, catalogue_note()),
+    ]);
+  }
+
+  return h('div', { className: 'rounded-2xl bg-zinc-900 text-white p-5' }, [
+    h('div', { className: 'flex items-center justify-between gap-2 flex-wrap' }, [
+      h('h3', { className: 'text-[11px] tracking-widest uppercase text-white/50' }, 'Your estimate'),
+      h('span', { className: 'text-[10px] px-2 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-200' },
+        state.price?.footprintSource === 'manual_entry' ? 'Your measurements' : 'Sized to your home'),
+    ]),
+    h('div', { className: 'mt-4 grid gap-2 text-sm' }, [
+      priceRow('Walls & cladding, fitted', price.cladding),
+      priceRow('Roof, fitted', price.roof),
+      priceRow('Fascia, soffit & guttering', price.trim),
+      priceRow('Scaffolding', price.scaffolding, true),
+      priceRow('Waste allowance', price.waste, true),
+      priceRow('VAT (20%)', price.vat, true),
+      h('div', { className: 'h-px bg-white/10 my-1' }),
+      h('div', { className: 'flex justify-between gap-4 font-medium' }, [h('span', {}, 'Estimated total'), h('span', {}, fmtMoney(price.total))]),
+    ]),
+    h('p', { className: 'mt-3 text-[10px] leading-4 text-white/50' }, `Based on ${price.footprintM2} m² of wall.`),
+    h('p', { className: 'mt-3 text-[10px] leading-4 text-white/50' }, catalogue_note()),
+    h('p', { className: 'mt-2 text-[10px] leading-4 text-white/50' }, 'A planning estimate, not a fixed quote — an installer will confirm the price after a survey.'),
   ]);
 }
 
@@ -866,30 +951,6 @@ function buildMeasureBlock() {
     ]);
   }
 
-  // Mid-terrace and end-of-terrace are separate because their wall areas
-  // differ by roughly 70% — a mid-terrace has two party walls, an end has one.
-  // Getting this wrong matters more than anything else the homeowner tells us.
-  const houseTypes = [
-    { id: 'detached',   label: 'Detached' },
-    { id: 'semi',       label: 'Semi-detached' },
-    { id: 'endTerrace', label: 'End of terrace' },
-    { id: 'terrace',    label: 'Mid-terrace' },
-  ];
-
-  const typeButtons = h('div', { className: 'mt-2 flex flex-wrap gap-2' }, houseTypes.map(t =>
-    h('button', {
-      type: 'button',
-      'aria-pressed': state.houseType === t.id ? 'true' : 'false',
-      className: `px-3 py-2 rounded-full border text-xs transition ${state.houseType === t.id ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-900'}`,
-      onClick: () => {
-        state.houseType = t.id;
-        state.measurement = null;      // the prior and multiplier both change
-        state.useMeasurement = false;
-        renderRefineOnly();
-      },
-    }, t.label)
-  ));
-
   const m = state.measurement;
   const result = m ? h('div', { className: 'mt-4 rounded-xl bg-zinc-900 text-white p-4' }, [
     h('div', { className: 'flex items-baseline justify-between gap-3 flex-wrap' }, [
@@ -930,9 +991,9 @@ function buildMeasureBlock() {
       state.scaleReference
         ? 'We can use your front door as a ruler to estimate how much wall there is to cover.'
         : 'We couldn’t find a front door to measure against, so this will be a rougher figure based on how much of the photo your walls fill.'),
-    h('div', { className: 'mt-4' }, [
-      h('div', { className: 'text-[10px] tracking-widest uppercase text-zinc-500' }, 'What kind of house is it?'),
-      typeButtons,
+    h('div', { className: 'mt-4 rounded-xl bg-zinc-900 p-3' }, [
+      h('div', { className: 'text-[10px] tracking-widest uppercase text-white/40' }, 'What kind of house is it?'),
+      h('div', { className: 'mt-2' }, buildHouseTypePicker()),
     ]),
     h('button', {
       type: 'button',
