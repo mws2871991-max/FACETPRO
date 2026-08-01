@@ -300,6 +300,28 @@ Set `SITE_MODE=live` to remove them. The default is deliberately the honest
 one: forgetting to add a beta badge is worse than forgetting to remove one,
 and if the page can't reach the server it assumes beta for the same reason.
 
+## Lead delivery
+
+Each lead is POSTed to every recipient in `LEAD_RECIPIENTS`, concurrently,
+with three attempts and a short backoff. Buyers pay per lead, so the record is
+billing evidence rather than a log line:
+
+- every attempt is recorded whether it succeeded or not
+- one buyer being down cannot stop the others receiving the lead
+- a 4xx other than 408/429 is not retried — it will not start working
+- a hanging buyer times out at 10s rather than blocking
+- `data/deliveries.jsonl` holds the per-lead outcome;
+  `data/delivery-failures.jsonl` is the list to re-send by hand
+- `GET /api/deliveries` (installer password) gives per-recipient totals
+
+Recipient URLs must be **https** and never appear in a response or a log line —
+they can carry auth tokens. A malformed `LEAD_RECIPIENTS` delivers to nobody
+and says so loudly at startup, rather than quietly dropping every lead.
+
+Delivery happens after the homeowner has been answered, so they never wait on
+three third-party webhooks. The lead is stored first, so nothing is lost if the
+process dies mid-delivery.
+
 ## Emails
 
 Two emails, two audiences, and they must not be confused. Templates live in

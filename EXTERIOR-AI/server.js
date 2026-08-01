@@ -7,6 +7,7 @@ const fs = require('fs');
 const store = require('./store');
 const measure = require('./measure');
 const emails = require('./emails');
+const delivery = require('./delivery');
 
 const catalogue = JSON.parse(fs.readFileSync(path.join(__dirname, 'catalogue.json'), 'utf8'));
 
@@ -322,6 +323,71 @@ async function sendDesignPack(lead, price) {
    table names, and routing this through it would also mean the failure log
    disappearing exactly when the database is the thing that's broken. */
 const NOTIFICATION_FAILURES_FILE = path.join(__dirname, 'data', 'notification-failures.jsonl');
+
+/* ── LEAD DELIVERY ──
+   Each lead goes to several buyers who pay per lead, so the delivery record is
+   a billing record: it has to say what went where, whether it arrived, and how
+   many attempts it took. A webhook that silently 500s is money gone. */
+const DELIVERIES_FILE = path.join(__dirname, 'data', 'deliveries.jsonl');
+const DELIVERY_FAILURES_FILE = path.join(__dirname, 'data', 'delivery-failures.jsonl');
+
+const { recipients: LEAD_RECIPIENTS, problems: RECIPIENT_PROBLEMS } =
+  delivery.parseRecipients(process.env.LEAD_RECIPIENTS, { legacyUrl: process.env.CRM_WEBHOOK_URL });
+
+function checkRecipients() {
+  RECIPIENT_PROBLEMS.forEach(p => console.error(`LEAD_RECIPIENTS: ${p}`));
+  if (!LEAD_RECIPIENTS.length) {
+    console.warn('No lead recipients configured — leads are stored but sent to nobody. Set LEAD_RECIPIENTS.');
+    return;
+  }
+  // Names only. The URLs can carry auth tokens and must not reach a log.
+  console.log(`Lead delivery: ${LEAD_RECIPIENTS.length} recipient(s) — ${LEAD_RECIPIENTS.map(r => r.name).join(', ')}`);
+}
+
+function appendJsonl(file, row) {
+  try {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.appendFileSync(file, JSON.stringify(row) + '\n');
+    return true;
+  } catch (err) {
+    console.error(`Could not write ${path.basename(file)}:`, err.message);
+    return false;
+  }
+}
+
+async function deliverAndRecord(lead) {
+  if (!LEAD_RECIPIENTS.length) return;
+  let results;
+  try {
+    results = await delivery.deliverLead(lead, LEAD_RECIPIENTS, { fetchImpl: (...a) => fetch(...a) });
+  } catch (err) {
+    // deliverTo never throws, so this is defensive — but losing the record
+    // silently is the one outcome that must not happen.
+    console.error(`Lead ${lead.id}: delivery crashed:`, err.message);
+    appendJsonl(DELIVERY_FAILURES_FILE, { ts: new Date().toISOString(), leadId: lead.id, error: err.message });
+    return;
+  }
+
+  const s = delivery.summarise(results);
+  appendJsonl(DELIVERIES_FILE, {
+    ts: new Date().toISOString(),
+    leadId: lead.id,
+    postcode: lead.postcode || null,
+    price: lead.price ?? null,
+    ...s,
+    results,
+  });
+
+  for (const r of results.filter(x => !x.ok)) {
+    console.error(`Lead ${lead.id}: delivery to ${r.name} FAILED after ${r.attempts} attempt(s) — ${r.error}`);
+    appendJsonl(DELIVERY_FAILURES_FILE, {
+      ts: new Date().toISOString(), leadId: lead.id, recipientId: r.id, recipientName: r.name,
+      attempts: r.attempts, status: r.status, error: r.error,
+      name: lead.name, email: lead.email, phone: lead.phone, postcode: lead.postcode,
+    });
+  }
+  if (s.delivered) console.log(`Lead ${lead.id}: delivered to ${s.delivered}/${s.total} recipient(s).`);
+}
 
 function recordNotificationFailure(lead, notification, kind = 'lead-notification') {
   try {
@@ -1123,16 +1189,48 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
   if (notification.attempted && !notification.sent) recordNotificationFailure(lead, notification, 'lead-notification');
   if (designPack.attempted && !designPack.sent) recordNotificationFailure(lead, designPack, 'design-pack');
 
-  const crmWebhook = process.env.CRM_WEBHOOK_URL;
-  if (crmWebhook) {
-    fetch(crmWebhook, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(lead)
-    }).catch(e => console.error('CRM webhook error:', e.message));
-  }
+  /* Deliver to every buyer, after responding rather than before — the
+     homeowner shouldn't wait on three third-party webhooks. The lead is
+     already stored, so nothing is lost if the process dies mid-delivery; the
+     reconciliation log below is what tells you it needs re-sending. */
+  deliverAndRecord(lead);
 
   res.json({ ok: true, lead });
+});
+
+/* ── GET /api/deliveries ──
+   Reconciliation. At £100 a delivery this is what you invoice against and
+   what you check when a buyer says they never received something.
+
+   Same password gate as the leads list. Recipient URLs are never included —
+   they can carry auth tokens, and nobody reading this needs them. */
+app.get('/api/deliveries', installerLimiter, requireInstallerPassword, (req, res) => {
+  let rows = [];
+  try {
+    const raw = fs.readFileSync(DELIVERIES_FILE, 'utf8').trim();
+    if (raw) rows = raw.split('\n').map(l => { try { return JSON.parse(l); } catch (_) { return null; } }).filter(Boolean);
+  } catch (_) { /* nothing delivered yet */ }
+
+  // Per-recipient totals — the figure that becomes an invoice line.
+  const byRecipient = {};
+  for (const row of rows) {
+    for (const r of row.results || []) {
+      const b = byRecipient[r.id] || (byRecipient[r.id] = { id: r.id, name: r.name, delivered: 0, failed: 0 });
+      r.ok ? b.delivered++ : b.failed++;
+    }
+  }
+
+  res.json({
+    configured: LEAD_RECIPIENTS.map(r => ({ id: r.id, name: r.name })),
+    totals: {
+      leads: rows.length,
+      deliveries: rows.reduce((n, r) => n + (r.total || 0), 0),
+      delivered: rows.reduce((n, r) => n + (r.delivered || 0), 0),
+      failed: rows.reduce((n, r) => n + (r.failed || 0), 0),
+    },
+    byRecipient: Object.values(byRecipient),
+    recent: rows.slice(-50).reverse(),
+  });
 });
 
 /* ── GET /api/leads ──
@@ -1159,6 +1257,7 @@ app.listen(PORT, () => {
   console.log(SITE_MODE === 'beta'
     ? 'Site mode: BETA — the badge and notice are shown. Set SITE_MODE=live to remove them.'
     : 'Site mode: LIVE — no beta badge.');
+  checkRecipients();
   logMeasureTuning();
   checkEmailConfig();
 });
