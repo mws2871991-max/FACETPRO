@@ -300,6 +300,34 @@ Set `SITE_MODE=live` to remove them. The default is deliberately the honest
 one: forgetting to add a beta badge is worse than forgetting to remove one,
 and if the page can't reach the server it assumes beta for the same reason.
 
+## Retention and access logging
+
+The privacy notice states retention periods as fact, so `retention.js` enforces
+them — a policy nothing enforces is a statement of intent, and stating it as
+fact is itself inaccurate.
+
+| What | How long |
+| --- | --- |
+| Design and estimate, never shared | 6 months |
+| Enquiry shared with installers | 24 months from last contact |
+| Consent records and withdrawals | 6 years |
+| Access logs | 12 months |
+
+Past its period an enquiry is **redacted**, not deleted: name, email, phone and
+postcode go, and the consent record stays until its own six years are up.
+Deleting the evidence of what someone agreed to while the sharing it authorised
+has already happened is the wrong way round — that record exists to answer a
+later challenge. Only once everything is out of period is the row removed.
+
+An undated record is never touched. Runs at startup and daily, and logs what it
+did, because "we delete on schedule" needs evidence like any other claim.
+
+`GET /api/leads` and `GET /api/deliveries` are the two endpoints exposing
+personal data, and every successful read is logged: when, which endpoint, and a
+truncated hash of the IP. Not the address itself — it isn't needed to
+investigate a concern, and storing it would make the log a bigger liability
+than the thing it protects. Refusals aren't access and aren't logged.
+
 ## Lead delivery
 
 Each lead is POSTed to every recipient in `LEAD_RECIPIENTS`, concurrently,
