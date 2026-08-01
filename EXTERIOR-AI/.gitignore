@@ -13,3 +13,7 @@ data/usage.json
 # Real surveyed properties — contains addresses. The committed template is
 # data/survey-samples.example.json.
 data/survey-samples.json
+
+# Lead delivery records — billing evidence, and contains homeowner details.
+data/deliveries.jsonl
+data/delivery-failures.jsonl
