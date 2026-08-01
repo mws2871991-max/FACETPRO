@@ -325,14 +325,11 @@ async function sendDesignPack(lead, price) {
    directly rather than through store.js: that module only knows a fixed set of
    table names, and routing this through it would also mean the failure log
    disappearing exactly when the database is the thing that's broken. */
-const NOTIFICATION_FAILURES_FILE = path.join(__dirname, 'data', 'notification-failures.jsonl');
 
 /* ── LEAD DELIVERY ──
    Each lead goes to several buyers who pay per lead, so the delivery record is
    a billing record: it has to say what went where, whether it arrived, and how
    many attempts it took. A webhook that silently 500s is money gone. */
-const DELIVERIES_FILE = path.join(__dirname, 'data', 'deliveries.jsonl');
-const DELIVERY_FAILURES_FILE = path.join(__dirname, 'data', 'delivery-failures.jsonl');
 
 const { recipients: LEAD_RECIPIENTS, problems: RECIPIENT_PROBLEMS } =
   delivery.parseRecipients(process.env.LEAD_RECIPIENTS, { legacyUrl: process.env.CRM_WEBHOOK_URL });
@@ -347,13 +344,17 @@ function checkRecipients() {
   console.log(`Lead delivery: ${LEAD_RECIPIENTS.length} recipient(s) — ${LEAD_RECIPIENTS.map(r => r.name).join(', ')}`);
 }
 
-function appendJsonl(file, row) {
+/* Delivery and failure records hold homeowner details, so they go through
+   store.js like leads do — that way "stored encrypted" is true of all of it
+   under Postgres, not just the leads table. Never throws: losing the record
+   silently is the one outcome that must not happen, so a write failure is
+   logged loudly and the request carries on. */
+async function record(table, row) {
   try {
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.appendFileSync(file, JSON.stringify(row) + '\n');
+    await store.append(table, row);
     return true;
   } catch (err) {
-    console.error(`Could not write ${path.basename(file)}:`, err.message);
+    console.error(`Could not record ${table}:`, err.message, JSON.stringify(row).slice(0, 300));
     return false;
   }
 }
@@ -363,7 +364,7 @@ async function deliverAndRecord(lead) {
      quotes, nobody gets their details. Recorded either way, so there is a
      positive record of the decision rather than an absence. */
   if (!lead.consent?.installerQuotes) {
-    appendJsonl(DELIVERIES_FILE, {
+    await record('deliveries', {
       ts: new Date().toISOString(), leadId: lead.id, postcode: lead.postcode || null,
       total: 0, delivered: 0, failed: 0, results: [],
       withheld: 'no consent to share with installers',
@@ -379,12 +380,12 @@ async function deliverAndRecord(lead) {
     // deliverTo never throws, so this is defensive — but losing the record
     // silently is the one outcome that must not happen.
     console.error(`Lead ${lead.id}: delivery crashed:`, err.message);
-    appendJsonl(DELIVERY_FAILURES_FILE, { ts: new Date().toISOString(), leadId: lead.id, error: err.message });
+    await record('deliveries', { ts: new Date().toISOString(), leadId: lead.id, delivered: 0, failed: LEAD_RECIPIENTS.length, results: [], crashed: err.message });
     return;
   }
 
   const s = delivery.summarise(results);
-  appendJsonl(DELIVERIES_FILE, {
+  await record('deliveries', {
     ts: new Date().toISOString(),
     leadId: lead.id,
     postcode: lead.postcode || null,
@@ -395,7 +396,7 @@ async function deliverAndRecord(lead) {
 
   for (const r of results.filter(x => !x.ok)) {
     console.error(`Lead ${lead.id}: delivery to ${r.name} FAILED after ${r.attempts} attempt(s) — ${r.error}`);
-    appendJsonl(DELIVERY_FAILURES_FILE, {
+    await record('deliveries', { kind: 'failure',
       ts: new Date().toISOString(), leadId: lead.id, recipientId: r.id, recipientName: r.name,
       attempts: r.attempts, status: r.status, error: r.error,
       name: lead.name, email: lead.email, phone: lead.phone, postcode: lead.postcode,
@@ -405,23 +406,20 @@ async function deliverAndRecord(lead) {
 }
 
 function recordNotificationFailure(lead, notification, kind = 'lead-notification') {
-  try {
-    fs.mkdirSync(path.dirname(NOTIFICATION_FAILURES_FILE), { recursive: true });
-    fs.appendFileSync(NOTIFICATION_FAILURES_FILE, JSON.stringify({
-      ts: new Date().toISOString(),
-      kind,
-      leadId: lead.id,
-      name: lead.name,
-      email: lead.email,
-      phone: lead.phone,
-      postcode: lead.postcode,
-      price: lead.price,
-      reason: notification.reason,
-    }) + '\n');
-    console.error(`Lead ${lead.id} recorded in data/notification-failures.jsonl — follow it up manually.`);
-  } catch (err) {
-    console.error(`Could not record the failed notification for lead ${lead.id}:`, err.message);
-  }
+  return record('notificationFailures', {
+    ts: new Date().toISOString(),
+    kind,
+    leadId: lead.id,
+    name: lead.name,
+    email: lead.email,
+    phone: lead.phone,
+    postcode: lead.postcode,
+    price: lead.price,
+    reason: notification.reason,
+  }).then(ok => {
+    if (ok) console.error(`Lead ${lead.id}: ${kind} failed and is recorded for follow-up.`);
+    return ok;
+  });
 }
 
 // Returns a small status object that gets attached to the stored lead, so a
@@ -1232,12 +1230,9 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
 
    Same password gate as the leads list. Recipient URLs are never included —
    they can carry auth tokens, and nobody reading this needs them. */
-app.get('/api/deliveries', installerLimiter, requireInstallerPassword, (req, res) => {
+app.get('/api/deliveries', installerLimiter, requireInstallerPassword, async (req, res) => {
   let rows = [];
-  try {
-    const raw = fs.readFileSync(DELIVERIES_FILE, 'utf8').trim();
-    if (raw) rows = raw.split('\n').map(l => { try { return JSON.parse(l); } catch (_) { return null; } }).filter(Boolean);
-  } catch (_) { /* nothing delivered yet */ }
+  try { rows = await store.readAll('deliveries'); } catch (_) { /* nothing delivered yet */ }
 
   // Per-recipient totals — the figure that becomes an invoice line.
   const byRecipient = {};
@@ -1277,7 +1272,18 @@ app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, 'legal', 'pr
 app.get('/terms', (req, res) => res.sendFile(path.join(__dirname, 'legal', 'terms.html')));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+/* ensureSchema was exported but never called — with DATABASE_URL set, every
+   insert would have hit a table that was never created. Awaited before the
+   port opens, so the process fails loudly on a bad database rather than
+   accepting leads it cannot store. */
+async function start() {
+  if (store.hasDb) {
+    await store.ensureSchema();
+    console.log('Storage: Postgres (encrypted at rest by the provider), schema ensured.');
+  } else {
+    console.warn('Storage: JSONL files under data/. Set DATABASE_URL for encrypted, backed-up storage.');
+  }
+  return app.listen(PORT, () => {
   console.log(`Facet Pro server running on http://localhost:${PORT}`);
   console.log(`Daily caps — detect: ${DAILY_LIMITS.detect}, render: ${DAILY_LIMITS.render} ` +
               `(used today: ${usage.detect}/${usage.render}, UTC day ${usage.day})`);
@@ -1288,4 +1294,10 @@ app.listen(PORT, () => {
   checkRecipients();
   logMeasureTuning();
   checkEmailConfig();
+  });
+}
+
+start().catch(err => {
+  console.error('Failed to start:', err.message);
+  process.exit(1);
 });

@@ -13,14 +13,9 @@
 
 const { test } = require('node:test');
 const assert = require('node:assert');
-const fs = require('fs');
-const path = require('path');
 
-const source = fs.readFileSync(path.join(__dirname, '..', 'store.js'), 'utf8');
-
-// Pull the leads mapper straight out of the module, so the test tracks the
-// real code rather than a copy of it.
-const leadsMapper = eval('(' + source.match(/leads: (o => \[[\s\S]*?\])\n/)[1] + ')');
+const { _internals } = require('../store');
+const leadsMapper = _internals.INSERT_PARAMS.leads;
 
 const LEAD = {
   ts: '2026-07-31T12:00:00Z',
