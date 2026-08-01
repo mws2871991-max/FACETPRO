@@ -52,11 +52,28 @@
     .media-cap img { height: 100%; object-fit: cover; }
   }
 
-  /* Before/after cards: the "after" is underneath and always rendered, so the
-     result is what shows if the toggle script never runs. */
-  .work-card.showing-before .work-before { opacity: 1; }
-  .work-toggle { cursor: pointer; }
-  .work-toggle:focus-visible { outline: 2px solid #18181b; outline-offset: 2px; }
+  /* Before/after cards. The "after" sits underneath and is always rendered, so
+     the finished result is what shows if the script never runs — the before is
+     clipped over the top of it and revealed by dragging.
+
+     Ported from ViewFrame's slider: a drag reveal beats a tap-to-swap because
+     you see the change happen rather than two separate states. */
+  .work-reveal { position: relative; overflow: hidden; touch-action: pan-y; cursor: ew-resize; }
+  .work-before { position: absolute; inset: 0; clip-path: inset(0 50% 0 0); will-change: clip-path; }
+  .work-handle {
+    position: absolute; top: 0; bottom: 0; left: 50%; width: 40px;
+    transform: translateX(-50%); display: flex; align-items: center; justify-content: center;
+    pointer-events: none;
+  }
+  .work-handle::before { content: ''; position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,.9); box-shadow: 0 0 0 1px rgba(0,0,0,.15); }
+  .work-grip {
+    position: relative; width: 32px; height: 32px; border-radius: 999px;
+    background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.3);
+    display: grid; place-items: center; font-size: 12px; color: #18181b;
+  }
+  .work-reveal:focus-visible { outline: 2px solid #18181b; outline-offset: 2px; }
+  /* No JS: show the finished result rather than a half-clipped image. */
+  .no-js .work-before { clip-path: inset(0 100% 0 0); }
 </style>
 
 <!-- Structured data. Every claim here matches what the product actually does. -->
@@ -258,17 +275,19 @@
     </div>
     <p class="mt-2 text-sm leading-6 text-zinc-600 max-w-[64ch]">
       Four UK homes, photographed before and after. Same camera position, nothing
-      retouched — tap any picture to see how it started.
+      retouched — drag across any picture to see how it started.
     </p>
 
     <div class="mt-6 grid sm:grid-cols-2 gap-4">
 
       <figure class="work-card rounded-2xl overflow-hidden border border-zinc-200 bg-[#FDFCF9]">
-        <button type="button" class="work-toggle relative block w-full text-left" aria-pressed="false">
+        <div class="work-reveal aspect-[3/4]" role="slider" tabindex="0" aria-label="Drag to compare before and after" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
           <img src="/assets/work/hero-after.jpg" alt="A bay-fronted brick home after its window frames were recoloured anthracite" class="work-after w-full aspect-[3/4] object-cover" loading="lazy" decoding="async">
-          <img src="/assets/work/hero-before.jpg" alt="The same home before, with white window frames" class="work-before w-full aspect-[3/4] object-cover absolute inset-0 opacity-0 transition-opacity duration-300" loading="lazy" decoding="async">
-          <span class="work-label absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-white/95 border border-zinc-200">After</span>
-        </button>
+          <img src="/assets/work/hero-before.jpg" alt="The same home before, with white window frames" class="work-before w-full aspect-[3/4] object-cover" loading="lazy" decoding="async">
+          <span class="work-handle"><span class="work-grip" aria-hidden="true">◂▸</span></span>
+          <span class="absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-white/95 border border-zinc-200">Before</span>
+          <span class="absolute right-3 top-3 text-[10px] px-2 py-1 rounded-full bg-zinc-900/90 text-white">After</span>
+        </div>
         <figcaption class="p-4 text-[12px] leading-5 text-zinc-600">
           <strong class="text-zinc-900">Bay-fronted brick semi</strong><br>
           Window frames recoloured white to anthracite. Brick, roof tiles and guttering untouched.
@@ -276,11 +295,13 @@
       </figure>
 
       <figure class="work-card rounded-2xl overflow-hidden border border-zinc-200 bg-[#FDFCF9]">
-        <button type="button" class="work-toggle relative block w-full text-left" aria-pressed="false">
+        <div class="work-reveal aspect-[3/4]" role="slider" tabindex="0" aria-label="Drag to compare before and after" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
           <img src="/assets/work/terrace-after.jpg" alt="A Victorian terrace bay window after its frames were recoloured black" class="work-after w-full aspect-[3/4] object-cover" loading="lazy" decoding="async">
-          <img src="/assets/work/terrace-before.jpg" alt="The same bay window before, with white frames" class="work-before w-full aspect-[3/4] object-cover absolute inset-0 opacity-0 transition-opacity duration-300" loading="lazy" decoding="async">
-          <span class="work-label absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-white/95 border border-zinc-200">After</span>
-        </button>
+          <img src="/assets/work/terrace-before.jpg" alt="The same bay window before, with white frames" class="work-before w-full aspect-[3/4] object-cover" loading="lazy" decoding="async">
+          <span class="work-handle"><span class="work-grip" aria-hidden="true">◂▸</span></span>
+          <span class="absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-white/95 border border-zinc-200">Before</span>
+          <span class="absolute right-3 top-3 text-[10px] px-2 py-1 rounded-full bg-zinc-900/90 text-white">After</span>
+        </div>
         <figcaption class="p-4 text-[12px] leading-5 text-zinc-600">
           <strong class="text-zinc-900">Victorian terrace, bay window</strong><br>
           Frames recoloured white to black. Render, stonework and the bay roof left as they were.
@@ -288,11 +309,13 @@
       </figure>
 
       <figure class="work-card rounded-2xl overflow-hidden border border-zinc-200 bg-[#FDFCF9]">
-        <button type="button" class="work-toggle relative block w-full text-left" aria-pressed="false">
+        <div class="work-reveal aspect-[4/3]" role="slider" tabindex="0" aria-label="Drag to compare before and after" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
           <img src="/assets/work/newbuild-after.jpg" alt="A modern yellow-brick detached home after its frames were recoloured anthracite" class="work-after w-full aspect-[4/3] object-cover" loading="lazy" decoding="async">
-          <img src="/assets/work/newbuild-before.jpg" alt="The same home before, with white frames" class="work-before w-full aspect-[4/3] object-cover absolute inset-0 opacity-0 transition-opacity duration-300" loading="lazy" decoding="async">
-          <span class="work-label absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-white/95 border border-zinc-200">After</span>
-        </button>
+          <img src="/assets/work/newbuild-before.jpg" alt="The same home before, with white frames" class="work-before w-full aspect-[4/3] object-cover" loading="lazy" decoding="async">
+          <span class="work-handle"><span class="work-grip" aria-hidden="true">◂▸</span></span>
+          <span class="absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-white/95 border border-zinc-200">Before</span>
+          <span class="absolute right-3 top-3 text-[10px] px-2 py-1 rounded-full bg-zinc-900/90 text-white">After</span>
+        </div>
         <figcaption class="p-4 text-[12px] leading-5 text-zinc-600">
           <strong class="text-zinc-900">Modern detached, yellow brick</strong><br>
           Every window recoloured white to anthracite, matching the existing front door.
@@ -300,11 +323,13 @@
       </figure>
 
       <figure class="work-card rounded-2xl overflow-hidden border border-zinc-200 bg-[#FDFCF9]">
-        <button type="button" class="work-toggle relative block w-full text-left" aria-pressed="false">
+        <div class="work-reveal aspect-[3/4]" role="slider" tabindex="0" aria-label="Drag to compare before and after" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
           <img src="/assets/work/tilehung-after.jpg" alt="A tile-hung detached home after its frames were recoloured slate grey" class="work-after w-full aspect-[3/4] object-cover" loading="lazy" decoding="async">
-          <img src="/assets/work/tilehung-before.jpg" alt="The same home before, with cream frames" class="work-before w-full aspect-[3/4] object-cover absolute inset-0 opacity-0 transition-opacity duration-300" loading="lazy" decoding="async">
-          <span class="work-label absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-white/95 border border-zinc-200">After</span>
-        </button>
+          <img src="/assets/work/tilehung-before.jpg" alt="The same home before, with cream frames" class="work-before w-full aspect-[3/4] object-cover" loading="lazy" decoding="async">
+          <span class="work-handle"><span class="work-grip" aria-hidden="true">◂▸</span></span>
+          <span class="absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-white/95 border border-zinc-200">Before</span>
+          <span class="absolute right-3 top-3 text-[10px] px-2 py-1 rounded-full bg-zinc-900/90 text-white">After</span>
+        </div>
         <figcaption class="p-4 text-[12px] leading-5 text-zinc-600">
           <strong class="text-zinc-900">Tile-hung detached</strong><br>
           Frames recoloured cream to slate grey, including the bay. Tile hanging and brick untouched.
@@ -1853,17 +1878,47 @@ async function sendDesignPack() {
 
 // ---------- boot ----------
 
-/* Before/after toggles on the completed-work cards. Click rather than hover,
-   because hover doesn't exist on a phone and that's where most people will
-   see this. */
-document.querySelectorAll('.work-toggle').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const card = btn.closest('.work-card');
-    const showingBefore = card.classList.toggle('showing-before');
-    btn.setAttribute('aria-pressed', showingBefore ? 'true' : 'false');
-    const label = btn.querySelector('.work-label');
-    if (label) label.textContent = showingBefore ? 'Before' : 'After';
+/* Before/after drag reveal on the completed-work cards.
+
+   Ported from ViewFrame's slider — the change is far more convincing when you
+   watch it happen than when two states swap. Pointer events cover mouse, touch
+   and pen in one path; dragging is captured to the element so it keeps
+   tracking if the finger leaves the card. Arrow keys work too, since a
+   drag-only control is unusable without a pointer. */
+document.querySelectorAll('.work-reveal').forEach(card => {
+  const before = card.querySelector('.work-before');
+  const handle = card.querySelector('.work-handle');
+  if (!before || !handle) return;
+
+  let pct = 50;
+  const paint = () => {
+    before.style.clipPath = `inset(0 ${100 - pct}% 0 0)`;
+    handle.style.left = `${pct}%`;
+    card.setAttribute('aria-valuenow', Math.round(pct));
+  };
+  const setFromX = (clientX) => {
+    const r = card.getBoundingClientRect();
+    pct = Math.min(100, Math.max(0, ((clientX - r.left) / r.width) * 100));
+    paint();
+  };
+
+  card.addEventListener('pointerdown', (e) => {
+    card.setPointerCapture(e.pointerId);
+    setFromX(e.clientX);
+    e.preventDefault();          // don't start a native image drag
   });
+  card.addEventListener('pointermove', (e) => {
+    if (card.hasPointerCapture(e.pointerId)) setFromX(e.clientX);
+  });
+  card.addEventListener('keydown', (e) => {
+    const step = e.shiftKey ? 10 : 4;
+    if (e.key === 'ArrowLeft')  { pct = Math.max(0, pct - step); paint(); e.preventDefault(); }
+    if (e.key === 'ArrowRight') { pct = Math.min(100, pct + step); paint(); e.preventDefault(); }
+    if (e.key === 'Home')       { pct = 0;   paint(); e.preventDefault(); }
+    if (e.key === 'End')        { pct = 100; paint(); e.preventDefault(); }
+  });
+
+  paint();
 });
 
 document.getElementById('hero-upload')?.addEventListener('click', () => {
