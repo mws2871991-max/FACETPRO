@@ -8,6 +8,7 @@ const store = require('./store');
 const measure = require('./measure');
 const emails = require('./emails');
 const delivery = require('./delivery');
+const retention = require('./retention');
 
 const catalogue = JSON.parse(fs.readFileSync(path.join(__dirname, 'catalogue.json'), 'utf8'));
 
@@ -1224,13 +1225,87 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
   res.json({ ok: true, lead });
 });
 
+/* ── RETENTION ──
+   The notice states periods; this enforces them. Runs once at startup and
+   daily after, and logs what it did — "we delete on schedule" needs evidence
+   like any other claim.
+
+   store.js is append-only by design, so a run rewrites the leads store rather
+   than deleting rows in place. That is fine at this scale and keeps one code
+   path for both backends; it would need revisiting at a size where rewriting
+   is expensive. */
+const RETENTION_INTERVAL_MS = 24 * 60 * 60 * 1000;
+
+async function runRetention({ dryRun = false } = {}) {
+  let leads = [], accessLog = [];
+  try { leads = await store.readAll('leads'); } catch (_) { return null; }
+  try { accessLog = await store.readAll('accessLog'); } catch (_) { /* none yet */ }
+
+  const p = retention.plan(leads, accessLog);
+  if (!p.redact.length && !p.delete.length && !p.accessLogExpired) {
+    return { kept: p.keep, redacted: 0, deleted: 0, accessLogRemoved: 0, dryRun };
+  }
+
+  const summary = {
+    ts: new Date().toISOString(),
+    kept: p.keep,
+    redacted: p.redact.length,
+    deleted: p.delete.length,
+    accessLogRemoved: p.accessLogExpired,
+    dryRun,
+  };
+
+  if (!dryRun) {
+    const toDelete = new Set(p.delete.map(l => l.id));
+    const toRedact = new Map(p.redact.map(l => [l.id, retention.redactLead(l)]));
+    const surviving = leads
+      .filter(l => !toDelete.has(l.id))
+      .map(l => toRedact.get(l.id) || l);
+    await store.replaceAll('leads', surviving);
+
+    if (p.accessLogExpired) {
+      await store.replaceAll('accessLog', accessLog.filter(r => !retention.isExpired(r, retention.PERIODS.accessLogDays)));
+    }
+    // The deletion itself is evidence that the policy is enforced.
+    await record('retentionRuns', summary);
+  }
+
+  console.log(`Retention: kept ${summary.kept}, redacted ${summary.redacted}, deleted ${summary.deleted}, access-log rows removed ${summary.accessLogRemoved}${dryRun ? ' (dry run)' : ''}.`);
+  return summary;
+}
+
+/* ── ACCESS LOGGING ──
+   The privacy notice says access to enquiries is logged. Two endpoints expose
+   personal data — the leads list and the delivery record — and both are behind
+   the installer password, so this records every successful read of them.
+
+   Deliberately minimal: when, which endpoint, how many records were returned,
+   and a truncated hash of the IP. The full address isn't needed to investigate
+   a concern, and storing it makes the log itself a bigger liability than the
+   thing it protects. Kept 12 months, per the notice. */
+function logAccess(endpoint) {
+  return (req, res, next) => {
+    res.on('finish', () => {
+      if (res.statusCode !== 200) return;      // refusals aren't access
+      record('accessLog', {
+        ts: new Date().toISOString(),
+        endpoint,
+        status: res.statusCode,
+        ipHash: crypto.createHash('sha256').update(String(req.ip || '')).digest('hex').slice(0, 12),
+        userAgent: String(req.get('user-agent') || '').slice(0, 120),
+      });
+    });
+    next();
+  };
+}
+
 /* ── GET /api/deliveries ──
    Reconciliation. At £100 a delivery this is what you invoice against and
    what you check when a buyer says they never received something.
 
    Same password gate as the leads list. Recipient URLs are never included —
    they can carry auth tokens, and nobody reading this needs them. */
-app.get('/api/deliveries', installerLimiter, requireInstallerPassword, async (req, res) => {
+app.get('/api/deliveries', installerLimiter, requireInstallerPassword, logAccess('/api/deliveries'), async (req, res) => {
   let rows = [];
   try { rows = await store.readAll('deliveries'); } catch (_) { /* nothing delivered yet */ }
 
@@ -1259,7 +1334,7 @@ app.get('/api/deliveries', installerLimiter, requireInstallerPassword, async (re
 /* ── GET /api/leads ──
    Leads captured so far, newest first. Password-protected — see
    requireInstallerPassword above. */
-app.get('/api/leads', installerLimiter, requireInstallerPassword, async (req, res) => {
+app.get('/api/leads', installerLimiter, requireInstallerPassword, logAccess('/api/leads'), async (req, res) => {
   const leads = await store.readAll('leads');
   res.json({ leads: leads.slice().reverse() });
 });
@@ -1292,6 +1367,8 @@ async function start() {
     ? 'Site mode: BETA — the badge and notice are shown. Set SITE_MODE=live to remove them.'
     : 'Site mode: LIVE — no beta badge.');
   checkRecipients();
+  runRetention().catch(err => console.error('Retention run failed:', err.message));
+  setInterval(() => runRetention().catch(err => console.error('Retention run failed:', err.message)), RETENTION_INTERVAL_MS).unref();
   logMeasureTuning();
   checkEmailConfig();
   });

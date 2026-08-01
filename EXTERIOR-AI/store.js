@@ -56,6 +56,12 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS detections (
     id SERIAL PRIMARY KEY, ts TIMESTAMPTZ NOT NULL, session_id TEXT, element_count INT, mime_type TEXT
   )`,
+  `CREATE TABLE IF NOT EXISTS retention_runs (
+    id SERIAL PRIMARY KEY, ts TIMESTAMPTZ NOT NULL, record JSONB
+  )`,
+  `CREATE TABLE IF NOT EXISTS access_log (
+    id SERIAL PRIMARY KEY, ts TIMESTAMPTZ NOT NULL, endpoint TEXT, ip_hash TEXT, record JSONB
+  )`,
   `CREATE TABLE IF NOT EXISTS deliveries (
     id SERIAL PRIMARY KEY, ts TIMESTAMPTZ NOT NULL, lead_id TEXT, delivered INT, failed INT, record JSONB
   )`,
@@ -78,7 +84,9 @@ async function ensureSchema() {
   }
 }
 
-const FILE_NAMES = { quotes: 'quotes.jsonl', waitlist: 'waitlist.jsonl', feedback: 'feedback.jsonl', detections: 'detections.jsonl', analytics: 'analytics.jsonl', leads: 'leads.jsonl', deliveries: 'deliveries.jsonl', notificationFailures: 'notification-failures.jsonl' };
+const TABLE_NAMES = { leads: 'leads', deliveries: 'deliveries', notificationFailures: 'notification_failures', accessLog: 'access_log', retentionRuns: 'retention_runs', quotes: 'quotes', waitlist: 'waitlist', feedback: 'feedback', detections: 'detections', analytics: 'analytics' };
+
+const FILE_NAMES = { quotes: 'quotes.jsonl', waitlist: 'waitlist.jsonl', feedback: 'feedback.jsonl', detections: 'detections.jsonl', analytics: 'analytics.jsonl', leads: 'leads.jsonl', deliveries: 'deliveries.jsonl', notificationFailures: 'notification-failures.jsonl', accessLog: 'access-log.jsonl', retentionRuns: 'retention-runs.jsonl' };
 
 function appendLine(file, obj) {
   fs.appendFileSync(path.join(DATA_DIR, file), JSON.stringify(obj) + '\n');
@@ -97,6 +105,8 @@ const INSERT_SQL = {
   feedback: `INSERT INTO ${SCHEMA_NAME}.feedback (ts, session_id, rating, element_count, comment) VALUES ($1,$2,$3,$4,$5)`,
   detections: `INSERT INTO ${SCHEMA_NAME}.detections (ts, session_id, element_count, mime_type) VALUES ($1,$2,$3,$4)`,
   leads: `INSERT INTO ${SCHEMA_NAME}.leads (ts, action, name, email, phone, postcode, message, source, status, design) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+  retentionRuns: `INSERT INTO ${SCHEMA_NAME}.retention_runs (ts, record) VALUES ($1,$2)`,
+  accessLog: `INSERT INTO ${SCHEMA_NAME}.access_log (ts, endpoint, ip_hash, record) VALUES ($1,$2,$3,$4)`,
   deliveries: `INSERT INTO ${SCHEMA_NAME}.deliveries (ts, lead_id, delivered, failed, record) VALUES ($1,$2,$3,$4,$5)`,
   notificationFailures: `INSERT INTO ${SCHEMA_NAME}.notification_failures (ts, lead_id, kind, record) VALUES ($1,$2,$3,$4)`
 };
@@ -121,6 +131,8 @@ const INSERT_PARAMS = {
   leads: o => [o.ts, null, o.name, o.email, o.phone, o.postcode, null, null, o.status, JSON.stringify(o)],
   // Same rule as leads: the scalar columns are for querying, the JSONB holds
   // the whole record so nothing is silently dropped.
+  retentionRuns: o => [o.ts, JSON.stringify(o)],
+  accessLog: o => [o.ts, o.endpoint || null, o.ipHash || null, JSON.stringify(o)],
   deliveries: o => [o.ts, o.leadId || null, o.delivered | 0, o.failed | 0, JSON.stringify(o)],
   notificationFailures: o => [o.ts, o.leadId || null, o.kind || null, JSON.stringify(o)]
 };
@@ -133,6 +145,8 @@ const SELECT_SQL = {
   // `design` holds the full lead, so read it back rather than reassembling a
   // partial one from the scalar columns.
   leads: `SELECT design FROM ${SCHEMA_NAME}.leads ORDER BY id ASC`,
+  retentionRuns: `SELECT record FROM ${SCHEMA_NAME}.retention_runs ORDER BY id ASC`,
+  accessLog: `SELECT record FROM ${SCHEMA_NAME}.access_log ORDER BY id ASC`,
   deliveries: `SELECT record FROM ${SCHEMA_NAME}.deliveries ORDER BY id ASC`,
   notificationFailures: `SELECT record FROM ${SCHEMA_NAME}.notification_failures ORDER BY id ASC`
 };
@@ -145,6 +159,35 @@ async function append(table, obj) {
   }
 }
 
+/* Rewrite a whole table. Only retention needs this — everything else appends.
+   Kept deliberately narrow: a full replace is a destructive operation and
+   should be hard to reach by accident. */
+async function replaceAll(table, rows) {
+  if (pool) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(`DELETE FROM ${SCHEMA_NAME}.${TABLE_NAMES[table]}`);
+      for (const row of rows) {
+        await client.query(INSERT_SQL[table], INSERT_PARAMS[table](row));
+      }
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+    return;
+  }
+  // Write to a temp file and rename, so an interrupted run cannot leave a
+  // half-written store behind.
+  const file = path.join(DATA_DIR, FILE_NAMES[table]);
+  const tmp = file + '.tmp';
+  fs.writeFileSync(tmp, rows.map(r => JSON.stringify(r)).join('\n') + (rows.length ? '\n' : ''));
+  fs.renameSync(tmp, file);
+}
+
 async function readAll(table) {
   if (pool) {
     const { rows } = await pool.query(SELECT_SQL[table]);
@@ -152,14 +195,14 @@ async function readAll(table) {
     // callers expect the same shape the JSONL path returns, not a row with a
     // nested object. Anything without it falls back to the row itself.
     if (table === 'leads') return rows.map(r => r.design || r);
-    if (table === 'deliveries' || table === 'notificationFailures') return rows.map(r => r.record || r);
+    if (table === 'deliveries' || table === 'notificationFailures' || table === 'accessLog' || table === 'retentionRuns') return rows.map(r => r.record || r);
     return rows;
   }
   return readLines(FILE_NAMES[table]);
 }
 
 module.exports = {
-  ensureSchema, append, readAll, hasDb: !!pool,
+  ensureSchema, append, readAll, replaceAll, hasDb: !!pool,
   // Exported for tests: scraping these out of the source with a regex broke
   // the moment another table was added after leads.
   _internals: { INSERT_PARAMS, INSERT_SQL, SELECT_SQL, FILE_NAMES },
