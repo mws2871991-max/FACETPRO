@@ -51,6 +51,12 @@
     .media-cap { max-height: 220px; }
     .media-cap img { height: 100%; object-fit: cover; }
   }
+
+  /* Before/after cards: the "after" is underneath and always rendered, so the
+     result is what shows if the toggle script never runs. */
+  .work-card.showing-before .work-before { opacity: 1; }
+  .work-toggle { cursor: pointer; }
+  .work-toggle:focus-visible { outline: 2px solid #18181b; outline-offset: 2px; }
 </style>
 
 <!-- Structured data. Every claim here matches what the product actually does. -->
@@ -161,6 +167,7 @@
     <nav class="flex items-center gap-2" aria-label="Primary">
       <a href="#whole-house" class="hidden sm:block text-xs px-3 py-2 rounded-full hover:bg-white transition">Finishes</a>
       <a href="#conservatory" class="hidden lg:block text-xs px-3 py-2 rounded-full hover:bg-white transition">Conservatories</a>
+      <a href="#our-work" class="hidden sm:block text-xs px-3 py-2 rounded-full hover:bg-white transition">Our work</a>
       <a href="#how-it-works" class="hidden sm:block text-xs px-3 py-2 rounded-full hover:bg-white transition">How it works</a>
       <a href="#faq" class="hidden sm:block text-xs px-3 py-2 rounded-full hover:bg-white transition">Questions</a>
       <a href="#your-photo" class="text-xs px-4 py-2 rounded-full bg-zinc-900 text-white hover:bg-zinc-800 transition">Start with a photo</a>
@@ -236,6 +243,82 @@
         <p class="mt-2 text-[13px] leading-6 text-zinc-600">Keep your before-and-after and your itemised estimate, and we'll put you in front of installers who can quote it properly.</p>
       </li>
     </ol>
+  </section>
+
+  <!-- Real completed work. Static markup, not JS-mounted: it's the strongest
+       thing on the page and crawlers should see it. Each card shows the after
+       by default, so if the toggle script never runs you still see the result. -->
+  <section id="our-work" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24" aria-labelledby="work-heading">
+    <div class="flex items-start justify-between gap-3 flex-wrap">
+      <div>
+        <p class="text-[11px] tracking-widest uppercase text-zinc-400">Real homes</p>
+        <h2 id="work-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">Work we've actually done</h2>
+      </div>
+      <span class="text-[10px] tracking-widest uppercase px-2.5 py-1 rounded-full bg-[#FFF7ED] border border-zinc-200">Photographs, not renders</span>
+    </div>
+    <p class="mt-2 text-sm leading-6 text-zinc-600 max-w-[64ch]">
+      Four UK homes, photographed before and after. Same camera position, nothing
+      retouched — tap any picture to see how it started.
+    </p>
+
+    <div class="mt-6 grid sm:grid-cols-2 gap-4">
+
+      <figure class="work-card rounded-2xl overflow-hidden border border-zinc-200 bg-[#FDFCF9]">
+        <button type="button" class="work-toggle relative block w-full text-left" aria-pressed="false">
+          <img src="/assets/work/hero-after.jpg" alt="A bay-fronted brick home after its window frames were recoloured anthracite" class="work-after w-full aspect-[3/4] object-cover" loading="lazy" decoding="async">
+          <img src="/assets/work/hero-before.jpg" alt="The same home before, with white window frames" class="work-before w-full aspect-[3/4] object-cover absolute inset-0 opacity-0 transition-opacity duration-300" loading="lazy" decoding="async">
+          <span class="work-label absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-white/95 border border-zinc-200">After</span>
+        </button>
+        <figcaption class="p-4 text-[12px] leading-5 text-zinc-600">
+          <strong class="text-zinc-900">Bay-fronted brick semi</strong><br>
+          Window frames recoloured white to anthracite. Brick, roof tiles and guttering untouched.
+        </figcaption>
+      </figure>
+
+      <figure class="work-card rounded-2xl overflow-hidden border border-zinc-200 bg-[#FDFCF9]">
+        <button type="button" class="work-toggle relative block w-full text-left" aria-pressed="false">
+          <img src="/assets/work/terrace-after.jpg" alt="A Victorian terrace bay window after its frames were recoloured black" class="work-after w-full aspect-[3/4] object-cover" loading="lazy" decoding="async">
+          <img src="/assets/work/terrace-before.jpg" alt="The same bay window before, with white frames" class="work-before w-full aspect-[3/4] object-cover absolute inset-0 opacity-0 transition-opacity duration-300" loading="lazy" decoding="async">
+          <span class="work-label absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-white/95 border border-zinc-200">After</span>
+        </button>
+        <figcaption class="p-4 text-[12px] leading-5 text-zinc-600">
+          <strong class="text-zinc-900">Victorian terrace, bay window</strong><br>
+          Frames recoloured white to black. Render, stonework and the bay roof left as they were.
+        </figcaption>
+      </figure>
+
+      <figure class="work-card rounded-2xl overflow-hidden border border-zinc-200 bg-[#FDFCF9]">
+        <button type="button" class="work-toggle relative block w-full text-left" aria-pressed="false">
+          <img src="/assets/work/newbuild-after.jpg" alt="A modern yellow-brick detached home after its frames were recoloured anthracite" class="work-after w-full aspect-[4/3] object-cover" loading="lazy" decoding="async">
+          <img src="/assets/work/newbuild-before.jpg" alt="The same home before, with white frames" class="work-before w-full aspect-[4/3] object-cover absolute inset-0 opacity-0 transition-opacity duration-300" loading="lazy" decoding="async">
+          <span class="work-label absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-white/95 border border-zinc-200">After</span>
+        </button>
+        <figcaption class="p-4 text-[12px] leading-5 text-zinc-600">
+          <strong class="text-zinc-900">Modern detached, yellow brick</strong><br>
+          Every window recoloured white to anthracite, matching the existing front door.
+        </figcaption>
+      </figure>
+
+      <figure class="work-card rounded-2xl overflow-hidden border border-zinc-200 bg-[#FDFCF9]">
+        <button type="button" class="work-toggle relative block w-full text-left" aria-pressed="false">
+          <img src="/assets/work/tilehung-after.jpg" alt="A tile-hung detached home after its frames were recoloured slate grey" class="work-after w-full aspect-[3/4] object-cover" loading="lazy" decoding="async">
+          <img src="/assets/work/tilehung-before.jpg" alt="The same home before, with cream frames" class="work-before w-full aspect-[3/4] object-cover absolute inset-0 opacity-0 transition-opacity duration-300" loading="lazy" decoding="async">
+          <span class="work-label absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-white/95 border border-zinc-200">After</span>
+        </button>
+        <figcaption class="p-4 text-[12px] leading-5 text-zinc-600">
+          <strong class="text-zinc-900">Tile-hung detached</strong><br>
+          Frames recoloured cream to slate grey, including the bay. Tile hanging and brick untouched.
+        </figcaption>
+      </figure>
+
+    </div>
+
+    <p class="mt-5 text-[11px] leading-5 text-zinc-500 max-w-[74ch]">
+      These four are window and door frame transformations. They show the standard of
+      work and that the before/after is real — the cladding, roof and roofline jobs
+      this site prices are related work by the same team, and we'll add those
+      photographs here as they're completed.
+    </p>
   </section>
 
   <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="honest-heading">
@@ -1769,6 +1852,19 @@ async function sendDesignPack() {
 }
 
 // ---------- boot ----------
+
+/* Before/after toggles on the completed-work cards. Click rather than hover,
+   because hover doesn't exist on a phone and that's where most people will
+   see this. */
+document.querySelectorAll('.work-toggle').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const card = btn.closest('.work-card');
+    const showingBefore = card.classList.toggle('showing-before');
+    btn.setAttribute('aria-pressed', showingBefore ? 'true' : 'false');
+    const label = btn.querySelector('.work-label');
+    if (label) label.textContent = showingBefore ? 'Before' : 'After';
+  });
+});
 
 document.getElementById('hero-upload')?.addEventListener('click', () => {
   document.getElementById('your-photo')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
