@@ -17,3 +17,6 @@ data/survey-samples.json
 # Lead delivery records — billing evidence, and contains homeowner details.
 data/deliveries.jsonl
 data/delivery-failures.jsonl
+
+# Stored renders — photorealistic images of identified homes.
+data/renders/

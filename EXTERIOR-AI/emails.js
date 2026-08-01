@@ -63,7 +63,10 @@ function leadNotificationHtml(lead, price) {
 function designPackHtml(lead, price, siteUrl) {
   const site = safeUrl(siteUrl) || 'https://facetpro.co.uk';
   const base = site.replace(/\/$/, '');
-  const render = safeUrl(lead.renderUrl);
+  // renderUrl is now a path on our own site, so make it absolute for email.
+  const render = lead.renderUrl && lead.renderUrl.startsWith('/')
+    ? base + lead.renderUrl
+    : safeUrl(lead.renderUrl);
 
   return `<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:560px;margin:0 auto;color:#0F1012;background:#FBF8F3;padding:28px 24px">
 

@@ -1024,6 +1024,51 @@ app.post('/api/whole-house', (req, res) => {
   });
 });
 
+/* Replicate's output URLs are public and expire within the hour, so linking
+   to one meant three things at once: a photorealistic image of an identified
+   person's home sitting at an unauthenticated URL, a design-pack email that
+   breaks for anyone who opens it later, and a privacy notice claiming we keep
+   the generated image when we kept a string that was already dead.
+
+   So the bytes are fetched while the URL is still alive and stored by us,
+   under an unguessable id. If fetching fails we fall back to returning
+   Replicate's URL rather than losing the render entirely — the homeowner still
+   sees it in that session, and the lead simply carries no render. */
+async function ourRenderUrl(renderId) {
+  if (!renderId) return null;
+  const found = await store.getRender(renderId);
+  return found ? `/r/${renderId}` : null;
+}
+
+async function keepRender(replicateUrl) {
+  try {
+    const res = await fetch(replicateUrl);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const bytes = Buffer.from(await res.arrayBuffer());
+    if (!bytes.length) throw new Error('empty body');
+    const id = crypto.randomBytes(16).toString('hex');
+    await store.putRender(id, bytes, { mime: res.headers.get('content-type') || 'image/jpeg' });
+    return { url: `/r/${id}`, renderId: id };
+  } catch (err) {
+    console.error('Could not keep the render, falling back to the provider URL:', err.message);
+    return { url: replicateUrl, renderId: null, ephemeral: true };
+  }
+}
+
+/* ── GET /r/:id ──
+   Serves a stored render. The id is 128 bits of randomness, so the URL is the
+   capability — that is what lets it work in an email without a login, and it
+   is still a great deal better than a public provider URL: we control who has
+   it, how long it lives, and retention deletes it with its lead. */
+app.get('/r/:id', async (req, res) => {
+  const render = await store.getRender(req.params.id);
+  if (!render) return res.status(404).json({ error: 'Not found.' });
+  res.setHeader('Content-Type', render.mime || 'image/jpeg');
+  res.setHeader('Cache-Control', 'private, max-age=86400');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.send(render.bytes);
+});
+
 /* ── POST /api/measure ──
    Optional. Estimates exterior wall area from a photo already analysed by
    /api/detect, so the quote can be sized to the actual house instead of the
@@ -1112,7 +1157,7 @@ app.post('/api/render', renderLimiter, async (req, res) => {
     const pred = await predRes.json();
     if (pred.status === 'succeeded' && pred.output) {
       const url = Array.isArray(pred.output) ? pred.output[0] : pred.output;
-      return res.json({ url });
+      return res.json(await keepRender(url));
     }
 
     for (let i = 0; i < 45; i++) {
@@ -1123,7 +1168,7 @@ app.post('/api/render', renderLimiter, async (req, res) => {
       const p = await poll.json();
       if (p.status === 'succeeded') {
         const url = Array.isArray(p.output) ? p.output[0] : p.output;
-        return res.json({ url });
+        return res.json(await keepRender(url));
       }
       if (p.status === 'failed') return res.status(502).json({ error: 'Render failed — try again.' });
     }
@@ -1149,7 +1194,7 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
     });
   }
 
-  const { name, email, phone, postcode, claddingId, trimId, roofId, footprintM2, trimLengthM, measurementSource, detections, renderUrl, notes, consent, detectionId, conservatoryStyleId } = req.body || {};
+  const { name, email, phone, postcode, claddingId, trimId, roofId, footprintM2, trimLengthM, measurementSource, detections, renderId, notes, consent, detectionId, conservatoryStyleId } = req.body || {};
   if (!name || !email) return res.status(400).json({ error: 'name and email are required.' });
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Invalid email address.' });
   /* Only agreement to the Terms is required. Passing details to installers is
@@ -1183,7 +1228,10 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
     conservatory: resolveConservatory(conservatoryStyleId),
     preferences: resolvePreferences(req.body || {}),
     detectionCount: Array.isArray(detections) ? detections.length : 0,
-    renderUrl: renderUrl || null,
+    /* Was whatever URL the browser sent. Now an id we issued, checked against
+       our own store — the server generated the render and should not be told
+       about it by the client. */
+    renderUrl: await ourRenderUrl(renderId),
     notes: (notes || '').slice(0, 2000),
     /* Each answer recorded separately, with the exact wording shown for each
        and the version tag — that is what makes it evidence rather than a
@@ -1258,6 +1306,7 @@ async function runRetention({ dryRun = false } = {}) {
     redacted: p.redact.length,
     deleted: p.delete.length,
     accessLogRemoved: p.accessLogExpired,
+    rendersRemoved: 0,
     dryRun,
   };
 
@@ -1268,6 +1317,17 @@ async function runRetention({ dryRun = false } = {}) {
       .filter(l => !toDelete.has(l.id))
       .map(l => toRedact.get(l.id) || l);
     await store.replaceAll('leads', surviving);
+
+    /* Renders belong to their lead. A deleted or redacted lead must not leave
+       a photorealistic image of someone's home sitting in storage behind an
+       unguessable-but-permanent URL. */
+    const goneRenderIds = [...p.delete, ...p.redact]
+      .map(l => (l.renderUrl || '').match(/^\/r\/([A-Za-z0-9_-]+)$/)?.[1])
+      .filter(Boolean);
+    if (goneRenderIds.length) {
+      const removed = await store.deleteRenders(goneRenderIds);
+      summary.rendersRemoved = removed;
+    }
 
     if (p.accessLogExpired) {
       await store.replaceAll('accessLog', accessLog.filter(r => !retention.isExpired(r, retention.PERIODS.accessLogDays)));

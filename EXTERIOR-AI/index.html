@@ -535,6 +535,7 @@ const state = {
   catalogue: null,
   price: null,        // last computed price breakdown
   renderUrl: null,    // AI-generated render, once produced
+  renderId: null,     // our id for it — the lead sends this, never a URL
   rendering: false,
   sendingLead: false,
 };
@@ -884,7 +885,7 @@ function buildVisualizer() {
             if (group === 'Cladding') state.cladding = sw;
             if (group === 'Trim') state.trim = sw;
             if (group === 'Roof') state.roof = sw;
-            state.renderUrl = null; // choice changed — the old render no longer matches
+            state.renderUrl = null; state.renderId = null; // choice changed — the old render no longer matches
             U(`${sw.name} selected — updating your estimate`);
             await refreshPrice();
             render();
@@ -1442,6 +1443,7 @@ async function generateRealRender() {
     if (!res.ok) throw new Error(data.error || 'Render failed');
     state.renderUnavailable = false;
     state.renderUrl = data.url;
+    state.renderId = data.renderId || null;
     U('Your new look is ready — drag the slider to compare');
   } catch (err) {
     U(err.plain ? err.message : `We couldn’t create that picture: ${err.message}`);
@@ -1892,7 +1894,8 @@ async function sendDesignPack() {
         conservatoryStyleId: state.conservatoryId,
         ...state.prefs,
         detections: state.detections,
-        renderUrl: state.renderUrl,
+        // The id we were issued, not a URL — the server looks it up itself.
+        renderId: state.renderId,
         consent: {
           terms: state.consent.terms,
           installerQuotes: state.consent.installerQuotes,

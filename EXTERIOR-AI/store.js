@@ -56,6 +56,9 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS detections (
     id SERIAL PRIMARY KEY, ts TIMESTAMPTZ NOT NULL, session_id TEXT, element_count INT, mime_type TEXT
   )`,
+  `CREATE TABLE IF NOT EXISTS renders (
+    id TEXT PRIMARY KEY, ts TIMESTAMPTZ NOT NULL, lead_id TEXT, mime TEXT, bytes BYTEA
+  )`,
   `CREATE TABLE IF NOT EXISTS retention_runs (
     id SERIAL PRIMARY KEY, ts TIMESTAMPTZ NOT NULL, record JSONB
   )`,
@@ -188,6 +191,52 @@ async function replaceAll(table, rows) {
   fs.renameSync(tmp, file);
 }
 
+/* Renders are binary and don't belong in an append-only JSONL row, so they get
+   their own path: a bytea column under Postgres, a file under data/renders
+   otherwise. Stored by us rather than linked from Replicate, whose delivery
+   URLs are public and expire within the hour. */
+const RENDER_DIR = path.join(DATA_DIR, 'renders');
+
+async function putRender(id, buffer, { mime = 'image/jpeg', leadId = null } = {}) {
+  if (pool) {
+    await pool.query(
+      `INSERT INTO ${SCHEMA_NAME}.renders (id, ts, lead_id, mime, bytes) VALUES ($1,$2,$3,$4,$5)
+       ON CONFLICT (id) DO NOTHING`,
+      [id, new Date().toISOString(), leadId, mime, buffer]);
+    return;
+  }
+  fs.mkdirSync(RENDER_DIR, { recursive: true });
+  fs.writeFileSync(path.join(RENDER_DIR, id + '.bin'), buffer);
+  fs.writeFileSync(path.join(RENDER_DIR, id + '.json'), JSON.stringify({ id, ts: new Date().toISOString(), leadId, mime }));
+}
+
+async function getRender(id) {
+  if (!/^[A-Za-z0-9_-]{8,64}$/.test(String(id || ''))) return null;   // never touch the filesystem with an unvetted id
+  if (pool) {
+    const { rows } = await pool.query(`SELECT mime, bytes FROM ${SCHEMA_NAME}.renders WHERE id = $1`, [id]);
+    return rows[0] ? { mime: rows[0].mime, bytes: rows[0].bytes } : null;
+  }
+  try {
+    const meta = JSON.parse(fs.readFileSync(path.join(RENDER_DIR, id + '.json'), 'utf8'));
+    return { mime: meta.mime, bytes: fs.readFileSync(path.join(RENDER_DIR, id + '.bin')) };
+  } catch (_) { return null; }
+}
+
+async function deleteRenders(ids) {
+  if (!ids.length) return 0;
+  if (pool) {
+    const { rowCount } = await pool.query(`DELETE FROM ${SCHEMA_NAME}.renders WHERE id = ANY($1)`, [ids]);
+    return rowCount;
+  }
+  let n = 0;
+  for (const id of ids) {
+    for (const ext of ['.bin', '.json']) {
+      try { fs.unlinkSync(path.join(RENDER_DIR, id + ext)); n++; } catch (_) {}
+    }
+  }
+  return n;
+}
+
 async function readAll(table) {
   if (pool) {
     const { rows } = await pool.query(SELECT_SQL[table]);
@@ -202,7 +251,7 @@ async function readAll(table) {
 }
 
 module.exports = {
-  ensureSchema, append, readAll, replaceAll, hasDb: !!pool,
+  ensureSchema, append, readAll, replaceAll, putRender, getRender, deleteRenders, hasDb: !!pool,
   // Exported for tests: scraping these out of the source with a regex broke
   // the moment another table was added after leads.
   _internals: { INSERT_PARAMS, INSERT_SQL, SELECT_SQL, FILE_NAMES },
