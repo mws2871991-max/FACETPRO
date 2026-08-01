@@ -297,6 +297,9 @@ async function sendEmail({ to, subject, html, text, replyTo }) {
 
 // The homeowner's design pack. Never blocks storing the lead.
 async function sendDesignPack(lead, price) {
+  if (!lead.consent?.emailPack) {
+    return { attempted: false, sent: false, reason: 'homeowner did not ask for the design pack' };
+  }
   if (!DESIGN_PACK_ENABLED) {
     return { attempted: false, sent: false, reason: 'design pack email not configured' };
   }
@@ -356,6 +359,18 @@ function appendJsonl(file, row) {
 }
 
 async function deliverAndRecord(lead) {
+  /* The whole point of a separate, optional box: if they didn't ask for
+     quotes, nobody gets their details. Recorded either way, so there is a
+     positive record of the decision rather than an absence. */
+  if (!lead.consent?.installerQuotes) {
+    appendJsonl(DELIVERIES_FILE, {
+      ts: new Date().toISOString(), leadId: lead.id, postcode: lead.postcode || null,
+      total: 0, delivered: 0, failed: 0, results: [],
+      withheld: 'no consent to share with installers',
+    });
+    console.log(`Lead ${lead.id}: not shared — no installer consent.`);
+    return;
+  }
   if (!LEAD_RECIPIENTS.length) return;
   let results;
   try {
@@ -1138,10 +1153,15 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
   const { name, email, phone, postcode, claddingId, trimId, roofId, footprintM2, trimLengthM, measurementSource, detections, renderUrl, notes, consent, detectionId, conservatoryStyleId } = req.body || {};
   if (!name || !email) return res.status(400).json({ error: 'name and email are required.' });
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Invalid email address.' });
-  // UK GDPR: consent to pass details to installers must be freely given and
-  // recorded. No tick, no lead — and we store the exact wording agreed to.
-  if (!consent || consent.given !== true) {
-    return res.status(400).json({ error: 'Please tick the box to agree before saving your design.' });
+  /* Only agreement to the Terms is required. Passing details to installers is
+     a separate, optional consent — making it a condition of saving at all made
+     it a condition of the service, which is the Article 7(4) problem: consent
+     obtained that way is not freely given.
+
+     So a lead saves with installerQuotes false. It simply is not delivered to
+     anyone, which is what the homeowner asked for. */
+  if (!consent || consent.terms !== true) {
+    return res.status(400).json({ error: 'Please agree to the Terms before saving your design.' });
   }
 
   const footprint = resolveFootprint({ footprintM2, detectionId });
@@ -1166,11 +1186,19 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
     detectionCount: Array.isArray(detections) ? detections.length : 0,
     renderUrl: renderUrl || null,
     notes: (notes || '').slice(0, 2000),
+    /* Each answer recorded separately, with the exact wording shown for each
+       and the version tag — that is what makes it evidence rather than a
+       boolean. Withdrawal is recorded the same way when it happens. */
     consent: {
-      given: true,
       at: new Date().toISOString(),
-      wording: String(consent.wording || '').slice(0, 1000),
-      version: String(consent.version || '').slice(0, 40)
+      version: String(consent.version || '').slice(0, 40),
+      terms: consent.terms === true,
+      installerQuotes: consent.installerQuotes === true,
+      emailPack: consent.emailPack === true,
+      wording: typeof consent.wording === 'object' && consent.wording
+        ? Object.fromEntries(Object.entries(consent.wording).slice(0, 5).map(([k, v]) => [k, String(v).slice(0, 800)]))
+        : { legacy: String(consent.wording || '').slice(0, 1000) },
+      ip: req.ip || null,
     },
     status: 'New lead'
   };

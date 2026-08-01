@@ -305,7 +305,7 @@ test('a lead is stored even when it cannot be emailed, and says so', async () =>
   const { status, body } = await post('/api/lead', {
     name: 'Jane', email: 'jane@example.com',
     claddingId: 'sage-slate', roofId: 'terracotta', trimId: 'cedar',
-    consent: { given: true, wording: 'w', version: 'v' },
+    consent: { terms: true, installerQuotes: true, version: 'v' },
   });
   assert.strictEqual(status, 200);
   assert.ok(body.lead.id, 'the lead is saved regardless');
@@ -319,7 +319,7 @@ test('the price on a lead is recomputed, never taken from the client', async () 
     name: 'Mallory', email: 'm@example.com',
     claddingId: 'sage-slate', roofId: 'terracotta', trimId: 'cedar',
     price: 1, total: 1, priceBreakdown: { total: 1 },   // all ignored
-    consent: { given: true, wording: 'w', version: 'v' },
+    consent: { terms: true, installerQuotes: true, version: 'v' },
   });
   assert.ok(body.lead.price > 1000, `price should be server-computed, got ${body.lead.price}`);
 });
@@ -327,7 +327,7 @@ test('the price on a lead is recomputed, never taken from the client', async () 
 test('an invalid email is refused', async () => {
   const { status } = await post('/api/lead', {
     name: 'A', email: 'not-an-email',
-    consent: { given: true, wording: 'w', version: 'v' },
+    consent: { terms: true, installerQuotes: true, version: 'v' },
   });
   assert.strictEqual(status, 400);
 });

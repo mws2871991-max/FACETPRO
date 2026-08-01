@@ -28,7 +28,7 @@ const post = async (path, body) => {
 const lead = (extra) => post('/api/lead', {
   name: 'Jane', email: 'jane@example.com',
   claddingId: 'sage-slate', roofId: 'terracotta', trimId: 'cedar',
-  consent: { given: true, wording: 'w', version: 'v' },
+  consent: { terms: true, installerQuotes: true, version: 'v' },
   ...extra,
 });
 

@@ -1,10 +1,4 @@
 <!DOCTYPE html>
-<!--
-  TEMPLATE — NOT LEGAL ADVICE.
-  Every [BRACKETED FIELD] below must be filled in, and the whole notice must be
-  reviewed by someone qualified, before this site goes live. Delete the amber
-  banner in the <body> once that's done.
--->
 <html lang="en-GB">
 <head>
 <meta charset="UTF-8">
@@ -30,7 +24,12 @@
   .prose table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:13px}
   .prose th,.prose td{text-align:left;vertical-align:top;padding:10px 12px;border:1px solid #e4e4e7}
   .prose th{background:#FDFCF9;font-weight:500}
+  .prose a{color:#18181b;text-decoration:underline;text-underline-offset:2px}
   .ph{background:#FEF3C7;border-bottom:1px solid #FCD34D;padding:0 3px;border-radius:2px;font-weight:500}
+  .summary{border:1px solid #e4e4e7;background:#FDFCF9;border-radius:16px;padding:20px 24px;margin-top:2rem}
+  .summary li{font-size:13.5px;line-height:1.7}
+  .toc a{font-size:13px;color:#52525b;text-decoration:none}
+  .toc a:hover{color:#18181b;text-decoration:underline}
 </style>
 </head>
 <body class="min-h-screen bg-[#FBF8F3] text-zinc-900">
@@ -47,125 +46,191 @@
 
 <main class="max-w-3xl mx-auto px-6 py-10">
 
-  <!-- DELETE THIS BANNER once the notice has been completed and reviewed. -->
-  <div class="rounded-2xl border border-amber-300 bg-amber-50 p-5 mb-10">
-    <p class="text-[13px] leading-6 text-amber-900"><strong>Template — not yet live-ready.</strong> Every <span class="ph">[HIGHLIGHTED FIELD]</span> below needs replacing with your real details, and this notice should be reviewed by a solicitor or data-protection adviser before you publish. Delete this banner when that's done.</p>
-  </div>
 
   <h1 class="serif text-[36px] md:text-[44px] leading-[1.05] tracking-[-0.02em]">Privacy Notice</h1>
-  <p class="mt-3 text-[13px] text-zinc-500">Last updated: <span class="ph">[DATE]</span> · Version <span class="ph">[VERSION]</span></p>
+  <p class="mt-3 text-[13px] text-zinc-500">Last updated: <span class="ph">[DATE]</span> &middot; Version <span class="ph">[VERSION]</span></p>
+
+  <div class="summary">
+    <p class="text-[13.5px] font-medium text-zinc-900 mb-2">The short version</p>
+    <ul class="list-disc pl-5 text-zinc-600 space-y-1">
+      <li>You can use the visualiser without telling us who you are.</li>
+      <li>We only pass your details to an installer if you specifically ask us to. That is a separate choice, and saying no does not stop you using anything else.</li>
+      <li>Your photograph is used to build your visualisation and is then deleted. We keep the image we generate, not your original.</li>
+      <li>We do not sell your data, and we do not send marketing.</li>
+      <li>You can ask us for a copy of your data, or ask us to delete it, at any time.</li>
+    </ul>
+    <p class="text-[12.5px] text-zinc-500 mt-3">This summary is here to help. The full notice below is what applies.</p>
+  </div>
 
   <div class="prose mt-8">
 
-    <p>This notice explains what we do with your personal data when you use Facet Pro to visualise your home and get an estimate. It covers your rights under the UK GDPR and the Data Protection Act 2018.</p>
+    <p>This notice explains what we do with your personal data when you use Facet Pro to visualise your home and get an indicative estimate. It covers your rights under the UK GDPR and the Data Protection Act 2018.</p>
 
     <h2>Who we are</h2>
-    <p><span class="ph">[COMPANY LEGAL NAME]</span> (&ldquo;we&rdquo;, &ldquo;us&rdquo;), trading as Facet Pro, is the data controller for the personal data described here.</p>
+    <p><span class="ph">[COMPANY LEGAL NAME]</span> (&ldquo;we&rdquo;, &ldquo;us&rdquo;), trading as Facet Pro, is the data controller for the personal data described in this notice. That means we decide how and why it is used, and we are responsible to you for it.</p>
     <ul>
       <li>Registered company number: <span class="ph">[COMPANY NUMBER]</span></li>
       <li>Registered address: <span class="ph">[REGISTERED ADDRESS]</span></li>
-      <li>Contact for data protection questions: <span class="ph">[PRIVACY CONTACT EMAIL]</span></li>
-      <li>Data protection officer: <span class="ph">[DPO NAME AND CONTACT, OR &ldquo;we have not appointed a DPO as we are not required to&rdquo;]</span></li>
+      <li>Contact for anything in this notice: <a href="mailto:[PRIVACY EMAIL]"><span class="ph">[PRIVACY EMAIL]</span></a></li>
       <li>ICO registration number: <span class="ph">[ICO REGISTRATION NUMBER]</span></li>
+      <li>We have not appointed a Data Protection Officer, as we are not required to under Article 37 UK GDPR. <span class="ph">[PRIVACY EMAIL]</span> reaches the person responsible for data protection here.</li>
     </ul>
 
     <h2>What we collect</h2>
     <table>
       <thead><tr><th>Data</th><th>Where it comes from</th></tr></thead>
       <tbody>
-        <tr><td>Your name, email address, phone number (optional) and postcode</td><td>You type it into the form when you save your design</td></tr>
         <tr><td>A photograph of your property</td><td>You upload it</td></tr>
-        <tr><td>Your design choices, measurements and the estimate produced</td><td>Generated as you use the site</td></tr>
-        <tr><td>Record of your consent, including the wording you agreed to and when</td><td>Recorded when you tick the consent box</td></tr>
-        <tr><td>Technical data such as IP address and browser type</td><td>Collected automatically by our hosting and rate-limiting</td></tr>
+        <tr><td>Your design choices, the measurements our software estimates from the photo, and the indicative costing produced</td><td>Generated as you use the site</td></tr>
+        <tr><td>Your name, email address and postcode</td><td>You type them in when you save a design</td></tr>
+        <tr><td>Your phone number</td><td>You type it in, only if you ask us to arrange quotes</td></tr>
+        <tr><td>A record of the choices you made on the form &mdash; the exact wording you agreed to, the version of it, and the date and time</td><td>Recorded when you tick a box, and again if you later change your mind</td></tr>
+        <tr><td>Technical data such as your IP address and browser type</td><td>Collected automatically by our hosting and by the limits we apply to prevent abuse</td></tr>
       </tbody>
     </table>
-    <p>We do not ask for special category data and you should not include any in the free-text or photo you send us.</p>
+    <p>We do not ask for special category data &mdash; things like health, religion or political opinions &mdash; and we have no use for it. Please avoid including any in what you send us. If a photograph of the front of your home happens to show something of that kind, we do not use it, look for it or record it.</p>
 
-    <h3>What happens to your photograph</h3>
-    <p>Your photo is sent to the AI providers listed below so they can identify the parts of your home and produce the visualisation. It is not saved to our lead records and it is not published anywhere. The generated image is stored with your design so an installer can see what you asked for.</p>
+    <h3>Do you have to give us this?</h3>
+    <p>No. None of it is a legal requirement, and you can use the visualiser without giving us anything at all.</p>
+    <ul>
+      <li>To <strong>save a design and have the pack emailed to you</strong>, we need your email address.</li>
+      <li>To <strong>arrange quotes from installers</strong>, we need your name, your postcode so we can find installers near you, and a way for them to reach you.</li>
+    </ul>
+    <p>If you would rather not give us these, nothing stops you using the visualiser &mdash; you simply will not get the emailed pack or any quotes.</p>
+
+    <h2>What happens to your photograph</h2>
+    <p>Your photo is sent to the AI providers listed below so they can identify the windows, doors, roof and walls, and generate the visualisation. <span class="ph">Once your visualisation has been generated, your original photograph is deleted from our systems.</span> What we keep is the generated image and your design choices, so that you can come back to your design and so an installer can see what you asked for.</p>
+    <p>Your photograph is never published, never used to train anyone's AI models, and never used in our marketing.</p>
+    <p>One request: please try not to upload a photo that shows other people, or a neighbour's property, or a visible number plate. If one does, tell us and we will remove it.</p>
 
     <h2>Why we use it, and our lawful basis</h2>
     <table>
-      <thead><tr><th>Purpose</th><th>Lawful basis</th></tr></thead>
+      <thead><tr><th>What we do</th><th>Our lawful basis</th></tr></thead>
       <tbody>
-        <tr><td>Producing your visualisation and estimate</td><td>Performance of a contract, or steps taken at your request before entering into one (Article 6(1)(b))</td></tr>
-        <tr><td>Passing your design and contact details to installers so they can quote</td><td>Consent (Article 6(1)(a)) — the box you tick on the form</td></tr>
-        <tr><td>Contacting you about your enquiry</td><td>Legitimate interests (Article 6(1)(f)) — responding to someone who has asked us to</td></tr>
-        <tr><td>Keeping the service secure and preventing abuse</td><td>Legitimate interests (Article 6(1)(f)) — protecting our service and users</td></tr>
-        <tr><td>Marketing emails, if you have asked for them</td><td>Consent (Article 6(1)(a)) <span class="ph">[DELETE IF YOU DO NOT SEND MARKETING]</span></td></tr>
+        <tr><td>Producing your visualisation and indicative estimate</td><td>Our legitimate interests (Article 6(1)(f)) in providing the service you have asked us for, and in running our business</td></tr>
+        <tr><td>Emailing you your design pack</td><td>Consent (Article 6(1)(a)) &mdash; the box you tick asking us to send it</td></tr>
+        <tr><td>Passing your design and contact details to installers so they can quote</td><td>Consent (Article 6(1)(a)) &mdash; the separate box you tick asking us to</td></tr>
+        <tr><td>Replying to you if you contact us about your enquiry</td><td>Our legitimate interests (Article 6(1)(f)) in answering someone who has got in touch</td></tr>
+        <tr><td>Keeping the service secure and preventing abuse</td><td>Our legitimate interests (Article 6(1)(f)) in protecting the service and the people who use it</td></tr>
+        <tr><td>Keeping records of consent, and of complaints and requests</td><td>Our legal obligations under data protection law (Article 6(1)(c)), and our legitimate interests in being able to show we have complied</td></tr>
       </tbody>
     </table>
-    <p>Where we rely on consent you can withdraw it at any time by emailing <span class="ph">[PRIVACY CONTACT EMAIL]</span>. Withdrawing consent does not affect anything we did before you withdrew it.</p>
+    <p>Where we rely on legitimate interests, we have weighed our interests against your rights and concluded that the processing is necessary, limited to what it needs to be, and not something you would find unexpected or intrusive. You can ask us for our assessment.</p>
+    <p><strong>We do not send marketing emails.</strong> If that ever changes we will ask you to opt in first, and you will be able to opt out of every message.</p>
+
+    <h3>The choices you make on the form</h3>
+    <p>There are two separate boxes when you save a design. Both are optional, both start unticked, and you can use Facet Pro whether or not you tick either.</p>
+    <ul>
+      <li><strong>Email me my design pack.</strong> We send you your visualisation and estimate. Nobody else sees it.</li>
+      <li><strong>Get quotes from installers.</strong> We pass your details and design to installers so they can contact you.</li>
+    </ul>
+    <p>You can change your mind about either at any time by emailing <a href="mailto:[PRIVACY EMAIL]"><span class="ph">[PRIVACY EMAIL]</span></a> or using the link in any email we send you. Withdrawing is as easy as agreeing was. It does not make anything we did beforehand unlawful, and if your details have already gone to an installer we cannot undo that &mdash; but we will tell the installer you have withdrawn, and you can ask them to delete your details too.</p>
 
     <h2>Who we share it with</h2>
+    <p>We do not sell your personal data, and we do not share it with anyone for their own marketing.</p>
     <ul>
-      <li><strong>Installers</strong> — <span class="ph">[NAMED INSTALLERS OR CATEGORIES, e.g. &ldquo;vetted installers in your region&rdquo;]</span>, so they can quote for your job. Only if you have ticked the consent box.</li>
-      <li><strong>Anthropic</strong> — processes your photo to identify the parts of your home. <span class="ph">[CONFIRM CURRENT PROVIDER AND DATA LOCATION]</span></li>
-      <li><strong>Replicate</strong> — generates the visualisation from your photo. <span class="ph">[CONFIRM CURRENT PROVIDER AND DATA LOCATION]</span></li>
-      <li><strong>Resend</strong> — delivers our notification emails. <span class="ph">[DELETE IF NOT USED]</span></li>
-      <li><strong>Our CRM provider</strong> — <span class="ph">[CRM PROVIDER NAME]</span>, where we manage enquiries. <span class="ph">[DELETE IF NOT USED]</span></li>
-      <li><strong>Our hosting provider</strong> — <span class="ph">[HOSTING PROVIDER NAME]</span>.</li>
-      <li><strong>Professional advisers and authorities</strong>, where we are required by law to disclose.</li>
+      <li><strong>Installers</strong> &mdash; up to <span class="ph">[3]</span> vetted installers covering your area, so they can quote for your job. Only if you have ticked that box. We will tell you which installers received your details, and you can ask us at any time. Each installer is separately responsible under data protection law for what it does with your details, and we require each of them, in writing, to use your details only to quote for your enquiry, never to add you to a marketing list, and never to pass your details on.</li>
+      <li><strong>Anthropic</strong> &mdash; AI vision, which identifies the parts of your home in the photo.</li>
+      <li><strong>Replicate</strong> &mdash; generates the visualisation from your photo.</li>
+      <li><strong>Resend</strong> &mdash; delivers our emails to you.</li>
+      <li><strong>Railway</strong> &mdash; hosts the site and stores enquiries. Data centre region: <span class="ph">[REGION]</span>.</li>
+      <li><span class="ph">[CRM PROVIDER &mdash; DELETE THIS LINE IF YOU DO NOT USE ONE]</span> &mdash; where we manage enquiries.</li>
+      <li><strong>Professional advisers, insurers and authorities</strong>, where we are required by law to disclose, or need advice.</li>
     </ul>
-    <p>We do not sell your personal data.</p>
+    <p>Everyone in that list other than the installers acts on our instructions under a written contract that meets Article 28 UK GDPR. None of them may use your data for their own purposes, and none of them may use it to train AI models.</p>
 
     <h2>Transfers outside the UK</h2>
-    <p>Some of the providers above process data outside the UK, including in the United States. Where that happens we rely on <span class="ph">[UK ADEQUACY REGULATIONS / THE UK INTERNATIONAL DATA TRANSFER AGREEMENT / THE UK ADDENDUM TO THE EU SCCs — SPECIFY WHICH APPLIES TO EACH PROVIDER]</span> to keep your data protected to UK standards. You can ask us for a copy of the safeguards in place.</p>
+    <p>Some of the providers above are based in the United States, so your data leaves the UK. Where that happens we make sure it stays protected to UK standards:</p>
+    <table>
+      <thead><tr><th>Provider</th><th>Where</th><th>How the transfer is protected</th></tr></thead>
+      <tbody>
+        <tr><td>Anthropic</td><td>United States</td><td><span class="ph">[UK EXTENSION TO THE EU&ndash;US DATA PRIVACY FRAMEWORK / UK ADDENDUM TO THE EU SCCs]</span></td></tr>
+        <tr><td>Replicate</td><td>United States</td><td><span class="ph">[UK EXTENSION TO THE EU&ndash;US DATA PRIVACY FRAMEWORK / UK ADDENDUM TO THE EU SCCs]</span></td></tr>
+        <tr><td>Resend</td><td>United States</td><td><span class="ph">[UK EXTENSION TO THE EU&ndash;US DATA PRIVACY FRAMEWORK / UK ADDENDUM TO THE EU SCCs]</span></td></tr>
+        <tr><td>Railway</td><td><span class="ph">[REGION]</span></td><td><span class="ph">[DELETE ROW IF UK/EEA HOSTED, OTHERWISE SPECIFY]</span></td></tr>
+      </tbody>
+    </table>
+    <p>Installers are UK businesses and your details are not sent overseas for that purpose. You can ask us for a copy of the safeguards we rely on, and we will send them to you.</p>
 
     <h2>How long we keep it</h2>
     <table>
-      <thead><tr><th>Data</th><th>Retention period</th></tr></thead>
+      <thead><tr><th>What</th><th>How long</th></tr></thead>
       <tbody>
-        <tr><td>Enquiry and design records</td><td><span class="ph">[e.g. 24 MONTHS FROM YOUR LAST CONTACT WITH US]</span></td></tr>
-        <tr><td>Consent records</td><td><span class="ph">[e.g. 6 YEARS, TO EVIDENCE COMPLIANCE]</span></td></tr>
-        <tr><td>Records relating to a job that went ahead</td><td><span class="ph">[e.g. 6 YEARS AFTER COMPLETION, FOR TAX AND CONTRACT PURPOSES]</span></td></tr>
-        <tr><td>Technical and security logs</td><td><span class="ph">[e.g. 12 MONTHS]</span></td></tr>
+        <tr><td>Your original uploaded photograph</td><td>Deleted once your visualisation has been generated</td></tr>
+        <tr><td>Your design, visualisation and estimate, where you did not ask for quotes</td><td>6 months</td></tr>
+        <tr><td>Your enquiry, where it was passed to installers</td><td>24 months from your last contact with us</td></tr>
+        <tr><td>Records of the choices you made and any withdrawal</td><td>6 years, so we can show what you agreed to and when</td></tr>
+        <tr><td>Records of a complaint or a request you made to us</td><td>6 years</td></tr>
+        <tr><td>Technical and security logs</td><td>12 months</td></tr>
       </tbody>
     </table>
+    <p>Deletion is automatic. At the end of each period the records are removed rather than archived. If you ask us to delete something sooner, we will.</p>
+
+    <h2>How we keep it safe</h2>
+    <ul>
+      <li>Everything you send us travels over an encrypted connection, and enquiries are stored encrypted.</li>
+      <li>Access to enquiries is restricted to the people who need it, and every access is logged.</li>
+      <li>Installers get their own individual accounts, protected by two-factor authentication. An installer can only see enquiries for their own area, and only the enquiries you asked us to send them.</li>
+      <li>We check every supplier's security and data protection terms before we use them, and we keep those checks under review.</li>
+      <li>Enquiries are backed up, and we test that we can restore them.</li>
+      <li>If something goes wrong and your data is at risk, we will tell the Information Commissioner within 72 hours where we are required to, and we will tell you directly if there is a high risk to you.</li>
+    </ul>
+
+    <h2>Cookies and similar technologies</h2>
+    <p>We do not use analytics cookies, advertising cookies, or any cross-site tracking. Nothing on this site follows you anywhere else, and there is no cookie banner because there is nothing to consent to.</p>
+    <p>The only thing we store on your device is a session cookie that keeps installers signed in to the installer area while they are using it. It is deleted when the browser tab closes. That is exempt from the consent requirement under regulation 6(4) of the Privacy and Electronic Communications Regulations 2003, because the service cannot work without it.</p>
+    <p>If we ever add analytics, we will update this notice first and give you a way to opt out.</p>
+
+    <h2>AI, and decisions made about you</h2>
+    <p>We use AI in two places: to identify the parts of your home in the photograph, and to generate the visualisation. The estimate is worked out by ordinary arithmetic from the choices you make and typical rates for materials, labour, scaffolding and waste.</p>
+    <p>None of this makes a decision about you. It does not assess you, score you, or determine what you are offered. The estimate is a guide to what work of that kind tends to cost, not a judgement about you, and it is not a quotation. Everything that follows &mdash; whether an installer contacts you, what they quote, whether you go ahead &mdash; involves people. So this is not automated decision-making of the kind restricted by Articles 22A to 22D of the UK GDPR.</p>
+    <p>Your photograph is not used to identify you or anyone else, and we do not carry out facial recognition or any other biometric processing.</p>
 
     <h2>Your rights</h2>
     <p>Under UK data protection law you have the right to:</p>
     <ul>
-      <li>be told how your data is used — this notice;</li>
-      <li>ask for a copy of the data we hold about you;</li>
-      <li>have inaccurate data corrected;</li>
-      <li>ask us to delete your data;</li>
-      <li>ask us to restrict how we use it;</li>
-      <li>receive your data in a portable format, or have it sent to another provider;</li>
-      <li>object to processing based on legitimate interests, and to direct marketing at any time; and</li>
-      <li>withdraw consent where we rely on it.</li>
+      <li>be told how your data is used &mdash; that is what this notice is for;</li>
+      <li>ask for a copy of the data we hold about you (Article 15);</li>
+      <li>have anything inaccurate corrected (Article 16);</li>
+      <li>ask us to delete your data (Article 17);</li>
+      <li>ask us to restrict how we use it while something is being sorted out (Article 18);</li>
+      <li>receive your data in a portable format, or have us send it to someone else (Article 20); and</li>
+      <li>withdraw a consent you have given, at any time (Article 7(3)).</li>
     </ul>
-    <p>To exercise any of these, email <span class="ph">[PRIVACY CONTACT EMAIL]</span>. We will respond within one month. There is no charge unless a request is manifestly unfounded or excessive.</p>
+    <p><strong>You also have the right to object.</strong> Where we rely on legitimate interests, you can object to what we are doing at any time, and we must stop unless we can show compelling grounds that override your rights. We are drawing this to your attention separately because Article 21(4) requires us to, and because it is easy to miss in a list.</p>
+    <p>If you ask us to correct or delete your data, we will pass that on to any installer we sent it to, and to our providers, unless that turns out to be impossible or would take disproportionate effort. You can ask us who those recipients were and we will tell you.</p>
+    <p>To use any of these rights, email <a href="mailto:[PRIVACY EMAIL]"><span class="ph">[PRIVACY EMAIL]</span></a>. We will normally respond within one month. If your request is complex, or you have made several, we may take up to two months longer, but we will tell you within the first month if that happens and explain why. There is no charge, unless a request is clearly unfounded or excessive, in which case we may charge a reasonable fee or decline it &mdash; and we will explain our reasons and how to challenge that.</p>
 
     <h2>Complaints</h2>
-    <p>If you are unhappy with how we have handled your data, please tell us first so we can put it right. You also have the right to complain to the Information Commissioner's Office: <a class="underline" href="https://ico.org.uk/make-a-complaint/" rel="noopener">ico.org.uk/make-a-complaint</a>, or 0303 123 1113.</p>
-
-    <h2>Cookies and similar technologies</h2>
-    <p><span class="ph">[DESCRIBE ANY COOKIES YOU SET. If the site only stores your installer login for the duration of a browser tab and sets no analytics or advertising cookies, say so here. If you add analytics or advertising, you will need a consent banner under PECR before those load.]</span></p>
-
-    <h2>Automated decision-making</h2>
-    <p>We use AI to identify parts of your home and to generate a visualisation, and we calculate an estimate from your choices. None of this produces a legal or similarly significant effect on you, and a person decides everything that follows. The estimate is a guide, not a decision about you.</p>
-
-    <h2>Security</h2>
-    <p><span class="ph">[DESCRIBE YOUR MEASURES, e.g. encryption in transit, access controls on the installer area, restricted staff access, supplier due diligence.]</span></p>
+    <h3>Complaining to us</h3>
+    <p>If you think we have handled your personal data wrongly, you have a right to complain to us directly. You can do that:</p>
+    <ul>
+      <li>using our complaints form at <a href="[COMPLAINTS FORM URL]"><span class="ph">[COMPLAINTS FORM URL]</span></a>;</li>
+      <li>by email to <a href="mailto:[PRIVACY EMAIL]"><span class="ph">[PRIVACY EMAIL]</span></a>; or</li>
+      <li>by post to <span class="ph">[COMPLAINTS ADDRESS]</span>.</li>
+    </ul>
+    <p>You do not need to use any particular form of words, or mention any legislation. Just tell us what has gone wrong. We will accept your complaint however it reaches us.</p>
+    <p>We will <strong>acknowledge your complaint within 30 days</strong> of receiving it. We will then look into it without undue delay, keep you updated as we go, and tell you the outcome and what we have done about it. This is your right under section 164A of the Data Protection Act 2018.</p>
+    <h3>Complaining to the regulator</h3>
+    <p>You can also complain to the Information Commissioner's Office at <a href="https://ico.org.uk/make-a-complaint" rel="noopener">ico.org.uk/make-a-complaint</a> or on 0303 123 1113. You can do that at any time, though the ICO will usually expect you to have raised it with us first.</p>
+    <p>Complaining does not affect your other rights, including your right to bring a claim in court.</p>
 
     <h2>Children</h2>
-    <p>Facet Pro is intended for homeowners aged 18 and over. We do not knowingly collect data from children.</p>
+    <p>Facet Pro is for homeowners and is intended for people aged 18 and over. It is not designed for or aimed at children, and we do not knowingly collect children's data. If we find that we have, we will delete it. If you think a child has given us their details, please tell us at <a href="mailto:[PRIVACY EMAIL]"><span class="ph">[PRIVACY EMAIL]</span></a>.</p>
 
     <h2>Changes to this notice</h2>
-    <p>We may update this notice. The version and date at the top will tell you when it last changed, and we will tell you directly if a change materially affects you.</p>
+    <p>We may update this notice as the service changes. The version and date at the top tell you when it last changed, and we keep previous versions &mdash; ask us if you want to see the one that applied when you used the site. If a change materially affects you, we will tell you directly rather than relying on you to check.</p>
 
   </div>
 </main>
 
-<footer class="max-w-3xl mx-auto px-6 pb-14">
-  <div class="rounded-2xl border border-zinc-200 bg-white p-6 flex flex-wrap items-center justify-between gap-4">
-    <span class="serif text-[17px] tracking-tight">Facet Pro</span>
-    <nav class="flex flex-wrap gap-x-5 gap-y-2 text-[12px] text-zinc-600" aria-label="Footer">
-      <a href="/" class="hover:text-zinc-900">Home</a>
-      <a href="/privacy" class="hover:text-zinc-900">Privacy notice</a>
-      <a href="/terms" class="hover:text-zinc-900">Terms</a>
+<footer class="border-t border-zinc-200 mt-16">
+  <div class="max-w-3xl mx-auto px-6 py-8 flex flex-wrap items-center justify-between gap-4">
+    <span class="serif text-[15px] text-zinc-500">Facet Pro</span>
+    <nav class="flex gap-5 text-xs text-zinc-500">
+      <a href="/" class="hover:text-zinc-900 transition">Home</a>
+      <a href="/privacy" class="hover:text-zinc-900 transition">Privacy notice</a>
+      <a href="/terms" class="hover:text-zinc-900 transition">Terms</a>
     </nav>
   </div>
 </footer>

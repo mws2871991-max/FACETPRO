@@ -466,8 +466,12 @@ function findSwatch(id) { return SWATCHES.find(s => s.id === id) || SWATCHES[0];
 // The exact wording the homeowner agrees to. Sent with the lead and stored, so
 // there's a record of what was consented to and when — bump CONSENT_VERSION
 // whenever CONSENT_WORDING changes, and keep the on-screen label identical.
-const CONSENT_VERSION = '2026-07-30';
-const CONSENT_WORDING = "I agree to Facet Pro's Terms and have read the Privacy Notice. I'm happy for my design and contact details to be passed to installers so they can quote for my job.";
+const CONSENT_VERSION = '2026-08-01';
+const CONSENT_WORDING = {
+  emailPack: 'Email me my design pack — my visualisation and indicative estimate.',
+  installerQuotes: 'Yes, I\u2019d like quotes. Please pass my name, postcode, email address and phone number, together with my design and estimate, to up to three vetted installers covering my area, so they can contact me about quoting for this work and arranging a survey. I understand they may contact me by email and by telephone, including if my number is registered with the Telephone Preference Service, and that each installer is responsible for its own use of my details.',
+  terms: 'I\u2019ve read and agree to the Terms of Use and the Privacy Notice.',
+};
 
 // ---------- app state ----------
 
@@ -486,7 +490,14 @@ const state = {
   leads: [],
   leadsLoaded: false,
   contact: { name: "", email: "", postcode: "", phone: "" },
-  consentGiven: false,
+  /* Three separate boxes, all starting unticked. Only the Terms one is
+     required — bundling "pass my details to installers" into the act of
+     saving made that consent a condition of the service, which is the
+     Article 7(4) problem: consent given that way isn't freely given.
+
+     Saving works with both optional boxes unticked. The visualisation and
+     estimate are unaffected either way. */
+  consent: { terms: false, installerQuotes: false, emailPack: false },
   detectionId: null,      // server's handle on our detections — measuring needs it
   canMeasure: false,      // walls were found, so measuring is worth offering
   scaleReference: false,  // a door was found too, so the good method is available
@@ -1612,6 +1623,27 @@ function renderRefineOnly() {
   old.replaceWith(buildRefineEstimate());
 }
 
+/* One consent checkbox. Identical markup and styling for all three, so the
+   optional ones carry no visual nudge relative to the required one. */
+function consentBox(key, label, { required = false } = {}) {
+  return h('label', { className: 'flex items-start gap-3 cursor-pointer' }, [
+    h('input', {
+      type: 'checkbox',
+      id: 'consent-' + key,
+      checked: state.consent[key],
+      className: 'mt-0.5 w-4 h-4 shrink-0 accent-zinc-900',
+      onChange: (e) => {
+        state.consent[key] = e.target.checked;
+        document.getElementById('consent-error')?.remove();
+      },
+    }),
+    h('span', { className: 'text-[12px] leading-5 text-zinc-600' }, [
+      ...label,
+      required ? h('span', { className: 'text-zinc-400' }, ' (required)') : null,
+    ]),
+  ]);
+}
+
 function buildSaveFraming() {
   function field(placeholder, key, extraClass, type) {
     return h('input', {
@@ -1653,20 +1685,26 @@ function buildSaveFraming() {
         field('Postcode', 'postcode', ''),
         field('Phone (optional)', 'phone', '', 'tel'),
       ]),
-      h('label', { className: 'mt-4 flex items-start gap-3 cursor-pointer' }, [
-        h('input', {
-          type: 'checkbox', id: 'consent-box', checked: state.consentGiven,
-          className: 'mt-0.5 w-4 h-4 shrink-0 accent-zinc-900',
-          onChange: (e) => { state.consentGiven = e.target.checked; document.getElementById('consent-error')?.remove(); },
-        }),
-        h('span', { className: 'text-[12px] leading-5 text-zinc-600' }, [
-          "I agree to Facet Pro's ",
-          h('a', { href: '/terms', target: '_blank', rel: 'noopener', className: 'underline hover:text-zinc-900' }, 'Terms'),
-          ' and have read the ',
-          h('a', { href: '/privacy', target: '_blank', rel: 'noopener', className: 'underline hover:text-zinc-900' }, 'Privacy Notice'),
-          ". I'm happy for my design and contact details to be passed to installers so they can quote for my job.",
+      /* Three boxes, all unticked. The optional ones come first so the
+         required one reads as the last step rather than the price of the
+         others. No pre-selection, no nudging styling, no bundling — the two
+         optional boxes look and behave identically. */
+      h('div', { className: 'mt-5 grid gap-3' }, [
+        consentBox('emailPack', ['Email me my design pack — my visualisation and indicative estimate.']),
+        consentBox('installerQuotes', [
+          h('strong', {}, 'Yes, I\u2019d like quotes. '),
+          'Please pass my name, postcode, email address and phone number, together with my design and estimate, to up to three vetted installers covering my area, so they can contact me about quoting for this work and arranging a survey. I understand they may contact me by email and by telephone, including if my number is registered with the Telephone Preference Service, and that each installer is responsible for its own use of my details.',
         ]),
+        consentBox('terms', [
+          'I\u2019ve read and agree to the ',
+          h('a', { href: '/terms', target: '_blank', rel: 'noopener', className: 'underline hover:text-zinc-900' }, 'Terms of Use'),
+          ' and the ',
+          h('a', { href: '/privacy', target: '_blank', rel: 'noopener', className: 'underline hover:text-zinc-900' }, 'Privacy Notice'),
+          '.',
+        ], { required: true }),
       ]),
+      h('p', { className: 'mt-3 text-[11px] leading-5 text-zinc-500' },
+        'You don\u2019t have to tick either of the first two. Your visualisation and estimate work the same way without them.'),
       h('button', {
         type: 'button',
         className: `mt-4 w-full py-3 rounded-full text-sm font-medium ${state.sendingLead ? 'bg-zinc-300 text-zinc-500' : 'bg-zinc-900 text-white'}`,
@@ -1824,11 +1862,11 @@ async function sendDesignPack() {
     U('Please add your name and email so we know where to send it');
     return;
   }
-  if (!state.consentGiven) {
-    U('Please tick the box to agree before we save your design');
-    const box = document.getElementById('consent-box');
+  if (!state.consent.terms) {
+    U('Please agree to the Terms before we save your design');
+    const box = document.getElementById('consent-terms');
     if (box && !document.getElementById('consent-error')) {
-      box.closest('label')?.after(h('p', { id: 'consent-error', className: 'mt-2 text-[12px] text-red-600' }, 'Please tick this box so we know we can pass your design to installers.'));
+      box.closest('label')?.after(h('p', { id: 'consent-error', className: 'mt-2 text-[12px] text-red-600' }, 'We need this one to save your design.'));
       box.focus();
     }
     return;
@@ -1857,7 +1895,13 @@ async function sendDesignPack() {
         ...state.prefs,
         detections: state.detections,
         renderUrl: state.renderUrl,
-        consent: { given: true, wording: CONSENT_WORDING, version: CONSENT_VERSION },
+        consent: {
+          terms: state.consent.terms,
+          installerQuotes: state.consent.installerQuotes,
+          emailPack: state.consent.emailPack,
+          version: CONSENT_VERSION,
+          wording: CONSENT_WORDING,
+        },
       })
     });
     const data = await res.json();

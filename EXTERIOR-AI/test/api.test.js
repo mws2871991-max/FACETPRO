@@ -116,7 +116,7 @@ test('the lead records the server-side source, not the client claim', async () =
     name: 'Test', email: 't@example.com', detectionId,
     claddingId: 'sage-slate', roofId: 'terracotta', trimId: 'cedar',
     measurementSource: 'surveyed_by_a_professional',   // a lie from the client
-    consent: { given: true, wording: 'w', version: 'v' },
+    consent: { terms: true, installerQuotes: true, version: 'v' },
   });
   assert.strictEqual(status, 200);
   assert.strictEqual(body.lead.measurementSource, 'photo_door');
