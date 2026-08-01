@@ -1690,13 +1690,11 @@ function buildSaveFraming() {
          others. No pre-selection, no nudging styling, no bundling — the two
          optional boxes look and behave identically. */
       h('div', { className: 'mt-5 grid gap-3' }, [
-        consentBox('emailPack', ['Email me my design pack — my visualisation and indicative estimate.']),
-        consentBox('installerQuotes', [
-          h('strong', {}, 'Yes, I\u2019d like quotes. '),
-          'Please pass my name, postcode, email address and phone number, together with my design and estimate, to up to three vetted installers covering my area, so they can contact me about quoting for this work and arranging a survey. I understand they may contact me by email and by telephone, including if my number is registered with the Telephone Preference Service, and that each installer is responsible for its own use of my details.',
-        ]),
+        consentBox('emailPack', [CONSENT_WORDING.emailPack]),
+        consentBox('installerQuotes', [CONSENT_WORDING.installerQuotes]),
         consentBox('terms', [
-          'I\u2019ve read and agree to the ',
+          // Only this one needs markup, for the two links.
+          CONSENT_WORDING.terms.replace(/ the Terms of Use.*$/, ' the '),
           h('a', { href: '/terms', target: '_blank', rel: 'noopener', className: 'underline hover:text-zinc-900' }, 'Terms of Use'),
           ' and the ',
           h('a', { href: '/privacy', target: '_blank', rel: 'noopener', className: 'underline hover:text-zinc-900' }, 'Privacy Notice'),

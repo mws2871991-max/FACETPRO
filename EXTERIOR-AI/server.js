@@ -1197,7 +1197,13 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
       wording: typeof consent.wording === 'object' && consent.wording
         ? Object.fromEntries(Object.entries(consent.wording).slice(0, 5).map(([k, v]) => [k, String(v).slice(0, 800)]))
         : { legacy: String(consent.wording || '').slice(0, 1000) },
-      ip: req.ip || null,
+      /* Hashed, not raw. A consent record is kept six years; the access log
+         hashes IPs and keeps them twelve months, so storing a raw address
+         here treated the same identifier two different ways in one codebase
+         — with the stricter treatment on the less sensitive record. The hash
+         still evidences that two consents came from the same place, which is
+         what it is for. */
+      ipHash: req.ip ? crypto.createHash('sha256').update(String(req.ip)).digest('hex').slice(0, 12) : null,
     },
     status: 'New lead'
   };
@@ -1335,7 +1341,19 @@ app.get('/api/deliveries', installerLimiter, requireInstallerPassword, logAccess
    Leads captured so far, newest first. Password-protected — see
    requireInstallerPassword above. */
 app.get('/api/leads', installerLimiter, requireInstallerPassword, logAccess('/api/leads'), async (req, res) => {
-  const leads = await store.readAll('leads');
+  /* Only leads whose owner asked for installer contact.
+
+     The delivery path was gated on this consent from the start; the portal
+     was not, so it handed every installer every lead ever captured —
+     including people who ticked only "email me my design pack", or nothing
+     but the Terms. They were told in terms that this happens only if they ask
+     for it, so the disclosure had no lawful basis and made the notice
+     inaccurate as well.
+
+     Redacted leads are excluded too: retention has already stripped them of
+     personal data, and there is nothing in one an installer can act on. */
+  const leads = (await store.readAll('leads'))
+    .filter(l => l.consent?.installerQuotes === true && !l.redacted);
   res.json({ leads: leads.slice().reverse() });
 });
 
