@@ -212,6 +212,13 @@ const leadLimiter = rateLimit({
 /* Withdrawing has to stay easy — Article 7(3) says as easy as giving consent
    was — so this is loose enough never to block a real person changing their
    mind, and tight enough that the token isn't worth guessing at 2^192. */
+/* Someone checking two or three postcodes is a homeowner comparing houses.
+   Someone checking hundreds is mapping our buyers' coverage. */
+const coverageLimiter = rateLimit({
+  windowMs: 60 * 1000, max: 20,
+  standardHeaders: true, legacyHeaders: false,
+  message: { error: 'Too many checks — please wait a minute.' }
+});
 const withdrawLimiter = rateLimit({
   windowMs: 60 * 1000, max: 20,
   standardHeaders: true, legacyHeaders: false,
@@ -1464,6 +1471,34 @@ app.get('/r/:id', async (req, res) => {
 
    Always a planning estimate — the response carries a range and a caveat, and
    the UI must present it as such. */
+/* ── POST /api/coverage ──
+   "Do you have installers near me?", answered before anyone is asked for
+   anything. The postcode box in the refine panel collected a postcode and did
+   nothing with it; now that routing decides who receives a lead, the site can
+   actually answer.
+
+   A count, never names. Which companies buy leads in which areas is
+   commercially theirs, not ours to publish on a consumer page — and a
+   homeowner is told exactly who received their details at the point it
+   happens, which is the moment it matters.
+
+   Runs the real routing rather than a lookalike, so what this promises is what
+   delivery does. */
+app.post('/api/coverage', coverageLimiter, (req, res) => {
+  const parsed = routing.parsePostcode(req.body?.postcode);
+  if (!parsed) {
+    return res.status(400).json({ error: 'That doesn’t look like a UK postcode.', reason: 'unreadable_postcode' });
+  }
+  // Same decision the delivery would make, minus the lead.
+  const { chosen } = routing.chooseRecipients(LEAD_RECIPIENTS, { id: 'coverage-check', postcode: parsed.outward + ' 1AA' },
+    { max: MAX_INSTALLERS_PER_LEAD });
+  res.json({
+    outward: parsed.outward,
+    installers: chosen.length,
+    cap: MAX_INSTALLERS_PER_LEAD,
+  });
+});
+
 /* ── POST /api/glazing ──
    A guide price for replacing the windows and the front door.
 

@@ -564,6 +564,8 @@ const state = {
   installerError: '',
   installerChecking: false,
   postcode: "",
+  coverage: null,           // { outward, installers } once checked
+  coverageChecking: false,
   footprint: null, // {area}
   trimLengthM: null, // fascia/soffit/guttering run length in metres
   measurementSource: "default_footprint",
@@ -1647,6 +1649,35 @@ function renderVisualizerOnly() {
   old.replaceWith(buildVisualizer());
 }
 
+/* Do we have installers where they live?
+
+   Asked and answered before anyone is invited to hand over a photograph or a
+   phone number. It runs the same routing the delivery does, so what it
+   promises is what happens — and it returns a count rather than names,
+   because which companies buy leads in which areas is theirs, not ours to
+   publish. A homeowner is told exactly who received their details at the
+   point that happens, which is the moment it matters. */
+async function checkCoverage() {
+  const postcode = (state.postcode || '').trim();
+  if (!postcode) return;
+  state.coverageChecking = true;
+  state.coverage = null;
+  renderRefineOnly();
+  try {
+    const res = await fetch('/api/coverage', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ postcode }),
+    });
+    const data = await res.json();
+    state.coverage = res.ok ? data : { error: data.error || 'We couldn’t check that just now.' };
+  } catch (_) {
+    state.coverage = { error: 'We couldn’t check that just now.' };
+  } finally {
+    state.coverageChecking = false;
+    renderRefineOnly();
+  }
+}
+
 function buildRefineEstimate() {
   // Say plainly which figure is actually sizing the quote right now — the
   // server decides that, so read it back rather than guessing from the inputs.
@@ -1673,7 +1704,12 @@ function buildRefineEstimate() {
   const postcodeInput = h('input', {
     value: state.postcode, placeholder: 'Your postcode', 'aria-label': 'Your postcode',
     className: 'flex-1 min-w-[140px] px-3 py-2.5 rounded-xl border border-zinc-200 text-sm outline-none focus:border-zinc-900',
-    onInput: (e) => { state.postcode = e.target.value; },
+    onInput: (e) => {
+      state.postcode = e.target.value;
+      // A stale answer beside a new postcode is worse than no answer.
+      if (state.coverage) { state.coverage = null; renderRefineOnly(); }
+    },
+    onKeyDown: (e) => { if (e.key === 'Enter') { e.preventDefault(); checkCoverage(); } },
   });
 
   const areaInput = h('input', {
@@ -1696,6 +1732,20 @@ function buildRefineEstimate() {
     },
   });
 
+  function coverageAnswer() {
+    const c = state.coverage;
+    if (!c) return null;
+    if (c.error) return h('p', { className: 'mt-3 text-[12px] text-zinc-600' }, c.error);
+    if (!c.installers) {
+      return h('p', { className: 'mt-3 text-[12px] leading-5 text-zinc-600' },
+        `We don’t have an installer covering ${c.outward} yet. You can still design your home and keep your estimate — we just can’t get you quotes there at the moment.`);
+    }
+    return h('p', { className: 'mt-3 text-[12px] leading-5 text-zinc-900' }, [
+      h('strong', {}, `${c.installers} installer${c.installers === 1 ? '' : 's'} cover ${c.outward}.`),
+      ` They’d quote from the design you’ve made here — nothing is sent to anyone unless you ask for it.`,
+    ]);
+  }
+
   return h('section', { id: 'refine-section', className: 'rounded-2xl bg-white border border-zinc-200 p-6 md:p-8' }, [
     h('h2', { className: 'serif text-[22px] md:text-[26px] tracking-tight' }, 'Make your estimate sharper'),
     h('p', { className: 'mt-2 text-sm text-zinc-600 max-w-[62ch]' }, 'All optional — your estimate already works without any of this. Measure your walls from the photo, or type in figures you already know.'),
@@ -1703,13 +1753,21 @@ function buildRefineEstimate() {
     h('h3', { className: 'mt-8 text-[13px] font-medium' }, 'Know your own measurements?'),
     h('p', { className: 'mt-1 text-[13px] text-zinc-600 max-w-[62ch]' }, 'Anything you enter here takes priority over everything else.'),
     h('div', { className: 'mt-5 flex flex-wrap gap-2' }, [
-      postcodeInput, areaInput, trimLengthInput,
+      postcodeInput,
+      h('button', {
+        type: 'button',
+        className: 'px-4 py-2.5 rounded-full border border-zinc-200 text-xs font-medium hover:border-zinc-900 transition',
+        disabled: state.coverageChecking,
+        onClick: () => checkCoverage(),
+      }, state.coverageChecking ? 'Checking…' : 'Who covers my area?'),
+      areaInput, trimLengthInput,
       h('button', {
         type: 'button',
         className: 'px-5 py-2.5 rounded-full bg-zinc-900 text-white text-xs font-medium',
         onClick: async () => { await refreshPrice(); renderRefineOnly(); renderVisualizerOnly(); U('Estimate updated with your measurements'); }
       }, 'Update my estimate'),
     ]),
+    coverageAnswer(),
     h('div', { className: 'mt-4 rounded-xl bg-[#FDFCF9] border border-zinc-200 p-3 text-xs leading-5' }, summary),
   ]);
 }
