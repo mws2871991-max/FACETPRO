@@ -358,6 +358,19 @@ async function deleteRenders(ids) {
   return n;
 }
 
+/* One code, by its own unique index.
+
+   Redemption used to read and deserialise every live code to find one row —
+   an O(1) lookup written as O(n) with the index already declared and never
+   used. Returns undefined when there is no index to use (the JSONL backend),
+   so the caller falls back rather than being told there is nothing there. */
+async function getResume(code) {
+  if (!pool) return undefined;
+  const { rows } = await pool.query(
+    `SELECT record FROM ${SCHEMA_NAME}.resumes WHERE code = $1 ORDER BY id DESC LIMIT 1`, [code]);
+  return rows[0]?.record || null;
+}
+
 async function readAll(table) {
   if (pool) {
     const { rows } = await pool.query(SELECT_SQL[table]);
@@ -378,7 +391,7 @@ async function end() {
 }
 
 module.exports = {
-  ensureSchema, append, readAll, replaceAll, mutate, end, putRender, getRender, deleteRenders, hasDb: !!pool,
+  ensureSchema, append, readAll, replaceAll, mutate, end, getResume, putRender, getRender, deleteRenders, hasDb: !!pool,
   // Exported for tests: scraping these out of the source with a regex broke
   // the moment another table was added after leads.
   _internals: { INSERT_PARAMS, INSERT_SQL, SELECT_SQL, FILE_NAMES },

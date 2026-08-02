@@ -81,3 +81,41 @@ test('switching the design pack off does not switch withdrawal off with it', asy
   assert.strictEqual(cfg.designPackEmail, false, 'the pack is off, as asked');
   assert.strictEqual(cfg.installerQuotes, true, 'but we can still reach them, so the consent stands');
 });
+
+test('somebody nobody covers is not told their enquiry was sent on', async (t) => {
+  /* The site tells them before they ask — /api/coverage answers honestly —
+     but the box is still tickable, and the code knows chosen.length === 0
+     before the email goes out. They used to receive "We've sent your enquiry
+     on", because an empty installer list rendered nothing and the template
+     fell through to "we're passing your details to installers who cover your
+     area". Their withdrawal page, reading the delivery log, would then
+     correctly say nothing had been shared. */
+  const port = 3079;
+  const { child } = await boot(port, {
+    RESEND_API_KEY: 'test-key-not-real', LEAD_FROM_EMAIL: 'hello@facetpro.co.uk',
+    // One installer, and only in Kent.
+    LEAD_RECIPIENTS: JSON.stringify([{ id: 'kent', name: 'Kent Co', url: 'https://k.test/h', areas: ['CT', 'ME', 'TN'] }]),
+  });
+  t.after(() => child.kill('SIGKILL'));
+
+  const res = await fetch(`http://127.0.0.1:${port}/api/coverage`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ postcode: 'M1 1AE' }),
+  });
+  const coverage = await res.json();
+  assert.strictEqual(coverage.installers, 0, 'nobody should cover Manchester here');
+
+  const save = await fetch(`http://127.0.0.1:${port}/api/lead`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: 'Jane', email: 'jane@example.com', postcode: 'M1 1AE',
+      claddingId: 'sage-slate', footprintM2: 100,
+      consent: { terms: true, installerQuotes: true, emailPack: false, version: 'test' },
+    }),
+  });
+  const body = await save.json();
+  assert.strictEqual(save.status, 200, 'the design still saves, and the consent is still recorded');
+  assert.strictEqual(body.lead.consent.installerQuotes, true, 'they asked, and that stays on the record');
+  assert.strictEqual(body.lead.homeownerEmail.kind, 'no-installers notice',
+    'the one email they must not get is the one saying it was sent on');
+});

@@ -73,8 +73,7 @@ const MAX_WINDOW_H_M = 3.2;
 // What a house can plausibly have. Outside this the detection is wrong, and
 // the honest answer is the prior rather than a confident wrong number — the
 // same reasoning as the manual-area bounds in computePrice.
-const MIN_WINDOWS = 1;
-const MAX_WINDOWS = 30;
+const { MIN_WINDOWS, MAX_WINDOWS } = require('./limits');
 
 /* A window whose box sits entirely above the top of the front door is on an
    upper storey. Crude, and deliberately so: it needs no assumption about

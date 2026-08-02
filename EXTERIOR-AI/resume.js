@@ -68,10 +68,15 @@ const ID_FIELDS = [
   'conservatoryStyleId', 'houseType',
 ];
 
+/* The same bounds the quote engine enforces, taken from the same file rather
+   than restated. These had drifted: a code could carry back a 5,000 m² wall
+   area that resolveFootprint then discarded, so the price on the phone
+   differed from the price on the desk with nothing to explain it. */
+const L = require('./limits');
 const NUMBER_FIELDS = {
-  footprintM2: { min: 1, max: 10000 },
-  trimLengthM: { min: 1, max: 1000 },
-  windowCount: { min: 1, max: 30 },
+  footprintM2: { min: L.MANUAL_AREA_MIN_M2, max: L.MANUAL_AREA_MAX_M2 },
+  trimLengthM: { min: L.TRIM_LENGTH_MIN_M, max: L.TRIM_LENGTH_MAX_M },
+  windowCount: { min: L.MIN_WINDOWS, max: L.MAX_WINDOWS },
 };
 
 const cleanId = (v) => {

@@ -168,3 +168,34 @@ test('the placeholder warning is driven by the catalogue, not by a flag someone 
   assert.ok(typeof catalogue.glazing.source === 'string' && catalogue.glazing.source.length,
     'glazing.source is what the caveat is derived from; it must exist');
 });
+
+test('one definition of what counts as a plausible house', () => {
+  /* These were stated in three places and had already drifted: a resume code
+     could carry back a 5,000 m² wall area that the quote engine then silently
+     discarded, so the price on the phone differed from the price on the desk
+     with nothing to explain it. */
+  const limits = require('../limits');
+  const resume = require('../resume');
+  const glazing = require('../glazing');
+
+  assert.strictEqual(resume.NUMBER_FIELDS.footprintM2.max, limits.MANUAL_AREA_MAX_M2);
+  assert.strictEqual(resume.NUMBER_FIELDS.footprintM2.min, limits.MANUAL_AREA_MIN_M2);
+  assert.strictEqual(resume.NUMBER_FIELDS.trimLengthM.max, limits.TRIM_LENGTH_MAX_M);
+  assert.strictEqual(resume.NUMBER_FIELDS.windowCount.max, limits.MAX_WINDOWS);
+  assert.strictEqual(glazing.MAX_WINDOWS, limits.MAX_WINDOWS);
+  assert.strictEqual(glazing.MIN_WINDOWS, limits.MIN_WINDOWS);
+});
+
+test('a design carried to a phone cannot hold a number the quote engine refuses', () => {
+  const resume = require('../resume');
+  const limits = require('../limits');
+  const carried = resume.buildPayload({
+    footprintM2: limits.MANUAL_AREA_MAX_M2 + 1,
+    trimLengthM: limits.TRIM_LENGTH_MAX_M + 1,
+    claddingId: 'sage-slate',
+  });
+  assert.deepStrictEqual(Object.keys(carried), ['claddingId']);
+
+  const kept = resume.buildPayload({ footprintM2: 95, trimLengthM: 24, claddingId: 'sage-slate' });
+  assert.strictEqual(kept.footprintM2, 95, 'a real house still travels');
+});

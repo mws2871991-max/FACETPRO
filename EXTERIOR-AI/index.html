@@ -2080,6 +2080,14 @@ function buildSaveFraming() {
            the withdrawal link, so the server turns this consent down — and a
            box that cannot be honoured should not be on the page. */
         state.installerQuotesAvailable ? consentBox('installerQuotes', [CONSENT_WORDING.installerQuotes]) : null,
+        /* They checked their postcode and nobody covers it. The box stays —
+           they can still ask, and we still record that they did — but saying
+           nothing here and then emailing "we've sent your enquiry on" is the
+           contradiction worth avoiding. */
+        (state.installerQuotesAvailable && state.coverage && state.coverage.installers === 0)
+          ? h('p', { className: 'text-[11px] leading-5 text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2' },
+              `We don't have an installer covering ${state.coverage.outward} yet. You can still ask — we'll save your design and let you know if that changes — but nobody will be contacting you just now.`)
+          : null,
         consentBox('terms', [
           // Only this one needs markup, for the two links.
           CONSENT_WORDING.terms.replace(/ the Terms of Use.*$/, ' the '),

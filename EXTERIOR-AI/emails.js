@@ -290,6 +290,85 @@ function sharingConfirmationText(lead, recipients, siteUrl, withdrawToken) {
 
 const sharingConfirmationSubject = (lead) => `We've sent your enquiry on — reference ${lead.id}`;
 
+/* ── homeowner: they asked for quotes, and nobody covers them ──
+
+   The site tells them this before they ask — /api/coverage answers "we don't
+   have an installer covering SW11 yet" — but the box is still tickable, and
+   someone who ticks it anyway has made a request we should honour with an
+   honest answer rather than a cheerful one.
+
+   The email they must not receive is the one headed "we've sent your enquiry
+   on", which is what they used to get: installerList([]) rendered nothing, so
+   the template fell through to "we are passing your details to installers who
+   cover your area" while the code already knew nobody did. Their withdrawal
+   page, reading the delivery log, would then correctly say nothing had been
+   shared. Two artefacts, one homeowner, and the cheerful one arrives first.
+
+   The consent still stands and is still recorded — they asked, and that is a
+   fact worth keeping — so this carries the withdrawal link like the others. */
+
+function noInstallersHtml(lead, siteUrl, withdrawToken) {
+  const site = safeUrl(siteUrl) || 'https://facetpro.co.uk';
+  const base = site.replace(/\/$/, '');
+  const withdrawLink = withdrawToken ? `${base}/withdraw?t=${encodeURIComponent(withdrawToken)}` : null;
+  const where = lead.postcode ? ` covering ${escapeHtml(lead.postcode)}` : ' in your area';
+
+  return `<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:560px;margin:0 auto;color:#0F1012;background:#FBF8F3;padding:28px 24px">
+
+    <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#8A8A8F">Facet Pro</div>
+    <h1 style="font-size:24px;line-height:1.25;margin:12px 0 0;font-weight:600">Your design is saved</h1>
+    <p style="font-size:15px;line-height:1.6;color:#3f3f46;margin:14px 0 0">
+      Hello ${escapeHtml(lead.name)}, thank you for asking us to get you quotes.
+      Your reference is <strong>${escapeHtml(lead.id)}</strong>.
+    </p>
+
+    <div style="background:#fff;border-radius:12px;padding:18px 20px;margin:22px 0 0">
+      <p style="font-size:14px;line-height:1.6;color:#3f3f46;margin:0">
+        We don't currently have an installer${where}, so <strong>we haven't passed your
+        details to anyone</strong> and nothing has been shared.
+      </p>
+      <p style="font-size:14px;line-height:1.6;color:#3f3f46;margin:10px 0 0">
+        We'll let you know if that changes. Your design and your estimate are saved
+        either way, and you're welcome to take them to any installer you like.
+      </p>
+    </div>
+
+    ${withdrawLink ? `<p style="font-size:14px;line-height:1.6;color:#3f3f46;margin:22px 0 0">
+      You can <a href="${escapeHtml(withdrawLink)}" style="color:#0F1012"><strong>ask us to delete your details</strong></a>
+      at any time.
+    </p>` : ''}
+
+    <p style="font-size:12px;line-height:1.6;color:#6B6E78;margin:26px 0 0;border-top:1px solid #e4e4e7;padding-top:16px">
+      You're receiving this because you asked us for quotes at
+      <a href="${escapeHtml(base)}/" style="color:#6B6E78">${escapeHtml(base.replace(/^https?:\/\//, ''))}</a>.
+      It is not a marketing email and you will not be added to a list. Our
+      <a href="${escapeHtml(base)}/privacy" style="color:#6B6E78">privacy notice</a> explains what we do with your details.
+    </p>
+  </div>`;
+}
+
+function noInstallersText(lead, siteUrl, withdrawToken) {
+  const base = (safeUrl(siteUrl) || 'https://facetpro.co.uk').replace(/\/$/, '');
+  return [
+    'Your design is saved',
+    '',
+    `Hello ${lead.name}, thank you for asking us to get you quotes.`,
+    `Your reference is ${lead.id}.`,
+    '',
+    `We don't currently have an installer${lead.postcode ? ` covering ${lead.postcode}` : ' in your area'}, so we`,
+    "haven't passed your details to anyone and nothing has been shared.",
+    '',
+    "We'll let you know if that changes. Your design and your estimate are saved",
+    'either way, and you are welcome to take them to any installer you like.',
+    '',
+    `Ask us to delete your details at any time: ${withdrawToken ? `${base}/withdraw?t=${encodeURIComponent(withdrawToken)}` : `${base}/privacy`}`,
+    '',
+    `You asked us for quotes at ${base}/ — this is not a marketing email.`,
+  ].join('\n');
+}
+
+const noInstallersSubject = (lead) => `Your Facet Pro design — reference ${lead.id}`;
+
 module.exports = {
   leadNotificationHtml,
   designPackHtml,
@@ -298,6 +377,9 @@ module.exports = {
   sharingConfirmationHtml,
   sharingConfirmationText,
   sharingConfirmationSubject,
+  noInstallersHtml,
+  noInstallersText,
+  noInstallersSubject,
   escapeHtml,
   safeUrl,
 };

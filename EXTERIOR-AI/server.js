@@ -225,21 +225,32 @@ const withdrawLimiter = rateLimit({
   standardHeaders: true, legacyHeaders: false,
   message: { error: 'Too many requests — please wait a minute and try again.' }
 });
-/* Everything cheap and unauthenticated. Generous enough that no real visitor
-   will meet it — the page fires several of these per interaction — and low
-   enough that nobody can use us as an amplifier. These were the endpoints
-   nobody had thought about: they cost us nothing individually, which is
-   exactly why they were the ones left open.
+/* Everything cheap and unauthenticated.
 
-   /healthz is deliberately absent. A platform health check must never be
-   throttled; its disk probe is cached instead. */
-const publicLimiter = rateLimit({
-  windowMs: 60 * 1000, max: 120,
+   Separate instances, one per kind of traffic. express-rate-limit keys on IP
+   per limiter, not per path, so a single app.use over seven paths was one
+   shared budget of 120 — and a homeowner clicking through swatches would
+   spend it on /api/quote and then find their own render 429ing. Verified: 121
+   calls to /api/catalogue and both /api/quote and /r/:id were refused.
+
+   The budgets follow the traffic. Prices update on every swatch tap, so they
+   get the largest; the catalogue is fetched once a session. /r is images
+   rather than API calls — a page showing a render and an email client
+   fetching the same URL must never collide with swatch traffic.
+
+   /healthz is deliberately outside all of it: a platform health check must
+   never be throttled, and its disk probe is cached instead. */
+const perMinute = (max, message) => rateLimit({
+  windowMs: 60 * 1000, max,
   standardHeaders: true, legacyHeaders: false,
-  message: { error: 'Too many requests — please wait a moment.' },
+  message: { error: message },
 });
-app.use(['/api/config', '/api/catalogue', '/api/quote', '/api/whole-house',
-         '/api/glazing', '/api/measure', '/r'], publicLimiter);
+
+app.use(['/api/config', '/api/catalogue'], perMinute(60, 'Too many requests — please wait a moment.'));
+app.use(['/api/quote', '/api/whole-house'], perMinute(240, 'Too many price checks — please wait a moment.'));
+app.use('/api/glazing', perMinute(120, 'Too many requests — please wait a moment.'));
+app.use('/api/measure', perMinute(60, 'Too many requests — please wait a moment.'));
+app.use('/r', perMinute(300, 'Too many requests — please wait a moment.'));
 
 /* ── DAILY CAP ON PAID ENDPOINTS ──
    The per-IP rate limiters above don't bound the bill: enough distinct IPs can
@@ -465,6 +476,13 @@ async function sendEmail({ to, subject, html, text, replyTo }) {
 async function sendHomeownerEmail(lead, price, withdrawToken, recipients) {
   const wantsPack = lead.consent?.emailPack === true;
   const wantsQuotes = lead.consent?.installerQuotes === true;
+  /* Asked for quotes, and nobody covers them. The site says so before they
+     ask, but the box is still tickable — and the one email they must not get
+     is the one headed "we've sent your enquiry on". They used to get exactly
+     that: an empty installer list rendered nothing, so the template fell
+     through to "we're passing your details to installers who cover your
+     area", while the code already knew none did. */
+  const nobodyCovers = wantsQuotes && !(recipients || []).length;
   if (!wantsPack && !wantsQuotes) {
     return { attempted: false, sent: false, reason: 'homeowner asked for neither' };
   }
@@ -473,7 +491,7 @@ async function sendHomeownerEmail(lead, price, withdrawToken, recipients) {
   }
 
   const pack = wantsPack && DESIGN_PACK_ENABLED;
-  const kind = pack ? 'design pack' : 'sharing confirmation';
+  const kind = pack ? 'design pack' : (nobodyCovers ? 'no-installers notice' : 'sharing confirmation');
   if (!pack && !wantsQuotes) {
     // Wanted the pack, the pack is switched off, and nothing was shared —
     // there is nothing to confirm and no sharing to withdraw from.
@@ -484,13 +502,18 @@ async function sendHomeownerEmail(lead, price, withdrawToken, recipients) {
     const id = await sendEmail({
       to: lead.email,
       replyTo: LEAD_NOTIFY_EMAIL || undefined,
-      subject: pack ? emails.designPackSubject(lead) : emails.sharingConfirmationSubject(lead),
+      subject: pack ? emails.designPackSubject(lead)
+        : (nobodyCovers ? emails.noInstallersSubject(lead) : emails.sharingConfirmationSubject(lead)),
       html: pack
         ? emails.designPackHtml(lead, price, SITE_URL, withdrawToken, recipients)
-        : emails.sharingConfirmationHtml(lead, recipients, SITE_URL, withdrawToken),
+        : (nobodyCovers
+            ? emails.noInstallersHtml(lead, SITE_URL, withdrawToken)
+            : emails.sharingConfirmationHtml(lead, recipients, SITE_URL, withdrawToken)),
       text: pack
         ? emails.designPackText(lead, price, SITE_URL, withdrawToken, recipients)
-        : emails.sharingConfirmationText(lead, recipients, SITE_URL, withdrawToken),
+        : (nobodyCovers
+            ? emails.noInstallersText(lead, SITE_URL, withdrawToken)
+            : emails.sharingConfirmationText(lead, recipients, SITE_URL, withdrawToken)),
     });
     console.log(`Lead ${lead.id}: ${kind} sent to the homeowner.`);
     return { attempted: true, sent: true, id, kind };
@@ -986,10 +1009,7 @@ app.get('/api/catalogue', (req, res) => {
    person dragging it has a legitimate reason to be at either end — there is
    no honest client that sends 600,000 m², so answering with 600 would dress
    a tampered request up as a real one. */
-const MANUAL_AREA_MIN_M2 = 15;
-const MANUAL_AREA_MAX_M2 = 600;
-const TRIM_LENGTH_MIN_M = 4;
-const TRIM_LENGTH_MAX_M = 200;
+const { MANUAL_AREA_MIN_M2, MANUAL_AREA_MAX_M2, TRIM_LENGTH_MIN_M, TRIM_LENGTH_MAX_M } = require('./limits');
 
 function computePrice({ claddingId, trimId, roofId, footprintM2, trimLengthM }) {
   const cladding = catalogue.cladding.find(c => c.id === claddingId) || catalogue.cladding[0];
@@ -1547,9 +1567,19 @@ app.get('/api/resume/:code', resumeRedeemLimiter, async (req, res) => {
   if (!resume.isCode(req.params.code)) {
     return res.status(400).json({ error: 'That code doesn’t look right.', reason: 'bad_code' });
   }
-  let rows = [];
-  try { rows = await store.readAll('resumes'); } catch (_) { /* none yet */ }
-  const found = resume.find(rows, req.params.code);
+  /* Use the index where there is one. getResume returns undefined on the
+     JSONL backend, which has none, so that path still scans — but the
+     database does not need to read every live code to find one row. */
+  const wanted = resume.normaliseCode(req.params.code);
+  let found;
+  try { found = await store.getResume(wanted); } catch (_) { /* fall through */ }
+  if (found === undefined) {
+    let rows = [];
+    try { rows = await store.readAll('resumes'); } catch (_) { /* none yet */ }
+    found = resume.find(rows, wanted);
+  } else if (found && resume.isExpired(found)) {
+    found = null;
+  }
   if (!found) {
     // Expired and never-existed are the same answer: there is nothing to tell
     // apart, and nothing worth confirming to somebody guessing.
