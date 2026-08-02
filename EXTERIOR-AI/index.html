@@ -533,6 +533,9 @@ const state = {
   renderUnavailable: false,
   // Window/door and roofline preferences. Recorded for the installer; they
   // never move the price, because the quote uses one sourced trim rate.
+  glazing: null,            // the window and door estimate, once we have one
+  glazingLoading: false,
+  windowCount: null,        // the homeowner's own count, which beats ours
   prefs: { windowStyleId: null, doorStyleId: null, windowDoorColourId: null,
            fasciaId: null, soffitId: null, gutteringId: null, rooflineCladdingId: null },
   installerPassword: sessionStorage.getItem('fp_installer_pw') || '',
@@ -1092,6 +1095,42 @@ function renderDetailsOnly() {
   old.replaceWith(buildDetailOptions());
 }
 
+/* The window and door estimate.
+
+   Sends the detection id rather than any geometry — the server holds the boxes
+   and reads the aspect ratio from the image bytes, so a tampered request
+   cannot inflate every window at once. Nothing else on the page waits on this.
+
+   Silent on failure by design: a missing window figure is a smaller problem
+   than an error message next to somebody's house. */
+let glazingRequest = 0;
+async function refreshGlazing() {
+  if (!state.prefs.windowStyleId && !state.prefs.doorStyleId) { state.glazing = null; renderDetailsOnly(); return; }
+  const ticket = ++glazingRequest;
+  state.glazingLoading = true;
+  renderDetailsOnly();
+  try {
+    const res = await fetch('/api/glazing', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        detectionId: state.detectionId,
+        houseType: state.houseType,
+        windowStyleId: state.prefs.windowStyleId,
+        doorStyleId: state.prefs.doorStyleId,
+        windowDoorColourId: state.prefs.windowDoorColourId,
+        windowCount: state.windowCount,
+      }),
+    });
+    const data = await res.json();
+    if (ticket !== glazingRequest) return;        // a later choice already won
+    state.glazing = res.ok ? data : null;
+  } catch (_) {
+    if (ticket === glazingRequest) state.glazing = null;
+  } finally {
+    if (ticket === glazingRequest) { state.glazingLoading = false; renderDetailsOnly(); }
+  }
+}
+
 function buildDetailOptions() {
   const wd = state.catalogue?.windowsDoors;
   const fs = state.catalogue?.fsgc;
@@ -1100,6 +1139,8 @@ function buildDetailOptions() {
   const setPref = (key, id) => {
     state.prefs[key] = state.prefs[key] === id ? null : id;
     renderDetailsOnly();
+    // Only the three that change the glazing price; roofline is a preference.
+    if (['windowStyleId', 'doorStyleId', 'windowDoorColourId'].includes(key)) refreshGlazing();
   };
 
   // Style/profile card: name, what it is, and — where we have them — the
@@ -1151,6 +1192,62 @@ function buildDetailOptions() {
 
   const chosen = Object.values(state.prefs).filter(Boolean).length;
 
+  /* The window and door estimate.
+
+     A range, never a single figure, and it says which method produced it —
+     the same contract the wall measurement has with the homeowner. The count
+     corrector matters more than it looks: window count is discrete, so one
+     window missed on a five-window terrace is a 20% error that no amount of
+     geometric precision recovers. It is also the one number the person
+     standing in the house knows better than we ever will. */
+  function glazingPanel() {
+    if (state.glazingLoading && !state.glazing) {
+      return h('p', { className: 'mt-4 text-[12px] text-zinc-500' }, 'Working out a guide price…');
+    }
+    const g = state.glazing;
+    if (!g || !g.price) return null;
+
+    const counted = g.windowCount;
+    const setCount = (n) => {
+      state.windowCount = Math.max(1, Math.min(30, n));
+      refreshGlazing();
+    };
+
+    return h('div', { className: 'mt-5 rounded-xl bg-[#FDFCF9] border border-zinc-200 p-4' }, [
+      h('div', { className: 'flex items-baseline justify-between gap-3 flex-wrap' }, [
+        h('span', { className: 'text-[12px] text-zinc-600' }, 'Guide price, supplied and fitted'),
+        h('span', { className: 'serif text-[22px] tracking-tight' },
+          `${fmtMoney(g.range.low)} – ${fmtMoney(g.range.high)}`),
+      ]),
+      h('p', { className: 'mt-1 text-[11px] leading-5 text-zinc-500' },
+        `Based on ${counted} window${counted === 1 ? '' : 's'} — ${g.sourceLabel}. Includes VAT${g.price.access ? ', and scaffolding or ladder access for the upstairs windows' : ''}.`),
+
+      h('div', { className: 'mt-3 pt-3 border-t border-zinc-200 flex items-center gap-3 flex-wrap' }, [
+        h('span', { className: 'text-[12px] text-zinc-600' }, `We counted ${counted}. Not right?`),
+        h('div', { className: 'flex items-center gap-2' }, [
+          h('button', {
+            type: 'button', 'aria-label': 'One fewer window',
+            className: 'w-8 h-8 rounded-full border border-zinc-200 hover:border-zinc-900 transition',
+            onClick: () => setCount(counted - 1),
+          }, '−'),
+          h('span', { className: 'text-[13px] tabular-nums min-w-[2ch] text-center' }, String(counted)),
+          h('button', {
+            type: 'button', 'aria-label': 'One more window',
+            className: 'w-8 h-8 rounded-full border border-zinc-200 hover:border-zinc-900 transition',
+            onClick: () => setCount(counted + 1),
+          }, '+'),
+        ]),
+      ]),
+
+      /* The rates behind this are not sourced yet, and saying so is not
+         optional: an itemised, VAT-inclusive figure built from placeholder
+         rates, presented as though it were the sourced cladding pricing, is
+         exactly what the CPUTRs are about. This line goes when the rates do. */
+      g.ratesSourced ? null : h('p', { className: 'mt-3 text-[11px] leading-5 text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2' },
+        'Window and door prices are an early guide while we finish sourcing our supplier rates. Treat the range as a starting point — your installer’s survey is the real figure.'),
+    ]);
+  }
+
   return h('div', { id: 'detail-options', className: 'grid gap-8' }, [
     wd ? h('div', {}, [
       h('h3', { className: 'text-[15px] font-medium' }, 'Windows & doors'),
@@ -1160,12 +1257,13 @@ function buildDetailOptions() {
          pricing caveat is real and stays — it is why the estimate does not
          move when you choose here. */
       h('p', { className: 'mt-1 text-[12px] leading-5 text-zinc-600 max-w-[68ch]' },
-        'Pick a style and a colour and we’ll show them on your home. We can’t price windows and doors from a photograph — that depends on frame sizes and glazing spec — so your installer quotes these on survey.'),
+        'Pick a style and a colour and we’ll show them on your home and work out a guide price.'),
       h('div', { className: 'mt-4 grid gap-5' }, [
         group('Window style', wd.windowStyles, 'windowStyleId'),
         group('Door style', wd.doorStyles, 'doorStyleId'),
         colourRow(wd.colours, 'windowDoorColourId'),
       ]),
+      glazingPanel(),
     ]) : null,
 
     fs ? h('div', { className: wd ? 'pt-8 border-t border-zinc-200' : '' }, [
@@ -1939,6 +2037,9 @@ async function sendDesignPack() {
         email: state.contact.email,
         phone: state.contact.phone,
         postcode: state.contact.postcode || state.postcode,
+        // What the homeowner was actually shown for windows and doors, and
+        // their own corrected count if they gave us one.
+        windowCount: state.windowCount,
         claddingId: state.cladding.id,
         trimId: state.trim.id,
         roofId: state.roof.id,

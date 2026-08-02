@@ -11,6 +11,7 @@ const delivery = require('./delivery');
 const retention = require('./retention');
 const withdrawal = require('./withdrawal');
 const routing = require('./routing');
+const glazing = require('./glazing');
 
 const catalogue = JSON.parse(fs.readFileSync(path.join(__dirname, 'catalogue.json'), 'utf8'));
 
@@ -19,6 +20,30 @@ const catalogue = JSON.parse(fs.readFileSync(path.join(__dirname, 'catalogue.jso
    on last year's material prices looks entirely plausible and is silently
    wrong. Warn once at startup rather than let it drift unnoticed. */
 const CATALOGUE_STALE_AFTER_DAYS = 180;
+
+/* Are the window and door rates real yet?
+
+   Every other rate in catalogue.json came from the production backend and
+   says so in `source`. The glazing block arrived as plausible-looking
+   inventions so the pricing module had something to run against, and it says
+   so too. Producing a confident, itemised, VAT-inclusive figure from invented
+   rates is the exact CPUTRs exposure the pricing comments elsewhere worry
+   about — so the fact travels with the number, to the operator at startup and
+   to the homeowner in the panel.
+
+   Delete this the day a supplier rate card replaces them, along with the
+   "source" line that makes it true. */
+const GLAZING_RATES_SOURCED = !!(catalogue.glazing?.source
+  && !/not sourced|placeholder/i.test(catalogue.glazing.source));
+
+function checkGlazingRates() {
+  if (!catalogue.glazing) return;
+  if (GLAZING_RATES_SOURCED) {
+    console.log(`Window and door rates: sourced (${catalogue.glazing.source}).`);
+    return;
+  }
+  console.warn('Window and door rates are PLACEHOLDERS — catalogue.glazing.source says so. Every window estimate is labelled as a guide until a supplier rate card replaces them. Ask your installers for one.');
+}
 
 function checkCatalogueAge(now = new Date()) {
   const updated = Date.parse(catalogue.updated);
@@ -1260,6 +1285,40 @@ function pick(list, id, fields) {
   return Object.fromEntries(fields.filter(f => found[f] !== undefined).map(f => [f, found[f]]));
 }
 
+/* The glazing estimate for a lead. Recomputed server-side from our own
+   detection record, so a client cannot send an installer a price we never
+   quoted. Null when they chose nothing — most people will not. */
+function resolveGlazing(body) {
+  if (!catalogue.glazing) return null;
+  if (!body.windowStyleId && !body.doorStyleId) return null;
+  const record = body.detectionId ? detectionRecords.get(String(body.detectionId)) : null;
+  try {
+    const result = glazing.estimateGlazing({
+      detections: record?.detections || [],
+      // The record already holds the ratio — it does not hold `size`. Copying the
+      // integration note's snippet verbatim read undefined here, which is not
+      // an error, just a null: every estimate silently fell back to the
+      // house-type prior while looking like it had measured the photograph.
+      aspectRatio: record?.aspectRatio ?? null,
+      houseType: body.houseType,
+      selections: {
+        windowStyleId: body.windowStyleId,
+        doorStyleId: body.doorStyleId,
+        windowDoorColourId: body.windowDoorColourId,
+      },
+      rates: catalogue.glazing,
+      windowCountOverride: body.windowCount,
+    });
+    // The per-window geometry is ours to work with, not the installer's to
+    // read — they get the count, the bands and the money.
+    const { windows, ...summary } = result;
+    return { ...summary, ratesSourced: GLAZING_RATES_SOURCED };
+  } catch (err) {
+    console.error('Could not attach a glazing estimate to the lead:', err.message);
+    return null;
+  }
+}
+
 function resolvePreferences(body) {
   const wd = catalogue.windowsDoors;
   const fs_ = catalogue.fsgc;
@@ -1405,6 +1464,51 @@ app.get('/r/:id', async (req, res) => {
 
    Always a planning estimate — the response carries a range and a caveat, and
    the UI must present it as such. */
+/* ── POST /api/glazing ──
+   A guide price for replacing the windows and the front door.
+
+   Reads the boxes from our own detection record rather than the request, for
+   the same reason /api/measure does: the client can send an id, not a
+   geometry. Never returns nothing — worst case it falls back to the house-type
+   prior and says so, because a homeowner who has just uploaded a photograph of
+   their house should not be told the tool has no opinion about it.
+
+   The rates behind this are not sourced. See the warning at startup and the
+   caveat the client renders — every figure here is a guide until a supplier
+   rate card replaces catalogue.glazing. */
+app.post('/api/glazing', (req, res) => {
+  const { detectionId, houseType, windowStyleId, doorStyleId, windowDoorColourId, windowCount } = req.body || {};
+
+  /* No style chosen, no price. The module will happily price a default set,
+     which is the right behaviour for a module and the wrong one for an
+     endpoint: a figure attached to a choice nobody made is the same problem
+     as an email confirming a consent nobody gave. */
+  if (!windowStyleId && !doorStyleId) {
+    return res.status(400).json({ error: 'Choose a window or door style first.', reason: 'nothing_chosen' });
+  }
+
+  const record = detectionId ? detectionRecords.get(String(detectionId)) : null;
+
+  try {
+    const result = glazing.estimateGlazing({
+      detections: record?.detections || [],
+      // The record already holds the ratio — it does not hold `size`. Copying the
+      // integration note's snippet verbatim read undefined here, which is not
+      // an error, just a null: every estimate silently fell back to the
+      // house-type prior while looking like it had measured the photograph.
+      aspectRatio: record?.aspectRatio ?? null,
+      houseType,
+      selections: { windowStyleId, doorStyleId, windowDoorColourId },
+      rates: catalogue.glazing,
+      windowCountOverride: windowCount,
+    });
+    res.json({ ...result, ratesSourced: GLAZING_RATES_SOURCED });
+  } catch (err) {
+    console.error('Glazing estimate failed:', err.message);
+    res.status(500).json({ error: 'We couldn’t work out a window estimate for that photo.' });
+  }
+});
+
 app.post('/api/measure', (req, res) => {
   const { detectionId, houseType } = req.body || {};
   if (!detectionId) return res.status(400).json({ error: 'detectionId required.' });
@@ -1634,6 +1738,11 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
     // Present only if they showed interest in one — useful for the installer,
     // and priced from our catalogue rather than whatever the client sent.
     conservatory: resolveConservatory(conservatoryStyleId),
+    /* The window and door estimate, recomputed here rather than taken from
+       the request — the same rule as the wall area. It is what the homeowner
+       was shown, so the installer should see the same figure and know which
+       method produced it. */
+    glazing: resolveGlazing(req.body || {}),
     preferences: resolvePreferences(req.body || {}),
     detectionCount: Array.isArray(detections) ? detections.length : 0,
     /* Was whatever URL the browser sent. Now an id we issued, checked against
@@ -2150,6 +2259,7 @@ async function start() {
   setInterval(() => runRetention().catch(err => console.error('Retention run failed:', err.message)), RETENTION_INTERVAL_MS).unref();
   logMeasureTuning();
   checkEmailConfig();
+  checkGlazingRates();
   });
 }
 

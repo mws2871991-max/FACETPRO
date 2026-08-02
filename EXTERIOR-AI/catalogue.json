@@ -574,5 +574,72 @@
       }
     ],
     "internalNote": "ESTIMATED per-metre guide prices for style comparison only — these are NOT the same numbers as the real, sourced trim rates used in the quote engine above (fascia £35/m + £12/m labour, soffit £30/m + £12/m labour, guttering £40/m + £15/m labour, from quote_generator.py), and cladding here is priced per linear metre for illustration whereas the real cladding catalogue is priced per m² of wall area. Don't treat these as a real quote — use the visualizer above for that."
+  },
+  "glazing": {
+    "note": "Guide prices for supply and fitting, per window and per door, including access and VAT.",
+    "internalNote": "PLACEHOLDER RATES — unlike cladding/roof/labour above, these are NOT from the production backend. They are plausible UK mid-market uPVC figures put here so glazing.js has something to run against. Replace every number below with your own supplier and subcontractor rates before this is shown to a homeowner, and bump `version`.",
+    "source": "Not sourced. Placeholder pending supplier rate card.",
+    "windowBands": [
+      {
+        "id": "small",
+        "label": "Small",
+        "maxAreaM2": 0.75,
+        "supplyFit": 420,
+        "example": "600 x 900 — WC, landing, porch"
+      },
+      {
+        "id": "standard",
+        "label": "Standard",
+        "maxAreaM2": 1.6,
+        "supplyFit": 590,
+        "example": "1200 x 1200 — most bedroom and lounge windows"
+      },
+      {
+        "id": "large",
+        "label": "Large",
+        "maxAreaM2": 2.6,
+        "supplyFit": 860,
+        "example": "1800 x 1350 — front lounge, patio-side"
+      },
+      {
+        "id": "xlarge",
+        "label": "Extra large",
+        "maxAreaM2": null,
+        "supplyFit": 1180,
+        "example": "Picture windows and wide mullioned units"
+      }
+    ],
+    "styleMultipliers": {
+      "casement": 1,
+      "flush": 1.15,
+      "sliding-sash": 1.65,
+      "bay": 1
+    },
+    "bayUplift": 1.45,
+    "nonWhiteUplift": 1.08,
+    "doors": [
+      {
+        "id": "composite",
+        "name": "Composite Door",
+        "supplyFit": 1250
+      },
+      {
+        "id": "bifold",
+        "name": "Bifold",
+        "supplyFit": 2950
+      }
+    ],
+    "accessCost": 780,
+    "disposalPerUnit": 35,
+    "minJobCharge": 950,
+    "vatPct": 20,
+    "vatNote": "Replacement windows and doors in an existing dwelling are standard-rated. The energy-saving materials relief does not cover them.",
+    "frontToTotal": {
+      "terrace": 2.2,
+      "endTerrace": 2.6,
+      "semi": 2.6,
+      "detached": 3,
+      "bungalow": 2.4
+    }
   }
 }
