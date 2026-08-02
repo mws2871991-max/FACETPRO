@@ -1,0 +1,19 @@
+Reading this as a zip rather than as a repository?
+
+Then what you have is the contents of EXTERIOR-AI/, and the archive folder
+is named differently. Two things follow, both of which have already cost
+reviewers a finding:
+
+  render.yaml is NOT here, and should not be. It lives at the repository
+  root, because it declares `rootDir: EXTERIOR-AI` and Render only looks
+  for a blueprint at the root. A copy inside this folder was the actual
+  bug — it was there once, and it meant the blueprint would never have
+  been found. Its absence is the fixed state.
+
+  Paths in the code and the docs are relative to this folder, so what is
+  `server.js` here is `EXTERIOR-AI/server.js` in the repository. A path
+  that looks wrong against the archive root is usually right against the
+  repository root.
+
+Everything runs standalone: node_modules is included, so `npm test` and
+`npm start` work without installing anything.
