@@ -813,7 +813,11 @@ function buildUploadDetect() {
           h('button', {
             type: 'button',
             className: 'px-3 py-2 rounded-full border border-zinc-200 bg-white text-xs',
-            onClick: () => { state.uploadedImg = null; state.uploadedBase64 = null; state.detections = []; state.stage = 'landing'; state.detectionStatus = 'idle'; state.renderUrl = null; U('Photo removed — add another whenever you like'); render(); }
+            /* windowCount and glazing go too. Correcting the count to 18 on a
+               detached, starting again and uploading a terrace would otherwise
+               price 18 windows and label it "the number of windows you
+               entered" — true, and materially misleading. */
+            onClick: () => { state.uploadedImg = null; state.uploadedBase64 = null; state.detections = []; state.stage = 'landing'; state.detectionStatus = 'idle'; state.renderUrl = null; state.windowCount = null; state.glazing = null; U('Photo removed — add another whenever you like'); render(); }
           }, 'Start again'),
         ]),
       ]),
@@ -927,7 +931,7 @@ function buildVisualizer() {
   return h('section', { id: 'visualizer-section', className: 'rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24' }, [
     h('div', { className: 'flex items-center justify-between gap-3 flex-wrap' }, [
       h('div', {}, [
-        h('p', { className: 'text-[11px] tracking-widest uppercase text-zinc-400' }, 'Step 2'),
+        h('p', { className: 'text-[11px] tracking-widest uppercase text-zinc-400' }, 'Step 3'),
         h('h2', { className: 'mt-1 serif text-[26px] md:text-[32px] tracking-tight' }, 'Try colours and see what it costs'),
       ]),
       h('span', { className: 'text-[10px] px-2 py-1 rounded-full bg-zinc-900 text-white' }, 'Price updates as you choose'),
@@ -1000,7 +1004,10 @@ function buildHouseTypePicker({ short } = {}) {
         state.houseType = t.id;
         state.measurement = null;      // prior and multiplier both change
         state.useMeasurement = false;
-        await refreshPrice();
+        // Glazing too: frontToTotal and the window priors both key off house
+        // type, so changing it left a terrace's window count on screen next to
+        // a detached house's cladding total.
+        await Promise.all([refreshPrice(), refreshGlazing()]);
         renderVisualizerOnly();
         renderRefineOnly();
         U(`Estimate updated for a ${t.label.toLowerCase()}`);
@@ -1201,6 +1208,13 @@ function buildDetailOptions() {
      geometric precision recovers. It is also the one number the person
      standing in the house knows better than we ever will. */
   function glazingPanel() {
+    /* A style with no colour renders nothing: glazingChoice() sends the pair
+       or neither, because "casement, colour unspecified" is not something to
+       ask a model for. That was silent — the button simply did nothing. */
+    if (state.prefs.windowStyleId && !state.prefs.windowDoorColourId) {
+      return h('p', { className: 'mt-4 text-[12px] leading-5 text-zinc-600' },
+        'Pick a frame colour and we’ll show these on your house.');
+    }
     if (state.glazingLoading && !state.glazing) {
       return h('p', { className: 'mt-4 text-[12px] text-zinc-500' }, 'Working out a guide price…');
     }
@@ -1213,7 +1227,7 @@ function buildDetailOptions() {
       refreshGlazing();
     };
 
-    return h('div', { className: 'mt-5 rounded-xl bg-[#FDFCF9] border border-zinc-200 p-4' }, [
+    return h('div', { className: 'mt-5 rounded-xl bg-[#FDFCF9] border border-zinc-200 p-4', 'aria-live': 'polite' }, [
       h('div', { className: 'flex items-baseline justify-between gap-3 flex-wrap' }, [
         h('span', { className: 'text-[12px] text-zinc-600' }, 'Guide price, supplied and fitted'),
         h('span', { className: 'serif text-[22px] tracking-tight' },
@@ -1221,19 +1235,30 @@ function buildDetailOptions() {
       ]),
       h('p', { className: 'mt-1 text-[11px] leading-5 text-zinc-500' },
         `Based on ${counted} window${counted === 1 ? '' : 's'} — ${g.sourceLabel}. Includes VAT${g.price.access ? ', and scaffolding or ladder access for the upstairs windows' : ''}.`),
+      /* Two money figures on one page, and nothing said how they related.
+         Someone could reasonably read the range as the whole job. */
+      h('p', { className: 'mt-1 text-[11px] leading-5 text-zinc-500' },
+        'Separate from the cladding and roof estimate above — windows and doors are quoted and fitted independently.'),
+
+      state.uploadedBase64 ? h('button', {
+        type: 'button',
+        className: 'mt-3 w-full py-2.5 rounded-full bg-zinc-900 text-white text-xs font-medium disabled:bg-zinc-300',
+        disabled: state.rendering,
+        onClick: () => generateRealRender(),
+      }, state.rendering ? 'Creating your picture…' : 'Show these on my house →') : null,
 
       h('div', { className: 'mt-3 pt-3 border-t border-zinc-200 flex items-center gap-3 flex-wrap' }, [
         h('span', { className: 'text-[12px] text-zinc-600' }, `We counted ${counted}. Not right?`),
         h('div', { className: 'flex items-center gap-2' }, [
           h('button', {
             type: 'button', 'aria-label': 'One fewer window',
-            className: 'w-8 h-8 rounded-full border border-zinc-200 hover:border-zinc-900 transition',
+            className: 'w-11 h-11 rounded-full border border-zinc-200 hover:border-zinc-900 transition text-lg leading-none',
             onClick: () => setCount(counted - 1),
           }, '−'),
           h('span', { className: 'text-[13px] tabular-nums min-w-[2ch] text-center' }, String(counted)),
           h('button', {
             type: 'button', 'aria-label': 'One more window',
-            className: 'w-8 h-8 rounded-full border border-zinc-200 hover:border-zinc-900 transition',
+            className: 'w-11 h-11 rounded-full border border-zinc-200 hover:border-zinc-900 transition text-lg leading-none',
             onClick: () => setCount(counted + 1),
           }, '+'),
         ]),
@@ -1798,7 +1823,7 @@ function buildSaveFraming() {
      switch is that nothing personal is entered — let alone sent. */
   if (!state.leadCapture) {
     return h('section', { id: 'save-design', className: 'rounded-2xl bg-[#111111] text-white p-6 md:p-8 scroll-mt-24' }, [
-      h('p', { className: 'text-[11px] tracking-widest uppercase text-white/55' }, 'Step 3'),
+      h('p', { className: 'text-[11px] tracking-widest uppercase text-white/55' }, 'Step 4'),
       h('h2', { className: 'mt-1 serif text-[26px] md:text-[32px] tracking-tight' }, 'Saving your design is coming shortly'),
       h('p', { className: 'mt-3 text-sm leading-6 text-white/60 max-w-[60ch]' },
         'We’re not taking anyone’s details just yet — we’re finishing our privacy policy first, and we’d rather do that properly than collect your information before it’s ready.'),
@@ -1812,7 +1837,7 @@ function buildSaveFraming() {
   }
 
   return h('section', { id: 'save-design', className: 'rounded-2xl bg-[#111111] text-white p-6 md:p-8 scroll-mt-24' }, [
-    h('p', { className: 'text-[11px] tracking-widest uppercase text-white/55' }, 'Step 3'),
+    h('p', { className: 'text-[11px] tracking-widest uppercase text-white/55' }, 'Step 4'),
     h('h2', { className: 'mt-1 serif text-[26px] md:text-[32px] tracking-tight' }, 'Where should we send your design?'),
     h('p', { className: 'mt-3 text-sm leading-6 text-white/60 max-w-[60ch]' }, state.designPackEmail
       ? 'We’ll email you your before-and-after and your itemised estimate to keep, and pass them to installers who can quote the job properly. No obligation, and you can walk away at any point.'
@@ -1955,6 +1980,10 @@ async function handleUpload(file) {
   state.stage = 'detecting';
   state.detectionStatus = 'detecting';
   state.renderUrl = null;
+  /* A count corrected for the last photograph does not apply to this one, and
+     a stale range next to a new house is worse than no range at all. */
+  state.windowCount = null;
+  state.glazing = null;
   U('Looking at your home…');
   render();
 
@@ -1994,7 +2023,13 @@ async function handleUpload(file) {
     state.detectionStatus = 'error';
     U(err.plain ? err.message : `We couldn’t read that photo: ${err.message}`);
   }
-  await refreshPrice();
+  /* Both, together. The windows panel prices before a photo exists — from the
+     house-type prior — so without this the normal path was: pick a style, get
+     a prior range, upload a photo, watch the cladding re-size to the real
+     house while the glazing kept the prior figure and its "a typical figure
+     for your house type" label. It only upgraded if you happened to touch a
+     chip again. */
+  await Promise.all([refreshPrice(), refreshGlazing()]);
   render();
   document.getElementById('visualizer-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
