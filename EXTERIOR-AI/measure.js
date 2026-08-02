@@ -467,17 +467,37 @@ function estimateWallArea({ detections, aspectRatio, houseType, tuning } = {}) {
    from the uploaded image rather than accepted from the client — otherwise a
    tampered value would move the m², and with it the quote.
    Supports the formats /api/detect already accepts. */
+/* What the bytes actually are, rather than what the request says they are.
+
+   The declared MIME type used to be allowlisted and then forwarded straight to
+   Anthropic as media_type, with nothing ever looking at the bytes — so
+   arbitrary base64 could be pushed through the API key, and the daily cap
+   bounded the volume rather than the content.
+
+   Returns { mime, width, height }, or null if it is not one of the four
+   formats we accept. Same header parsing as imageSize, which now delegates
+   here so there is one definition of "is this an image". */
+function sniffImage(buffer) {
+  const size = readSize(buffer);
+  return size ? size : null;
+}
+
 function imageSize(buffer) {
+  const found = readSize(buffer);
+  return found ? { width: found.width, height: found.height } : null;
+}
+
+function readSize(buffer) {
   if (!Buffer.isBuffer(buffer) || buffer.length < 24) return null;
 
   // PNG: IHDR is always the first chunk.
   if (buffer.slice(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
-    return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
+    return { mime: 'image/png', width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
   }
 
   // GIF87a / GIF89a: little-endian dimensions in the logical screen descriptor.
   if (buffer.slice(0, 3).toString('ascii') === 'GIF') {
-    return { width: buffer.readUInt16LE(6), height: buffer.readUInt16LE(8) };
+    return { mime: 'image/gif', width: buffer.readUInt16LE(6), height: buffer.readUInt16LE(8) };
   }
 
   // WebP (VP8 / VP8L / VP8X).
@@ -485,16 +505,17 @@ function imageSize(buffer) {
     const fourCC = buffer.slice(12, 16).toString('ascii');
     if (fourCC === 'VP8X' && buffer.length >= 30) {
       return {
+        mime: 'image/webp',
         width: 1 + (buffer[24] | (buffer[25] << 8) | (buffer[26] << 16)),
         height: 1 + (buffer[27] | (buffer[28] << 8) | (buffer[29] << 16)),
       };
     }
     if (fourCC === 'VP8 ' && buffer.length >= 30) {
-      return { width: buffer.readUInt16LE(26) & 0x3fff, height: buffer.readUInt16LE(28) & 0x3fff };
+      return { mime: 'image/webp', width: buffer.readUInt16LE(26) & 0x3fff, height: buffer.readUInt16LE(28) & 0x3fff };
     }
     if (fourCC === 'VP8L' && buffer.length >= 25) {
       const bits = buffer.readUInt32LE(21);
-      return { width: (bits & 0x3fff) + 1, height: ((bits >> 14) & 0x3fff) + 1 };
+      return { mime: 'image/webp', width: (bits & 0x3fff) + 1, height: ((bits >> 14) & 0x3fff) + 1 };
     }
     return null;
   }
@@ -507,7 +528,7 @@ function imageSize(buffer) {
       const marker = buffer[offset + 1];
       // SOF0-SOF15, excluding DHT (c4), JPG (c8) and DAC (cc).
       if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
-        return { height: buffer.readUInt16BE(offset + 5), width: buffer.readUInt16BE(offset + 7) };
+        return { mime: 'image/jpeg', height: buffer.readUInt16BE(offset + 5), width: buffer.readUInt16BE(offset + 7) };
       }
       const length = buffer.readUInt16BE(offset + 2);
       if (length < 2) return null;
@@ -519,6 +540,7 @@ function imageSize(buffer) {
 }
 
 module.exports = {
+  sniffImage,
   estimateWallArea,
   imageSize,
   tuningFor,

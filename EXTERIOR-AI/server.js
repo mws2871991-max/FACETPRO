@@ -1021,13 +1021,70 @@ app.post('/api/quote', (req, res) => {
   });
 });
 
+/* ── IS THIS ACTUALLY AN IMAGE? ──
+
+   Both paid endpoints used to take the client's word for it. /api/detect
+   allowlisted the declared mimeType and then handed it to Anthropic as
+   media_type; /api/render did not even allowlist it, and interpolated it into
+   a data: URL for Replicate — or forwarded the client's own data: URL whole.
+   Nothing anywhere looked at the bytes, so arbitrary base64 could be pushed
+   through the API keys. The daily caps bound how much of that happens, not
+   what it is.
+
+   So the bytes are read, and what they say wins. A request whose declared type
+   disagrees with its own header is refused rather than quietly corrected: at
+   best it is a confused client, and there is no good reason to guess for it.
+
+   Returns { ok: true, mime, width, height, buffer } or { ok: false, status,
+   error } — never throws, because a malformed body is an ordinary request. */
+const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+function readImage(image, declaredMime, { requireDeclared = true } = {}) {
+  if (typeof image !== 'string' || image.length < 10) {
+    return { ok: false, status: 400, error: 'Invalid image data.' };
+  }
+  // A data: URL carries its own type; anything after the comma is the payload.
+  let payload = image;
+  let dataUrlMime = null;
+  const dataUrl = /^data:([a-z]+\/[a-z0-9.+-]+)?;base64,/i.exec(image);
+  if (dataUrl) {
+    dataUrlMime = dataUrl[1] ? dataUrl[1].toLowerCase() : null;
+    payload = image.slice(dataUrl[0].length);
+  } else if (image.startsWith('data:')) {
+    return { ok: false, status: 400, error: 'Unsupported image encoding.' };
+  }
+
+  const declared = String(declaredMime || dataUrlMime || '').toLowerCase().replace('image/jpg', 'image/jpeg');
+  if (requireDeclared && !declared) return { ok: false, status: 400, error: 'Missing image or mimeType.' };
+  if (declared && !ACCEPTED_IMAGE_TYPES.includes(declared)) {
+    return { ok: false, status: 400, error: 'Unsupported image type.' };
+  }
+
+  let buffer;
+  try {
+    buffer = Buffer.from(payload, 'base64');
+  } catch (_) {
+    return { ok: false, status: 400, error: 'Invalid image data.' };
+  }
+  if (!buffer.length) return { ok: false, status: 400, error: 'Invalid image data.' };
+
+  const found = measure.sniffImage(buffer);
+  if (!found) {
+    return { ok: false, status: 400, error: 'That doesn’t look like an image. Please upload a JPEG, PNG, GIF or WebP photo.' };
+  }
+  if (declared && found.mime !== declared) {
+    return { ok: false, status: 400, error: 'That file isn’t the type it says it is. Please upload the photo again.' };
+  }
+  return { ok: true, mime: found.mime, width: found.width, height: found.height, buffer, payload };
+}
+
 /* ── POST /api/detect ──
    Real AI detection via Claude vision. Requires ANTHROPIC_API_KEY. */
 app.post('/api/detect', detectLimiter, async (req, res) => {
   const { image, mimeType, sessionId } = req.body || {};
   if (!image || !mimeType) return res.status(400).json({ error: 'Missing image or mimeType.' });
-  const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-  if (!allowed.includes(mimeType)) return res.status(400).json({ error: 'Unsupported image type.' });
+  const img = readImage(image, mimeType);
+  if (!img.ok) return res.status(img.status).json({ error: img.error });
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set — see .env.example.' });
@@ -1046,7 +1103,7 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
         messages: [{
           role: 'user',
           content: [
-            { type: 'image', source: { type: 'base64', media_type: mimeType, data: image } },
+            { type: 'image', source: { type: 'base64', media_type: img.mime, data: img.payload } },
             { type: 'text', text: `Detect every exterior architectural element on this UK home. Return ONLY a JSON array, no markdown. Detect ALL of these element types if visible:
 
 - "window": any window
@@ -1093,11 +1150,11 @@ Finally add: {"type":"analysis","summary":"2-3 sentence overview of the property
   }
 
   const elementCount = detections.filter(d => d.type !== 'analysis').length;
-  await store.append('detections', { ts: new Date().toISOString(), sessionId: sessionId || null, elementCount, mimeType });
+  await store.append('detections', { ts: new Date().toISOString(), sessionId: sessionId || null, elementCount, mimeType: img.mime });
 
-  // Aspect ratio comes from the image itself, never from the client.
-  let size = null;
-  try { size = measure.imageSize(Buffer.from(image, 'base64')); } catch (_) { /* unreadable header — measuring falls back */ }
+  // Aspect ratio comes from the image itself, never from the client — and it
+  // was already read at the gate above, so there is nothing left to fail here.
+  const size = { width: img.width, height: img.height };
   const detectionId = saveDetectionRecord(detections, size);
 
   // canMeasure tells the UI whether to offer the step at all, so we don't
@@ -1309,6 +1366,10 @@ app.post('/api/render', renderLimiter, async (req, res) => {
   if (!image) return res.status(400).json({ error: 'image required' });
   if (typeof image !== 'string' || image.length < 10) return res.status(400).json({ error: 'Invalid image data.' });
   if (image.length > 20 * 1024 * 1024) return res.status(413).json({ error: 'Image too large (max 20MB).' });
+  /* The type is optional here because the client may send a data: URL that
+     carries its own — but whatever it claims, the bytes decide. */
+  const img = readImage(image, mimeType, { requireDeclared: false });
+  if (!img.ok) return res.status(img.status).json({ error: img.error });
 
   const replicateKey = process.env.REPLICATE_API_TOKEN;
   if (!replicateKey) return res.status(500).json({ error: 'REPLICATE_API_TOKEN not set — see .env.example.' });
@@ -1328,7 +1389,9 @@ app.post('/api/render', renderLimiter, async (req, res) => {
     `The result must be indistinguishable from a real installation photograph.`
   ].join(' ');
 
-  const inputImage = image.startsWith('data:') ? image : `data:${mimeType || 'image/jpeg'};base64,${image}`;
+  // Rebuilt from what the bytes are, so a client-supplied data: URL is never
+  // forwarded to Replicate verbatim.
+  const inputImage = `data:${img.mime};base64,${img.payload}`;
 
   try {
     const controller = new AbortController();
@@ -1535,10 +1598,12 @@ async function runRetention({ dryRun = false } = {}) {
   if (!dryRun) {
     const toDelete = new Set(p.delete.map(l => l.id));
     const toRedact = new Map(p.redact.map(l => [l.id, retention.redactLead(l)]));
-    const surviving = leads
+    /* Inside the lock, and applied to the rows as they are rather than to the
+       ones the plan was made from. A run takes a moment, and a lead saved in
+       that moment must not be deleted by a plan made before it existed. */
+    await store.mutate('leads', (rows) => rows
       .filter(l => !toDelete.has(l.id))
-      .map(l => toRedact.get(l.id) || l);
-    await store.replaceAll('leads', surviving);
+      .map(l => toRedact.get(l.id) || l));
 
     /* Renders belong to their lead. A deleted or redacted lead must not leave
        a photorealistic image of someone's home sitting in storage behind an
@@ -1552,7 +1617,7 @@ async function runRetention({ dryRun = false } = {}) {
     }
 
     if (p.accessLogExpired) {
-      await store.replaceAll('accessLog', accessLog.filter(r => !retention.isExpired(r, retention.PERIODS.accessLogDays)));
+      await store.mutate('accessLog', (rows) => rows.filter(r => !retention.isExpired(r, retention.PERIODS.accessLogDays)));
     }
     // The deletion itself is evidence that the policy is enforced.
     await record('retentionRuns', summary);
@@ -1758,8 +1823,7 @@ app.post('/api/withdraw', withdrawLimiter, async (req, res) => {
   const { token, scope } = req.body || {};
   if (!withdrawal.isScope(scope)) return res.status(400).json({ error: 'Unknown request.' });
 
-  const leads = await store.readAll('leads');
-  const lead = withdrawal.findByToken(leads, token);
+  const lead = withdrawal.findByToken(await store.readAll('leads'), token);
   if (!lead) return res.status(404).json({ error: 'This link has expired. Please email us and we will deal with it by hand.' });
 
   const at = new Date().toISOString();
@@ -1768,18 +1832,22 @@ app.post('/api/withdraw', withdrawLimiter, async (req, res) => {
   let received = [];
   try { received = withdrawal.recipientsWhoReceived(await store.readAll('deliveries'), lead.id); } catch (_) { /* none */ }
 
-  const updated = withdrawal.applyWithdrawal(lead, scope, { now: at, ipHash, redactLead: retention.redactLead });
-
   /* Written before anyone is notified. If the process dies between the two,
      the safe failure is a withdrawal we honoured but under-announced — not
      one we announced and then forgot.
 
-     Read-modify-write of the whole store, the same as a retention run: a lead
-     saved between the read above and this write would be lost. At a handful of
-     leads a day the window is negligible, and the alternative is a locking
-     scheme this doesn't yet need — but it is the reason to move to real UPDATE
-     statements before volume makes it likely rather than merely possible. */
-  await store.replaceAll('leads', leads.map(l => (l.id === lead.id ? updated : l)));
+     Through mutate, so the read and the write are inside one lock. The lead is
+     found again from the rows as they are now rather than reusing the one
+     matched above: between the two, another request may have saved a lead, or
+     a second withdrawal may have arrived for this one. */
+  let updated = null;
+  await store.mutate('leads', (rows) => {
+    const current = rows.find(l => l.id === lead.id);
+    if (!current || current.redacted) return undefined;      // already erased; nothing to do
+    updated = withdrawal.applyWithdrawal(current, scope, { now: at, ipHash, redactLead: retention.redactLead });
+    return rows.map(l => (l.id === lead.id ? updated : l));
+  });
+  if (!updated) return res.status(404).json({ error: 'This link has expired. Please email us and we will deal with it by hand.' });
 
   if (scope === 'all') {
     // The render is a photorealistic image of their home; "everything" means it.
@@ -1818,10 +1886,10 @@ async function purgeLeadPii(leadId) {
     return { ...rest, erased: true };
   };
   for (const table of ['deliveries', 'notificationFailures']) {
-    let rows;
-    try { rows = await store.readAll(table); } catch (_) { continue; }
-    if (!rows.some(r => r?.leadId === leadId)) continue;
-    await store.replaceAll(table, rows.map(scrub));
+    try {
+      await store.mutate(table, (rows) =>
+        rows.some(r => r?.leadId === leadId) ? rows.map(scrub) : undefined);
+    } catch (_) { /* table may not exist yet */ }
   }
 }
 

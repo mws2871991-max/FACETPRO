@@ -161,6 +161,10 @@ const SELECT_SQL = {
 };
 
 async function append(table, obj) {
+  return withWriteLock(() => appendNow(table, obj));
+}
+
+async function appendNow(table, obj) {
   if (pool) {
     await pool.query(INSERT_SQL[table], INSERT_PARAMS[table](obj));
   } else {
@@ -171,7 +175,53 @@ async function append(table, obj) {
 /* Rewrite a whole table. Only retention needs this — everything else appends.
    Kept deliberately narrow: a full replace is a destructive operation and
    should be hard to reach by accident. */
+/* ── ONE WRITER AT A TIME ──
+
+   replaceAll is read-all, write-temp, rename. Every caller that uses it does a
+   read-modify-write: read the leads, change one, write them all back. A lead
+   saved between the read and the rename is silently lost, and so is a second
+   withdrawal arriving at the same moment as the first.
+
+   That is not an ordinary integrity bug. Losing a consent record destroys the
+   evidence of the lawful basis for everything already done with that person's
+   details; losing a withdrawal means processing carries on after someone
+   asked us to stop.
+
+   The window only closes if the read and the write are inside the same lock,
+   which is why callers get mutate() rather than being trusted to hold one.
+   Serialised through a promise chain — cheap, and this is not a hot path.
+
+   In-process only. Two instances sharing a data directory would still race,
+   which is one more reason JSONL is for development and Postgres is what runs
+   live (see refuseToStartIfStorageContradictsTheNotice in server.js). */
+let writeQueue = Promise.resolve();
+
+function withWriteLock(fn) {
+  const result = writeQueue.then(fn, fn);
+  writeQueue = result.then(() => {}, () => {});   // a failure must not wedge the queue
+  return result;
+}
+
+/* Read, change, write — all inside the lock.
+
+   The transform receives the rows as they are at that moment, so it must find
+   what it is changing itself rather than relying on anything read earlier.
+   Returning undefined means "nothing to do", and nothing is written. */
+async function mutate(table, transform) {
+  return withWriteLock(async () => {
+    const rows = await readAll(table);
+    const next = await transform(rows);
+    if (next === undefined) return null;
+    await writeAll(table, next);
+    return next;
+  });
+}
+
 async function replaceAll(table, rows) {
+  return withWriteLock(() => writeAll(table, rows));
+}
+
+async function writeAll(table, rows) {
   if (pool) {
     const client = await pool.connect();
     try {
@@ -257,7 +307,7 @@ async function readAll(table) {
 }
 
 module.exports = {
-  ensureSchema, append, readAll, replaceAll, putRender, getRender, deleteRenders, hasDb: !!pool,
+  ensureSchema, append, readAll, replaceAll, mutate, putRender, getRender, deleteRenders, hasDb: !!pool,
   // Exported for tests: scraping these out of the source with a regex broke
   // the moment another table was added after leads.
   _internals: { INSERT_PARAMS, INSERT_SQL, SELECT_SQL, FILE_NAMES },

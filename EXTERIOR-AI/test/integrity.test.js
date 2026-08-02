@@ -1,0 +1,131 @@
+/* Two ways the store used to lose things, and one way the paid endpoints used
+   to take the client's word for what they were being sent.
+
+   Both matter beyond ordinary correctness. Losing a consent record destroys
+   the evidence of the lawful basis for everything already done with that
+   person's details. Losing a withdrawal means processing carries on after
+   somebody asked us to stop. And an unvalidated upload is arbitrary content
+   pushed through the Anthropic and Replicate keys — the daily caps bound how
+   much of that happens, not what it is. */
+
+'use strict';
+
+const { test } = require('node:test');
+const assert = require('node:assert');
+const fs = require('fs');
+const path = require('path');
+const store = require('../store');
+const measure = require('../measure');
+
+/* ── what the bytes actually are ── */
+
+const png = (w = 100, h = 50) => {
+  const b = Buffer.alloc(33);
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(b, 0);
+  b.writeUInt32BE(w, 16); b.writeUInt32BE(h, 20);
+  return b;
+};
+const gif = () => Buffer.concat([Buffer.from('GIF89a'), Buffer.from([200, 0, 100, 0]), Buffer.alloc(20)]);
+const jpeg = (w = 800, h = 600) => {
+  const b = Buffer.alloc(40, 0);
+  b[0] = 0xff; b[1] = 0xd8;                       // SOI
+  b[2] = 0xff; b[3] = 0xc0;                       // SOF0
+  b.writeUInt16BE(17, 4);                         // segment length
+  b.writeUInt16BE(h, 7); b.writeUInt16BE(w, 9);
+  return b;
+};
+
+test('a real image is recognised, with its format', () => {
+  assert.deepStrictEqual(measure.sniffImage(png()), { mime: 'image/png', width: 100, height: 50 });
+  assert.deepStrictEqual(measure.sniffImage(gif()), { mime: 'image/gif', width: 200, height: 100 });
+  assert.strictEqual(measure.sniffImage(jpeg()).mime, 'image/jpeg');
+});
+
+test('anything else is not', () => {
+  for (const bad of [
+    Buffer.from('<?php system($_GET["c"]); ?>'.repeat(4)),
+    Buffer.from('{"just":"some json, padded out to a plausible length"}'),
+    Buffer.alloc(64),                                  // zeroes
+    Buffer.from('%PDF-1.7\n%âãÏÓ\nnot an image at all'),
+    Buffer.alloc(4),                                   // too short to judge
+  ]) {
+    assert.strictEqual(measure.sniffImage(bad), null, bad.slice(0, 16).toString('latin1'));
+  }
+});
+
+test('imageSize still answers the question it always did', () => {
+  // It now delegates to the same header parsing, so the two cannot disagree
+  // about whether something is an image.
+  assert.deepStrictEqual(measure.imageSize(png(1200, 900)), { width: 1200, height: 900 });
+  assert.strictEqual(measure.imageSize(Buffer.from('not an image, not even a little bit')), null);
+});
+
+/* ── one writer at a time ── */
+
+const table = 'accessLog';                 // not leads: no test needs to fight over those
+const reset = async () => { await store.replaceAll(table, []); };
+
+test('a write landing mid-mutation is not lost', async () => {
+  /* The bug: mutate used to be readAll() in the caller, then replaceAll() —
+     so anything appended in between was overwritten by rows read before it
+     existed. Here the append is fired while the transform is still running. */
+  await reset();
+  await store.append(table, { ts: 'A', endpoint: '/first' });
+
+  const slowMutate = store.mutate(table, async (rows) => {
+    await new Promise(r => setTimeout(r, 40));            // the window
+    return [...rows, { ts: 'B', endpoint: '/from-mutate' }];
+  });
+  const concurrentAppend = store.append(table, { ts: 'C', endpoint: '/concurrent' });
+  await Promise.all([slowMutate, concurrentAppend]);
+
+  const rows = await store.readAll(table);
+  const seen = rows.map(r => r.endpoint).sort();
+  assert.deepStrictEqual(seen, ['/concurrent', '/first', '/from-mutate'],
+    'the concurrent write was swallowed by the mutation');
+});
+
+test('two mutations of the same table both take effect', async () => {
+  // Two withdrawals arriving together: one used to be lost.
+  await reset();
+  await store.append(table, { ts: 'A', endpoint: '/base' });
+  await Promise.all([
+    store.mutate(table, async (rows) => { await new Promise(r => setTimeout(r, 30)); return [...rows, { ts: 'X', endpoint: '/one' }]; }),
+    store.mutate(table, async (rows) => [...rows, { ts: 'Y', endpoint: '/two' }]),
+  ]);
+  const seen = (await store.readAll(table)).map(r => r.endpoint).sort();
+  assert.deepStrictEqual(seen, ['/base', '/one', '/two']);
+});
+
+test('the transform sees the rows as they are, not as they were', async () => {
+  await reset();
+  await store.append(table, { ts: 'A', endpoint: '/a' });
+  await store.mutate(table, (rows) => [...rows, { ts: 'B', endpoint: '/b' }]);
+  await store.mutate(table, (rows) => {
+    assert.strictEqual(rows.length, 2, 'the second mutation must see the first');
+    return rows;
+  });
+});
+
+test('returning undefined writes nothing', async () => {
+  await reset();
+  await store.append(table, { ts: 'A', endpoint: '/kept' });
+  const result = await store.mutate(table, () => undefined);
+  assert.strictEqual(result, null);
+  assert.strictEqual((await store.readAll(table)).length, 1, 'nothing should have been rewritten');
+});
+
+test('a failed mutation does not wedge the queue behind it', async () => {
+  await reset();
+  await assert.rejects(store.mutate(table, () => { throw new Error('boom'); }), /boom/);
+  await store.append(table, { ts: 'A', endpoint: '/after' });
+  assert.strictEqual((await store.readAll(table)).length, 1, 'writes must still work afterwards');
+});
+
+test('a failed mutation leaves the store as it was', async () => {
+  await reset();
+  await store.append(table, { ts: 'A', endpoint: '/original' });
+  await assert.rejects(store.mutate(table, () => { throw new Error('boom'); }));
+  const rows = await store.readAll(table);
+  assert.deepStrictEqual(rows.map(r => r.endpoint), ['/original'], 'a half-applied change is worse than none');
+});
