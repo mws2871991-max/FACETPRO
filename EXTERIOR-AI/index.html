@@ -181,11 +181,10 @@
     </a>
     <nav class="flex items-center gap-2" aria-label="Primary">
       <a href="#windows-doors" class="hidden sm:block text-xs px-3 py-2 rounded-full hover:bg-white transition">Windows &amp; doors</a>
-      <a href="#whole-house" class="hidden md:block text-xs px-3 py-2 rounded-full hover:bg-white transition">Finishes</a>
+      <a href="#roofline" class="hidden lg:block text-xs px-3 py-2 rounded-full hover:bg-white transition">Fascias, soffits &amp; cladding</a>
       <a href="#conservatory" class="hidden lg:block text-xs px-3 py-2 rounded-full hover:bg-white transition">Conservatories</a>
-      <a href="#our-work" class="hidden sm:block text-xs px-3 py-2 rounded-full hover:bg-white transition">Our work</a>
-      <a href="#how-it-works" class="hidden sm:block text-xs px-3 py-2 rounded-full hover:bg-white transition">How it works</a>
-      <a href="#faq" class="hidden sm:block text-xs px-3 py-2 rounded-full hover:bg-white transition">Questions</a>
+      <a href="#roofs" class="hidden md:block text-xs px-3 py-2 rounded-full hover:bg-white transition">Roofs</a>
+      <a href="#rendering" class="hidden md:block text-xs px-3 py-2 rounded-full hover:bg-white transition">Rendering</a>
       <a href="#your-photo" class="text-xs px-4 py-2 rounded-full bg-zinc-900 text-white hover:bg-zinc-800 transition">Start with a photo</a>
     </nav>
   </div>
@@ -428,6 +427,11 @@
       </div>
       <nav class="flex flex-wrap gap-x-5 gap-y-2 text-[12px] text-zinc-600" aria-label="Footer">
         <a href="#windows-doors" class="hover:text-zinc-900">Windows &amp; doors</a>
+        <a href="#roofline" class="hover:text-zinc-900">Fascias, soffits &amp; cladding</a>
+        <a href="#conservatory" class="hover:text-zinc-900">Conservatories</a>
+        <a href="#roofs" class="hover:text-zinc-900">Roofs</a>
+        <a href="#rendering" class="hover:text-zinc-900">Rendering</a>
+        <a href="#our-work" class="hover:text-zinc-900">Our work</a>
         <a href="#how-it-works" class="hover:text-zinc-900">How it works</a>
         <a href="#faq" class="hover:text-zinc-900">Questions</a>
         <a href="#your-photo" class="hover:text-zinc-900">Start your design</a>
@@ -890,8 +894,13 @@ function buildVisualizer() {
   slider.addEventListener('input', (e) => { state.afterPct = parseInt(e.target.value); renderVisualizerOnly(); });
 
   const groupLabels = { Cladding: 'Walls & cladding', Trim: 'Fascia, soffit & guttering', Roof: 'Roof' };
+  /* Roofs and rendering are product lines in the header, so they need
+     somewhere to land. They are choosers inside the visualiser rather than
+     sections of their own — worth splitting out properly if they are going to
+     carry their own nav entry for long. */
+  const groupAnchors = { Cladding: 'rendering', Roof: 'roofs' };
   const groupsRow = ['Cladding', 'Trim', 'Roof'].map(group =>
-    h('div', {}, [
+    h('div', { id: groupAnchors[group] || null, className: groupAnchors[group] ? 'scroll-mt-24' : '' }, [
       h('h3', { className: 'text-[10px] tracking-widest uppercase text-zinc-500' }, groupLabels[group]),
       h('div', { className: 'mt-2 flex flex-wrap gap-2' }, SWATCHES.filter(s => s.group === group).map(sw => {
         const active = (group === 'Cladding' && state.cladding.id === sw.id) ||
@@ -1291,8 +1300,8 @@ function buildDetailOptions() {
       glazingPanel(),
     ]) : null,
 
-    fs ? h('div', { className: wd ? 'pt-8 border-t border-zinc-200' : '' }, [
-      h('h3', { className: 'text-[15px] font-medium' }, 'Roofline & cladding profiles'),
+    fs ? h('div', { id: 'roofline', className: `scroll-mt-24 ${wd ? 'pt-8 border-t border-zinc-200' : ''}` }, [
+      h('h3', { className: 'text-[15px] font-medium' }, 'Fascias, soffits & cladding'),
       h('p', { className: 'mt-1 text-[12px] leading-5 text-zinc-600 max-w-[68ch]' },
         'Your estimate already includes fascia, soffit and guttering at our standard specification. These are the profiles you can choose between — the per-metre figures are a guide for comparing them, not the sourced rates behind your quote.'),
       h('div', { className: 'mt-4 grid gap-5' }, [
