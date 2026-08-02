@@ -45,7 +45,7 @@ function leadNotificationHtml(lead, price) {
     <table style="width:100%;border-collapse:collapse;font-size:14px">
       ${row('Reference', escapeHtml(lead.id))}
       ${row('Name', `<strong>${escapeHtml(lead.name)}</strong>`)}
-      ${row('Email', `<a href="mailto:${encodeURIComponent(lead.email)}">${escapeHtml(lead.email)}</a>`)}
+      ${row('Email', `<a href="mailto:${encodeURI(String(lead.email || ''))}">${escapeHtml(lead.email)}</a>`)}
       ${row('Phone', escapeHtml(lead.phone) || '—')}
       ${row('Postcode', escapeHtml(lead.postcode) || '—')}
       ${row('Selections', escapeHtml(`${price.selections.cladding} / ${price.selections.trim} / ${price.selections.roof}`))}
@@ -83,6 +83,12 @@ function designPackHtml(lead, price, siteUrl, withdrawToken, recipients) {
   const render = lead.renderUrl && lead.renderUrl.startsWith('/')
     ? base + lead.renderUrl
     : safeUrl(lead.renderUrl);
+  /* Read from the consent record on the lead, not from whether anyone happens
+     to have been named. The "what happens next" paragraph below used to be
+     unconditional, so somebody who deliberately left the sharing box unticked
+     received written confirmation that they had ticked it — contradicting our
+     own stored consent record in the one artefact they keep. */
+  const shared = lead.consent?.installerQuotes === true;
 
   return `<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:560px;margin:0 auto;color:#0F1012;background:#FBF8F3;padding:28px 24px">
 
@@ -128,11 +134,11 @@ function designPackHtml(lead, price, siteUrl, withdrawToken, recipients) {
     </div>
 
     <h2 style="font-size:15px;margin:26px 0 8px;font-weight:600">What happens next</h2>
-    ${installerList(recipients)}
-    <p style="font-size:14px;line-height:1.6;color:#3f3f46;margin:${(recipients || []).length ? '10px 0 0' : '0'}">
-      ${(recipients || []).length
+    ${shared ? installerList(recipients) : ''}
+    <p style="font-size:14px;line-height:1.6;color:#3f3f46;margin:${shared && (recipients || []).length ? '10px 0 0' : '0'}">
+      ${shared
         ? 'They may contact you by email or telephone to talk it through and arrange a survey. There is no obligation to go ahead at any point.'
-        : 'You agreed we could pass your design to installers, so one may contact you to talk it through and arrange a survey. There\'s no obligation to go ahead at any point.'}
+        : 'We haven\'t passed your details to anyone. If you would like quotes from installers, reply to this email and we will arrange it — and if you would rather we didn\'t, you need do nothing.'}
     </p>
 
     <p style="font-size:12px;line-height:1.6;color:#6B6E78;margin:26px 0 0;border-top:1px solid #e4e4e7;padding-top:16px">
@@ -175,13 +181,15 @@ function designPackText(lead, price, siteUrl, withdrawToken, recipients) {
     `survey your home.`,
     ``,
     `WHAT HAPPENS NEXT`,
-    ...((recipients || []).filter(r => r && r.name).length
-      ? ['We have passed your details and your design to:',
-         ...recipients.filter(r => r && r.name).map(r => `  ${r.name}`),
+    ...(lead.consent?.installerQuotes === true
+      ? [...((recipients || []).filter(r => r && r.name).length
+            ? ['We have passed your details and your design to:',
+               ...recipients.filter(r => r && r.name).map(r => `  ${r.name}`)]
+            : ['We are passing your details and your design to installers who cover your area.']),
          'They may contact you by email or telephone to talk it through and arrange a',
          'survey. There is no obligation to go ahead at any point.']
-      : ['You agreed we could pass your design to installers, so one may contact you to',
-         "talk it through and arrange a survey. There's no obligation to go ahead."]),
+      : ["We haven't passed your details to anyone. If you would like quotes from",
+         'installers, reply to this email and we will arrange it.']),
     ``,
     `You're receiving this because you saved a design at ${base}/`,
     `Change your mind or ask us to delete your details: ${withdrawLink}`,

@@ -36,6 +36,9 @@ function checkCatalogueAge(now = new Date()) {
 }
 
 const app = express();
+// "X-Powered-By: Express" on every response tells an attacker what to target
+// and tells nobody else anything.
+app.disable('x-powered-by');
 app.set('trust proxy', 1);
 
 // No CORS headers: the front end is served from this same origin, so it never
@@ -53,7 +56,17 @@ app.use(express.json({ limit: '20mb' }));
    /legal. Anything else 404s. */
 const PUBLIC_FILES = new Set([
   '/index.html',
-  '/guided-demo.html',
+  /* guided-demo.html is deliberately not here. It is an unmaintained fork of
+     the product UI: it asks for a real email address and posts it to
+     /api/lead with no consent object at all, derives a name by splitting the
+     email on "@", and links to neither the privacy notice nor the terms.
+     Nothing links to it, and it carries a canonical tag, so the only visitors
+     it would ever have had were search engines.
+
+     The consent gate on /api/lead means no lead was ever created from it —
+     but the address still reached us, from a page that told the visitor
+     nothing about what we do with it. Kept in the repo for the walkthrough
+     copy; not served. */
   '/robots.txt',
   '/sitemap.xml',
 ]);
@@ -893,13 +906,40 @@ app.get('/api/catalogue', (req, res) => {
 /* ── helper: compute price server-side from catalogue + selections ──
    Never trust a client-submitted price — always recompute here so a
    tampered request can't create a lead with a fake quote. */
+/* What a house can plausibly be.
+
+   computePrice was written never to trust a client-sent price — and then took
+   the client's word for the area, which is the multiplier that produces the
+   price. There was no bound at all: a request could ask for 100,000,000 m²
+   and be answered with a £231bn estimate, stored, marked exact, emailed to
+   the homeowner as their quote and POSTed to three installers who pay for it.
+
+   The absurd number is not the danger. A plausible one is: a real house
+   quoted at 40 m² instead of 95 produces a materially misleading price
+   presented as a precise figure, which is what the CPUTRs exist for.
+
+   Out-of-band values fall back to the measurement rather than being clamped
+   to the boundary. Unlike the whole-house slider — which clamps, because a
+   person dragging it has a legitimate reason to be at either end — there is
+   no honest client that sends 600,000 m², so answering with 600 would dress
+   a tampered request up as a real one. */
+const MANUAL_AREA_MIN_M2 = 15;
+const MANUAL_AREA_MAX_M2 = 600;
+const TRIM_LENGTH_MIN_M = 4;
+const TRIM_LENGTH_MAX_M = 200;
+
 function computePrice({ claddingId, trimId, roofId, footprintM2, trimLengthM }) {
   const cladding = catalogue.cladding.find(c => c.id === claddingId) || catalogue.cladding[0];
   const trim = catalogue.trim.find(t => t.id === trimId) || catalogue.trim[0];
   const roof = catalogue.roof.find(r => r.id === roofId) || catalogue.roof[0];
-  const claddingArea = footprintM2 && footprintM2 > 0 ? footprintM2 : catalogue.defaultFootprintM2;
+  const area = Number(footprintM2);
+  const claddingArea = Number.isFinite(area) && area >= MANUAL_AREA_MIN_M2 && area <= MANUAL_AREA_MAX_M2
+    ? area : catalogue.defaultFootprintM2;
   const roofArea = claddingArea * 0.55; // roof area is typically smaller than wall footprint
-  const trimLength = trimLengthM && trimLengthM > 0 ? trimLengthM : catalogue.defaultTrimLengthM;
+  // Same reasoning as the wall area: the perimeter of a house is bounded too.
+  const trimAsked = Number(trimLengthM);
+  const trimLength = Number.isFinite(trimAsked) && trimAsked >= TRIM_LENGTH_MIN_M && trimAsked <= TRIM_LENGTH_MAX_M
+    ? trimAsked : catalogue.defaultTrimLengthM;
 
   // Real methodology from quote_generator.py: materials + labour (real per-m²/per-m rates)
   // + fixed scaffolding + waste allowance, then VAT on top.
@@ -952,8 +992,11 @@ function computePrice({ claddingId, trimId, roofId, footprintM2, trimLengthM }) 
    at rather than presenting an estimate as if it were measured. */
 function resolveFootprint({ footprintM2, detectionId, houseType }) {
   const manual = Number(footprintM2);
-  if (Number.isFinite(manual) && manual > 0) {
+  if (Number.isFinite(manual) && manual >= MANUAL_AREA_MIN_M2 && manual <= MANUAL_AREA_MAX_M2) {
     return { m2: manual, source: 'manual_entry', measurement: null, exact: true };
+  }
+  if (Number.isFinite(manual) && manual > 0) {
+    console.warn(`Ignoring an implausible wall area of ${manual} m² — outside ${MANUAL_AREA_MIN_M2}–${MANUAL_AREA_MAX_M2}. Falling back to the measurement.`);
   }
   const record = detectionId ? detectionRecords.get(String(detectionId)) : null;
   if (record && record.measurement) {
@@ -1020,6 +1063,37 @@ app.post('/api/quote', (req, res) => {
     range: footprint.exact ? null : priceRange({ claddingId, trimId, roofId, trimLengthM }, footprint.m2),
   });
 });
+
+/* ── LEAD REFERENCES ──
+
+   This used to be `LD-${Math.floor(2000 + Math.random() * 9000)}`: nine
+   thousand possible values, drawn without checking, from a generator that was
+   never meant to be unique. By the birthday paradox that is a coin flip at
+   112 leads and a certainty by five hundred.
+
+   It would not have been a cosmetic clash. lead.id is the join key for every
+   cross-record operation here — withdrawal writes, retention, the erasure
+   purge, the Article 19 notice, the billing reconciliation — and none of them
+   tolerate a duplicate. Two homeowners sharing a reference means one of them
+   clicking "delete everything" overwrites the other's record, consent
+   evidence and withdrawal token included, silently.
+
+   Sixty bits of CSPRNG entropy in Crockford's base32, which drops I, L, O and
+   U so nothing is misread over the phone. Twelve characters, unambiguous, and
+   unguessable — the four-digit version was also trivially enumerable. */
+const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+
+function newLeadId() {
+  const bytes = crypto.randomBytes(8);
+  let bits = 0n;
+  for (const byte of bytes) bits = (bits << 8n) | BigInt(byte);
+  let out = '';
+  for (let i = 0; i < 12; i++) {
+    out = CROCKFORD[Number(bits & 31n)] + out;
+    bits >>= 5n;
+  }
+  return 'LD-' + out;
+}
 
 /* ── IS THIS ACTUALLY AN IMAGE? ──
 
@@ -1451,9 +1525,26 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
     });
   }
 
-  const { name, email, phone, postcode, claddingId, trimId, roofId, footprintM2, trimLengthM, measurementSource, detections, renderId, notes, consent, detectionId, conservatoryStyleId } = req.body || {};
+  const { claddingId, trimId, roofId, footprintM2, trimLengthM, measurementSource, detections, renderId, notes, consent, detectionId, conservatoryStyleId } = req.body || {};
+
+  /* Trimmed and capped at the boundary, once, before any of it is stored,
+     interpolated into an email or POSTed to an installer.
+
+     notes and the consent wording were already capped; these four were not,
+     and a 500,000-character name is accepted by Postgres TEXT, breaks the
+     lead notification at most email providers, and is re-read and re-parsed
+     on every retention run and every withdrawal. Generous versions of real
+     limits: E.164 is 15 digits plus formatting, a UK postcode is at most 8
+     characters, and RFC 5321 caps an address at 254. */
+  const cap = (value, max) => String(value ?? '').trim().slice(0, max);
+  const name = cap(req.body?.name, 100);
+  const email = cap(req.body?.email, 254);
+  const phone = cap(req.body?.phone, 32);
+  const postcode = cap(req.body?.postcode, 12).toUpperCase();
+
   if (!name || !email) return res.status(400).json({ error: 'name and email are required.' });
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Invalid email address.' });
+  // {2,} on the last label: the old pattern accepted a@b.c.
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return res.status(400).json({ error: 'Invalid email address.' });
   /* Only agreement to the Terms is required. Passing details to installers is
      a separate, optional consent — making it a condition of saving at all made
      it a condition of the service, which is the Article 7(4) problem: consent
@@ -1499,7 +1590,7 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
 
   const lead = {
     ts: new Date().toISOString(),
-    id: `LD-${Math.floor(2000 + Math.random() * 9000)}`,
+    id: newLeadId(),
     name, email, phone: phone || '', postcode: postcode || '',
     selections: price.selections,
     price: price.total,
@@ -1670,6 +1761,7 @@ function logAccess(endpoint) {
    Same password gate as the leads list. Recipient URLs are never included —
    they can carry auth tokens, and nobody reading this needs them. */
 app.get('/api/deliveries', installerLimiter, requireInstallerPassword, logAccess('/api/deliveries'), async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   let rows = [];
   try { rows = await store.readAll('deliveries'); } catch (_) { /* nothing delivered yet */ }
 
@@ -1699,6 +1791,8 @@ app.get('/api/deliveries', installerLimiter, requireInstallerPassword, logAccess
    Leads captured so far, newest first. Password-protected — see
    requireInstallerPassword above. */
 app.get('/api/leads', installerLimiter, requireInstallerPassword, logAccess('/api/leads'), async (req, res) => {
+  // Homeowners' contact details: not for any cache between us and the browser.
+  res.setHeader('Cache-Control', 'no-store');
   /* Only leads whose owner asked for installer contact.
 
      The delivery path was gated on this consent from the start; the portal
@@ -1911,6 +2005,64 @@ async function purgeLeadPii(leadId) {
 app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, 'legal', 'privacy.html')));
 app.get('/terms', (req, res) => res.sendFile(path.join(__dirname, 'legal', 'terms.html')));
 
+/* ── NOT FOUND, AND THINGS GOING WRONG ──
+   Registered last, after every route, because Express matches in order.
+
+   There was no error handler at all, so Express's default took over: an HTML
+   page containing the stack trace, the absolute path of the deployment
+   directory and the exact version of whatever dependency threw. Two separate
+   problems in one page.
+
+   The disclosure is the obvious half. The other half is that this is a JSON
+   API whose own front end calls res.json() unconditionally — so a homeowner
+   whose phone photo exceeded the body limit saw "Unexpected token '<'"
+   rather than "that photo is too large". That was a live bug on any modern
+   phone camera.
+
+   Errors the client caused are named plainly. Anything else gets a reference
+   they can quote and we can grep for, and nothing else. */
+app.use((req, res) => {
+  if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Not found.' });
+  res.status(404).type('html').send(
+    '<!doctype html><meta charset="utf-8"><title>Not found — Facet Pro</title>' +
+    '<body style="font:16px/1.6 -apple-system,sans-serif;background:#FBF8F3;color:#0F1012;padding:40px">' +
+    '<p>We couldn\'t find that page. <a href="/" style="color:#0F1012">Back to Facet Pro</a>.</p>');
+});
+
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+
+  if (err?.type === 'entity.too.large') {
+    return res.status(413).json({ error: 'That photo is too large — please use one under 15MB.' });
+  }
+  if (err?.type === 'entity.parse.failed' || err instanceof SyntaxError) {
+    return res.status(400).json({ error: 'Malformed request.' });
+  }
+
+  const ref = crypto.randomBytes(6).toString('hex');
+  console.error(`[${ref}] ${req.method} ${req.path} failed:`, err?.stack || err?.message || err);
+  res.status(500).json({ error: 'Something went wrong on our side.', ref });
+});
+
+/* ── STAYING UP, AND GOING DOWN CLEANLY ──
+
+   None of this existed. A rejected promise nobody awaited, or a throw outside
+   a request, killed the process with no log line — the platform restarts it
+   and the cause is invisible. Delivery to installer webhooks is fired without
+   await by design, so unhandled rejections were a matter of when.
+
+   A crash is not always the wrong answer, but an undiagnosable one is. */
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled promise rejection:', reason instanceof Error ? reason.stack : reason);
+});
+
+process.on('uncaughtException', (err) => {
+  /* Genuinely unexpected: the process may be in an unknown state, so log
+     properly and let the platform restart us rather than limping on. */
+  console.error('Uncaught exception — exiting:', err.stack || err.message);
+  process.exit(1);
+});
+
 const PORT = process.env.PORT || 3000;
 /* ensureSchema was exported but never called — with DATABASE_URL set, every
    insert would have hit a table that was never created. Awaited before the
@@ -1974,3 +2126,9 @@ start().catch(err => {
   console.error('Failed to start:', err.message);
   process.exit(1);
 });
+
+/* Exposed for tests only. newLeadId is worth exercising directly: the property
+   that matters is that fifty thousand of them are fifty thousand distinct
+   values, and there is no way to observe that through an endpoint that allows
+   five submissions a minute. */
+module.exports = { _internals: { newLeadId, readImage } };

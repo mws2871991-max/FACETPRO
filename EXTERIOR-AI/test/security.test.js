@@ -146,7 +146,7 @@ test('path traversal cannot escape the allowlist', async () => {
 });
 
 test('the genuinely public files are still served', async () => {
-  for (const p of ['/', '/index.html', '/guided-demo.html', '/robots.txt', '/sitemap.xml', '/privacy', '/terms', '/legal/privacy.html']) {
+  for (const p of ['/', '/index.html', '/robots.txt', '/sitemap.xml', '/privacy', '/terms', '/legal/privacy.html']) {
     const { status } = await get(p);
     assert.strictEqual(status, 200, `${p} should be served, got ${status}`);
   }
@@ -335,4 +335,13 @@ test('an invalid email is refused', async () => {
     consent: { terms: true, installerQuotes: true, version: 'v' },
   });
   assert.strictEqual(status, 400);
+});
+
+test('the guided demo is not published', async () => {
+  /* An unmaintained fork of the product UI that asks for a real email address
+     and posts it to /api/lead with no consent object, and links to neither the
+     privacy notice nor the terms. Nothing links to it, and it carried a
+     canonical tag, so its only visitors would have been search engines. */
+  const { status } = await get('/guided-demo.html');
+  assert.strictEqual(status, 404, 'it collects an email address from a page with no privacy notice');
 });

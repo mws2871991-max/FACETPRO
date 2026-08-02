@@ -25,6 +25,12 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "22"
+      # Express serves its default error page — stack trace, absolute paths,
+      # dependency versions — unless this is set. There is an error handler
+      # now that catches those anyway, but belt and braces on the one that
+      # leaks the deployment layout.
+      - key: NODE_ENV
+        value: production
       - key: SITE_MODE
         value: beta
       - key: SITE_URL

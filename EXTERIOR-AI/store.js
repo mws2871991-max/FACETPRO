@@ -18,9 +18,43 @@ if (process.env.DATABASE_URL) {
       'as JSONL files under data/.'
     );
   }
+  /* Verification stays on.
+
+     This was `rejectUnauthorized: false`, which encrypts the connection
+     without authenticating the other end — precisely the shape a
+     man-in-the-middle needs, on the connection that carries every homeowner's
+     name, email, phone number, postcode and consent record. It is the usual
+     copy-paste for managed Postgres, goes in to get something working, and
+     never comes out.
+
+     Managed providers use their own CA rather than a public root, so supply
+     it: DATABASE_CA_CERT for the PEM inline (easiest in a platform env var)
+     or PGSSLROOTCERT for a path. Every provider publishes one.
+
+     Without a CA we fall back to the platform's trust store rather than to no
+     verification at all. If that fails, the connection fails, and a refused
+     connection is a better outcome than an unauthenticated one. */
+  const caPem = process.env.DATABASE_CA_CERT
+    || (process.env.PGSSLROOTCERT && fs.readFileSync(process.env.PGSSLROOTCERT, 'utf8'));
+  if (!caPem) {
+    console.warn('No DATABASE_CA_CERT or PGSSLROOTCERT set — verifying the database certificate against the system trust store. If the connection is refused, download your provider\'s CA certificate.');
+  }
+
   pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
+    ssl: { rejectUnauthorized: true, ...(caPem ? { ca: caPem } : {}) },
+    max: 10,
+    idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: 5_000,
+    statement_timeout: 15_000,
+  });
+
+  /* Without this, a network blip on an idle pooled client emits 'error' on
+     the Pool with nothing listening — and an unhandled 'error' event in Node
+     takes the whole process down. The database going wobbly should not take
+     the website with it. */
+  pool.on('error', (err) => {
+    console.error('Postgres pool error on an idle client:', err.message);
   });
 
   /* Our tables live in their own schema, never in public.
@@ -88,6 +122,28 @@ async function ensureSchema() {
   for (const ddl of SCHEMA) {
     await pool.query(ddl.replace(/CREATE TABLE IF NOT EXISTS (\w+)/, `CREATE TABLE IF NOT EXISTS ${SCHEMA_NAME}.$1`));
   }
+
+  /* The lead reference, and the database's own refusal to hold it twice.
+
+     The application generates 60 bits of entropy per reference, so a
+     duplicate should never arrive — but "should never" is exactly the class
+     of assumption worth having the database enforce, because lead.id is the
+     join key for withdrawal, retention and erasure. A unique index turns a
+     silent overwrite of somebody else's record into a failed insert.
+
+     Added separately from the CREATE TABLE because that only runs on a fresh
+     database, and the tables this needs to reach already exist. */
+  await pool.query(`ALTER TABLE ${SCHEMA_NAME}.leads ADD COLUMN IF NOT EXISTS lead_id TEXT`);
+  try {
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS leads_lead_id_key ON ${SCHEMA_NAME}.leads (lead_id)`);
+  } catch (err) {
+    /* Duplicates already in the table. Refusing to start would be worse than
+       running without the backstop — the data is already there either way —
+       but this has to be loud, because those records need reconciling by hand
+       and one of them may be somebody's consent evidence. */
+    console.error('COULD NOT ADD THE UNIQUE INDEX ON leads.lead_id:', err.message);
+    console.error('There are duplicate lead references in the database. Run: node scripts/check-lead-ids.js');
+  }
 }
 
 const TABLE_NAMES = { leads: 'leads', deliveries: 'deliveries', notificationFailures: 'notification_failures', accessLog: 'access_log', withdrawals: 'withdrawals', retentionRuns: 'retention_runs', quotes: 'quotes', waitlist: 'waitlist', feedback: 'feedback', detections: 'detections', analytics: 'analytics' };
@@ -110,7 +166,7 @@ const INSERT_SQL = {
   waitlist: `INSERT INTO ${SCHEMA_NAME}.waitlist (ts, email, role) VALUES ($1,$2,$3)`,
   feedback: `INSERT INTO ${SCHEMA_NAME}.feedback (ts, session_id, rating, element_count, comment) VALUES ($1,$2,$3,$4,$5)`,
   detections: `INSERT INTO ${SCHEMA_NAME}.detections (ts, session_id, element_count, mime_type) VALUES ($1,$2,$3,$4)`,
-  leads: `INSERT INTO ${SCHEMA_NAME}.leads (ts, action, name, email, phone, postcode, message, source, status, design) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+  leads: `INSERT INTO ${SCHEMA_NAME}.leads (ts, action, name, email, phone, postcode, message, source, status, design, lead_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
   withdrawals: `INSERT INTO ${SCHEMA_NAME}.withdrawals (ts, lead_id, scope, record) VALUES ($1,$2,$3,$4)`,
   retentionRuns: `INSERT INTO ${SCHEMA_NAME}.retention_runs (ts, record) VALUES ($1,$2)`,
   accessLog: `INSERT INTO ${SCHEMA_NAME}.access_log (ts, endpoint, ip_hash, record) VALUES ($1,$2,$3,$4)`,
@@ -135,7 +191,7 @@ const INSERT_PARAMS = {
      lawful basis under UK GDPR — losing it silently is worse than not
      having a database at all. `action`, `message` and `source` are legacy
      columns from an older shape and are simply not part of a lead. */
-  leads: o => [o.ts, null, o.name, o.email, o.phone, o.postcode, null, null, o.status, JSON.stringify(o)],
+  leads: o => [o.ts, null, o.name, o.email, o.phone, o.postcode, null, null, o.status, JSON.stringify(o), o.id || null],
   // Same rule as leads: the scalar columns are for querying, the JSONB holds
   // the whole record so nothing is silently dropped.
   withdrawals: o => [o.ts, o.leadId || null, o.scope || null, JSON.stringify(o)],

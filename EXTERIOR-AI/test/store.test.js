@@ -100,6 +100,9 @@ test('reading back unwraps the JSONB rather than returning a nested row', () => 
 test('a sparse lead still maps without throwing', () => {
   const minimal = { ts: '2026-07-31T12:00:00Z', id: 'LD-1', name: 'A', email: 'a@example.com', status: 'New lead' };
   const params = leadsMapper(minimal);
-  assert.strictEqual(params.length, 10);
+  assert.strictEqual(params.length, 11);
   assert.deepStrictEqual(JSON.parse(params[9]), minimal);
+  // The reference also goes in its own column, so the database can refuse a
+  // duplicate rather than letting one lead silently overwrite another.
+  assert.strictEqual(params[10], 'LD-1');
 });
