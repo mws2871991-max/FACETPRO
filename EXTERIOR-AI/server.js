@@ -12,6 +12,7 @@ const retention = require('./retention');
 const withdrawal = require('./withdrawal');
 const routing = require('./routing');
 const glazing = require('./glazing');
+const resume = require('./resume');
 
 const catalogue = JSON.parse(fs.readFileSync(path.join(__dirname, 'catalogue.json'), 'utf8'));
 
@@ -1471,6 +1472,62 @@ app.get('/r/:id', async (req, res) => {
 
    Always a planning estimate — the response carries a range and a caveat, and
    the UI must present it as such. */
+/* ── CARRYING A DESIGN TO A PHONE ──
+   The choices, under a six-character code, for a day. No photograph and
+   nothing identifying — see resume.js for why that is the whole point rather
+   than a detail.
+
+   Two rate limits, because the two directions are different requests: issuing
+   is cheap and rare, redeeming is what someone would sit and guess at. */
+const resumeIssueLimiter = rateLimit({
+  windowMs: 60 * 1000, max: 10,
+  standardHeaders: true, legacyHeaders: false,
+  message: { error: 'Too many codes — please wait a minute.' }
+});
+const resumeRedeemLimiter = rateLimit({
+  windowMs: 60 * 1000, max: 15,
+  standardHeaders: true, legacyHeaders: false,
+  message: { error: 'Too many tries — please wait a minute.' }
+});
+
+app.post('/api/resume', resumeIssueLimiter, async (req, res) => {
+  const design = resume.buildPayload(req.body || {});
+  if (!Object.keys(design).length) {
+    return res.status(400).json({ error: 'There’s nothing to carry over yet — choose something first.', reason: 'nothing_to_save' });
+  }
+  const now = Date.now();
+  const record = {
+    ts: new Date(now).toISOString(),
+    code: resume.newCode(),
+    expiresAt: new Date(now + resume.TTL_MS).toISOString(),
+    design,
+  };
+  try {
+    await store.append('resumes', record);
+  } catch (err) {
+    console.error('Could not store a resume code:', err.message);
+    return res.status(500).json({ error: 'We couldn’t make you a code just now.' });
+  }
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ code: record.code, expiresAt: record.expiresAt });
+});
+
+app.get('/api/resume/:code', resumeRedeemLimiter, async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  if (!resume.isCode(req.params.code)) {
+    return res.status(400).json({ error: 'That code doesn’t look right.', reason: 'bad_code' });
+  }
+  let rows = [];
+  try { rows = await store.readAll('resumes'); } catch (_) { /* none yet */ }
+  const found = resume.find(rows, req.params.code);
+  if (!found) {
+    // Expired and never-existed are the same answer: there is nothing to tell
+    // apart, and nothing worth confirming to somebody guessing.
+    return res.status(404).json({ error: 'That code has expired or we don’t recognise it.', reason: 'not_found' });
+  }
+  res.json({ design: found.design, expiresAt: found.expiresAt });
+});
+
 /* ── POST /api/coverage ──
    "Do you have installers near me?", answered before anyone is asked for
    anything. The postcode box in the refine panel collected a postcode and did
@@ -1892,6 +1949,15 @@ async function runRetention({ dryRun = false } = {}) {
       const removed = await store.deleteRenders(goneRenderIds);
       summary.rendersRemoved = removed;
     }
+
+    /* Resume codes hold no personal data, so this is housekeeping rather
+       than retention — but a store that only grows is its own problem. */
+    try {
+      await store.mutate('resumes', (rows) => {
+        const live = rows.filter(r => !resume.isExpired(r));
+        return live.length === rows.length ? undefined : live;
+      });
+    } catch (_) { /* table may not exist yet */ }
 
     if (p.accessLogExpired) {
       await store.mutate('accessLog', (rows) => rows.filter(r => !retention.isExpired(r, retention.PERIODS.accessLogDays)));
