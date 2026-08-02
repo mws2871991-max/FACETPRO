@@ -29,7 +29,7 @@ const post = async (path, body) => {
   return { status: res.status, body: await res.json() };
 };
 const lead = (extra) => post('/api/lead', {
-  name: 'Jane', email: 'jane@example.com',
+  name: 'Jane', email: 'jane@example.com', postcode: 'SW11 4NP',   // required once quotes are asked for
   claddingId: 'sage-slate', roofId: 'terracotta', trimId: 'cedar',
   consent: { terms: true, installerQuotes: true, version: 'v' },
   ...extra,

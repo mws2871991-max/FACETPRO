@@ -1470,6 +1470,17 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
      consent would mean sharing their details with three companies while
      leaving them no way to stop it. The same instinct as refusing to start
      live without a database: do not accept a promise you cannot keep. */
+  /* Asked for quotes, but we do not know where they are. Without a postcode
+     the routing can only reach installers claiming national coverage, so the
+     consent they gave — "installers covering my area" — is not one we could
+     honour. Checked here rather than only in the browser, because the browser
+     is not where the promise lives. */
+  if (consent.installerQuotes === true && !routing.parsePostcode(postcode)) {
+    return res.status(400).json({
+      error: 'Please add your postcode so we can find installers who cover your area.',
+      reason: 'postcode_required_for_quotes',
+    });
+  }
   if (consent.installerQuotes === true && !HOMEOWNER_EMAIL_ENABLED) {
     console.error('Refused installer-quotes consent: homeowner email is not configured, so no withdrawal link could be sent. Set RESEND_API_KEY and a LEAD_FROM_EMAIL on a verified domain.');
     return res.status(503).json({

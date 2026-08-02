@@ -27,7 +27,11 @@ require('./helpers/email').configureEmail();
 const realFetch = globalThis.fetch;
 require('../server');
 
-const base = { name: 'Jane', email: 'jane@example.com', claddingId: 'sage-slate', roofId: 'terracotta', trimId: 'cedar' };
+/* A postcode, because asking for installer quotes without one is refused —
+   the routing could only reach buyers claiming national coverage, so
+   "installers covering my area" would not be a consent we could honour. */
+const base = { name: 'Jane', email: 'jane@example.com', postcode: 'SW11 4NP',
+  claddingId: 'sage-slate', roofId: 'terracotta', trimId: 'cedar' };
 const send = async (consent) => {
   const res = await realFetch(BASE + '/api/lead', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },

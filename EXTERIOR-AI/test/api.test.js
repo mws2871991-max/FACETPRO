@@ -116,7 +116,7 @@ test('a client cannot inject a wall area without a detectionId', async () => {
 
 test('the lead records the server-side source, not the client claim', async () => {
   const { status, body } = await post('/api/lead', {
-    name: 'Test', email: 't@example.com', detectionId,
+    name: 'Test', email: 't@example.com', postcode: 'SW11 4NP', detectionId,
     claddingId: 'sage-slate', roofId: 'terracotta', trimId: 'cedar',
     measurementSource: 'surveyed_by_a_professional',   // a lie from the client
     consent: { terms: true, installerQuotes: true, version: 'v' },
