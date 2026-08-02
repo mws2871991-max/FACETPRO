@@ -1402,6 +1402,8 @@ function buildDetailOptions() {
          Someone could reasonably read the range as the whole job. */
       h('p', { className: 'mt-1 text-[11px] leading-5 text-zinc-500' },
         'Separate from the cladding and roof estimate above — windows and doors are quoted and fitted independently.'),
+      // Shown next to the corrector, which is the thing that fixes it.
+      g.countNote ? h('p', { className: 'mt-2 text-[11px] leading-5 text-amber-800' }, g.countNote) : null,
 
       state.uploadedBase64 ? h('button', {
         type: 'button',

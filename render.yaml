@@ -1,6 +1,10 @@
-# Render blueprint. Commit this at the REPOSITORY ROOT if you deploy from
-# Render's blueprint flow — it currently sits inside EXTERIOR-AI/ alongside the
-# app, so either move it up a level or set the root directory in the dashboard.
+# Render blueprint. It has to live at the REPOSITORY ROOT, which is where it
+# now is — it used to sit inside EXTERIOR-AI/ while also declaring
+# `rootDir: EXTERIOR-AI`, so Render would never have found it, and the disk
+# mount path underneath assumed the layout it has from here.
+#
+# The app itself is in EXTERIOR-AI/. That is what rootDir points at, and it is
+# why mountPath resolves through it.
 #
 # The disk is the part that matters. Without it Render gives you an ephemeral
 # filesystem, and this app keeps leads, the detection records and the daily
@@ -16,6 +20,11 @@ services:
     startCommand: npm start
     healthCheckPath: /healthz
     autoDeploy: false      # deploy deliberately, not on every push to main
+    # One instance, deliberately. The write lock in store.js is per process, as
+    # its own comment says, and the daily spend counter is a file. Two
+    # instances would race on both — leads lost on one side, twice the API
+    # bill on the other. Scaling out means a shared store first.
+    numInstances: 1
 
     disk:
       name: facetpro-data

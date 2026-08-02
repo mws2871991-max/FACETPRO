@@ -56,16 +56,28 @@ function leadNotificationHtml(lead, price) {
 }
 
 /* The notice says "we will tell you which installers received your details".
-   That is a promise, so it is kept in the email rather than only on request. */
+   That is a promise, so it is kept in the email rather than only on request.
+
+   Present tense, deliberately. This email goes out before delivery does — the
+   homeowner should not wait on three third-party webhooks for their
+   confirmation — so at the moment they read it, these are the installers
+   their enquiry is going to, not ones that have it. Delivery can still fail,
+   and when it does the withdrawal page reads the delivery log and would
+   correctly say nobody received anything. Two artefacts, one homeowner: they
+   must not contradict each other, and the one written first is the one that
+   has to be careful. */
 function installerList(recipients) {
   const list = (recipients || []).filter(r => r && r.name);
   if (!list.length) return '';
   return `<p style="font-size:14px;line-height:1.6;color:#3f3f46;margin:0">
-      We have passed your details and your design to:
+      We're passing your details and your design to:
     </p>
     <ul style="font-size:14px;line-height:1.7;color:#3f3f46;margin:8px 0 0;padding-left:20px">
       ${list.map(r => `<li>${escapeHtml(r.name)}</li>`).join('')}
-    </ul>`;
+    </ul>
+    <p style="font-size:12px;line-height:1.6;color:#6B6E78;margin:8px 0 0">
+      If we can't reach any of them we'll let you know.
+    </p>`;
 }
 
 /* ── homeowner: their design pack ──
@@ -183,8 +195,9 @@ function designPackText(lead, price, siteUrl, withdrawToken, recipients) {
     `WHAT HAPPENS NEXT`,
     ...(lead.consent?.installerQuotes === true
       ? [...((recipients || []).filter(r => r && r.name).length
-            ? ['We have passed your details and your design to:',
-               ...recipients.filter(r => r && r.name).map(r => `  ${r.name}`)]
+            ? ["We're passing your details and your design to:",
+               ...recipients.filter(r => r && r.name).map(r => `  ${r.name}`),
+               "If we can't reach any of them we'll let you know."]
             : ['We are passing your details and your design to installers who cover your area.']),
          'They may contact you by email or telephone to talk it through and arrange a',
          'survey. There is no obligation to go ahead at any point.']
@@ -262,7 +275,7 @@ function sharingConfirmationText(lead, recipients, siteUrl, withdrawToken) {
     `Your reference is ${lead.id}.`,
     '',
     ...(named.length
-      ? ['We have passed your details and your design to:', ...named.map(r => `  ${r.name}`)]
+      ? ["We're passing your details and your design to:", ...named.map(r => `  ${r.name}`)]
       : ['We are passing your details and your design to installers who cover your area.']),
     '',
     'They may contact you by email or telephone to talk it through and arrange a survey.',

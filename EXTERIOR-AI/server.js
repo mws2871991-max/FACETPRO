@@ -225,6 +225,22 @@ const withdrawLimiter = rateLimit({
   standardHeaders: true, legacyHeaders: false,
   message: { error: 'Too many requests — please wait a minute and try again.' }
 });
+/* Everything cheap and unauthenticated. Generous enough that no real visitor
+   will meet it — the page fires several of these per interaction — and low
+   enough that nobody can use us as an amplifier. These were the endpoints
+   nobody had thought about: they cost us nothing individually, which is
+   exactly why they were the ones left open.
+
+   /healthz is deliberately absent. A platform health check must never be
+   throttled; its disk probe is cached instead. */
+const publicLimiter = rateLimit({
+  windowMs: 60 * 1000, max: 120,
+  standardHeaders: true, legacyHeaders: false,
+  message: { error: 'Too many requests — please wait a moment.' },
+});
+app.use(['/api/config', '/api/catalogue', '/api/quote', '/api/whole-house',
+         '/api/glazing', '/api/measure', '/r'], publicLimiter);
+
 /* ── DAILY CAP ON PAID ENDPOINTS ──
    The per-IP rate limiters above don't bound the bill: enough distinct IPs can
    still run up unlimited Anthropic and Replicate spend. This is a global cap
@@ -845,14 +861,28 @@ const LEAD_CAPTURE = (process.env.LEAD_CAPTURE || 'on').toLowerCase() !== 'off';
    is the failure this deployment is most likely to hit, since a host without
    a mounted volume looks perfectly healthy right up until the first lead is
    silently lost. */
-app.get('/healthz', (req, res) => {
-  let storageWritable = false;
+/* Deliberately outside the public rate limiter — a platform health check must
+   never be throttled. The disk probe is cached instead: two synchronous
+   syscalls per request is a poor trade when the answer changes about as often
+   as the disk does, and health checks arrive every few seconds forever. */
+let diskProbe = { at: 0, writable: false };
+const DISK_PROBE_TTL_MS = 10_000;
+
+function storageIsWritable() {
+  const now = Date.now();
+  if (now - diskProbe.at < DISK_PROBE_TTL_MS) return diskProbe.writable;
+  let writable = false;
   try {
     fs.mkdirSync(path.join(__dirname, 'data'), { recursive: true });
     fs.accessSync(path.join(__dirname, 'data'), fs.constants.W_OK);
-    storageWritable = true;
-  } catch (_) { /* reported below */ }
+    writable = true;
+  } catch (_) { /* reported by the caller */ }
+  diskProbe = { at: now, writable };
+  return writable;
+}
 
+app.get('/healthz', (req, res) => {
+  const storageWritable = storageIsWritable();
   res.status(storageWritable ? 200 : 503).json({
     ok: storageWritable,
     mode: SITE_MODE,
@@ -1890,7 +1920,8 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
      homeowner shouldn't wait on three third-party webhooks. The lead is
      already stored, so nothing is lost if the process dies mid-delivery; the
      reconciliation log below is what tells you it needs re-sending. */
-  deliverAndRecord(lead, plan);
+  deliverAndRecord(lead, plan).catch(err =>
+    console.error(`Lead ${lead.id}: delivery threw after the response:`, err?.stack || err?.message || err));
 
   /* The hash is ours. It is no use to an installer and no use to the browser,
      and the fewer places a credential's shadow appears the better. */
@@ -2339,8 +2370,42 @@ function refuseToStartIfStorageContradictsTheNotice() {
   process.exit(1);
 }
 
+/* A notice that says [COMPANY LEGAL NAME] does not tell anyone who is
+   processing their details, which is the first thing Article 13 asks for. So
+   a live deployment collecting personal data behind an unfinished notice is a
+   failure rather than a caution.
+
+   .env.example already says to turn lead capture on only once the
+   placeholders are gone — but that is a comment in a template, and templates
+   get copied and edited. This is the structural version. */
+function refuseToStartIfTheNoticeIsUnfinished() {
+  if (!LEAD_CAPTURE || SITE_MODE !== 'live') return;
+  const unfinished = [];
+  for (const page of ['legal/privacy.html', 'legal/terms.html']) {
+    let html = '';
+    try { html = fs.readFileSync(path.join(__dirname, page), 'utf8'); } catch (_) { continue; }
+    const found = [...new Set(html.match(/\[[A-Z][A-Z0-9 &;#/,.'’-]{2,60}\]/g) || [])];
+    if (found.length) unfinished.push(`  ${page} — ${found.length} left: ${found.slice(0, 6).join(', ')}${found.length > 6 ? ' …' : ''}`);
+  }
+  if (!unfinished.length) return;
+  console.error([
+    '',
+    'REFUSING TO START.',
+    '',
+    'SITE_MODE=live and LEAD_CAPTURE=on, but the legal pages are unfinished:',
+    ...unfinished,
+    '',
+    'These are the pages people have to agree to before a lead can be saved, and',
+    'Article 13 wants the controller named at the point of collection. Fill them',
+    'in, or set LEAD_CAPTURE=off until they are done.',
+    '',
+  ].join('\n'));
+  process.exit(1);
+}
+
 async function start() {
   refuseToStartIfStorageContradictsTheNotice();
+  refuseToStartIfTheNoticeIsUnfinished();
   if (store.hasDb) {
     await store.ensureSchema();
     console.log('Storage: Postgres (encrypted at rest by the provider), schema ensured.');
@@ -2364,7 +2429,39 @@ async function start() {
   });
 }
 
-start().catch(err => {
+start().then((server) => {
+  if (!server) return;
+
+  /* A request that has been running for two minutes is not going to finish.
+     Without these, a stuck upstream holds a socket open indefinitely. */
+  server.headersTimeout = 65_000;
+  server.requestTimeout = 120_000;
+  server.keepAliveTimeout = 61_000;
+
+  /* Platforms send SIGTERM and then wait a moment before SIGKILL. Using that
+     moment: stop accepting connections, let the ones in flight finish, and
+     close the database pool so Postgres is not left holding sessions. A lead
+     being written when the deploy lands should reach the store. */
+  let closing = false;
+  const shutdown = (signal) => {
+    if (closing) return;
+    closing = true;
+    console.log(`${signal} received — finishing what's in flight.`);
+    const forced = setTimeout(() => {
+      console.error('Still busy after 10s — exiting anyway.');
+      process.exit(1);
+    }, 10_000);
+    forced.unref();
+    server.close(async () => {
+      clearTimeout(forced);
+      try { await store.end(); } catch (_) { /* already gone */ }
+      console.log('Closed cleanly.');
+      process.exit(0);
+    });
+  };
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+}).catch(err => {
   console.error('Failed to start:', err.message);
   process.exit(1);
 });

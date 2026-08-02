@@ -477,10 +477,7 @@ function estimateWallArea({ detections, aspectRatio, houseType, tuning } = {}) {
    Returns { mime, width, height }, or null if it is not one of the four
    formats we accept. Same header parsing as imageSize, which now delegates
    here so there is one definition of "is this an image". */
-function sniffImage(buffer) {
-  const size = readSize(buffer);
-  return size ? size : null;
-}
+const sniffImage = readSize;
 
 function imageSize(buffer) {
   const found = readSize(buffer);

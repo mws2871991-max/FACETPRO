@@ -267,13 +267,20 @@ function priorWindows({ houseType, bands }) {
       windows.push({
         widthM: null, heightM: null, areaM2: null,
         bandId: band.id, bandLabel: band.label,
-        // Half of a typical house's glazing is upstairs; assume access is
-        // needed, because assuming it isn't is the error that costs money.
-        upperStorey: i % 2 === 1,
+        upperStorey: false,          // decided below, across the whole house
         confidence: null,
       });
     }
   }
+  /* Half of a typical house's glazing is upstairs. This used to alternate
+     within each band, which meant a mix of {1, 5, 2} produced three out of
+     eight rather than four — the comment said half and the code said 37%. It
+     doesn't move the price, since access is a threshold rather than a count,
+     but upperStoreyCount is shown to the homeowner. A bungalow keeps none. */
+  const singleStorey = key === 'bungalow';
+  const upstairs = singleStorey ? 0 : Math.round(windows.length / 2);
+  for (let i = 0; i < upstairs; i++) windows[windows.length - 1 - i].upperStorey = true;
+
   return { method: 'prior', windows, frontCount: windows.length, discarded: null };
 }
 
@@ -282,6 +289,10 @@ function priorWindows({ houseType, bands }) {
    missing rate throws rather than silently defaulting to zero — a glazing
    quote that quietly omits a line is worse than no quote. */
 function priceGlazing({ windows, totalCount, selections, rates, houseType }) {
+  // Unreachable through estimateGlazing, which enforces a minimum — but this
+  // is exported, and dividing by zero here turns every money field into NaN
+  // quietly rather than loudly.
+  if (!windows.length) throw new Error('priceGlazing needs at least one window.');
   const styleMult = rates.styleMultipliers?.[selections.windowStyleId] ?? 1;
   const isBay = selections.windowStyleId === 'bay';
   const colourMult = selections.windowDoorColourId && selections.windowDoorColourId !== 'white'
@@ -306,6 +317,22 @@ function priceGlazing({ windows, totalCount, selections, rates, houseType }) {
     if (w.upperStorey) upperStoreyCount += scale;
     byBand[w.bandId] = (byBand[w.bandId] || 0) + scale;
   }
+
+  /* Largest remainder, because rounding each band on its own does not add up.
+     Three front windows scaled to eight is 2.67 a band, which rounds to three
+     three times: a panel headed "8 windows" above a breakdown summing to 9
+     reads as a bug even when the money is right. */
+  const bandKeys = Object.keys(byBand);
+  const floors = bandKeys.map(k => Math.floor(byBand[k]));
+  let remaining = totalCount - floors.reduce((a, n) => a + n, 0);
+  const byRemainder = bandKeys
+    .map((k, i) => ({ k, i, rem: byBand[k] - floors[i] }))
+    .sort((a, b) => b.rem - a.rem);
+  for (const { i } of byRemainder) {
+    if (remaining <= 0) break;
+    floors[i]++; remaining--;
+  }
+  bandKeys.forEach((k, i) => { byBand[k] = floors[i]; });
 
   // Doors are priced per leaf from the catalogue, not per m² — the reason
   // they were never in the cladding engine in the first place.
@@ -407,7 +434,24 @@ function estimateGlazing({
     console.warn(`Ignoring an implausible window count of ${manual} — outside ${MIN_WINDOWS}–${MAX_WINDOWS}.`);
   }
 
+  /* Say when we have capped it.
+
+     A detached house with eleven detected front windows scales to
+     thirty-three and was silently becoming thirty — a ten per cent undercount
+     on the largest quote the tool produces, presented as a measured figure
+     when it is a boundary. That is the same objection this module makes to
+     clamping a manual count fifteen lines above, and the same one
+     computePrice makes about dressing a tampered request up as a real one.
+
+     Falling back is not available here: it is our own arithmetic that
+     overflowed, not a client's claim. So it is capped, and it says so, and it
+     asks the one person who can settle it. */
+  const wanted = Math.round(totalCount);
   totalCount = Math.round(clamp(totalCount, MIN_WINDOWS, MAX_WINDOWS));
+  const countCapped = countSource !== 'manual_entry' && wanted > MAX_WINDOWS;
+  if (countCapped) {
+    console.warn(`Capped a window count of ${wanted} at ${MAX_WINDOWS} for a ${key}.`);
+  }
 
   const price = priceGlazing({
     windows: base.windows,
@@ -425,6 +469,10 @@ function estimateGlazing({
     countSource,
     houseType: key,
     windowCount: totalCount,
+    countCapped,
+    countNote: countCapped
+      ? `We've capped this at ${MAX_WINDOWS} windows. If your home has more, tell us the number and we'll price it properly.`
+      : null,
     frontCount: base.method === 'door' ? base.frontCount : null,
     frontToTotal: base.method === 'door' ? frontToTotal : null,
     windows: base.windows,

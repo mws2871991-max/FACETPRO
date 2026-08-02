@@ -371,8 +371,14 @@ async function readAll(table) {
   return readLines(FILE_NAMES[table]);
 }
 
+/* Let the pool go on shutdown, so Postgres isn't left holding sessions from
+   a container that has already gone. No-op without a database. */
+async function end() {
+  if (pool) await pool.end();
+}
+
 module.exports = {
-  ensureSchema, append, readAll, replaceAll, mutate, putRender, getRender, deleteRenders, hasDb: !!pool,
+  ensureSchema, append, readAll, replaceAll, mutate, end, putRender, getRender, deleteRenders, hasDb: !!pool,
   // Exported for tests: scraping these out of the source with a regex broke
   // the moment another table was added after leads.
   _internals: { INSERT_PARAMS, INSERT_SQL, SELECT_SQL, FILE_NAMES },

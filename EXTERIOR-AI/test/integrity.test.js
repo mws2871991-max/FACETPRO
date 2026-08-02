@@ -129,3 +129,42 @@ test('a failed mutation leaves the store as it was', async () => {
   const rows = await store.readAll(table);
   assert.deepStrictEqual(rows.map(r => r.endpoint), ['/original'], 'a half-applied change is worse than none');
 });
+
+/* ── the catalogue has to agree with itself ──
+
+   The two halves fail differently when they drift, which is what makes this
+   worth a test rather than a comment. A window style with no multiplier
+   prices at 1× with no signal at all. A door style with no rate throws — so
+   /api/glazing returns 500, and resolveGlazing swallows the same throw, which
+   means the lead silently loses its estimate and the installer never sees the
+   figure the homeowner was shown. */
+
+const catalogue = require('../catalogue.json');
+
+test('every window style we offer has a rate behind it', () => {
+  for (const style of catalogue.windowsDoors.windowStyles) {
+    assert.notStrictEqual(catalogue.glazing.styleMultipliers[style.id], undefined,
+      `windowStyles offers "${style.id}" but glazing.styleMultipliers has no entry — it would price at 1x, silently`);
+  }
+});
+
+test('every door style we offer has a rate behind it', () => {
+  for (const style of catalogue.windowsDoors.doorStyles) {
+    assert.ok(catalogue.glazing.doors.some(d => d.id === style.id),
+      `doorStyles offers "${style.id}" but glazing.doors has no rate — /api/glazing would 500 for anyone who picks it`);
+  }
+});
+
+test('window bands ascend, because bandFor takes the first that fits', () => {
+  const caps = catalogue.glazing.windowBands.map(b => b.maxAreaM2 ?? Infinity);
+  assert.deepStrictEqual(caps, [...caps].sort((a, b) => a - b),
+    'out of order, every window falls into whichever band happens to be first');
+});
+
+test('the placeholder warning is driven by the catalogue, not by a flag someone forgets', () => {
+  /* GLAZING_RATES_SOURCED reads catalogue.glazing.source. Replacing the rates
+     and editing that line turns every caveat off at once — which is the right
+     design, and worth pinning so nobody removes the string it depends on. */
+  assert.ok(typeof catalogue.glazing.source === 'string' && catalogue.glazing.source.length,
+    'glazing.source is what the caveat is derived from; it must exist');
+});

@@ -24,6 +24,18 @@ Independent of any other project on this machine (`homeai`, `delivery`,
 
 ## Setup
 
+> `.env.example` ships `LEAD_CAPTURE=off` and `SITE_MODE=beta`. Copy it and the
+> site runs with the form replaced by an honest explanation rather than
+> collecting anyone's details — deliberate, because copying a template and
+> forgetting a line should not be how you start holding personal data. Turn
+> capture on when the legal pages have no `[PLACEHOLDERS]` left in them, the
+> ICO registration is done and `DATABASE_URL` is set. With `SITE_MODE=live`
+> the server refuses to start until the first two of those are true.
+>
+> Database connections verify the server certificate. Managed providers use
+> their own CA: give it in `DATABASE_CA_CERT` (the PEM inline) or
+> `PGSSLROOTCERT` (a path). `NODE_ENV=production` in a real deployment.
+
 ```bash
 npm install
 cp .env.example .env
@@ -41,7 +53,22 @@ Open http://localhost:3020 (or whatever `PORT` you set).
 ## Files
 
 - `server.js` — Express backend: `/api/detect`, `/api/render`, `/api/quote`,
-  `/api/lead`, `/api/leads`, `/api/catalogue`.
+  `/api/glazing`, `/api/measure`, `/api/whole-house`, `/api/coverage`,
+  `/api/resume`, `/api/lead`, `/api/leads`, `/api/deliveries`,
+  `/api/withdraw`, `/api/catalogue`, `/r/:id`.
+- `measure.js` — wall area from a photograph, and `sniffImage`, which is what
+  both paid endpoints use to check that an upload is actually an image before
+  it reaches Anthropic or Replicate.
+- `glazing.js` — per-unit window and door pricing. See below.
+- `routing.js` — which installers a lead goes to: postcode areas, and the cap
+  the consent wording promises.
+- `withdrawal.js` — withdrawing consent, and who has to be told.
+- `retention.js` — how long each kind of record lives, and what survives redaction.
+- `resume.js` — carrying a design to another device by short code. Choices only.
+- `delivery.js`, `emails.js` — sending leads to buyers, and to the homeowner.
+- `scripts/check-lead-ids.js` — read-only scan for duplicate lead references,
+  from before references had real entropy. Run it once before relying on the
+  unique index.
 - `store.js` — simple JSONL file storage. Uses Postgres instead if `DATABASE_URL`
   is set, which additionally requires `npm install pg` (not a dependency, since
   the file fallback covers local use); it now says so plainly rather than
@@ -265,6 +292,47 @@ Read these before putting a number in front of a homeowner.
 - **Presentation is part of the accuracy.** It is a planning estimate, always
   shown as a range with a survey caveat. Do not surface the midpoint alone.
 
+## Windows and doors
+
+Priced per unit, not per square metre — a window costs what its size and style
+cost, and a door costs by the leaf. `glazing.js` does the geometry,
+`catalogue.glazing` holds the money, the same split the wall pricing uses.
+
+The measurement was already being computed and thrown away. `/api/detect`
+returns a box for every window and for the front door; `measure.js` turns the
+door box into a metres-per-pixel scale and works out each opening's area, then
+discards it, because in that file an opening only exists as something to
+subtract from the wall. Door height gives the scale, so window sizes do not
+depend on how far back the photographer stood, and a window whose box sits
+entirely above the top of the door is upstairs — which is what brings in the
+access cost.
+
+The count matters more than the geometry. Window count is discrete, so one
+window missed on a five-window terrace is a 20% error no amount of precision
+recovers. Hence the corrector in the panel: the homeowner's own count wins,
+and it is the one number they know better than we ever will. Counts outside
+1–30 are ignored rather than obeyed; a whole-house count that overflows 30 is
+capped, and says so in `countNote` rather than presenting a boundary as a
+measurement.
+
+### The rates are not sourced yet
+
+Every other rate in `catalogue.json` came from the production backend and says
+so in `source`. The `glazing` block does not:
+
+    "source": "Not sourced. Placeholder pending supplier rate card."
+
+**That string is load-bearing.** `GLAZING_RATES_SOURCED` in `server.js` tests
+it with a regex, and it drives all of it: the startup warning, `ratesSourced`
+on every `/api/glazing` response, and the amber caveat under the price on the
+page. Replace the rates and edit that line and every caveat turns off at once —
+which is the design, and the reason to know what the line controls before
+editing it.
+
+Ask the installers who buy your leads for their rate card. They want good
+leads, it costs them nothing to send one, and it makes your estimates agree
+with what they will actually quote.
+
 ## Keeping prices current
 
 `catalogue.json` holds real UK material and labour rates, not placeholders, so
@@ -450,8 +518,8 @@ Quota is checked after request validation, so a malformed request costs nothing.
 
 ## What is publicly served
 
-Static file serving is deny-by-default. Only `index.html`, `guided-demo.html`,
-`robots.txt`, `sitemap.xml`, `/assets/**` and `/legal/**` are reachable; the
+Static file serving is deny-by-default. Only `index.html`, `robots.txt`,
+`sitemap.xml`, `/assets/**` and `/legal/**` are reachable; the
 request path is decoded and normalised before the check, so `/assets/../server.js`
 is judged as `/server.js` and refused. Source, data, config and documentation
 extensions (`.js`, `.json`, `.jsonl`, `.md`, `.yml`, `.lock`, keys, logs …) are
@@ -459,6 +527,15 @@ blocked even inside a public directory, and dotfiles are denied outright.
 
 If you add a new public page or asset directory, add it to `PUBLIC_FILES` or
 `PUBLIC_DIRS` in `server.js` — it will 404 until you do.
+
+`guided-demo.html` is deliberately **not** served. It is an unmaintained fork
+of the product UI: it asks for a real email address and posts it to
+`/api/lead` with no consent object, and links to neither the privacy notice
+nor the terms. It stays in the repo for the walkthrough copy.
+
+The Render blueprint lives at the **repository root**, not in here — it
+declares `rootDir: EXTERIOR-AI`, so a copy inside this folder would never be
+found.
 
 No CORS headers are sent. The front end is same-origin, so it never needed them.
 
