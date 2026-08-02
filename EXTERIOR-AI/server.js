@@ -9,6 +9,7 @@ const measure = require('./measure');
 const emails = require('./emails');
 const delivery = require('./delivery');
 const retention = require('./retention');
+const withdrawal = require('./withdrawal');
 
 const catalogue = JSON.parse(fs.readFileSync(path.join(__dirname, 'catalogue.json'), 'utf8'));
 
@@ -106,6 +107,14 @@ const leadLimiter = rateLimit({
   windowMs: 60 * 1000, max: 5,
   standardHeaders: true, legacyHeaders: false,
   message: { error: 'Too many submissions — please wait a minute.' }
+});
+/* Withdrawing has to stay easy — Article 7(3) says as easy as giving consent
+   was — so this is loose enough never to block a real person changing their
+   mind, and tight enough that the token isn't worth guessing at 2^192. */
+const withdrawLimiter = rateLimit({
+  windowMs: 60 * 1000, max: 20,
+  standardHeaders: true, legacyHeaders: false,
+  message: { error: 'Too many requests — please wait a minute and try again.' }
 });
 /* ── DAILY CAP ON PAID ENDPOINTS ──
    The per-IP rate limiters above don't bound the bill: enough distinct IPs can
@@ -243,6 +252,9 @@ const dailyLimitBody = (kind) => ({
 const RESEND_TEST_SENDER = 'onboarding@resend.dev';
 const LEAD_FROM_EMAIL = process.env.LEAD_FROM_EMAIL || `Facet Pro <${RESEND_TEST_SENDER}>`;
 const LEAD_NOTIFY_EMAIL = process.env.LEAD_NOTIFY_EMAIL || '';
+/* Where someone writes when the automated route fails them. The notice names
+   an address, so this must be the same one. */
+const PRIVACY_EMAIL = process.env.PRIVACY_EMAIL || LEAD_NOTIFY_EMAIL || 'privacy@facetpro.co.uk';
 const SITE_URL = process.env.SITE_URL || 'https://facetpro.co.uk';
 
 /* The homeowner's copy of their design. Off unless email is configured, and
@@ -297,7 +309,7 @@ async function sendEmail({ to, subject, html, text, replyTo }) {
 }
 
 // The homeowner's design pack. Never blocks storing the lead.
-async function sendDesignPack(lead, price) {
+async function sendDesignPack(lead, price, withdrawToken) {
   if (!lead.consent?.emailPack) {
     return { attempted: false, sent: false, reason: 'homeowner did not ask for the design pack' };
   }
@@ -309,8 +321,8 @@ async function sendDesignPack(lead, price) {
       to: lead.email,
       replyTo: LEAD_NOTIFY_EMAIL || undefined,
       subject: emails.designPackSubject(lead),
-      html: emails.designPackHtml(lead, price, SITE_URL),
-      text: emails.designPackText(lead, price, SITE_URL),
+      html: emails.designPackHtml(lead, price, SITE_URL, withdrawToken),
+      text: emails.designPackText(lead, price, SITE_URL, withdrawToken),
     });
     console.log(`Lead ${lead.id}: design pack sent to the homeowner.`);
     return { attempted: true, sent: true, id };
@@ -375,8 +387,9 @@ async function deliverAndRecord(lead) {
   }
   if (!LEAD_RECIPIENTS.length) return;
   let results;
+  const { withdrawTokenHash: _hash, ...forInstaller } = lead;
   try {
-    results = await delivery.deliverLead(lead, LEAD_RECIPIENTS, { fetchImpl: (...a) => fetch(...a) });
+    results = await delivery.deliverLead(forInstaller, LEAD_RECIPIENTS, { fetchImpl: (...a) => fetch(...a) });
   } catch (err) {
     // deliverTo never throws, so this is defensive — but losing the record
     // silently is the one outcome that must not happen.
@@ -1211,6 +1224,11 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
   const footprint = resolveFootprint({ footprintM2, detectionId });
   const price = computePrice({ claddingId, trimId, roofId, footprintM2: footprint.m2, trimLengthM });
 
+  /* The raw token goes into their email and nowhere else; we keep the hash.
+     Otherwise the withdrawal link would be readable by anything that can read
+     a lead, including the installer portal. */
+  const { token: withdrawToken, hash: withdrawTokenHash } = withdrawal.newToken();
+
   const lead = {
     ts: new Date().toISOString(),
     id: `LD-${Math.floor(2000 + Math.random() * 9000)}`,
@@ -1253,6 +1271,7 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
          what it is for. */
       ipHash: req.ip ? crypto.createHash('sha256').update(String(req.ip)).digest('hex').slice(0, 12) : null,
     },
+    withdrawTokenHash,
     status: 'New lead'
   };
   // Stored first, unconditionally — a notification problem must never cost a lead.
@@ -1262,7 +1281,7 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
   // neither can fail the request — the lead is already saved.
   const [notification, designPack] = await Promise.all([
     notifyNewLead(lead, price),
-    sendDesignPack(lead, price),
+    sendDesignPack(lead, price, withdrawToken),
   ]);
   lead.notification = notification;
   lead.designPack = designPack;
@@ -1276,7 +1295,10 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
      reconciliation log below is what tells you it needs re-sending. */
   deliverAndRecord(lead);
 
-  res.json({ ok: true, lead });
+  /* The hash is ours. It is no use to an installer and no use to the browser,
+     and the fewer places a credential's shadow appears the better. */
+  const { withdrawTokenHash: _hash, ...publicLead } = lead;
+  res.json({ ok: true, lead: publicLead });
 });
 
 /* ── RETENTION ──
@@ -1413,9 +1435,195 @@ app.get('/api/leads', installerLimiter, requireInstallerPassword, logAccess('/ap
      Redacted leads are excluded too: retention has already stripped them of
      personal data, and there is nothing in one an installer can act on. */
   const leads = (await store.readAll('leads'))
-    .filter(l => l.consent?.installerQuotes === true && !l.redacted);
+    .filter(l => l.consent?.installerQuotes === true && !l.redacted)
+    // The withdrawal token's hash is ours, not theirs.
+    .map(({ withdrawTokenHash, ...rest }) => rest);
   res.json({ leads: leads.slice().reverse() });
 });
+
+/* ── WITHDRAWING CONSENT ──
+   Article 7(3): as easy to withdraw as it was to give. The notice also
+   promises we will tell the installers, and tell the homeowner which
+   installers received their details — both are done here.
+
+   Two routes, deliberately. The link in the email is a GET that only shows a
+   page; the actual withdrawal is a POST. Mail scanners fetch every URL in
+   every email before a human sees it, so a GET that erased a record would
+   fire on delivery rather than on request. */
+
+// Never say whether a token exists. The page is the same either way.
+const withdrawPage = (body) => `<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Your choices — Facet Pro</title>
+<style>
+  body{font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#FBF8F3;color:#0F1012;margin:0;padding:40px 20px}
+  main{max-width:560px;margin:0 auto;background:#fff;border-radius:16px;padding:32px 28px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  h1{font-size:24px;margin:0 0 8px;font-weight:600}
+  p{color:#3f3f46;margin:12px 0}
+  .muted{color:#6B6E78;font-size:14px}
+  button{display:block;width:100%;text-align:left;font:inherit;margin:10px 0 0;padding:14px 16px;border:1px solid #d4d4d8;border-radius:12px;background:#fff;cursor:pointer}
+  button:hover{border-color:#0F1012}
+  button.danger{border-color:#fca5a5;color:#991b1b}
+  button.danger:hover{border-color:#dc2626}
+  .done{background:#F0FDF4;border:1px solid #86efac;border-radius:12px;padding:16px}
+  ul{padding-left:20px;color:#3f3f46}
+</style></head><body><main>${body}
+<p class="muted" style="border-top:1px solid #e4e4e7;padding-top:16px;margin-top:24px">
+Facet Pro · <a href="/privacy" style="color:#6B6E78">Privacy notice</a></p>
+</main></body></html>`;
+
+app.get('/withdraw', withdrawLimiter, async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Referrer-Policy', 'no-referrer');   // the token is in the URL
+  const token = String(req.query.t || '');
+
+  let lead = null;
+  try { lead = withdrawal.findByToken(await store.readAll('leads'), token); } catch (_) { /* fall through */ }
+
+  if (!lead) {
+    return res.status(404).type('html').send(withdrawPage(`
+      <h1>This link has expired</h1>
+      <p>It may already have been used, or the details it referred to may have been deleted.</p>
+      <p>Either way you can email us at <a href="mailto:${emails.escapeHtml(PRIVACY_EMAIL)}">${emails.escapeHtml(PRIVACY_EMAIL)}</a>
+         and we will deal with it by hand.</p>`));
+  }
+
+  let received = [];
+  try { received = withdrawal.recipientsWhoReceived(await store.readAll('deliveries'), lead.id); } catch (_) { /* none */ }
+
+  const choice = (scope, label, note, cls = '') =>
+    `<button class="${cls}" onclick="go('${scope}')">${label}<br><span class="muted">${note}</span></button>`;
+
+  res.type('html').send(withdrawPage(`
+    <h1>Your choices</h1>
+    <p>Reference <strong>${emails.escapeHtml(lead.id)}</strong>. You can change your mind about
+       anything you agreed to, at any time, and you don't have to give a reason.</p>
+    ${received.length
+      ? `<p>Your details were passed to:</p><ul>${received.map(r => `<li>${emails.escapeHtml(r.name)}</li>`).join('')}</ul>
+         <p class="muted">We'll tell them you've withdrawn. They hold their own copy and are separately
+            responsible for it, so you can also ask them directly to delete it.</p>`
+      : `<p class="muted">Your details have not been passed to any installer.</p>`}
+    ${lead.consent?.installerQuotes ? choice('installerQuotes', 'Stop sharing my details with installers', 'No new installer gets your details.') : ''}
+    ${lead.consent?.emailPack ? choice('emailPack', 'Stop emailing me about my design', 'No further emails about this design.') : ''}
+    ${choice('all', 'Delete everything you hold about me', 'We keep only a record that you asked, which the law requires us to.', 'danger')}
+    <div id="err" class="muted"></div>
+    <script>
+      async function go(scope) {
+        if (scope === 'all' && !confirm('Delete everything we hold about you? This cannot be undone.')) return;
+        document.querySelectorAll('button').forEach(b => b.disabled = true);
+        try {
+          const r = await fetch('/api/withdraw', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: new URLSearchParams(location.search).get('t'), scope }),
+          });
+          const d = await r.json();
+          if (!r.ok) throw new Error(d.error || 'Something went wrong.');
+          document.querySelector('main').innerHTML =
+            '<h1>Done</h1><div class="done"><p>' + d.message + '</p></div>' +
+            '<p class="muted">Confirmed at ' + new Date(d.at).toLocaleString('en-GB') + '.</p>';
+        } catch (e) {
+          document.getElementById('err').textContent = e.message;
+          document.querySelectorAll('button').forEach(b => b.disabled = false);
+        }
+      }
+    </script>`));
+});
+
+/* Tell the installers who actually received the lead. Article 19: we notify
+   each recipient of an erasure or restriction unless it proves impossible.
+   Recorded either way, including when a recipient can no longer be reached,
+   because "unless it proves impossible" is a claim that needs evidence. */
+async function notifyWithdrawal(lead, scope, received) {
+  if (!withdrawal.SCOPES[scope].tellRecipients || !received.length) return [];
+  const at = new Date().toISOString();
+  const payload = withdrawal.withdrawalPayload(lead.id, scope, at);
+
+  const results = [];
+  for (const r of received) {
+    const config = LEAD_RECIPIENTS.find(c => c.id === r.id);
+    if (!config) {
+      // They hold the data but we no longer have a way to reach them.
+      results.push({ id: r.id, name: r.name, ok: false, error: 'recipient no longer configured — tell them by hand' });
+      console.error(`Withdrawal ${lead.id}: cannot notify ${r.name} — no longer in LEAD_RECIPIENTS. Tell them by hand.`);
+      continue;
+    }
+    results.push(await delivery.deliverTo(config, payload, { fetchImpl: (...a) => fetch(...a) }));
+  }
+  return results;
+}
+
+app.post('/api/withdraw', withdrawLimiter, async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  const { token, scope } = req.body || {};
+  if (!withdrawal.isScope(scope)) return res.status(400).json({ error: 'Unknown request.' });
+
+  const leads = await store.readAll('leads');
+  const lead = withdrawal.findByToken(leads, token);
+  if (!lead) return res.status(404).json({ error: 'This link has expired. Please email us and we will deal with it by hand.' });
+
+  const at = new Date().toISOString();
+  const ipHash = req.ip ? crypto.createHash('sha256').update(String(req.ip)).digest('hex').slice(0, 12) : null;
+
+  let received = [];
+  try { received = withdrawal.recipientsWhoReceived(await store.readAll('deliveries'), lead.id); } catch (_) { /* none */ }
+
+  const updated = withdrawal.applyWithdrawal(lead, scope, { now: at, ipHash, redactLead: retention.redactLead });
+
+  /* Written before anyone is notified. If the process dies between the two,
+     the safe failure is a withdrawal we honoured but under-announced — not
+     one we announced and then forgot.
+
+     Read-modify-write of the whole store, the same as a retention run: a lead
+     saved between the read above and this write would be lost. At a handful of
+     leads a day the window is negligible, and the alternative is a locking
+     scheme this doesn't yet need — but it is the reason to move to real UPDATE
+     statements before volume makes it likely rather than merely possible. */
+  await store.replaceAll('leads', leads.map(l => (l.id === lead.id ? updated : l)));
+
+  if (scope === 'all') {
+    // The render is a photorealistic image of their home; "everything" means it.
+    const renderId = (lead.renderUrl || '').match(/^\/r\/([A-Za-z0-9_-]+)$/)?.[1];
+    if (renderId) { try { await store.deleteRenders([renderId]); } catch (_) { /* logged below */ } }
+    // Delivery and notification failures carry name, email and phone of their own.
+    try { await purgeLeadPii(lead.id); } catch (err) { console.error(`Withdrawal ${lead.id}: could not purge ancillary records:`, err.message); }
+  }
+
+  const notified = await notifyWithdrawal(lead, scope, received);
+
+  await record('withdrawals', {
+    ts: at, leadId: lead.id, scope, ipHash,
+    recipientsNotified: notified.map(n => ({ id: n.id, name: n.name, ok: n.ok, status: n.status ?? null, error: n.error ?? null })),
+  });
+  console.log(`Lead ${lead.id}: consent withdrawn (${scope}); ${notified.filter(n => n.ok).length}/${notified.length} recipient(s) notified.`);
+
+  const message = scope === 'all'
+    ? 'Your details have been deleted. We keep only a record that you asked us to, and what you originally agreed to — the law requires us to be able to show both.'
+      + (received.length ? ' We have asked the installers who received your details to delete their copies.' : '')
+    : scope === 'emailPack'
+      ? 'We will not email you about this design again.'
+      : 'We have stopped sharing your details, and told the installers who already received them.';
+
+  res.json({ ok: true, at, scope, message, recipientsNotified: notified.length });
+});
+
+/* Erasure has to reach the copies too. The delivery-failure and notification-
+   failure records each carry a name, an email and a phone number so a failed
+   lead can be chased by hand — which is exactly why they cannot be left behind
+   when the lead itself is erased. */
+async function purgeLeadPii(leadId) {
+  const scrub = (row) => {
+    if (row?.leadId !== leadId) return row;
+    const { name, email, phone, postcode, ...rest } = row;
+    return { ...rest, erased: true };
+  };
+  for (const table of ['deliveries', 'notificationFailures']) {
+    let rows;
+    try { rows = await store.readAll(table); } catch (_) { continue; }
+    if (!rows.some(r => r?.leadId === leadId)) continue;
+    await store.replaceAll(table, rows.map(scrub));
+  }
+}
 
 /* ── LEGAL PAGES ──
    Clean URLs for the privacy notice and terms. The files also sit under

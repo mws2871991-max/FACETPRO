@@ -59,6 +59,9 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS renders (
     id TEXT PRIMARY KEY, ts TIMESTAMPTZ NOT NULL, lead_id TEXT, mime TEXT, bytes BYTEA
   )`,
+  `CREATE TABLE IF NOT EXISTS withdrawals (
+    id SERIAL PRIMARY KEY, ts TIMESTAMPTZ NOT NULL, lead_id TEXT, scope TEXT, record JSONB
+  )`,
   `CREATE TABLE IF NOT EXISTS retention_runs (
     id SERIAL PRIMARY KEY, ts TIMESTAMPTZ NOT NULL, record JSONB
   )`,
@@ -87,9 +90,9 @@ async function ensureSchema() {
   }
 }
 
-const TABLE_NAMES = { leads: 'leads', deliveries: 'deliveries', notificationFailures: 'notification_failures', accessLog: 'access_log', retentionRuns: 'retention_runs', quotes: 'quotes', waitlist: 'waitlist', feedback: 'feedback', detections: 'detections', analytics: 'analytics' };
+const TABLE_NAMES = { leads: 'leads', deliveries: 'deliveries', notificationFailures: 'notification_failures', accessLog: 'access_log', withdrawals: 'withdrawals', retentionRuns: 'retention_runs', quotes: 'quotes', waitlist: 'waitlist', feedback: 'feedback', detections: 'detections', analytics: 'analytics' };
 
-const FILE_NAMES = { quotes: 'quotes.jsonl', waitlist: 'waitlist.jsonl', feedback: 'feedback.jsonl', detections: 'detections.jsonl', analytics: 'analytics.jsonl', leads: 'leads.jsonl', deliveries: 'deliveries.jsonl', notificationFailures: 'notification-failures.jsonl', accessLog: 'access-log.jsonl', retentionRuns: 'retention-runs.jsonl' };
+const FILE_NAMES = { quotes: 'quotes.jsonl', waitlist: 'waitlist.jsonl', feedback: 'feedback.jsonl', detections: 'detections.jsonl', analytics: 'analytics.jsonl', leads: 'leads.jsonl', deliveries: 'deliveries.jsonl', notificationFailures: 'notification-failures.jsonl', accessLog: 'access-log.jsonl', withdrawals: 'withdrawals.jsonl', retentionRuns: 'retention-runs.jsonl' };
 
 function appendLine(file, obj) {
   fs.appendFileSync(path.join(DATA_DIR, file), JSON.stringify(obj) + '\n');
@@ -108,6 +111,7 @@ const INSERT_SQL = {
   feedback: `INSERT INTO ${SCHEMA_NAME}.feedback (ts, session_id, rating, element_count, comment) VALUES ($1,$2,$3,$4,$5)`,
   detections: `INSERT INTO ${SCHEMA_NAME}.detections (ts, session_id, element_count, mime_type) VALUES ($1,$2,$3,$4)`,
   leads: `INSERT INTO ${SCHEMA_NAME}.leads (ts, action, name, email, phone, postcode, message, source, status, design) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+  withdrawals: `INSERT INTO ${SCHEMA_NAME}.withdrawals (ts, lead_id, scope, record) VALUES ($1,$2,$3,$4)`,
   retentionRuns: `INSERT INTO ${SCHEMA_NAME}.retention_runs (ts, record) VALUES ($1,$2)`,
   accessLog: `INSERT INTO ${SCHEMA_NAME}.access_log (ts, endpoint, ip_hash, record) VALUES ($1,$2,$3,$4)`,
   deliveries: `INSERT INTO ${SCHEMA_NAME}.deliveries (ts, lead_id, delivered, failed, record) VALUES ($1,$2,$3,$4,$5)`,
@@ -134,6 +138,7 @@ const INSERT_PARAMS = {
   leads: o => [o.ts, null, o.name, o.email, o.phone, o.postcode, null, null, o.status, JSON.stringify(o)],
   // Same rule as leads: the scalar columns are for querying, the JSONB holds
   // the whole record so nothing is silently dropped.
+  withdrawals: o => [o.ts, o.leadId || null, o.scope || null, JSON.stringify(o)],
   retentionRuns: o => [o.ts, JSON.stringify(o)],
   accessLog: o => [o.ts, o.endpoint || null, o.ipHash || null, JSON.stringify(o)],
   deliveries: o => [o.ts, o.leadId || null, o.delivered | 0, o.failed | 0, JSON.stringify(o)],
@@ -148,6 +153,7 @@ const SELECT_SQL = {
   // `design` holds the full lead, so read it back rather than reassembling a
   // partial one from the scalar columns.
   leads: `SELECT design FROM ${SCHEMA_NAME}.leads ORDER BY id ASC`,
+  withdrawals: `SELECT record FROM ${SCHEMA_NAME}.withdrawals ORDER BY id ASC`,
   retentionRuns: `SELECT record FROM ${SCHEMA_NAME}.retention_runs ORDER BY id ASC`,
   accessLog: `SELECT record FROM ${SCHEMA_NAME}.access_log ORDER BY id ASC`,
   deliveries: `SELECT record FROM ${SCHEMA_NAME}.deliveries ORDER BY id ASC`,
@@ -244,7 +250,7 @@ async function readAll(table) {
     // callers expect the same shape the JSONL path returns, not a row with a
     // nested object. Anything without it falls back to the row itself.
     if (table === 'leads') return rows.map(r => r.design || r);
-    if (table === 'deliveries' || table === 'notificationFailures' || table === 'accessLog' || table === 'retentionRuns') return rows.map(r => r.record || r);
+    if (table === 'deliveries' || table === 'notificationFailures' || table === 'accessLog' || table === 'retentionRuns' || table === 'withdrawals') return rows.map(r => r.record || r);
     return rows;
   }
   return readLines(FILE_NAMES[table]);

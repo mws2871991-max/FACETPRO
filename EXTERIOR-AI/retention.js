@@ -53,6 +53,16 @@ function classifyLead(lead, now = Date.now(), periods = PERIODS) {
   const a = age(ts, now);
   if (a === null) return 'keep';                    // undated: never guess, leave it
 
+  /* Already redacted — by a previous run, or by someone withdrawing. There is
+     nothing personal left to strip, so it is kept until the consent record
+     itself expires and then goes entirely. Without this it would be redacted
+     again on every run, refreshing redactedAt each time and making the record
+     look newer than the erasure it documents. */
+  if (lead?.redacted === true) {
+    const consentAge = age(lead?.consent?.at || ts, now);
+    return (consentAge !== null && consentAge < periods.consentRecordDays * DAY) ? 'keep' : 'delete';
+  }
+
   const shared = lead?.consent?.installerQuotes === true;
   const enquiryLimit = (shared ? periods.sharedEnquiryDays : periods.designOnlyDays) * DAY;
   if (a < enquiryLimit) return 'keep';
@@ -72,6 +82,11 @@ function redactLead(lead) {
     redacted: true,
     // Kept: what they agreed to, when, and which version — the whole point.
     consent: lead.consent,
+    /* Kept for the same reason and the same six years: if they withdrew, that
+       is as much a part of the record as the agreeing was, and it is the half
+       more likely to be asked about later. */
+    ...(lead.withdrawals ? { withdrawals: lead.withdrawals } : {}),
+    ...(lead.withdrawnAt ? { withdrawnAt: lead.withdrawnAt } : {}),
     // Kept: non-identifying facts useful for reporting.
     price: lead.price ?? null,
     houseType: lead.wallMeasurement?.houseType ?? null,

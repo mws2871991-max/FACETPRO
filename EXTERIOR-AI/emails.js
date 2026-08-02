@@ -60,9 +60,12 @@ function leadNotificationHtml(lead, price) {
    with the same build-up as the site, repeats the planning-estimate caveat
    rather than burying it, and tells them how to get their data removed. */
 
-function designPackHtml(lead, price, siteUrl) {
+function designPackHtml(lead, price, siteUrl, withdrawToken) {
   const site = safeUrl(siteUrl) || 'https://facetpro.co.uk';
   const base = site.replace(/\/$/, '');
+  /* The notice promises "the link in any email we send you", so this has to
+     be a link that does something, not a pointer at the notice. */
+  const withdrawLink = withdrawToken ? `${base}/withdraw?t=${encodeURIComponent(withdrawToken)}` : null;
   // renderUrl is now a path on our own site, so make it absolute for email.
   const render = lead.renderUrl && lead.renderUrl.startsWith('/')
     ? base + lead.renderUrl
@@ -119,8 +122,9 @@ function designPackHtml(lead, price, siteUrl) {
 
     <p style="font-size:12px;line-height:1.6;color:#6B6E78;margin:26px 0 0;border-top:1px solid #e4e4e7;padding-top:16px">
       You're receiving this because you saved a design at <a href="${escapeHtml(base)}/" style="color:#6B6E78">${escapeHtml(base.replace(/^https?:\/\//, ''))}</a>.
-      You can withdraw your consent and ask us to delete your details at any time — see our
-      <a href="${escapeHtml(base)}/privacy" style="color:#6B6E78">privacy notice</a>.
+      ${withdrawLink
+        ? `You can <a href="${escapeHtml(withdrawLink)}" style="color:#6B6E78">change your mind or ask us to delete your details</a> at any time — see our <a href="${escapeHtml(base)}/privacy" style="color:#6B6E78">privacy notice</a>.`
+        : `You can withdraw your consent and ask us to delete your details at any time — see our <a href="${escapeHtml(base)}/privacy" style="color:#6B6E78">privacy notice</a>.`}
       Our <a href="${escapeHtml(base)}/terms" style="color:#6B6E78">terms</a> explain how estimates work.
     </p>
   </div>`;
@@ -128,8 +132,9 @@ function designPackHtml(lead, price, siteUrl) {
 
 // Plain-text alternative. Improves deliverability and is what text-only
 // clients show instead of a wall of stripped markup.
-function designPackText(lead, price, siteUrl) {
+function designPackText(lead, price, siteUrl, withdrawToken) {
   const base = (safeUrl(siteUrl) || 'https://facetpro.co.uk').replace(/\/$/, '');
+  const withdrawLink = withdrawToken ? `${base}/withdraw?t=${encodeURIComponent(withdrawToken)}` : `${base}/privacy`;
   return [
     `Your home, as you designed it`,
     ``,
@@ -159,7 +164,7 @@ function designPackText(lead, price, siteUrl) {
     `talk it through and arrange a survey. There's no obligation to go ahead.`,
     ``,
     `You're receiving this because you saved a design at ${base}/`,
-    `Withdraw consent or ask us to delete your details: ${base}/privacy`,
+    `Change your mind or ask us to delete your details: ${withdrawLink}`,
     `How estimates work: ${base}/terms`,
   ].join('\n');
 }
