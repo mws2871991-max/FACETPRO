@@ -88,6 +88,68 @@ const serveStatic = express.static(__dirname, {
   setHeaders: (res) => res.setHeader('X-Content-Type-Options', 'nosniff'),
 });
 
+/* ── SECURITY HEADERS ──
+   Article 32 asks for measures appropriate to the risk, and for a site
+   handling contact details and photographs of people's homes these are the
+   floor rather than the ceiling.
+
+   Written out rather than pulled in through helmet: it is a dozen headers,
+   the policy differs between the app and the legal pages, and a reader can
+   see exactly what is set and why without going to another repository.
+
+   Two policies, because the pages are genuinely different. The visualiser
+   still compiles Tailwind in the browser from a CDN, which needs both
+   'unsafe-inline' and 'unsafe-eval' — a real weakness, and the reason to move
+   to a built stylesheet. The legal pages need no script at all, so they get a
+   policy with no script-src escape hatch and nothing external whatsoever. */
+
+const CSP_APP = [
+  "default-src 'self'",
+  // The Tailwind Play CDN compiles at runtime; it needs eval and inline style.
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https://replicate.delivery",   // renders, before we have stored them
+  "font-src 'self'",
+  "connect-src 'self'",
+  "frame-ancestors 'none'",
+  "form-action 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+].join('; ');
+
+const CSP_LEGAL = [
+  "default-src 'self'",
+  "script-src 'none'",
+  "style-src 'self'",
+  "img-src 'self' data:",
+  "font-src 'self'",
+  "connect-src 'none'",
+  "frame-ancestors 'none'",
+  "form-action 'none'",
+  "base-uri 'self'",
+  "object-src 'none'",
+].join('; ');
+
+const isLegalPath = (p) => p === '/privacy' || p === '/terms' || p.startsWith('/legal/');
+
+app.use((req, res, next) => {
+  res.setHeader('Content-Security-Policy', isLegalPath(req.path) ? CSP_LEGAL : CSP_APP);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  /* No referrer across origins: the withdrawal link carries its token in the
+     query string, and a full referrer would hand it to anything that page
+     ever loads. */
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=(), payment=(), interest-cohort=()');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  /* HSTS only where TLS is actually terminated. Sending it from a plain-http
+     local server would pin a developer's browser to https://localhost. */
+  if (req.secure || req.get('x-forwarded-proto') === 'https') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  next();
+});
+
 app.use((req, res, next) => {
   if (req.path.startsWith('/api/') || !isPublicPath(req.path)) return next();
   serveStatic(req, res, next);
@@ -597,6 +659,28 @@ function saveDetectionRecord(detections, size) {
 /* Wall-measurement tuning. The defaults in measure.js come from the prototype
    survey table; these let you recalibrate per house type without a code
    change, which is how you'd fold in real surveyed properties. */
+/* Replicate's content filter, 0 (strictest) to 6 (most permissive). This was
+   at 5 — near the top of the range — on a service where members of the public
+   upload photographs of their homes, which routinely contain their children,
+   their neighbours and their cars. The permissive end is for people generating
+   their own images, not for a filter standing between an uploaded photograph
+   of a real family home and a model.
+
+   2 is Replicate's own default and the highest the API accepts for
+   image-to-image work. Configurable, because if legitimate house photographs
+   start being refused that is a product problem worth being able to fix
+   without a deploy — but the default should be the cautious one. */
+const RENDER_SAFETY_TOLERANCE = (() => {
+  const raw = process.env.RENDER_SAFETY_TOLERANCE;
+  if (raw === undefined || raw === '') return 2;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 0 || n > 6) {
+    console.error(`RENDER_SAFETY_TOLERANCE="${raw}" is not a whole number from 0 to 6 — using 2.`);
+    return 2;
+  }
+  return n;
+})();
+
 function envPositive(name) {
   const raw = process.env[name];
   if (raw === undefined || raw.trim() === '') return undefined;
@@ -1203,7 +1287,7 @@ app.post('/api/render', renderLimiter, async (req, res) => {
       method: 'POST',
       signal: controller.signal,
       headers: { 'Authorization': `Bearer ${replicateKey}`, 'Content-Type': 'application/json', 'Prefer': 'wait=90' },
-      body: JSON.stringify({ input: { prompt, input_image: inputImage, output_format: 'jpg', safety_tolerance: 5 } })
+      body: JSON.stringify({ input: { prompt, input_image: inputImage, output_format: 'jpg', safety_tolerance: RENDER_SAFETY_TOLERANCE } })
     });
     clearTimeout(renderTimeout);
 
@@ -1683,7 +1767,38 @@ const PORT = process.env.PORT || 3000;
    insert would have hit a table that was never created. Awaited before the
    port opens, so the process fails loudly on a bad database rather than
    accepting leads it cannot store. */
+/* Refuse to start rather than quietly contradict the notice.
+
+   Without DATABASE_URL everything lands in JSONL files on the container:
+   unencrypted, and on an ephemeral filesystem unless a volume is mounted. The
+   privacy notice says enquiries are stored encrypted and backed up. A warning
+   at startup does not stop a deployment, and nobody reads a warning in a log
+   they only open when something is already wrong — so a live deployment that
+   is taking personal data and cannot store it as promised is a failure, not a
+   caution. Same instinct as SITE_MODE defaulting to beta. */
+function refuseToStartIfStorageContradictsTheNotice() {
+  if (store.hasDb || !LEAD_CAPTURE || SITE_MODE !== 'live') return;
+  console.error([
+    '',
+    'REFUSING TO START.',
+    '',
+    'SITE_MODE=live and LEAD_CAPTURE=on, but DATABASE_URL is not set. Leads would be',
+    'written to plain JSONL files on this container — not encrypted, and lost on the',
+    'next deploy unless a volume is mounted. The privacy notice tells people their',
+    'enquiry is stored encrypted and backed up, so this would make the notice untrue',
+    'about data you had already collected.',
+    '',
+    'Do one of these:',
+    '  · set DATABASE_URL   (the intended fix — Postgres, encrypted at rest)',
+    '  · set LEAD_CAPTURE=off   (the site works; it just takes no details)',
+    '  · set SITE_MODE=beta   (for a staging deployment)',
+    '',
+  ].join('\n'));
+  process.exit(1);
+}
+
 async function start() {
+  refuseToStartIfStorageContradictsTheNotice();
   if (store.hasDb) {
     await store.ensureSchema();
     console.log('Storage: Postgres (encrypted at rest by the provider), schema ensured.');

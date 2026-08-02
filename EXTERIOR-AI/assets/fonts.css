@@ -1,0 +1,34 @@
+/* Self-hosted typefaces.
+
+   These used to be loaded from fonts.googleapis.com, which meant every
+   visitor's IP address reached Google before they had done anything —
+   including on the privacy notice, whose whole purpose is to explain that we
+   do not do that sort of thing. German courts have found precisely that
+   arrangement to be an unlawful transfer.
+
+   Geist is one variable file covering 300–600, so declaring the range serves
+   every weight the site uses from a single 29 KB request. */
+
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 300 600;
+  font-display: swap;
+  src: url('/assets/fonts/geist-variable.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Instrument Serif';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/assets/fonts/instrument-serif-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Instrument Serif';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/assets/fonts/instrument-serif-400-italic.woff2') format('woff2');
+}
