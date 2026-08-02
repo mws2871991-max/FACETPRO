@@ -19,7 +19,10 @@ const DELIVERIES = path.join(__dirname, '..', 'data', 'deliveries.jsonl');
 process.env.PORT = String(PORT);
 process.env.INSTALLER_PASSWORD = 'test-pw';
 process.env.LEAD_RECIPIENTS = JSON.stringify([{ id: 'buyer', name: 'Buyer', url: 'https://127.0.0.1:9/h' }]);
-delete process.env.RESEND_API_KEY;
+/* Installer-quotes consent is refused unless we can email the homeowner —
+   that is where the withdrawal link lives — so email is made to look
+   configured. Nothing is sent; the stub records it. */
+require('./helpers/email').configureEmail();
 
 const realFetch = globalThis.fetch;
 require('../server');
@@ -50,9 +53,12 @@ test('a design saves with BOTH optional boxes unticked — the Article 7(4) fix'
   assert.strictEqual(body.lead.consent.installerQuotes, false);
   assert.strictEqual(body.lead.consent.emailPack, false);
 
-  // No design pack, because they didn't ask for one.
-  assert.strictEqual(body.lead.designPack.sent, false);
-  assert.match(body.lead.designPack.reason, /did not ask/i);
+  // No email, because they asked for neither. (The field covers both the
+  // design pack and the sharing confirmation — a lead that asked for quotes
+  // but not the pack still gets one, since that is where the withdrawal link
+  // lives.)
+  assert.strictEqual(body.lead.homeownerEmail.sent, false);
+  assert.match(body.lead.homeownerEmail.reason, /neither/i);
 
   // And nobody receives their details — the point of a separate box.
   await new Promise(r => setTimeout(r, 400));

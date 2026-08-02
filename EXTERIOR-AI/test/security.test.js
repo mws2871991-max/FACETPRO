@@ -305,7 +305,12 @@ test('a lead is stored even when it cannot be emailed, and says so', async () =>
   const { status, body } = await post('/api/lead', {
     name: 'Jane', email: 'jane@example.com',
     claddingId: 'sage-slate', roofId: 'terracotta', trimId: 'cedar',
-    consent: { terms: true, installerQuotes: true, version: 'v' },
+    /* Terms only. This run has no RESEND_API_KEY, and asking for installer
+       quotes without email is refused outright — we would be sharing their
+       details with no way to send them the link that undoes it. That refusal
+       has its own tests; this one is about the lead surviving a failed
+       notification. */
+    consent: { terms: true, installerQuotes: false, version: 'v' },
   });
   assert.strictEqual(status, 200);
   assert.ok(body.lead.id, 'the lead is saved regardless');
@@ -319,7 +324,7 @@ test('the price on a lead is recomputed, never taken from the client', async () 
     name: 'Mallory', email: 'm@example.com',
     claddingId: 'sage-slate', roofId: 'terracotta', trimId: 'cedar',
     price: 1, total: 1, priceBreakdown: { total: 1 },   // all ignored
-    consent: { terms: true, installerQuotes: true, version: 'v' },
+    consent: { terms: true, installerQuotes: false, version: 'v' },   // see above
   });
   assert.ok(body.lead.price > 1000, `price should be server-computed, got ${body.lead.price}`);
 });

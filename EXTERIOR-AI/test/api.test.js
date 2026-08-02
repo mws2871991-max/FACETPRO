@@ -53,7 +53,10 @@ globalThis.fetch = async (url, opts) => {
 process.env.PORT = String(PORT);
 process.env.ANTHROPIC_API_KEY = 'sk-ant-test-stub';
 process.env.INSTALLER_PASSWORD = 'test-pw';
-delete process.env.RESEND_API_KEY;
+/* Installer-quotes consent is refused unless we can email the homeowner —
+   that is where the withdrawal link lives — so email is made to look
+   configured. Nothing is sent; the stub records it. */
+require('./helpers/email').configureEmail();
 
 require('../server');
 

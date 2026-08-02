@@ -55,12 +55,25 @@ function leadNotificationHtml(lead, price) {
   </div>`;
 }
 
+/* The notice says "we will tell you which installers received your details".
+   That is a promise, so it is kept in the email rather than only on request. */
+function installerList(recipients) {
+  const list = (recipients || []).filter(r => r && r.name);
+  if (!list.length) return '';
+  return `<p style="font-size:14px;line-height:1.6;color:#3f3f46;margin:0">
+      We have passed your details and your design to:
+    </p>
+    <ul style="font-size:14px;line-height:1.7;color:#3f3f46;margin:8px 0 0;padding-left:20px">
+      ${list.map(r => `<li>${escapeHtml(r.name)}</li>`).join('')}
+    </ul>`;
+}
+
 /* ── homeowner: their design pack ──
    Deliberately restrained. It confirms what they chose, shows the estimate
    with the same build-up as the site, repeats the planning-estimate caveat
    rather than burying it, and tells them how to get their data removed. */
 
-function designPackHtml(lead, price, siteUrl, withdrawToken) {
+function designPackHtml(lead, price, siteUrl, withdrawToken, recipients) {
   const site = safeUrl(siteUrl) || 'https://facetpro.co.uk';
   const base = site.replace(/\/$/, '');
   /* The notice promises "the link in any email we send you", so this has to
@@ -115,9 +128,11 @@ function designPackHtml(lead, price, siteUrl, withdrawToken) {
     </div>
 
     <h2 style="font-size:15px;margin:26px 0 8px;font-weight:600">What happens next</h2>
-    <p style="font-size:14px;line-height:1.6;color:#3f3f46;margin:0">
-      You agreed we could pass your design to installers, so one may contact you to talk it through
-      and arrange a survey. There's no obligation to go ahead at any point.
+    ${installerList(recipients)}
+    <p style="font-size:14px;line-height:1.6;color:#3f3f46;margin:${(recipients || []).length ? '10px 0 0' : '0'}">
+      ${(recipients || []).length
+        ? 'They may contact you by email or telephone to talk it through and arrange a survey. There is no obligation to go ahead at any point.'
+        : 'You agreed we could pass your design to installers, so one may contact you to talk it through and arrange a survey. There\'s no obligation to go ahead at any point.'}
     </p>
 
     <p style="font-size:12px;line-height:1.6;color:#6B6E78;margin:26px 0 0;border-top:1px solid #e4e4e7;padding-top:16px">
@@ -132,7 +147,7 @@ function designPackHtml(lead, price, siteUrl, withdrawToken) {
 
 // Plain-text alternative. Improves deliverability and is what text-only
 // clients show instead of a wall of stripped markup.
-function designPackText(lead, price, siteUrl, withdrawToken) {
+function designPackText(lead, price, siteUrl, withdrawToken, recipients) {
   const base = (safeUrl(siteUrl) || 'https://facetpro.co.uk').replace(/\/$/, '');
   const withdrawLink = withdrawToken ? `${base}/withdraw?t=${encodeURIComponent(withdrawToken)}` : `${base}/privacy`;
   return [
@@ -160,8 +175,13 @@ function designPackText(lead, price, siteUrl, withdrawToken) {
     `survey your home.`,
     ``,
     `WHAT HAPPENS NEXT`,
-    `You agreed we could pass your design to installers, so one may contact you to`,
-    `talk it through and arrange a survey. There's no obligation to go ahead.`,
+    ...((recipients || []).filter(r => r && r.name).length
+      ? ['We have passed your details and your design to:',
+         ...recipients.filter(r => r && r.name).map(r => `  ${r.name}`),
+         'They may contact you by email or telephone to talk it through and arrange a',
+         'survey. There is no obligation to go ahead at any point.']
+      : ['You agreed we could pass your design to installers, so one may contact you to',
+         "talk it through and arrange a survey. There's no obligation to go ahead."]),
     ``,
     `You're receiving this because you saved a design at ${base}/`,
     `Change your mind or ask us to delete your details: ${withdrawLink}`,
@@ -171,11 +191,92 @@ function designPackText(lead, price, siteUrl, withdrawToken) {
 
 const designPackSubject = (lead) => `Your Facet Pro design — reference ${lead.id}`;
 
+/* ── homeowner: confirmation that their details have gone to installers ──
+
+   The design pack used to be the only email the homeowner ever received, and
+   it only goes to people who asked for it. So someone who ticked "get quotes"
+   but not "email me my design" had their details sent to three companies and
+   received nothing at all — no record of it, and no withdrawal link. That is
+   the person who most needs one.
+
+   This is transactional, not marketing: it confirms something they asked for,
+   names who received their details as the notice promises, and carries the
+   link that makes Article 7(3) real. Deliberately short — the design pack is
+   the one with the picture in it. */
+
+function sharingConfirmationHtml(lead, recipients, siteUrl, withdrawToken) {
+  const site = safeUrl(siteUrl) || 'https://facetpro.co.uk';
+  const base = site.replace(/\/$/, '');
+  const withdrawLink = withdrawToken ? `${base}/withdraw?t=${encodeURIComponent(withdrawToken)}` : null;
+
+  return `<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:560px;margin:0 auto;color:#0F1012;background:#FBF8F3;padding:28px 24px">
+
+    <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#8A8A8F">Facet Pro</div>
+    <h1 style="font-size:24px;line-height:1.25;margin:12px 0 0;font-weight:600">Your enquiry is on its way</h1>
+    <p style="font-size:15px;line-height:1.6;color:#3f3f46;margin:14px 0 0">
+      Hello ${escapeHtml(lead.name)}, thank you for asking us to get you quotes${lead.postcode ? ` for ${escapeHtml(lead.postcode)}` : ''}.
+      Your reference is <strong>${escapeHtml(lead.id)}</strong>.
+    </p>
+
+    <div style="background:#fff;border-radius:12px;padding:18px 20px;margin:22px 0 0">
+      ${installerList(recipients) || `<p style="font-size:14px;line-height:1.6;color:#3f3f46;margin:0">
+        We are passing your details and your design to installers who cover your area.
+      </p>`}
+      <p style="font-size:14px;line-height:1.6;color:#3f3f46;margin:10px 0 0">
+        They may contact you by email or telephone to talk it through and arrange a survey.
+        There is no obligation to go ahead at any point, and each of them is responsible
+        for its own use of your details.
+      </p>
+    </div>
+
+    ${withdrawLink ? `<p style="font-size:14px;line-height:1.6;color:#3f3f46;margin:22px 0 0">
+      Changed your mind? You can
+      <a href="${escapeHtml(withdrawLink)}" style="color:#0F1012"><strong>stop this at any time</strong></a>
+      — we will tell the installers, and you can ask us to delete your details altogether.
+    </p>` : ''}
+
+    <p style="font-size:12px;line-height:1.6;color:#6B6E78;margin:26px 0 0;border-top:1px solid #e4e4e7;padding-top:16px">
+      You're receiving this because you asked us for quotes at
+      <a href="${escapeHtml(base)}/" style="color:#6B6E78">${escapeHtml(base.replace(/^https?:\/\//, ''))}</a>.
+      It is not a marketing email and you will not be added to a list. Our
+      <a href="${escapeHtml(base)}/privacy" style="color:#6B6E78">privacy notice</a> explains what we do with your details.
+    </p>
+  </div>`;
+}
+
+function sharingConfirmationText(lead, recipients, siteUrl, withdrawToken) {
+  const base = (safeUrl(siteUrl) || 'https://facetpro.co.uk').replace(/\/$/, '');
+  const named = (recipients || []).filter(r => r && r.name);
+  return [
+    'Your enquiry is on its way',
+    '',
+    `Hello ${lead.name}, thank you for asking us to get you quotes${lead.postcode ? ` for ${lead.postcode}` : ''}.`,
+    `Your reference is ${lead.id}.`,
+    '',
+    ...(named.length
+      ? ['We have passed your details and your design to:', ...named.map(r => `  ${r.name}`)]
+      : ['We are passing your details and your design to installers who cover your area.']),
+    '',
+    'They may contact you by email or telephone to talk it through and arrange a survey.',
+    'There is no obligation to go ahead at any point.',
+    '',
+    `Changed your mind? Stop this at any time: ${withdrawToken ? `${base}/withdraw?t=${encodeURIComponent(withdrawToken)}` : `${base}/privacy`}`,
+    '',
+    `You asked us for quotes at ${base}/ — this is not a marketing email.`,
+    `What we do with your details: ${base}/privacy`,
+  ].join('\n');
+}
+
+const sharingConfirmationSubject = (lead) => `We've sent your enquiry on — reference ${lead.id}`;
+
 module.exports = {
   leadNotificationHtml,
   designPackHtml,
   designPackText,
   designPackSubject,
+  sharingConfirmationHtml,
+  sharingConfirmationText,
+  sharingConfirmationSubject,
   escapeHtml,
   safeUrl,
 };

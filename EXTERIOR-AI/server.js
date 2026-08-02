@@ -325,10 +325,16 @@ const SITE_URL = process.env.SITE_URL || 'https://facetpro.co.uk';
    account — sending homeowner mail through it would fail for every real
    customer while looking configured. The site asks the server whether this is
    on (see /api/config) so the form never promises an email we can't send. */
-const DESIGN_PACK_ENABLED =
-  process.env.DESIGN_PACK_EMAIL !== 'off' &&
+/* Two different questions, and conflating them is what broke withdrawal.
+
+   HOMEOWNER_EMAIL_ENABLED is "can we reach this person at all". It is what
+   the withdrawal link depends on, so turning the design pack off must not
+   take withdrawal with it. */
+const HOMEOWNER_EMAIL_ENABLED =
   !!process.env.RESEND_API_KEY &&
   !LEAD_FROM_EMAIL.includes(RESEND_TEST_SENDER);
+
+const DESIGN_PACK_ENABLED = process.env.DESIGN_PACK_EMAIL !== 'off' && HOMEOWNER_EMAIL_ENABLED;
 
 function checkEmailConfig() {
   // Logged first and unconditionally: "is the customer getting their design?"
@@ -338,6 +344,13 @@ function checkEmailConfig() {
     : `Homeowner design-pack emails: OFF${process.env.DESIGN_PACK_EMAIL === 'off'
         ? ' (DESIGN_PACK_EMAIL=off)'
         : ' — needs RESEND_API_KEY and a LEAD_FROM_EMAIL on a verified domain'}`);
+
+  /* Louder than it looks. Without homeowner email there is no withdrawal
+     link, so the installer-quotes box is hidden and that consent is refused —
+     which is the whole revenue path. */
+  console.log(HOMEOWNER_EMAIL_ENABLED
+    ? 'Installer quotes: available (the withdrawal link can be delivered).'
+    : 'Installer quotes: UNAVAILABLE — no homeowner email, so no withdrawal link, so that consent is refused and the box is hidden. This is the paid path; fix it before launch.');
 
   if (!process.env.RESEND_API_KEY) {
     console.warn('RESEND_API_KEY not set — leads will be stored but nobody will be emailed.');
@@ -371,27 +384,57 @@ async function sendEmail({ to, subject, html, text, replyTo }) {
   return result?.data?.id || null;
 }
 
-// The homeowner's design pack. Never blocks storing the lead.
-async function sendDesignPack(lead, price, withdrawToken) {
-  if (!lead.consent?.emailPack) {
-    return { attempted: false, sent: false, reason: 'homeowner did not ask for the design pack' };
+/* The homeowner's email. Never blocks storing the lead.
+
+   One email, not two, and which one depends on what they asked for:
+
+     design pack           they ticked "email me my design"
+     sharing confirmation  they ticked "get me quotes" but not the design pack
+
+   The second case is why this exists. The design pack used to be the only
+   email a homeowner ever received, so someone who wanted quotes but not a
+   picture had their details sent to three companies and got nothing at all —
+   no record of it, and no withdrawal link. Article 7(3) asks that withdrawing
+   be as easy as consenting; consenting was one tick, and withdrawing was
+   impossible.
+
+   Both carry the withdrawal link, and both name the installers, which the
+   notice promises. */
+async function sendHomeownerEmail(lead, price, withdrawToken, recipients) {
+  const wantsPack = lead.consent?.emailPack === true;
+  const wantsQuotes = lead.consent?.installerQuotes === true;
+  if (!wantsPack && !wantsQuotes) {
+    return { attempted: false, sent: false, reason: 'homeowner asked for neither' };
   }
-  if (!DESIGN_PACK_ENABLED) {
-    return { attempted: false, sent: false, reason: 'design pack email not configured' };
+  if (!HOMEOWNER_EMAIL_ENABLED) {
+    return { attempted: false, sent: false, reason: 'homeowner email not configured' };
   }
+
+  const pack = wantsPack && DESIGN_PACK_ENABLED;
+  const kind = pack ? 'design pack' : 'sharing confirmation';
+  if (!pack && !wantsQuotes) {
+    // Wanted the pack, the pack is switched off, and nothing was shared —
+    // there is nothing to confirm and no sharing to withdraw from.
+    return { attempted: false, sent: false, reason: 'design pack switched off' };
+  }
+
   try {
     const id = await sendEmail({
       to: lead.email,
       replyTo: LEAD_NOTIFY_EMAIL || undefined,
-      subject: emails.designPackSubject(lead),
-      html: emails.designPackHtml(lead, price, SITE_URL, withdrawToken),
-      text: emails.designPackText(lead, price, SITE_URL, withdrawToken),
+      subject: pack ? emails.designPackSubject(lead) : emails.sharingConfirmationSubject(lead),
+      html: pack
+        ? emails.designPackHtml(lead, price, SITE_URL, withdrawToken, recipients)
+        : emails.sharingConfirmationHtml(lead, recipients, SITE_URL, withdrawToken),
+      text: pack
+        ? emails.designPackText(lead, price, SITE_URL, withdrawToken, recipients)
+        : emails.sharingConfirmationText(lead, recipients, SITE_URL, withdrawToken),
     });
-    console.log(`Lead ${lead.id}: design pack sent to the homeowner.`);
-    return { attempted: true, sent: true, id };
+    console.log(`Lead ${lead.id}: ${kind} sent to the homeowner.`);
+    return { attempted: true, sent: true, id, kind };
   } catch (err) {
-    console.error(`Lead ${lead.id}: design pack FAILED: ${err.message}`);
-    return { attempted: true, sent: false, reason: err.message };
+    console.error(`Lead ${lead.id}: ${kind} FAILED: ${err.message}`);
+    return { attempted: true, sent: false, reason: err.message, kind };
   }
 }
 
@@ -461,7 +504,9 @@ async function record(table, row) {
   }
 }
 
-async function deliverAndRecord(lead) {
+const planDelivery = (lead) => routing.chooseRecipients(LEAD_RECIPIENTS, lead, { max: MAX_INSTALLERS_PER_LEAD });
+
+async function deliverAndRecord(lead, plan) {
   /* The whole point of a separate, optional box: if they didn't ask for
      quotes, nobody gets their details. Recorded either way, so there is a
      positive record of the decision rather than an absence. */
@@ -480,7 +525,9 @@ async function deliverAndRecord(lead) {
      specific, so the routing has to be. Everything about the decision is
      recorded, including who was skipped and why: a buyer asking why they
      didn't get a lead deserves an answer, and so would the ICO. */
-  const { chosen, routing: routingRecord } = routing.chooseRecipients(LEAD_RECIPIENTS, lead, { max: MAX_INSTALLERS_PER_LEAD });
+  /* Reuses the plan from the request rather than recomputing it: the
+     homeowner has already been told, by name, who is getting their details. */
+  const { chosen, routing: routingRecord } = plan || planDelivery(lead);
   if (!chosen.length) {
     await record('deliveries', {
       ts: new Date().toISOString(), leadId: lead.id, postcode: lead.postcode || null,
@@ -770,6 +817,10 @@ app.get('/healthz', (req, res) => {
 app.get('/api/config', (req, res) => {
   res.json({
     designPackEmail: DESIGN_PACK_ENABLED,
+    /* Whether the installer-quotes box can be offered at all. Without email we
+       cannot send the withdrawal link, so that consent is refused server-side
+       — the form should not show a box that is going to be turned down. */
+    installerQuotes: HOMEOWNER_EMAIL_ENABLED,
     beta: SITE_MODE === 'beta',
     leadCapture: LEAD_CAPTURE,
   });
@@ -1350,6 +1401,19 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
   if (!consent || consent.terms !== true) {
     return res.status(400).json({ error: 'Please agree to the Terms before saving your design.' });
   }
+  /* Refused rather than accepted quietly, and refused before anything is
+     stored. If we cannot email them, we cannot send the withdrawal link, and
+     the notice promises "the link in any email from us" — so taking this
+     consent would mean sharing their details with three companies while
+     leaving them no way to stop it. The same instinct as refusing to start
+     live without a database: do not accept a promise you cannot keep. */
+  if (consent.installerQuotes === true && !HOMEOWNER_EMAIL_ENABLED) {
+    console.error('Refused installer-quotes consent: homeowner email is not configured, so no withdrawal link could be sent. Set RESEND_API_KEY and a LEAD_FROM_EMAIL on a verified domain.');
+    return res.status(503).json({
+      error: 'We can’t pass your details to installers just now — our email isn’t set up, and we won’t share your details without being able to send you a link to undo it. Untick that box and your design will save as normal.',
+      reason: 'withdrawal_link_undeliverable',
+    });
+  }
 
   const footprint = resolveFootprint({ footprintM2, detectionId });
   const price = computePrice({ claddingId, trimId, roofId, footprintM2: footprint.m2, trimLengthM });
@@ -1407,23 +1471,29 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
   // Stored first, unconditionally — a notification problem must never cost a lead.
   await store.append('leads', lead);
 
+  /* Worked out before the email rather than inside the delivery that follows
+     it, so we can name the installers to the homeowner — the notice says "we
+     will tell you which installers received your details" — and so the email
+     and the delivery cannot disagree about who that is. */
+  const plan = lead.consent.installerQuotes ? planDelivery(lead) : null;
+
   // Both emails run together: neither is allowed to delay the other, and
   // neither can fail the request — the lead is already saved.
-  const [notification, designPack] = await Promise.all([
+  const [notification, homeownerEmail] = await Promise.all([
     notifyNewLead(lead, price),
-    sendDesignPack(lead, price, withdrawToken),
+    sendHomeownerEmail(lead, price, withdrawToken, plan?.chosen),
   ]);
   lead.notification = notification;
-  lead.designPack = designPack;
+  lead.homeownerEmail = homeownerEmail;
 
   if (notification.attempted && !notification.sent) recordNotificationFailure(lead, notification, 'lead-notification');
-  if (designPack.attempted && !designPack.sent) recordNotificationFailure(lead, designPack, 'design-pack');
+  if (homeownerEmail.attempted && !homeownerEmail.sent) recordNotificationFailure(lead, homeownerEmail, homeownerEmail.kind || 'homeowner-email');
 
   /* Deliver to every buyer, after responding rather than before — the
      homeowner shouldn't wait on three third-party webhooks. The lead is
      already stored, so nothing is lost if the process dies mid-delivery; the
      reconciliation log below is what tells you it needs re-sending. */
-  deliverAndRecord(lead);
+  deliverAndRecord(lead, plan);
 
   /* The hash is ours. It is no use to an installer and no use to the browser,
      and the fewer places a credential's shadow appears the better. */

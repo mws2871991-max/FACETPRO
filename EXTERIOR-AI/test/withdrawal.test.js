@@ -27,7 +27,10 @@ const DATA = path.join(__dirname, '..', 'data');
 process.env.PORT = String(PORT);
 process.env.LEAD_CAPTURE = 'on';
 process.env.LEAD_RECIPIENTS = JSON.stringify([{ id: 'anglian', name: 'Anglian', url: 'https://buyer.test/hook' }]);
-delete process.env.RESEND_API_KEY;
+/* Installer-quotes consent is refused unless we can email the homeowner —
+   that is where the withdrawal link lives — so email is made to look
+   configured. Nothing is sent; the stub records it. */
+require('./helpers/email').configureEmail();
 
 /* The buyer is stubbed, so nothing leaves the machine and we can read exactly
    what we would have sent them. */

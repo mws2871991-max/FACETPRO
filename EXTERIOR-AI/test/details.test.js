@@ -14,7 +14,10 @@ const BASE = `http://127.0.0.1:${PORT}`;
 
 process.env.PORT = String(PORT);
 process.env.INSTALLER_PASSWORD = 'test-pw';
-delete process.env.RESEND_API_KEY;
+/* Installer-quotes consent is refused unless we can email the homeowner —
+   that is where the withdrawal link lives — so email is made to look
+   configured. Nothing is sent; the stub records it. */
+require('./helpers/email').configureEmail();
 
 const realFetch = globalThis.fetch;
 require('../server');
