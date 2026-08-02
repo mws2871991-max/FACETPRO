@@ -10,6 +10,7 @@ const emails = require('./emails');
 const delivery = require('./delivery');
 const retention = require('./retention');
 const withdrawal = require('./withdrawal');
+const routing = require('./routing');
 
 const catalogue = JSON.parse(fs.readFileSync(path.join(__dirname, 'catalogue.json'), 'utf8'));
 
@@ -347,14 +348,40 @@ async function sendDesignPack(lead, price, withdrawToken) {
 const { recipients: LEAD_RECIPIENTS, problems: RECIPIENT_PROBLEMS } =
   delivery.parseRecipients(process.env.LEAD_RECIPIENTS, { legacyUrl: process.env.CRM_WEBHOOK_URL });
 
+/* The consent wording on the form says "up to three vetted installers covering
+   my area". That sentence is the limit, not this setting — so the setting can
+   lower it and cannot raise it. Raising the number would need the wording
+   changed first, and then the people who already consented under the old
+   wording are a separate problem again. */
+const CONSENTED_MAX_INSTALLERS = 3;
+const MAX_INSTALLERS_PER_LEAD = (() => {
+  const raw = process.env.MAX_INSTALLERS_PER_LEAD;
+  if (raw === undefined || raw === '') return CONSENTED_MAX_INSTALLERS;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 0) {
+    console.error(`MAX_INSTALLERS_PER_LEAD="${raw}" is not a whole number — using ${CONSENTED_MAX_INSTALLERS}.`);
+    return CONSENTED_MAX_INSTALLERS;
+  }
+  if (n > CONSENTED_MAX_INSTALLERS) {
+    console.error(`MAX_INSTALLERS_PER_LEAD=${n} is more than the ${CONSENTED_MAX_INSTALLERS} the consent wording promises — using ${CONSENTED_MAX_INSTALLERS}. Change the wording on the form first, and remember it does not apply retrospectively.`);
+    return CONSENTED_MAX_INSTALLERS;
+  }
+  return n;
+})();
+
 function checkRecipients() {
   RECIPIENT_PROBLEMS.forEach(p => console.error(`LEAD_RECIPIENTS: ${p}`));
   if (!LEAD_RECIPIENTS.length) {
     console.warn('No lead recipients configured — leads are stored but sent to nobody. Set LEAD_RECIPIENTS.');
     return;
   }
-  // Names only. The URLs can carry auth tokens and must not reach a log.
-  console.log(`Lead delivery: ${LEAD_RECIPIENTS.length} recipient(s) — ${LEAD_RECIPIENTS.map(r => r.name).join(', ')}`);
+  // Names and coverage only. The URLs can carry auth tokens and must not reach a log.
+  console.log(`Lead delivery: up to ${MAX_INSTALLERS_PER_LEAD} of ${LEAD_RECIPIENTS.length} recipient(s) per lead — ` +
+    LEAD_RECIPIENTS.map(r => `${r.name} (${r.areas.length ? r.areas.join('/') : 'national'})`).join(', '));
+  const national = LEAD_RECIPIENTS.filter(r => !r.areas.length);
+  if (national.length && LEAD_RECIPIENTS.length > national.length) {
+    console.log(`  ${national.length} of those claim national coverage, so they are eligible for every postcode. Worth having that in writing.`);
+  }
 }
 
 /* Delivery and failure records hold homeowner details, so they go through
@@ -386,15 +413,33 @@ async function deliverAndRecord(lead) {
     return;
   }
   if (!LEAD_RECIPIENTS.length) return;
+
+  /* "up to three vetted installers covering my area" — the consent is
+     specific, so the routing has to be. Everything about the decision is
+     recorded, including who was skipped and why: a buyer asking why they
+     didn't get a lead deserves an answer, and so would the ICO. */
+  const { chosen, routing: routingRecord } = routing.chooseRecipients(LEAD_RECIPIENTS, lead, { max: MAX_INSTALLERS_PER_LEAD });
+  if (!chosen.length) {
+    await record('deliveries', {
+      ts: new Date().toISOString(), leadId: lead.id, postcode: lead.postcode || null,
+      total: 0, delivered: 0, failed: 0, results: [], routing: routingRecord,
+      withheld: routingRecord.postcodeUsable
+        ? 'no configured installer covers this area'
+        : 'no usable postcode, and every installer is area-restricted',
+    });
+    console.warn(`Lead ${lead.id}: nobody to send to — ${routingRecord.postcodeUsable ? `no installer covers ${routingRecord.outward}` : 'no usable postcode'}.`);
+    return;
+  }
+
   let results;
   const { withdrawTokenHash: _hash, ...forInstaller } = lead;
   try {
-    results = await delivery.deliverLead(forInstaller, LEAD_RECIPIENTS, { fetchImpl: (...a) => fetch(...a) });
+    results = await delivery.deliverLead(forInstaller, chosen, { fetchImpl: (...a) => fetch(...a) });
   } catch (err) {
     // deliverTo never throws, so this is defensive — but losing the record
     // silently is the one outcome that must not happen.
     console.error(`Lead ${lead.id}: delivery crashed:`, err.message);
-    await record('deliveries', { ts: new Date().toISOString(), leadId: lead.id, delivered: 0, failed: LEAD_RECIPIENTS.length, results: [], crashed: err.message });
+    await record('deliveries', { ts: new Date().toISOString(), leadId: lead.id, delivered: 0, failed: chosen.length, results: [], routing: routingRecord, crashed: err.message });
     return;
   }
 
@@ -406,6 +451,7 @@ async function deliverAndRecord(lead) {
     price: lead.price ?? null,
     ...s,
     results,
+    routing: routingRecord,
   });
 
   for (const r of results.filter(x => !x.ok)) {

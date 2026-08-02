@@ -18,6 +18,8 @@
 
 'use strict';
 
+const routing = require('./routing');
+
 const DEFAULT_ATTEMPTS = 3;
 const DEFAULT_TIMEOUT_MS = 10000;
 // Between attempts. Short — the homeowner has already been told we're done,
@@ -55,10 +57,15 @@ function parseRecipients(raw, { legacyUrl } = {}) {
         problems.push(`LEAD_RECIPIENTS[${i}] (${id}) has no https url — skipped. Lead data must not travel over plain http.`);
         return;
       }
+      /* Optional. Postcode areas ("SW") or full outward codes ("SW11") this
+         installer covers. Absent means national — see routing.js. */
+      const { areas, bad } = routing.normaliseAreas(r?.areas);
+      if (bad.length) problems.push(`LEAD_RECIPIENTS[${i}] (${id}) has unrecognised areas: ${bad.join(', ')} — expected a postcode area like "SW" or an outward code like "SW11".`);
       out.push({
         id,
         name: String(r?.name || id).trim(),
         url,
+        areas,
         headers: (r && typeof r.headers === 'object' && r.headers) || {},
       });
     });
@@ -66,7 +73,7 @@ function parseRecipients(raw, { legacyUrl } = {}) {
 
   // Backwards compatibility with the single-webhook setup.
   if (!out.length && legacyUrl && /^https:\/\//i.test(legacyUrl)) {
-    out.push({ id: 'crm', name: 'CRM webhook', url: legacyUrl, headers: {} });
+    out.push({ id: 'crm', name: 'CRM webhook', url: legacyUrl, areas: [], headers: {} });
   }
 
   const seen = new Set();
