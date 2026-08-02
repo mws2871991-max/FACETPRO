@@ -1436,7 +1436,8 @@ app.post('/api/measure', (req, res) => {
    Real AI render via Replicate FLUX Kontext Pro. Requires REPLICATE_API_TOKEN.
    Accepts { image: 'data:image/...;base64,...', mimeType, claddingName, trimName, roofName } */
 app.post('/api/render', renderLimiter, async (req, res) => {
-  const { image, mimeType, claddingName, trimName, roofName } = req.body || {};
+  const { image, mimeType, claddingName, trimName, roofName,
+          windowStyleName, doorStyleName, windowDoorColourName } = req.body || {};
   if (!image) return res.status(400).json({ error: 'image required' });
   if (typeof image !== 'string' || image.length < 10) return res.status(400).json({ error: 'Invalid image data.' });
   if (image.length > 20 * 1024 * 1024) return res.status(413).json({ error: 'Image too large (max 20MB).' });
@@ -1455,13 +1456,43 @@ app.post('/api/render', renderLimiter, async (req, res) => {
   const trim = trimName || 'Ink Trim';
   const roof = roofName || 'Slate Roof';
 
+  /* Windows and doors change only when the homeowner has actually chosen
+     something for them.
+
+     The prompt used to say, unconditionally, that "the windows, doors ...
+     must remain completely untouched and pixel-perfect" — while every one of
+     the four before-and-after photographs on the site is a window-frame
+     recolour. The visualiser was instructed to refuse the transformation the
+     site uses as its only proof.
+
+     Conditional rather than a straight swap, because the cladding, roof and
+     trim visualiser is a real product too and freezing the frames is the
+     right instruction when nobody has asked for new ones. */
+  const windowStyle = String(windowStyleName || '').trim();
+  const doorStyle = String(doorStyleName || '').trim();
+  const glazingColour = String(windowDoorColourName || '').trim();
+  const changingGlazing = !!(glazingColour && (windowStyle || doorStyle));
+
+  const glazingChange = changingGlazing
+    ? `Replace the window frames${doorStyle ? ' and the front door' : ''} with photorealistic ${windowStyle || 'casement'} windows${doorStyle ? ` and a ${doorStyle} front door` : ''}, both in ${glazingColour}. Frame proportions and opening sizes must match the existing apertures exactly — do not resize, add or remove any window or door. Glass reflections must stay consistent with the original sky and surroundings.`
+    : '';
+
+  const untouched = changingGlazing
+    ? 'The brickwork, garden, path, sky and every other element must remain completely untouched and pixel-perfect to the original — only the wall cladding, trim colour, roof material, window frames and door change.'
+    : 'The windows, doors, garden, path, sky and every other element must remain completely untouched and pixel-perfect to the original — only the wall cladding, trim colour, and roof material change.';
+
   const prompt = [
     `Replace the exterior wall cladding with a photorealistic ${cladding} finish, the window/door trim with ${trim} coloured trim, and the roof material with ${roof}.`,
+    glazingChange,
     `Critically: preserve the exact perspective, shadow direction, ambient lighting colour temperature, lens distortion, camera exposure, and depth of field of the original photograph.`,
-    `The windows, doors, garden, path, sky and every other element must remain completely untouched and pixel-perfect to the original — only the wall cladding, trim colour, and roof material change.`,
+    untouched,
+    /* FLUX Kontext will happily "improve" a house by adding a window. A render
+       showing an opening the homeowner does not have is a complaint waiting
+       to happen, and it is the kind an installer discovers on survey. */
+    `Do not add, remove, move or resize any window, door or other opening.`,
     `Shadows and reflections must remain consistent with the existing light source angle and intensity.`,
     `The result must be indistinguishable from a real installation photograph.`
-  ].join(' ');
+  ].filter(Boolean).join(' ');
 
   // Rebuilt from what the bytes are, so a client-supplied data: URL is never
   // forwarded to Replicate verbatim.
