@@ -53,7 +53,13 @@ test('the build input is not sitting in a served directory', () => {
   // assets/ is a served file that has no business being one.
   assert.ok(!fs.existsSync(path.join(root, 'assets', 'tailwind.css')));
   assert.ok(fs.existsSync(path.join(root, 'styles', 'tailwind.css')));
-  assert.match(require('../package.json').scripts['build:css'], /styles\/tailwind\.css/);
+  /* build:css and prestart go through the same script now — they used to be
+     separate commands that disagreed about whether the output was stale. */
+  const pkg = require('../package.json');
+  assert.strictEqual(pkg.scripts['build:css'], pkg.scripts.prestart,
+    'one path, so the two cannot drift');
+  assert.match(fs.readFileSync(path.join(root, 'scripts', 'prestart-css.js'), 'utf8'),
+    /styles\/tailwind\.css/, 'the build input moved out of the served directory');
 });
 
 test('the daylight tints come from this palette, not the mockup they arrived in', () => {

@@ -1,5 +1,11 @@
 #!/usr/bin/env node
-/* Make sure the stylesheet is there, and current, before the server starts.
+/* Build the stylesheet, or check the built one — whichever this machine can do.
+
+   Both `npm run build:css` and `npm start` come through here, deliberately.
+   They used to be different commands and disagreed: build:css shelled out to
+   Tailwind, which skips the write when the output is byte-identical, leaving
+   app.css older than index.html — and then prestart warned that a perfectly
+   current stylesheet was stale. Two paths, one of them lying.
 
    assets/app.css is compiled ahead of time and the site is unstyled without
    it — a spectacular way to discover a deploy went wrong, and one nobody sees
