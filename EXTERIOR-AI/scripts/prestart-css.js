@@ -29,7 +29,7 @@ const canBuild = (() => {
 })();
 
 if (canBuild) {
-  execFileSync('npx', ['tailwindcss', '-i', './assets/tailwind.css', '-o', './assets/app.css', '--minify'],
+  execFileSync('npx', ['tailwindcss', '-i', './styles/tailwind.css', '-o', './assets/app.css', '--minify'],
     { cwd: root, stdio: 'inherit' });
   /* Tailwind skips the write when the output is byte-identical, so a correct
      rebuild can leave the file older than the markup — and the staleness

@@ -8,7 +8,7 @@
     "test": "node test/run.js",
     "validate": "node scripts/validate-measurements.js",
     "set-domain": "node scripts/set-domain.js",
-    "build:css": "tailwindcss -i ./assets/tailwind.css -o ./assets/app.css --minify",
+    "build:css": "tailwindcss -i ./styles/tailwind.css -o ./assets/app.css --minify",
     "prestart": "node scripts/prestart-css.js"
   },
   "license": "ISC",

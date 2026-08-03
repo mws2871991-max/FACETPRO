@@ -13,7 +13,15 @@ instrument-serif-400-italic.woff2
   https://github.com/Instrument/instrument-serif
   Latin subset only.
 
-Both licences permit redistribution and self-hosting. They are here rather
+jetbrains-mono-variable.woff2
+  JetBrains Mono, by JetBrains. SIL Open Font License 1.1.
+  https://github.com/JetBrains/JetBrainsMono
+  One variable file covering weights 400-500. Latin subset only.
+  Used for measured values — money, areas, counts, references — because a
+  monospace numeral reads as taken off a building, and a proportional one
+  reads as chosen.
+
+All three licences permit redistribution and self-hosting. They are here rather
 than on fonts.googleapis.com so that no visitor's IP address reaches a third
 party just for loading a page — which matters most on the privacy notice,
 whose purpose is to explain that we do not do that sort of thing.

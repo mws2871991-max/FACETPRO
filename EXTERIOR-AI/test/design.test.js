@@ -34,6 +34,43 @@ test('every face the page uses is served from here', () => {
   }
 });
 
+test('every font we redistribute is attributed', () => {
+  /* The suite had a hole shaped exactly like the omission it missed: it
+     checked JetBrains Mono existed and was declared, but not that anyone had
+     said whose it was. 31 KB of somebody's typeface with no licence entry. */
+  const dir = path.join(root, 'assets', 'fonts');
+  const notice = fs.readFileSync(path.join(dir, 'NOTICE.txt'), 'utf8');
+  const fonts = fs.readdirSync(dir).filter(f => f.endsWith('.woff2'));
+  assert.ok(fonts.length, 'there should be fonts to attribute');
+  for (const font of fonts) {
+    assert.ok(notice.includes(font), `${font} is redistributed but not in NOTICE.txt`);
+  }
+  assert.match(notice, /Open Font License/);
+});
+
+test('the build input is not sitting in a served directory', () => {
+  // Nothing is exposed by three @tailwind directives, but a build input in
+  // assets/ is a served file that has no business being one.
+  assert.ok(!fs.existsSync(path.join(root, 'assets', 'tailwind.css')));
+  assert.ok(fs.existsSync(path.join(root, 'styles', 'tailwind.css')));
+  assert.match(require('../package.json').scripts['build:css'], /styles\/tailwind\.css/);
+});
+
+test('the daylight tints come from this palette, not the mockup they arrived in', () => {
+  /* A page built on sand #D9C5B4 and slate #2F3336 reaching outside itself in
+     one place reads as borrowed. */
+  const start = html.indexOf('const LIGHTING = {');
+  const body = html.slice(start, start + 700);
+  assert.ok(!/255,232,184|15,10,42/.test(body), 'the mockup palette is back');
+  assert.match(body, /217,197,180/, 'morning should be the sand token');
+});
+
+test('a request for less movement is honoured', () => {
+  // The daylight transitions are .7s on filter, background and shadow.
+  assert.match(html, /prefers-reduced-motion: reduce/);
+  assert.match(html, /transition-duration:\.01ms !important/);
+});
+
 test('measured figures are set in the mono, with tabular numerals', () => {
   // A column of prices that does not line up, or a total that shuffles
   // sideways as it changes, is the thing tabular figures exist to stop.
