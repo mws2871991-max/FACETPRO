@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>New Windows &amp; Doors, Priced From One Photo — No Salesman | Facet Pro</title>
+<title>A Fair Price For Windows, Without Haggling — One Photo | Facet Pro</title>
 <meta name="description" content="See new windows and doors on your own house and what they cost, in about a minute — no home visit, no salesman, no obligation. Walls, roof and roofline price off the same photo when you are ready.">
 <link rel="canonical" href="https://www.facetpro.co.uk/">
 <meta name="robots" content="index, follow, max-image-preview:large">
@@ -16,14 +16,14 @@
 <meta property="og:site_name" content="Facet Pro">
 <meta property="og:locale" content="en_GB">
 <meta property="og:url" content="https://www.facetpro.co.uk/">
-<meta property="og:title" content="New windows and doors. One photo. No salesmen. — Facet Pro">
+<meta property="og:title" content="You shouldn&rsquo;t have to haggle to get a fair price for your windows — Facet Pro">
 <meta property="og:description" content="Upload one photo. Try real window styles and frame colours on your home, and get a costed estimate in about a minute.">
 <meta property="og:image" content="https://www.facetpro.co.uk/assets/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Facet Pro — a home exterior shown before and after new cladding.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="New windows and doors. One photo. No salesmen. — Facet Pro">
+<meta name="twitter:title" content="You shouldn&rsquo;t have to haggle to get a fair price for your windows — Facet Pro">
 <meta name="twitter:description" content="Upload one photo. Try real window styles and frame colours on your home, and get a costed estimate in about a minute.">
 <meta name="twitter:image" content="https://www.facetpro.co.uk/assets/og-image.png">
 
@@ -225,18 +225,18 @@
 
   <section class="rounded-2xl bg-zinc-900 text-[#FBF8F3] overflow-hidden p-8 md:p-12" aria-labelledby="hero-heading">
     <p class="text-[11px] tracking-[0.25em] uppercase text-white/50">Windows &amp; doors · and the rest of your outside · UK</p>
-    <h1 id="hero-heading" class="mt-4 serif text-[36px] md:text-[56px] leading-[0.95] tracking-[-0.03em]">New windows and doors.<br class="hidden sm:block"> One photo. No salesmen.</h1>
+    <h1 id="hero-heading" class="mt-4 serif text-[36px] md:text-[56px] leading-[0.95] tracking-[-0.03em]">You shouldn&rsquo;t have to haggle<br class="hidden sm:block"> to get a fair price for your windows.</h1>
     <!-- Names the thing the buyer actually dreads. The doorstep double-glazing
          sale is the strongest lever in this category and the old copy didn't
          touch it. -->
-    <p class="mt-5 text-[15px] leading-7 text-white/70 max-w-[58ch]">Pricing windows the usual way means a two-hour visit, a folder of options, and a number that comes down if you say you will think about it. On a weeknight. In your living room.</p>
-    <p class="mt-4 text-[16px] leading-7 text-white/85 max-w-[58ch]">Upload one photo instead. See new frames and a new front door on your own house, and what they would cost, in about a minute — before you speak to anybody.</p>
+    <p class="mt-5 text-[15px] leading-7 text-white/70 max-w-[58ch]">Two neighbours can buy the same windows and pay wildly different prices — because one of them pushed harder, on a weeknight, in their own front room. That is not a price. It is a negotiation, and not everybody wants one.</p>
+    <p class="mt-4 text-[16px] leading-7 text-white/85 max-w-[58ch]">Upload one photo. See new frames and a new front door on your own house, and what they cost, in about a minute. <strong class="text-white">The same house gets the same number here</strong> — it does not go up because you were polite, or down because you got up to see somebody out.</p>
     <p class="mt-3 text-[14px] leading-6 text-white/55 max-w-[58ch]">And when you are ready, the walls, roof, roofline and a conservatory price off the same photo. One place for the whole outside of your house.</p>
     <ul class="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-white/60">
+      <li>One price, for everyone</li>
       <li>Nobody visits</li>
       <li>Nobody calls unless you ask</li>
       <li>Free, about a minute</li>
-      <li>No obligation</li>
     </ul>
     <div class="mt-8 flex flex-wrap gap-3">
       <button id="hero-upload" type="button" class="px-5 py-3 rounded-full bg-white text-zinc-900 text-sm font-medium hover:bg-zinc-100 transition">See it on your house — free</button>
@@ -1502,6 +1502,8 @@ function buildPricePanel(price, priceRow) {
     h('p', { className: 'mt-3 text-[10px] leading-4 text-white/50' }, ['Based on ', h('span', { className: 'measured' }, `${price.footprintM2} m²`), ' of wall.']),
     h('p', { className: 'mt-3 text-[10px] leading-4 text-white/50' }, catalogue_note()),
     h('p', { className: 'mt-2 text-[10px] leading-4 text-white/50' }, 'A planning estimate, not a fixed quote — an installer will confirm the price after a survey.'),
+    h('p', { className: 'mt-2 text-[10px] leading-4 text-white/50' },
+      'It is the same number for everybody with your house and your choices. Where it moves, it moves on what we could measure and which installer quotes — never on how hard you push.'),
   ]);
 }
 
