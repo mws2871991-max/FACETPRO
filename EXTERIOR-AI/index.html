@@ -36,6 +36,46 @@
   .serif{font-family:'Instrument Serif',serif}
   /* Numbers that came from measuring something. Tabular figures so a column
      of prices lines up and a changing total doesn't shuffle sideways. */
+
+  /* ── BRAND PALETTE ──
+     From the brand brief: navy #0D1B2A, blue #1D4ED8, cream #FAF8F5, and gold
+     #B98A3E reserved for Pro. None of the four appeared anywhere in the build
+     — the brief and the site had simply never agreed.
+
+     Applied as a layer over the utilities already in the markup rather than by
+     rewriting ninety-five class names. One place, one revert, and the diff
+     shows the decision instead of burying it.
+
+     What deliberately does NOT change: the catalogue swatches. Terracotta
+     #B45309 and Cedar #8B5A2B are products somebody is buying, not brand
+     colours — a review mistook them for the palette, which is exactly why
+     they should stay where a reader can tell them apart. Nor the semantic
+     colours: amber still means a caveat, red still means refused. */
+  :root{
+    --brand-navy:#0D1B2A;
+    --brand-navy-hover:#16293c;
+    --brand-blue:#1D4ED8;
+    --brand-blue-hover:#1a44bd;
+    --brand-cream:#FAF8F5;
+    --brand-card:#FFFDFA;
+    --brand-gold:#B98A3E;      /* Pro only — nothing on this page uses it yet */
+  }
+  body{background:var(--brand-cream)}
+  .bg-\[\#FBF8F3\]{background-color:var(--brand-cream)}
+  .bg-\[\#FBF8F3\]\/80{background-color:rgba(250,248,245,.8)}
+  .bg-\[\#FDFCF9\]{background-color:var(--brand-card)}
+  .bg-zinc-900{background-color:var(--brand-navy)}
+  .text-zinc-900{color:var(--brand-navy)}
+  .border-zinc-900{border-color:var(--brand-navy)}
+  .hover\:bg-zinc-800:hover{background-color:var(--brand-navy-hover)}
+  .hover\:border-zinc-900:hover{border-color:var(--brand-navy)}
+  .hover\:text-zinc-900:hover{color:var(--brand-navy)}
+  .bg-\[\#111111\]{background-color:var(--brand-navy)}
+
+  /* Blue is the brief's action colour, so it goes on the things that move
+     somebody forward — and nowhere else, or it stops meaning anything. */
+  .cta{background-color:var(--brand-blue) !important;color:#fff !important;border-color:var(--brand-blue) !important}
+  .cta:hover{background-color:var(--brand-blue-hover) !important;border-color:var(--brand-blue-hover) !important}
   .measured{font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-0.01em}
   /* Room for the fixed total bar, so it never covers the last thing on the
      page — which would be the consent boxes. */
@@ -239,7 +279,7 @@
       <li>Free, about a minute</li>
     </ul>
     <div class="mt-8 flex flex-wrap gap-3">
-      <button id="hero-upload" type="button" class="px-5 py-3 rounded-full bg-white text-zinc-900 text-sm font-medium hover:bg-zinc-100 transition">See it on your house — free</button>
+      <button id="hero-upload" type="button" class="cta px-5 py-3 rounded-full text-sm font-medium transition">See it on your house — free</button>
       <!-- Most first-time visitors are not ready to upload anything. The old
            secondary sent them to an explainer; this sends them to the proof. -->
       <a href="#our-work" class="px-5 py-3 rounded-full border border-white/20 text-sm font-medium hover:bg-white/10 transition">Look at our work first</a>
@@ -1063,7 +1103,7 @@ function buildUploadDetect() {
         fileInput,
         dropArea,
         h('div', { className: 'mt-3 flex gap-2' }, [
-          h('button', { type: 'button', className: 'flex-1 px-3 py-2 rounded-full bg-zinc-900 text-white text-xs', onClick: () => sharedRefs.fileInput?.click() }, 'Choose a photo'),
+          h('button', { type: 'button', className: 'cta flex-1 px-3 py-2 rounded-full text-xs', onClick: () => sharedRefs.fileInput?.click() }, 'Choose a photo'),
           h('button', {
             type: 'button',
             className: 'px-3 py-2 rounded-full border border-zinc-200 bg-white text-xs',
@@ -2474,7 +2514,7 @@ function buildSaveFraming() {
           : 'You don\u2019t have to tick the first one. Your visualisation and estimate work the same way without it.'),
       h('button', {
         type: 'button',
-        className: `mt-4 w-full py-3 rounded-full text-sm font-medium ${state.sendingLead ? 'bg-zinc-300 text-zinc-500' : 'bg-zinc-900 text-white'}`,
+        className: `mt-4 w-full py-3 rounded-full text-sm font-medium ${state.sendingLead ? 'bg-zinc-300 text-zinc-500' : 'cta'}`,
         disabled: state.sendingLead,
         onClick: sendDesignPack
       }, state.sendingLead ? 'Saving your design…' : (state.consent.installerQuotes ? 'Get my free quotes →' : 'Save my design →')),

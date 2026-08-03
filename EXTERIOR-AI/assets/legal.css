@@ -24,10 +24,20 @@ ul, ol { padding: 0; list-style: none; }
 a { color: inherit; }
 table { border-collapse: collapse; }
 
+/* ── brand ──
+   From the brand brief. The legal pages carry their own stylesheet, so these
+   are stated here as well as in index.html rather than shared — two files,
+   four constants, and no build step between them. */
+:root{
+  --brand-navy:#0D1B2A;
+  --brand-cream:#FAF8F5;
+  --brand-card:#FFFDFA;
+}
+
 /* ── type ── */
 * { font-family: Geist, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
 .serif { font-family: 'Instrument Serif', Georgia, serif; }
-body { background: #FBF8F3; }
+body { background: var(--brand-cream); }
 
 /* ── layout ── */
 .min-h-screen { min-height: 100vh; }
@@ -63,15 +73,15 @@ body { background: #FBF8F3; }
 .space-y-1 > * + * { margin-top: 0.25rem; }
 
 /* ── colour and surface ── */
-.bg-\[\#FBF8F3\] { background-color: #FBF8F3; }
-.bg-\[\#FBF8F3\]\/80 { background-color: rgba(251, 248, 243, 0.8); }
-.bg-zinc-900 { background-color: #18181b; }
+.bg-\[\#FBF8F3\] { background-color: var(--brand-cream); }
+.bg-\[\#FBF8F3\]\/80 { background-color: rgba(250, 248, 245, 0.85); }
+.bg-zinc-900 { background-color: var(--brand-navy); }
 .hover\:bg-white:hover { background-color: #fff; }
 .text-white { color: #fff; }
-.text-zinc-900 { color: #18181b; }
+.text-zinc-900 { color: var(--brand-navy); }
 .text-zinc-600 { color: #52525b; }
 .text-zinc-500 { color: #71717a; }
-.hover\:text-zinc-900:hover { color: #18181b; }
+.hover\:text-zinc-900:hover { color: var(--brand-navy); }
 .border { border: 1px solid transparent; }
 .border-b { border-bottom-width: 1px; border-bottom-style: solid; }
 .border-t { border-top-width: 1px; border-top-style: solid; }
@@ -108,8 +118,8 @@ body { background: #FBF8F3; }
 .prose ul { list-style: disc; padding-left: 1.25rem; margin: 0.5rem 0; }
 .prose table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 13px; }
 .prose th, .prose td { text-align: left; vertical-align: top; padding: 10px 12px; border: 1px solid #e4e4e7; }
-.prose th { background: #FDFCF9; font-weight: 500; }
-.prose a { color: #18181b; text-decoration: underline; text-underline-offset: 2px; }
+.prose th { background: var(--brand-card); font-weight: 500; }
+.prose a { color: var(--brand-navy); text-decoration: underline; text-underline-offset: 2px; }
 
 /* A table on a phone is the one thing that will overflow, and the retention
    table is the part people actually come here to read. */
@@ -118,11 +128,11 @@ body { background: #FBF8F3; }
 /* Placeholder still to be filled in before publishing. */
 .ph { background: #FEF3C7; border-bottom: 1px solid #FCD34D; padding: 0 3px; border-radius: 2px; font-weight: 500; }
 
-.summary { border: 1px solid #e4e4e7; background: #FDFCF9; border-radius: 16px; padding: 20px 24px; margin-top: 2rem; }
+.summary { border: 1px solid #e4e4e7; background: var(--brand-card); border-radius: 16px; padding: 20px 24px; margin-top: 2rem; }
 .summary li { font-size: 13.5px; line-height: 1.7; }
 
-.callout { border: 1px solid #e4e4e7; background: #FDFCF9; border-radius: 16px; padding: 18px 22px; margin: 1.5rem 0; }
+.callout { border: 1px solid #e4e4e7; background: var(--brand-card); border-radius: 16px; padding: 18px 22px; margin: 1.5rem 0; }
 .callout p { font-size: 13.5px; margin: 0; }
 
 .toc a { font-size: 13px; color: #52525b; text-decoration: none; }
-.toc a:hover { color: #18181b; text-decoration: underline; }
+.toc a:hover { color: var(--brand-navy); text-decoration: underline; }
