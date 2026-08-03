@@ -61,15 +61,26 @@ test('the legal pages allow no script at all', async () => {
   }
 });
 
-test('the app policy still names every host it actually needs', async () => {
+test('the app runs no code from anywhere but here', async () => {
+  /* The visualiser used to compile Tailwind in the browser from a CDN, so the
+     policy had to grant 'unsafe-eval' and allowlist that origin — on the same
+     page that keeps the installer password in sessionStorage. Anything
+     executing there could read the one credential that unlocks every
+     consenting homeowner's name, email, phone and postcode. */
   const csp = parseCsp((await realFetch(`${BASE}/`)).headers.get('content-security-policy'));
-  // The visualiser compiles Tailwind in the browser, which needs eval. That is
-  // a real weakness and the reason to move to a built stylesheet — but the
-  // policy must at least be honest about it rather than absent.
-  assert.ok(csp['script-src'].includes('https://cdn.tailwindcss.com'));
+  assert.ok(!csp['script-src'].includes("'unsafe-eval'"), 'eval is back');
+  assert.ok(!csp['script-src'].some(v => v.startsWith('http')), `external script origin: ${csp['script-src'].join(' ')}`);
   assert.ok(csp['img-src'].includes('data:'), 'the uploaded photo is a data URL');
   assert.deepStrictEqual(csp['object-src'], ["'none'"]);
   assert.deepStrictEqual(csp['base-uri'], ["'self'"]);
+});
+
+test('the stylesheet is built and served, not fetched from a CDN', async () => {
+  const res = await realFetch(`${BASE}/assets/app.css`);
+  assert.strictEqual(res.status, 200, 'the page links it; it has to exist');
+  assert.ok(Number(res.headers.get('content-length')) > 10000, 'suspiciously small for a whole site');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  assert.ok(!/cdn\.tailwindcss\.com/.test(html), 'the CDN is back in the page');
 });
 
 test('HSTS is not sent over plain http', async () => {

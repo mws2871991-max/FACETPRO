@@ -124,15 +124,28 @@ test('the server does not announce what it is', async () => {
 /* ── H-5: nobody can plant 20MB in the lead store ── */
 
 test('long fields are capped, not stored whole', async () => {
+  /* Sized to fit inside the 100kb body limit that /api/lead now has, because
+     the caps have to hold for what gets through it. Both defences matter:
+     the limit stops 20MB being parsed at all, the caps stop 90kb of name
+     reaching an installer's webhook and an email template. */
   const { status, body } = await post('/api/lead', {
-    name: 'A'.repeat(500000), email: 'a@example.com',
-    phone: 'B'.repeat(100000), postcode: 'C'.repeat(100000),
+    name: 'A'.repeat(20000), email: 'a@example.com',
+    phone: 'B'.repeat(20000), postcode: 'C'.repeat(20000),
     claddingId: 'sage-slate', consent: { terms: true, version: 'v' },
   });
   assert.strictEqual(status, 200);
   assert.strictEqual(body.lead.name.length, 100);
   assert.strictEqual(body.lead.phone.length, 32);
   assert.strictEqual(body.lead.postcode.length, 12);
+});
+
+test('and a body too large to be a lead never gets parsed', async () => {
+  // 20MB was the global limit; only the two photo endpoints need that room.
+  const { status, body } = await post('/api/lead', {
+    name: 'A'.repeat(500000), email: 'a@example.com',
+    claddingId: 'sage-slate', consent: { terms: true, version: 'v' },
+  });
+  assert.strictEqual(status, 413, JSON.stringify(body).slice(0, 120));
 });
 
 test('whitespace is trimmed, so " " is not a name', async () => {

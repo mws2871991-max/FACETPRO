@@ -71,7 +71,11 @@ app.set('trust proxy', 1);
 // needs them. Sending `Access-Control-Allow-Origin: *` only let any website
 // read these endpoints from a visitor's browser.
 
-app.use(express.json({ limit: '20mb' }));
+/* Photographs need room; nothing else does. This was one global 20 MB, so
+   every endpoint on the site would accept a 20 MB body and parse it before
+   any handler saw it. */
+app.use(['/api/detect', '/api/render'], express.json({ limit: '20mb' }));
+app.use(express.json({ limit: '100kb' }));
 
 /* ── STATIC FILES ──
    Deny by default. Serving __dirname wholesale published the entire project —
@@ -136,16 +140,21 @@ const serveStatic = express.static(__dirname, {
    the policy differs between the app and the legal pages, and a reader can
    see exactly what is set and why without going to another repository.
 
-   Two policies, because the pages are genuinely different. The visualiser
-   still compiles Tailwind in the browser from a CDN, which needs both
-   'unsafe-inline' and 'unsafe-eval' — a real weakness, and the reason to move
-   to a built stylesheet. The legal pages need no script at all, so they get a
-   policy with no script-src escape hatch and nothing external whatsoever. */
+   Two policies, because the pages are genuinely different. Neither loads
+   anything from another origin any more: the app used to pull Tailwind from a
+   CDN and compile it in the browser, which meant granting 'unsafe-eval' and
+   allowlisting that origin — on the same page that keeps the installer
+   password in sessionStorage. Anything executing there could read the one
+   credential that unlocks every consenting homeowner's contact details. The
+   stylesheet is built now, so both are gone.
+
+   'unsafe-inline' remains on script-src for the app: the page is a single
+   file with its inline module, and splitting it out is a separate change.
+   Script execution is at least confined to bytes we served. */
 
 const CSP_APP = [
   "default-src 'self'",
-  // The Tailwind Play CDN compiles at runtime; it needs eval and inline style.
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com",
+  "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://replicate.delivery",   // renders, before we have stored them
   "font-src 'self'",
@@ -947,7 +956,7 @@ app.get('/api/config', (req, res) => {
 const swatchFields = ({ id, name, hex, image }) => ({ id, name, hex, image });
 
 function buildPublicCatalogue(c) {
-  const pick = (obj, keys) => obj ? Object.fromEntries(keys.filter(k => obj[k] !== undefined).map(k => [k, obj[k]])) : undefined;
+  const pickFields = (obj, keys) => obj ? Object.fromEntries(keys.filter(k => obj[k] !== undefined).map(k => [k, obj[k]])) : undefined;
 
   return {
     version: c.version,
@@ -962,24 +971,24 @@ function buildPublicCatalogue(c) {
     wholeHouse: c.wholeHouse && {
       note: c.wholeHouse.note,
       areaMinM2: c.wholeHouse.areaMinM2, areaMaxM2: c.wholeHouse.areaMaxM2, areaDefaultM2: c.wholeHouse.areaDefaultM2,
-      finishes: c.wholeHouse.finishes.map(f => pick(f, ['id', 'name', 'hex', 'textureType', 'pricePerM2', 'lightScore', 'bestFor', 'bestseller'])),
-      roofColours: c.wholeHouse.roofColours.map(x => pick(x, ['id', 'name', 'hex'])),
-      windowColours: c.wholeHouse.windowColours.map(x => pick(x, ['id', 'name', 'hex'])),
+      finishes: c.wholeHouse.finishes.map(f => pickFields(f, ['id', 'name', 'hex', 'textureType', 'pricePerM2', 'lightScore', 'bestFor', 'bestseller'])),
+      roofColours: c.wholeHouse.roofColours.map(x => pickFields(x, ['id', 'name', 'hex'])),
+      windowColours: c.wholeHouse.windowColours.map(x => pickFields(x, ['id', 'name', 'hex'])),
     },
     conservatories: c.conservatories && {
       note: c.conservatories.note,
-      styles: c.conservatories.styles.map(s => pick(s, ['id', 'name', 'priceMin', 'priceMax', 'bestFor', 'footprint', 'lightPct', 'description', 'pros', 'cons'])),
+      styles: c.conservatories.styles.map(s => pickFields(s, ['id', 'name', 'priceMin', 'priceMax', 'bestFor', 'footprint', 'lightPct', 'description', 'pros', 'cons'])),
     },
     windowsDoors: c.windowsDoors && {
       note: c.windowsDoors.note,
-      windowStyles: c.windowsDoors.windowStyles.map(s => pick(s, ['id', 'name', 'detail', 'description'])),
-      doorStyles: c.windowsDoors.doorStyles.map(s => pick(s, ['id', 'name', 'detail', 'description'])),
-      colours: c.windowsDoors.colours.map(x => pick(x, ['id', 'name', 'hex'])),
+      windowStyles: c.windowsDoors.windowStyles.map(s => pickFields(s, ['id', 'name', 'detail', 'description'])),
+      doorStyles: c.windowsDoors.doorStyles.map(s => pickFields(s, ['id', 'name', 'detail', 'description'])),
+      colours: c.windowsDoors.colours.map(x => pickFields(x, ['id', 'name', 'hex'])),
     },
     fsgc: c.fsgc && Object.fromEntries([
       ['note', c.fsgc.note],
       ...['fascia', 'soffit', 'guttering', 'cladding'].map(k => [
-        k, (c.fsgc[k] || []).map(i => pick(i, ['id', 'name', 'pricePerM', 'tagline', 'colours', 'guaranteeYears', 'bestseller'])),
+        k, (c.fsgc[k] || []).map(i => pickFields(i, ['id', 'name', 'pricePerM', 'tagline', 'colours', 'guaranteeYears', 'bestseller'])),
       ]),
     ]),
   };
@@ -1180,6 +1189,11 @@ function newLeadId() {
   return 'LD-' + out;
 }
 
+// Anthropic rejects images over 5MB, so anything larger is a wasted call and
+// a wasted daily slot. Client-side downscaling makes this rare; the guard is
+// what stops it costing anything when it happens.
+const ANTHROPIC_MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
 /* ── IS THIS ACTUALLY AN IMAGE? ──
 
    Both paid endpoints used to take the client's word for it. /api/detect
@@ -1244,6 +1258,16 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
   if (!image || !mimeType) return res.status(400).json({ error: 'Missing image or mimeType.' });
   const img = readImage(image, mimeType);
   if (!img.ok) return res.status(img.status).json({ error: img.error });
+  /* Before the quota, not after. consumeDailyQuota is irreversible, and a
+     photo over the provider's limit is a request guaranteed to fail — so an
+     8 MB phone picture spent one of fifty daily slots on a 400 from
+     Anthropic. readImage has already decoded the buffer, so this is free. */
+  if (img.buffer.length > ANTHROPIC_MAX_IMAGE_BYTES) {
+    return res.status(413).json({
+      error: 'That photo is too large to analyse — please use one under 5MB.',
+      reason: 'image_too_large',
+    });
+  }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set — see .env.example.' });
@@ -1338,7 +1362,7 @@ Finally add: {"type":"analysis","summary":"2-3 sentence overview of the property
 
    Resolved from our own catalogue by id, so a lead can't invent a product or
    a price, and unknown ids drop out rather than being echoed back. */
-function pick(list, id, fields) {
+function pickById(list, id, fields) {
   if (!Array.isArray(list) || !id) return null;
   const found = list.find(x => x.id === id);
   if (!found) return null;
@@ -1386,16 +1410,16 @@ function resolvePreferences(body) {
   const priced = ['id', 'name', 'pricePerM', 'guaranteeYears'];
 
   const windows = wd ? {
-    style: pick(wd.windowStyles, body.windowStyleId, [...named, 'detail']),
-    door: pick(wd.doorStyles, body.doorStyleId, [...named, 'detail']),
-    colour: pick(wd.colours, body.windowDoorColourId, [...named, 'hex']),
+    style: pickById(wd.windowStyles, body.windowStyleId, [...named, 'detail']),
+    door: pickById(wd.doorStyles, body.doorStyleId, [...named, 'detail']),
+    colour: pickById(wd.colours, body.windowDoorColourId, [...named, 'hex']),
   } : null;
 
   const roofline = fs_ ? {
-    fascia: pick(fs_.fascia, body.fasciaId, priced),
-    soffit: pick(fs_.soffit, body.soffitId, priced),
-    guttering: pick(fs_.guttering, body.gutteringId, priced),
-    cladding: pick(fs_.cladding, body.rooflineCladdingId, priced),
+    fascia: pickById(fs_.fascia, body.fasciaId, priced),
+    soffit: pickById(fs_.soffit, body.soffitId, priced),
+    guttering: pickById(fs_.guttering, body.gutteringId, priced),
+    cladding: pickById(fs_.cladding, body.rooflineCladdingId, priced),
   } : null;
 
   const any = (o) => o && Object.values(o).some(Boolean);
@@ -1671,7 +1695,15 @@ app.post('/api/measure', (req, res) => {
   if (!record) {
     return res.status(404).json({ error: 'That photo has expired — please upload it again to measure.' });
   }
-  record.at = Date.now();   // still in use, keep it alive
+  /* Still in use — and Map preserves insertion order, so touching the
+     timestamp was not enough: eviction takes the oldest inserted, not the
+     oldest used. Re-inserting moves it to the back of the queue, which is
+     what "keep it alive" was supposed to mean. Someone measuring a photo they
+     uploaded twenty minutes ago was getting "that photo has expired"
+     mid-journey. */
+  record.at = Date.now();
+  detectionRecords.delete(detectionId);
+  detectionRecords.set(detectionId, record);
 
   const result = measure.estimateWallArea({
     detections: record.detections,

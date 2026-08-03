@@ -29,9 +29,8 @@
 
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='16' fill='%2318181b'/%3E%3Ctext x='16' y='21' font-family='Georgia,serif' font-size='14' fill='%23FBF8F3' text-anchor='middle'%3EFP%3C/text%3E%3C/svg%3E">
 
-<link rel="preconnect" href="https://cdn.tailwindcss.com">
 <link rel="stylesheet" href="/assets/fonts.css">
-<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="/assets/app.css">
 <style>
   *{font-family:Geist,sans-serif}
   .serif{font-family:'Instrument Serif',serif}
@@ -700,17 +699,73 @@ async function refreshPrice() {
   }
 }
 
-function fileToBase64(file) {
+/* Read a photo, and shrink it on the way.
+
+   A modern phone camera produces 4–12 MB, and base64 adds a third — so the
+   journey was posting 5–16 MB twice, once to detect and again to render. It
+   is the single biggest thing standing between tapping the button and seeing
+   the house, and neither the detection nor the render is better for it:
+   Claude works from proportions, and Kontext-Pro resizes to its own working
+   resolution anyway.
+
+   1600px on the long edge, which is more than either needs and enough that
+   the preview still looks like a photograph rather than a thumbnail. It also
+   keeps every upload under Anthropic's 5 MB limit, which the server has to
+   refuse — better not to reach it.
+
+   Falls back to the original bytes if anything goes wrong. A canvas can fail
+   for reasons that have nothing to do with the photograph — memory on an old
+   phone, a format the browser will not decode — and a slow upload beats a
+   failed one. */
+const MAX_UPLOAD_EDGE_PX = 1600;
+const DOWNSCALE_QUALITY = 0.85;
+
+function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result; // data:<mime>;base64,<data>
-      const comma = result.indexOf(',');
-      resolve(result.slice(comma + 1));
-    };
+    reader.onload = () => resolve(reader.result);
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+const stripDataUrl = (dataUrl) => dataUrl.slice(dataUrl.indexOf(',') + 1);
+
+async function fileToBase64(file) {
+  const original = await readFileAsDataUrl(file);
+  const asIs = { base64: stripDataUrl(original), mimeType: file.type || 'image/jpeg' };
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error('could not decode'));
+      el.src = original;
+    });
+
+    const longest = Math.max(img.naturalWidth, img.naturalHeight);
+    // Already small enough — re-encoding would only lose quality.
+    if (!longest || longest <= MAX_UPLOAD_EDGE_PX) return asIs;
+
+    const scale = MAX_UPLOAD_EDGE_PX / longest;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(img.naturalWidth * scale);
+    canvas.height = Math.round(img.naturalHeight * scale);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return asIs;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    const shrunk = canvas.toDataURL('image/jpeg', DOWNSCALE_QUALITY);
+    // A canvas that produced nothing useful is not an improvement.
+    if (!shrunk || shrunk.length >= original.length) return asIs;
+
+    /* Returned, not assigned to state: the caller used to overwrite the type
+       from file.type after this resolved, so a downscaled PNG would have gone
+       up declared as a PNG with JPEG bytes inside it — and the server refuses
+       exactly that, on purpose. */
+    return { base64: stripDataUrl(shrunk), mimeType: 'image/jpeg' };
+  } catch (_) {
+    return asIs;
+  }
 }
 
 // ---------- small DOM helpers ----------
@@ -2217,9 +2272,10 @@ async function handleUpload(file) {
   render();
 
   try {
-    const base64 = await fileToBase64(file);
+    // Both together — the type has to describe the bytes we ended up with.
+    const { base64, mimeType } = await fileToBase64(file);
     state.uploadedBase64 = base64;
-    state.uploadedMimeType = file.type || 'image/jpeg';
+    state.uploadedMimeType = mimeType;
 
     const res = await fetch('/api/detect', {
       method: 'POST',

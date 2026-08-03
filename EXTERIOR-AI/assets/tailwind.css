@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+/* The site's own tokens, so arbitrary values in the markup keep working after
+   the Play CDN goes. Everything else is Tailwind's default. */
+@theme {
+  --color-paper: #FBF8F3;
+  --color-paper-warm: #FDFCF9;
+}

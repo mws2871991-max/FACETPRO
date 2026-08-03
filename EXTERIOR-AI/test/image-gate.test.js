@@ -108,3 +108,19 @@ test('a real photograph still goes through, measured from its own header', async
   assert.strictEqual(upstream.anthropic, before + 1);
   assert.strictEqual(body.canMeasure, false, 'no cladding in an empty detection');
 });
+
+test('a photo too big for the provider does not spend a paid slot', async () => {
+  /* consumeDailyQuota is irreversible, and /api/detect called it before
+     posting to a provider that rejects oversized images — so an 8MB phone
+     picture burned one of fifty daily slots on a request guaranteed to fail.
+     /api/render already checked; detect did not. */
+  const before = upstream.anthropic;
+  const big = Buffer.concat([
+    Buffer.from([0xff, 0xd8, 0xff, 0xc0, 0x00, 0x11, 0x08, 0x02, 0x58, 0x02, 0x80]),
+    Buffer.alloc(6 * 1024 * 1024),
+  ]).toString('base64');
+  const { status, body } = await post('/api/detect', { image: big, mimeType: 'image/jpeg' });
+  assert.strictEqual(status, 413);
+  assert.strictEqual(body.reason, 'image_too_large');
+  assert.strictEqual(upstream.anthropic, before, 'it reached the provider anyway');
+});
