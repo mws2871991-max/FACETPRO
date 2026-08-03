@@ -240,11 +240,19 @@
       <span id="beta-badge" hidden class="text-[10px] tracking-widest uppercase px-2 py-0.5 rounded-full bg-amber-100 border border-amber-300 text-amber-900">Beta</span>
     </a>
     <nav class="flex items-center gap-2" aria-label="Primary">
-      <a href="#windows-doors" class="hidden sm:block text-xs px-3 py-2 rounded-full hover:bg-white transition">Windows &amp; doors</a>
-      <a href="#roofline" class="hidden lg:block text-xs px-3 py-2 rounded-full hover:bg-white transition">Fascias, soffits &amp; cladding</a>
-      <a href="#conservatory" class="hidden lg:block text-xs px-3 py-2 rounded-full hover:bg-white transition">Conservatories</a>
-      <a href="#roofs" class="hidden md:block text-xs px-3 py-2 rounded-full hover:bg-white transition">Roofs</a>
-      <a href="#rendering" class="hidden md:block text-xs px-3 py-2 rounded-full hover:bg-white transition">Rendering</a>
+      <!-- This was five category links: windows, roofline, conservatories,
+           roofs, rendering. Two of those anchors (#roofs, #rendering) existed
+           nowhere in the document, and two more (#roofline, #conservatory) are
+           built by the visualiser only after somebody has uploaded a photo. So
+           for every first-time visitor — which is everyone who matters here —
+           four of the five did nothing at all when clicked.
+
+           They were also the first thing anybody read: a directory of five
+           trades, sitting directly above a headline about being charged fairly
+           for windows. The menu argued with the page. Two links that work, and
+           the whole-exterior story told once, properly, further down. -->
+      <a href="#our-work" class="hidden sm:block text-xs px-3 py-2 rounded-full hover:bg-white transition">Our work</a>
+      <a href="#how-it-works" class="hidden sm:block text-xs px-3 py-2 rounded-full hover:bg-white transition">How it works</a>
       <a href="#your-photo" class="text-xs px-4 py-2 rounded-full bg-zinc-900 text-white hover:bg-zinc-800 transition">Start with a photo</a>
     </nav>
   </div>
@@ -264,14 +272,18 @@
   </aside>
 
   <section class="rounded-2xl bg-zinc-900 text-[#FBF8F3] overflow-hidden p-8 md:p-12" aria-labelledby="hero-heading">
-    <p class="text-[11px] tracking-[0.25em] uppercase text-white/50">Windows &amp; doors · and the rest of your outside · UK</p>
+    <p class="text-[11px] tracking-[0.25em] uppercase text-white/50">Windows &amp; doors · UK</p>
     <h1 id="hero-heading" class="mt-4 serif text-[36px] md:text-[56px] leading-[0.95] tracking-[-0.03em]">You shouldn&rsquo;t have to haggle<br class="hidden sm:block"> to get a fair price for your windows.</h1>
     <!-- Names the thing the buyer actually dreads. The doorstep double-glazing
          sale is the strongest lever in this category and the old copy didn't
          touch it. -->
     <p class="mt-5 text-[15px] leading-7 text-white/70 max-w-[58ch]">Two neighbours can buy the same windows and pay wildly different prices — because one of them pushed harder, on a weeknight, in their own front room. That is not a price. It is a negotiation, and not everybody wants one.</p>
     <p class="mt-4 text-[16px] leading-7 text-white/85 max-w-[58ch]">Upload one photo. See new frames and a new front door on your own house, and what they cost, in about a minute. <strong class="text-white">The same house gets the same number here</strong> — it does not go up because you were polite, or down because you got up to see somebody out.</p>
-    <p class="mt-3 text-[14px] leading-6 text-white/55 max-w-[58ch]">And when you are ready, the walls, roof, roofline and a conservatory price off the same photo. One place for the whole outside of your house.</p>
+    <!-- A third paragraph used to sit here promising the walls, roof, roofline
+         and conservatory off the same photo. It is a good argument and it is
+         made in full under "How it works", where the mechanic is the point.
+         Here it was the fourth thing said in a hero whose one job is the
+         haggling — and a hero that makes two arguments makes neither. -->
     <ul class="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-white/60">
       <li>One price, for everyone</li>
       <li>Nobody visits</li>
@@ -384,9 +396,11 @@
     </div>
 
     <p class="mt-5 text-[11px] leading-5 text-zinc-500 max-w-[74ch]">
-      Every photograph here is a job this team has done. We price cladding, roofs and
-      roofline on the same photo too, and we'll add those before-and-afters as they're
-      completed.
+      <!-- "We price cladding, roofs and roofline on the same photo too" was the
+           third time the page said this above the fold, and the weakest — an
+           aside in eleven-pixel grey under somebody else's photographs. The
+           caption's job is to vouch for the pictures. It now only does that. -->
+      Every photograph here is a job this team has done.
     </p>
   </section>
 
@@ -520,11 +534,9 @@
         <span class="serif text-[17px] tracking-tight">Facet Pro</span>
       </div>
       <nav class="flex flex-wrap gap-x-5 gap-y-2 text-[12px] text-zinc-600" aria-label="Footer">
-        <a href="#windows-doors" class="hover:text-zinc-900">Windows &amp; doors</a>
-        <a href="#roofline" class="hover:text-zinc-900">Fascias, soffits &amp; cladding</a>
-        <a href="#conservatory" class="hover:text-zinc-900">Conservatories</a>
-        <a href="#roofs" class="hover:text-zinc-900">Roofs</a>
-        <a href="#rendering" class="hover:text-zinc-900">Rendering</a>
+        <!-- Same four broken anchors as the header carried. A footer link that
+             scrolls nowhere is the kind of thing nobody reports and everybody
+             notices. -->
         <a href="#our-work" class="hover:text-zinc-900">Our work</a>
         <a href="#how-it-works" class="hover:text-zinc-900">How it works</a>
         <a href="#faq" class="hover:text-zinc-900">Questions</a>
