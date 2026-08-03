@@ -254,13 +254,15 @@
     <div class="flex items-start justify-between gap-3 flex-wrap">
       <div>
         <p class="text-[11px] tracking-widest uppercase text-zinc-400">Real homes</p>
-        <h2 id="work-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">Windows and doors we've actually fitted</h2>
+        <h2 id="work-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">Real homes. Real work. No showroom.</h2>
       </div>
       <span class="text-[10px] tracking-widest uppercase px-2.5 py-1 rounded-full bg-[#FFF7ED] border border-zinc-200">Photographs, not renders</span>
     </div>
     <p class="mt-2 text-sm leading-6 text-zinc-600 max-w-[64ch]">
       Four UK homes, photographed from the same spot before and after. Nothing
-      retouched — drag across any picture to see how it started.
+      retouched — drag across any picture to see how it started. These are window
+      and door jobs; we price the walls, roofline and roof on the same photo, and
+      those before-and-afters go up here as they finish.
     </p>
 
     <div class="mt-6 grid sm:grid-cols-2 gap-4">
@@ -356,8 +358,8 @@
 
   <section id="how-it-works" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="how-heading">
     <h2 id="how-heading" class="serif text-[26px] md:text-[32px] tracking-tight">How it works</h2>
-    <p class="mt-2 text-sm text-zinc-600 max-w-[62ch]">Three steps, no site visit, no salesperson.</p>
-    <p class="mt-2 text-sm leading-6 text-zinc-600 max-w-[68ch]">One photo covers <strong>windows and doors</strong>, <strong>walls — cladding or render</strong>, <strong>fascias, soffits and guttering</strong>, <strong>the roof</strong>, and <strong>a conservatory</strong> if you want one. Priced together, so you see the true cost of the job rather than five separate quotes that never quite add up.</p>
+    <p class="mt-2 text-sm text-zinc-600 max-w-[62ch]">Three steps. No site visit, no appointment, nobody in your house.</p>
+    <p class="mt-2 text-sm leading-6 text-zinc-600 max-w-[68ch]">That one photo covers <strong>windows and doors</strong>, <strong>walls — cladding or render</strong>, <strong>fascias, soffits and guttering</strong>, <strong>the roof</strong>, and <strong>a conservatory</strong> if you want one. Five trades. Five companies you would otherwise be booking, waiting in for, and chasing. Priced here together, so you see what the job really costs instead of five figures that never add up to one.</p>
     <ol class="mt-8 grid md:grid-cols-3 gap-6">
       <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
         <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">1</span>
@@ -366,8 +368,8 @@
       </li>
       <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
         <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">2</span>
-        <h3 class="mt-4 text-[15px] font-medium">Choose your windows and doors</h3>
-        <p class="mt-2 text-[13px] leading-6 text-zinc-600">Try real frame styles and colours and watch the price move with every choice — then cladding, roof and roofline on the same photo if you want them. Slide between before and after to compare.</p>
+        <h3 class="mt-4 text-[15px] font-medium">Choose anything out there</h3>
+        <p class="mt-2 text-[13px] leading-6 text-zinc-600">Frames, front door, walls, roof, roofline, conservatory — try them and watch the price move with every choice. One photo, every trade, no appointment with any of them.</p>
       </li>
       <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
         <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">3</span>
@@ -426,7 +428,7 @@
 
       <details class="group">
         <summary class="flex items-center justify-between gap-4 py-4"><h3 class="text-[15px] font-medium">Can I still price cladding, render or a new roof?</h3><span class="chev text-zinc-400 transition-transform" aria-hidden="true">⌄</span></summary>
-        <p class="pb-4 text-[13px] leading-6 text-zinc-600 max-w-[72ch]">Yes — on the same photo, priced the same way, with fascias, soffits, guttering and conservatories too. Most people start with the windows.</p>
+        <p class="pb-4 text-[13px] leading-6 text-zinc-600 max-w-[72ch]">Yes — that is rather the point. Windows, doors, walls, roofline, roof and a conservatory all price off the one photo you already uploaded. Most people start with the windows and add the rest once they can see what the whole job comes to.</p>
       </details>
 
       <details class="group">
@@ -2410,8 +2412,8 @@ function buildSaveFraming() {
     h('p', { className: 'text-[11px] tracking-widest uppercase text-white/55' }, 'Step 4'),
     h('h2', { className: 'mt-1 serif text-[26px] md:text-[32px] tracking-tight' }, 'Ready for real numbers?'),
     h('p', { className: 'mt-3 text-sm leading-6 text-white/60 max-w-[60ch]' }, state.designPackEmail
-      ? 'We’ll email you your before-and-after and your itemised estimate to keep. If you’d like quotes, we’ll pass your design to installers near you — they price from what you’ve already chosen, so nobody turns up trying to sell you something else. No obligation, and you can walk away at any point.'
-      : 'We’ll keep your before-and-after and your itemised estimate together. If you’d like quotes, installers price from what you’ve already chosen — so nobody turns up trying to sell you something else. No obligation, and you can walk away at any point.'),
+      ? 'We’ll email you your before-and-after and your itemised estimate to keep. If you’d like quotes, installers work from the design you’ve already made — so nobody arrives with a folder, nobody prices something you didn’t ask for, and nobody needs your evening. No obligation, and you can walk away at any point.'
+      : 'We’ll keep your before-and-after and your itemised estimate together. If you’d like quotes, installers work from the design you’ve already made — so nobody arrives with a folder, and nobody needs your evening. No obligation, and you can walk away at any point.'),
     h('div', { className: 'mt-6 rounded-2xl bg-white text-zinc-900 p-5' }, [
       h('div', { className: 'grid grid-cols-2 gap-3' }, [
         field('Your name', 'name', 'col-span-2 md:col-span-1'),
