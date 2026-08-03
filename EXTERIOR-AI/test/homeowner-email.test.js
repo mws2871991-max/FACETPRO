@@ -132,3 +132,36 @@ test('the form is told the box can be offered', async () => {
   const cfg = await (await realFetch(`${BASE}/api/config`)).json();
   assert.strictEqual(cfg.installerQuotes, true);
 });
+
+test('the design pack does not claim sharing when nobody covers them', async () => {
+  /* The three-state fix was applied first to the "quotes, no design pack"
+     branch and skipped the busier one: somebody who wants installers to call
+     will usually also want their picture. The HTML said "They may contact
+     you" with no list above it for "they" to refer to, and the text version
+     said outright that we were passing details to installers who cover the
+     area — for exactly the people nobody covered. */
+  const emails = require('../emails');
+  const price = { cladding: 1, roof: 1, trim: 1, scaffolding: 1, waste: 1, vat: 1, total: 6, footprintM2: 95,
+    selections: { cladding: 'A', trim: 'B', roof: 'C' } };
+  const lead = { id: 'LD-1', name: 'Jane', postcode: 'M1 1AE', consent: { installerQuotes: true, emailPack: true } };
+
+  for (const [what, body] of [
+    ['html', emails.designPackHtml(lead, price, 'https://facetpro.co.uk', 'tok', [])],
+    ['text', emails.designPackText(lead, price, 'https://facetpro.co.uk', 'tok', [])],
+  ]) {
+    assert.match(body, /haven.t passed\s+your details to anyone|haven.t\s+passed your details to anyone/,
+      `${what} should say plainly that nothing was shared`);
+    assert.ok(!/They may contact you/.test(body), `${what} has no "they" to refer to`);
+    assert.ok(!/installers who cover your area/.test(body), `${what} claims coverage that does not exist`);
+  }
+});
+
+test('and still does, when somebody does cover them', async () => {
+  const emails = require('../emails');
+  const price = { cladding: 1, roof: 1, trim: 1, scaffolding: 1, waste: 1, vat: 1, total: 6, footprintM2: 95,
+    selections: { cladding: 'A', trim: 'B', roof: 'C' } };
+  const lead = { id: 'LD-1', name: 'Jane', consent: { installerQuotes: true, emailPack: true } };
+  const html = emails.designPackHtml(lead, price, 'https://facetpro.co.uk', 'tok', [{ id: 'a', name: 'Anglian' }]);
+  assert.match(html, /Anglian/);
+  assert.match(html, /They may contact you/, 'now "they" has an antecedent');
+});

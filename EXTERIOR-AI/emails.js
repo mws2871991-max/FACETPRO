@@ -101,6 +101,17 @@ function designPackHtml(lead, price, siteUrl, withdrawToken, recipients) {
      received written confirmation that they had ticked it — contradicting our
      own stored consent record in the one artefact they keep. */
   const shared = lead.consent?.installerQuotes === true;
+  const named = (recipients || []).filter(r => r && r.name);
+  /* Three states, not two. Asking for quotes and nobody covering you is not
+     the same as not asking — and it used to render as "They may contact you"
+     with nothing above it for "they" to refer to, while the text version said
+     outright that we were passing details to installers who cover the area,
+     when the caller had already established that none do. */
+  const nextSteps = !shared
+    ? 'We haven\'t passed your details to anyone. If you would like quotes from installers, reply to this email and we will arrange it — and if you would rather we didn\'t, you need do nothing.'
+    : named.length
+      ? 'They may contact you by email or telephone to talk it through and arrange a survey. There is no obligation to go ahead at any point.'
+      : 'We don\'t currently have an installer covering your area, so we haven\'t passed your details to anyone. We\'ll let you know if that changes — your design and your estimate are saved either way.';
 
   return `<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:560px;margin:0 auto;color:#0F1012;background:#FBF8F3;padding:28px 24px">
 
@@ -146,11 +157,9 @@ function designPackHtml(lead, price, siteUrl, withdrawToken, recipients) {
     </div>
 
     <h2 style="font-size:15px;margin:26px 0 8px;font-weight:600">What happens next</h2>
-    ${shared ? installerList(recipients) : ''}
-    <p style="font-size:14px;line-height:1.6;color:#3f3f46;margin:${shared && (recipients || []).length ? '10px 0 0' : '0'}">
-      ${shared
-        ? 'They may contact you by email or telephone to talk it through and arrange a survey. There is no obligation to go ahead at any point.'
-        : 'We haven\'t passed your details to anyone. If you would like quotes from installers, reply to this email and we will arrange it — and if you would rather we didn\'t, you need do nothing.'}
+    ${shared && named.length ? installerList(named) : ''}
+    <p style="font-size:14px;line-height:1.6;color:#3f3f46;margin:${shared && named.length ? '10px 0 0' : '0'}">
+      ${nextSteps}
     </p>
 
     <p style="font-size:12px;line-height:1.6;color:#6B6E78;margin:26px 0 0;border-top:1px solid #e4e4e7;padding-top:16px">
@@ -161,6 +170,29 @@ function designPackHtml(lead, price, siteUrl, withdrawToken, recipients) {
       Our <a href="${escapeHtml(base)}/terms" style="color:#6B6E78">terms</a> explain how estimates work.
     </p>
   </div>`;
+}
+
+/* The same three states as the HTML, kept beside it so they cannot drift.
+   The text version was the worse of the two: it carried the sentence "we are
+   passing your details to installers who cover your area" for exactly the
+   people nobody covered. */
+function whatHappensNextText(lead, recipients) {
+  const shared = lead.consent?.installerQuotes === true;
+  const named = (recipients || []).filter(r => r && r.name);
+  if (!shared) {
+    return ["We haven't passed your details to anyone. If you would like quotes from",
+            'installers, reply to this email and we will arrange it.'];
+  }
+  if (!named.length) {
+    return ["We don't currently have an installer covering your area, so we haven't",
+            "passed your details to anyone. We'll let you know if that changes — your",
+            'design and your estimate are saved either way.'];
+  }
+  return ["We're passing your details and your design to:",
+          ...named.map(r => `  ${r.name}`),
+          "If we can't reach any of them we'll let you know.",
+          'They may contact you by email or telephone to talk it through and arrange a',
+          'survey. There is no obligation to go ahead at any point.'];
 }
 
 // Plain-text alternative. Improves deliverability and is what text-only
@@ -193,16 +225,7 @@ function designPackText(lead, price, siteUrl, withdrawToken, recipients) {
     `survey your home.`,
     ``,
     `WHAT HAPPENS NEXT`,
-    ...(lead.consent?.installerQuotes === true
-      ? [...((recipients || []).filter(r => r && r.name).length
-            ? ["We're passing your details and your design to:",
-               ...recipients.filter(r => r && r.name).map(r => `  ${r.name}`),
-               "If we can't reach any of them we'll let you know."]
-            : ['We are passing your details and your design to installers who cover your area.']),
-         'They may contact you by email or telephone to talk it through and arrange a',
-         'survey. There is no obligation to go ahead at any point.']
-      : ["We haven't passed your details to anyone. If you would like quotes from",
-         'installers, reply to this email and we will arrange it.']),
+    ...whatHappensNextText(lead, recipients),
     ``,
     `You're receiving this because you saved a design at ${base}/`,
     `Change your mind or ask us to delete your details: ${withdrawLink}`,
@@ -241,7 +264,8 @@ function sharingConfirmationHtml(lead, recipients, siteUrl, withdrawToken) {
 
     <div style="background:#fff;border-radius:12px;padding:18px 20px;margin:22px 0 0">
       ${installerList(recipients) || `<p style="font-size:14px;line-height:1.6;color:#3f3f46;margin:0">
-        We are passing your details and your design to installers who cover your area.
+        We don't currently have an installer covering your area, so we haven't passed
+        your details to anyone. We'll let you know if that changes.
       </p>`}
       <p style="font-size:14px;line-height:1.6;color:#3f3f46;margin:10px 0 0">
         They may contact you by email or telephone to talk it through and arrange a survey.
@@ -276,7 +300,8 @@ function sharingConfirmationText(lead, recipients, siteUrl, withdrawToken) {
     '',
     ...(named.length
       ? ["We're passing your details and your design to:", ...named.map(r => `  ${r.name}`)]
-      : ['We are passing your details and your design to installers who cover your area.']),
+      : ["We don't currently have an installer covering your area, so we haven't passed",
+         "your details to anyone. We'll let you know if that changes."]),
     '',
     'They may contact you by email or telephone to talk it through and arrange a survey.',
     'There is no obligation to go ahead at any point.',

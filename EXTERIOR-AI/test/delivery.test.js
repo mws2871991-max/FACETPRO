@@ -86,6 +86,10 @@ test('a permanent rejection is not retried — retrying a 400 just wastes time',
   assert.strictEqual(r.ok, false);
   assert.strictEqual(calls, 1, `gave up after ${calls} call(s), expected 1`);
   assert.match(r.error, /400/);
+  /* And the record has to say one, not three. This is what a buyer sees when
+     they query an invoice — evidence that overstates what we did is worse
+     than none, because it is the half nobody checks. */
+  assert.strictEqual(r.attempts, 1, 'reported more attempts than it made');
 });
 
 test('429 and 408 ARE retried — those do clear', async () => {

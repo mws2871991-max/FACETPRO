@@ -349,11 +349,18 @@ async function deleteRenders(ids) {
     const { rowCount } = await pool.query(`DELETE FROM ${SCHEMA_NAME}.renders WHERE id = ANY($1)`, [ids]);
     return rowCount;
   }
+  /* Renders removed, not files removed. Each one is a .bin and a .json, so
+     this counted two for every image — and the number goes into the retention
+     record, which is the evidence for "we delete on schedule". A count that
+     doubles is worse than no count, and it made the two backends disagree:
+     Postgres returns rows. */
   let n = 0;
   for (const id of ids) {
+    let removed = false;
     for (const ext of ['.bin', '.json']) {
-      try { fs.unlinkSync(path.join(RENDER_DIR, id + ext)); n++; } catch (_) {}
+      try { fs.unlinkSync(path.join(RENDER_DIR, id + ext)); removed = true; } catch (_) { /* already gone */ }
     }
+    if (removed) n++;
   }
   return n;
 }

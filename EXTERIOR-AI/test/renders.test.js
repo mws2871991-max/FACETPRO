@@ -65,3 +65,14 @@ test('a hostile render path is still refused', () => {
     assert.ok(!html.includes('javascript:') && !html.includes('data:text/html'), bad);
   }
 });
+
+test('deleting counts renders, not the files behind them', async () => {
+  /* Each render is a .bin and a .json, and this counted both — so the
+     retention record, which is the evidence for "we delete on schedule",
+     reported twice what was removed. It also made the two backends disagree:
+     Postgres returns rows deleted. */
+  const ids = ['count1' + Date.now().toString(16), 'count2' + Date.now().toString(16)];
+  for (const id of ids) await store.putRender(id, bytes, { mime: 'image/png' });
+  assert.strictEqual(await store.deleteRenders(ids), ids.length);
+  assert.strictEqual(await store.deleteRenders(ids), 0, 'gone means gone');
+});

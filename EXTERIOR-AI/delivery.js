@@ -93,8 +93,14 @@ async function deliverTo(recipient, lead, { fetchImpl, attempts = DEFAULT_ATTEMP
   const started = new Date().toISOString();
   let lastError = null;
   let lastStatus = null;
+  /* What we actually spent, not what we were allowed to. A 400 breaks out on
+     the first try, and this used to report three — on the record a buyer
+     queries when they say they never received a lead. Evidence that overstates
+     is worse than none, because it is the half nobody checks. */
+  let spent = 0;
 
   for (let attempt = 1; attempt <= attempts; attempt++) {
+    spent = attempt;
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -127,7 +133,7 @@ async function deliverTo(recipient, lead, { fetchImpl, attempts = DEFAULT_ATTEMP
     if (attempt < attempts) await onSleep(BACKOFF_MS[attempt - 1] ?? BACKOFF_MS[BACKOFF_MS.length - 1]);
   }
 
-  return { id: recipient.id, name: recipient.name, ok: false, status: lastStatus, attempts, error: lastError, at: new Date().toISOString(), startedAt: started };
+  return { id: recipient.id, name: recipient.name, ok: false, status: lastStatus, attempts: spent, error: lastError, at: new Date().toISOString(), startedAt: started };
 }
 
 /* All recipients, concurrently. One slow buyer shouldn't delay the rest. */
