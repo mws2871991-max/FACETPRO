@@ -1,0 +1,69 @@
+# The suite, twice: once on files, once on the backend that actually runs.
+#
+# refuseToStartIfStorageContradictsTheNotice requires DATABASE_URL on any
+# deployment, so Postgres is the only storage path production will ever use —
+# and until this workflow existed it was the only one with no coverage. Every
+# green run was proving that a code path nobody executes works.
+#
+# Both jobs run the whole suite rather than a Postgres-only subset, because
+# store.js presents one interface over both backends and the interesting
+# failures are the places they disagree.
+
+name: tests
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  files:
+    name: JSONL backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: EXTERIOR-AI
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: EXTERIOR-AI/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  postgres:
+    name: Postgres backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: EXTERIOR-AI
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: facetpro_test
+        ports: ['5432:5432']
+        # Without this the job races the container and fails on connection
+        # refused, which looks like a test failure and is not one.
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      # localhost and a database named for testing — which is what the guard in
+      # test/postgres.test.js insists on before it deletes anything.
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/facetpro_test
+      PGSSLMODE: disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: EXTERIOR-AI/package-lock.json
+      - run: npm ci
+      - run: npm test
