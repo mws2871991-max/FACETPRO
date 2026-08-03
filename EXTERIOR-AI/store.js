@@ -73,8 +73,20 @@ if (process.env.DATABASE_URL) {
      Override with DB_SCHEMA if you want it elsewhere. */
 }
 
-const DATA_DIR = path.join(__dirname, 'data');
-if (!pool && !fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
+/* Where the JSONL files live.
+
+   Overridable because `npm test` wrote here — to the same directory a
+   deployment mounts its volume on. Running the suite on a box with that
+   volume attached would have written test leads into real storage and deleted
+   the live spend counter. Nothing else in this codebase can damage anything
+   outside the app; this could.
+
+   The variable is read once, at load, so a test sets it before requiring
+   anything and every consumer agrees. */
+const DATA_DIR = process.env.FACETPRO_DATA_DIR
+  ? path.resolve(process.env.FACETPRO_DATA_DIR)
+  : path.join(__dirname, 'data');
+if (!pool && !fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS quotes (
@@ -398,7 +410,7 @@ async function end() {
 }
 
 module.exports = {
-  ensureSchema, append, readAll, replaceAll, mutate, end, getResume, putRender, getRender, deleteRenders, hasDb: !!pool,
+  ensureSchema, append, readAll, replaceAll, mutate, end, getResume, DATA_DIR, putRender, getRender, deleteRenders, hasDb: !!pool,
   // Exported for tests: scraping these out of the source with a regex broke
   // the moment another table was added after leads.
   _internals: { INSERT_PARAMS, INSERT_SQL, SELECT_SQL, FILE_NAMES },

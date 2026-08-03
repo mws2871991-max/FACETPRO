@@ -282,7 +282,7 @@ const DAILY_LIMITS = {
   render: envLimit('DAILY_RENDER_LIMIT', 50),
 };
 
-const USAGE_FILE = path.join(__dirname, 'data', 'usage.json');
+const USAGE_FILE = path.join(store.DATA_DIR, 'usage.json');
 const utcDay = () => new Date().toISOString().slice(0, 10);
 
 function readUsageFile() {
@@ -896,8 +896,10 @@ function storageIsWritable() {
   if (now - diskProbe.at < DISK_PROBE_TTL_MS) return diskProbe.writable;
   let writable = false;
   try {
-    fs.mkdirSync(path.join(__dirname, 'data'), { recursive: true });
-    fs.accessSync(path.join(__dirname, 'data'), fs.constants.W_OK);
+    // store.DATA_DIR, not a second guess at the same path — they must agree,
+    // and the tests point it somewhere harmless.
+    fs.mkdirSync(store.DATA_DIR, { recursive: true });
+    fs.accessSync(store.DATA_DIR, fs.constants.W_OK);
     writable = true;
   } catch (_) { /* reported by the caller */ }
   diskProbe = { at: now, writable };

@@ -292,6 +292,19 @@ Read these before putting a number in front of a homeowner.
 - **Presentation is part of the accuracy.** It is a planning estimate, always
   shown as a range with a survey caveat. Do not surface the midpoint alone.
 
+## Running the tests
+
+    npm test
+
+The suite writes to a temp directory, never to `data/`. `store.js` resolves
+its data directory once at load from `FACETPRO_DATA_DIR`, and every test file
+requires `test/helpers/data-dir` before anything else, which sets it. Before
+that, `npm test` on a box with the production volume mounted would have
+written test leads into real storage and deleted the live spend counter — the
+only way this codebase could damage anything outside itself.
+
+A new test file that forgets the guard is caught by a test.
+
 ## Windows and doors
 
 Priced per unit, not per square metre — a window costs what its size and style

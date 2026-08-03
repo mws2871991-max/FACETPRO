@@ -6,6 +6,8 @@
 
 'use strict';
 
+require('./helpers/data-dir');   // never write to the real data/ — see the file
+
 const { test } = require('node:test');
 const assert = require('node:assert');
 const { classifyLead, redactLead, isExpired, plan, PERIODS, DAY } = require('../retention');

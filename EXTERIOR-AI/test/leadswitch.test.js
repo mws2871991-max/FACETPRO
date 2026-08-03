@@ -7,6 +7,8 @@
 
 'use strict';
 
+require('./helpers/data-dir');   // never write to the real data/ — see the file
+
 const { test } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
@@ -14,7 +16,7 @@ const path = require('path');
 
 const PORT = 3091;
 const BASE = `http://127.0.0.1:${PORT}`;
-const LEADS_FILE = path.join(__dirname, '..', 'data', 'leads.jsonl');
+const LEADS_FILE = path.join(process.env.FACETPRO_DATA_DIR, 'leads.jsonl');
 
 process.env.PORT = String(PORT);
 process.env.LEAD_CAPTURE = 'off';

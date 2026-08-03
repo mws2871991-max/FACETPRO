@@ -7,6 +7,8 @@
 
 'use strict';
 
+require('./helpers/data-dir');   // never write to the real data/ — see the file
+
 const { test } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
@@ -14,7 +16,7 @@ const path = require('path');
 
 const PORT = 3090;
 const BASE = `http://127.0.0.1:${PORT}`;
-const DELIVERIES = path.join(__dirname, '..', 'data', 'deliveries.jsonl');
+const DELIVERIES = path.join(process.env.FACETPRO_DATA_DIR, 'deliveries.jsonl');
 
 process.env.PORT = String(PORT);
 process.env.INSTALLER_PASSWORD = 'test-pw';
@@ -113,7 +115,7 @@ test('the installer portal shows only leads that asked for quotes', async () => 
     'every lead in the portal must carry installer consent');
 
   // And the ones that declined really were captured — they are just not here.
-  const stored = fs.readFileSync(path.join(__dirname, '..', 'data', 'leads.jsonl'), 'utf8')
+  const stored = fs.readFileSync(path.join(process.env.FACETPRO_DATA_DIR, 'leads.jsonl'), 'utf8')
     .trim().split('\n').filter(Boolean).map(JSON.parse);
   const declined = stored.filter(l => l.consent?.installerQuotes !== true);
   assert.ok(declined.length > 0, 'declining leads should still be saved');

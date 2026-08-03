@@ -13,6 +13,8 @@
 
 'use strict';
 
+require('./helpers/data-dir');   // never write to the real data/ — see the file
+
 const { test } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
@@ -22,7 +24,7 @@ const { redactLead, classifyLead, PERIODS, DAY } = require('../retention');
 
 const PORT = 3095;
 const BASE = `http://127.0.0.1:${PORT}`;
-const DATA = path.join(__dirname, '..', 'data');
+const DATA = process.env.FACETPRO_DATA_DIR;
 
 process.env.PORT = String(PORT);
 process.env.LEAD_CAPTURE = 'on';

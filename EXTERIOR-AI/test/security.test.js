@@ -11,6 +11,8 @@
 
 'use strict';
 
+require('./helpers/data-dir');   // never write to the real data/ — see the file
+
 const { test } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
@@ -38,7 +40,7 @@ globalThis.fetch = async (url, opts) => {
   return realFetch(u, opts);
 };
 
-const DATA_DIR = path.join(__dirname, '..', 'data');
+const DATA_DIR = process.env.FACETPRO_DATA_DIR;
 fs.rmSync(path.join(DATA_DIR, 'usage.json'), { force: true });
 
 process.env.PORT = String(PORT);

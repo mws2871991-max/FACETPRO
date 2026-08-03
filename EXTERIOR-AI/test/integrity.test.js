@@ -10,6 +10,8 @@
 
 'use strict';
 
+require('./helpers/data-dir');   // never write to the real data/ — see the file
+
 const { test } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
@@ -198,4 +200,28 @@ test('a design carried to a phone cannot hold a number the quote engine refuses'
 
   const kept = resume.buildPayload({ footprintM2: 95, trimLengthM: 24, claddingId: 'sage-slate' });
   assert.strictEqual(kept.footprintM2, 95, 'a real house still travels');
+});
+
+test('the suite cannot write to the real data directory', () => {
+  /* The one remaining way this codebase could damage something outside
+     itself: `npm test` on a box with the production volume mounted wrote test
+     leads into real storage and deleted the live spend counter. store.js now
+     resolves DATA_DIR once, from FACETPRO_DATA_DIR, and every test file
+     requires helpers/data-dir before anything else. */
+  const store = require('../store');
+  const real = path.join(__dirname, '..', 'data');
+  assert.ok(process.env.FACETPRO_DATA_DIR, 'the guard should have set this');
+  assert.notStrictEqual(path.resolve(store.DATA_DIR), path.resolve(real),
+    'the store is pointed at the real data directory during a test run');
+  assert.strictEqual(path.resolve(store.DATA_DIR), path.resolve(process.env.FACETPRO_DATA_DIR));
+});
+
+test('every test file is guarded, not just the ones that write today', () => {
+  // A new test file that forgets the guard writes to the real directory, and
+  // nothing would say so until the day it runs beside a mounted volume.
+  const dir = __dirname;
+  const unguarded = fs.readdirSync(dir)
+    .filter(f => f.endsWith('.test.js'))
+    .filter(f => !fs.readFileSync(path.join(dir, f), 'utf8').includes("helpers/data-dir"));
+  assert.deepStrictEqual(unguarded, [], `these write to the real data/: ${unguarded.join(', ')}`);
 });
