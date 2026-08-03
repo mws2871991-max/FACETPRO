@@ -265,7 +265,9 @@
       those before-and-afters go up here as they finish.
     </p>
 
-    <div class="mt-6 grid sm:grid-cols-2 gap-4">
+    <div id="work-carousel" class="mt-6 overflow-hidden">
+      <div id="work-track" class="flex transition-transform duration-500 ease-out">
+      <div class="w-full shrink-0 grid sm:grid-cols-2 gap-4 px-px">
 
       <figure class="work-card rounded-2xl overflow-hidden border border-zinc-200 bg-[#FDFCF9]">
         <div class="work-reveal aspect-[3/4]" role="slider" tabindex="0" aria-label="Drag to compare before and after" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
@@ -295,6 +297,8 @@
         </figcaption>
       </figure>
 
+      </div>
+      <div class="w-full shrink-0 grid sm:grid-cols-2 gap-4 px-px">
       <figure class="work-card rounded-2xl overflow-hidden border border-zinc-200 bg-[#FDFCF9]">
         <div class="work-reveal aspect-[4/3]" role="slider" tabindex="0" aria-label="Drag to compare before and after" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
           <img src="/assets/work/newbuild-after.jpg" alt="A modern yellow-brick detached home after its frames were recoloured anthracite" class="work-after w-full aspect-[4/3] object-cover" loading="lazy" decoding="async">
@@ -323,6 +327,20 @@
         </figcaption>
       </figure>
 
+    </div>
+
+      </div>
+      </div>
+    </div>
+
+    <div class="mt-4 flex items-center justify-between gap-4">
+      <div id="work-dots" class="flex items-center gap-2" role="tablist" aria-label="Choose a pair of homes"></div>
+      <div class="flex items-center gap-2">
+        <button type="button" id="work-prev" aria-label="Previous two homes"
+          class="w-11 h-11 rounded-full border border-zinc-200 hover:border-zinc-900 transition disabled:opacity-40">&#8592;</button>
+        <button type="button" id="work-next" aria-label="Next two homes"
+          class="w-11 h-11 rounded-full border border-zinc-200 hover:border-zinc-900 transition disabled:opacity-40">&#8594;</button>
+      </div>
     </div>
 
     <p class="mt-5 text-[11px] leading-5 text-zinc-500 max-w-[74ch]">
@@ -2741,6 +2759,67 @@ document.querySelectorAll('.work-reveal').forEach(card => {
 
   paint();
 });
+
+/* Our work: two homes at a time.
+
+   Paged with a transform, not a scrolling track. Every card has a
+   drag-to-compare handle, and a horizontally scrollable container would fight
+   it — you would swipe the gallery while trying to drag the reveal. So the
+   only ways to move are the buttons, the dots and the arrow keys, and a
+   horizontal drag on a photograph is always the reveal.
+
+   If this script never runs, the first two are visible and the reveal still
+   works: the cards are plain markup and the handles are their own listeners.
+   Nothing here is load-bearing for the proof. */
+(function workCarousel() {
+  const track = document.getElementById('work-track');
+  const dots = document.getElementById('work-dots');
+  const prev = document.getElementById('work-prev');
+  const next = document.getElementById('work-next');
+  if (!track || !dots || !prev || !next) return;
+
+  const pages = track.children.length;
+  let at = 0;
+
+  for (let i = 0; i < pages; i++) {
+    const dot = document.createElement('button');
+    dot.type = 'button';
+    dot.setAttribute('role', 'tab');
+    dot.setAttribute('aria-label', `Homes ${i * 2 + 1} and ${i * 2 + 2}`);
+    dot.className = 'h-2.5 rounded-full transition-all';
+    dot.addEventListener('click', () => show(i));
+    dots.appendChild(dot);
+  }
+
+  function show(i) {
+    at = Math.max(0, Math.min(pages - 1, i));
+    track.style.transform = `translateX(-${at * 100}%)`;
+    prev.disabled = at === 0;
+    next.disabled = at === pages - 1;
+    [...dots.children].forEach((dot, n) => {
+      const here = n === at;
+      dot.className = `h-2.5 rounded-full transition-all ${here ? 'w-6 bg-zinc-900' : 'w-2.5 bg-zinc-300 hover:bg-zinc-400'}`;
+      dot.setAttribute('aria-selected', here ? 'true' : 'false');
+    });
+    /* Cards on the page you cannot see should not be reachable by tab —
+       otherwise the focus ring disappears off the side of the frame. */
+    [...track.children].forEach((page, n) => {
+      page.toggleAttribute('inert', n !== at);
+      page.setAttribute('aria-hidden', n === at ? 'false' : 'true');
+    });
+  }
+
+  prev.addEventListener('click', () => show(at - 1));
+  next.addEventListener('click', () => show(at + 1));
+  document.getElementById('work-carousel')?.addEventListener('keydown', (e) => {
+    // Not when the focus is on a reveal handle — those own the arrow keys.
+    if (e.target.closest('.work-reveal')) return;
+    if (e.key === 'ArrowLeft') { e.preventDefault(); show(at - 1); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); show(at + 1); }
+  });
+
+  show(0);
+})();
 
 document.getElementById('hero-upload')?.addEventListener('click', () => {
   /* Scroll, and stop there. This used to open the file picker on the same tap:
