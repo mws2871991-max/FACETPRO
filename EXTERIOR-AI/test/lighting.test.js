@@ -90,6 +90,20 @@ test('it does not claim to simulate light', () => {
   assert.match(body, /no extra renders/, 'free is worth saying, and it is true');
 });
 
+test('both panes are lit by the same hour', () => {
+  /* The filter belongs on the frame that holds the before and the after, not
+     on the rendered image alone. Filtering one side meant dragging the slider
+     compared this evening's new frames with this afternoon's old ones — two
+     changes at once, which is the one thing a before-and-after must not do. */
+  const start = html.indexOf("className: 'media-cap relative aspect-[16/10]");
+  assert.ok(start > 0, 'the media frame should still be there');
+  const frame = html.slice(start - 200, start + 400);
+  assert.match(frame, /filter: \(LIGHTING\[state\.timeOfDay\]/, 'the frame carries the filter');
+  // And not on the after image on its own.
+  const after = html.slice(html.indexOf('src: state.renderUrl'), html.indexOf('src: state.renderUrl') + 400);
+  assert.ok(!/filter:/.test(after), 'the after image is filtered separately from the before');
+});
+
 test('the controls appear only once there is a render to light', () => {
   const start = html.indexOf('const lightingControls =');
   assert.match(html.slice(start, start + 80), /state\.renderUrl \?/,

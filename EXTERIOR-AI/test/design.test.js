@@ -92,6 +92,18 @@ test('the glazing estimate says what is inside it', () => {
   }
 });
 
+test('it says what is not covered, not only what is', () => {
+  /* A survey finding rot behind a frame is the commonest extra in this trade.
+     A homeowner told about it here has been quoted honestly; one told about it
+     on the day has been caught out. */
+  const start = html.indexOf("What's included");
+  const body = html.slice(start, start + 2600);
+  assert.match(body, /Not included/);
+  assert.match(body, /rotten timber/i);
+  assert.match(body, /FENSA or Certass/i, 'building control is only extra if they cannot self-certify');
+  assert.match(body, /structural/i);
+});
+
 test('it tells the truth about access either way', () => {
   // Charging for a tower on a bungalow, or listing access that is not in the
   // number, would both be the same kind of wrong.

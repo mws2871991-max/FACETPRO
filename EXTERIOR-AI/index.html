@@ -1190,7 +1190,6 @@ function buildVisualizer() {
         src: state.renderUrl,
         alt: `Your home with ${state.cladding.name} cladding, ${state.trim.name} trim and a ${state.roof.name} roof`,
         className: 'w-full h-full object-cover',
-        style: { filter: (LIGHTING[state.timeOfDay] || LIGHTING.afternoon).filter, transition: 'filter .7s' },
       }),
       ...lightingLayers(),
       h('div', { className: 'absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-emerald-600 text-white' }, 'After • your home, rendered'),
@@ -1307,7 +1306,15 @@ function buildVisualizer() {
     h('p', { className: 'mt-2 text-sm text-zinc-600 max-w-[62ch]' }, 'Drag the slider to compare your home now with how it could look. Every colour and material moves the estimate, so there are no surprises later.'),
     h('div', { className: 'mt-6 grid lg:grid-cols-[1.2fr_0.8fr] gap-6' }, [
       h('div', { className: 'rounded-2xl overflow-hidden border border-zinc-200 bg-[#FDFCF9]' }, [
-        h('div', { className: 'media-cap relative aspect-[16/10] bg-zinc-100 overflow-hidden' }, [
+        /* The daylight filter goes on the frame holding both panes, not on the
+           rendered image alone. Filtering only the "after" side meant dragging
+           the slider compared this evening's new frames against this
+           afternoon's old ones — two changes at once, which is the one thing a
+           before-and-after must not do. */
+        h('div', {
+          className: 'media-cap relative aspect-[16/10] bg-zinc-100 overflow-hidden',
+          style: { filter: (LIGHTING[state.timeOfDay] || LIGHTING.afternoon).filter, transition: 'filter .7s' },
+        }, [
           beforePane, afterPane, slider,
           h('div', { className: 'absolute bottom-3 right-3 text-[10px] px-2 py-1 rounded-full bg-white border border-zinc-200' }, `${state.afterPct}% after`),
         ]),
@@ -1693,7 +1700,17 @@ function buildDetailOptions() {
           h('li', {}, 'VAT at 20%, shown separately rather than hidden in the headline.'),
           h('li', {}, 'The installer’s own guarantee, which they confirm on survey.'),
         ]),
-      ]),
+        /* And what isn't in it. A survey finding rot behind a frame is the
+           commonest extra in this trade, and a homeowner told about it here
+           has been quoted honestly; one told about it on the day has been
+           caught out. Same for building control, which is only a separate
+           cost if the installer isn't registered to self-certify. */
+        h('p', { className: 'mt-3 text-[11px] font-medium text-zinc-600' }, 'Not included'),
+        h('ul', { className: 'mt-1 grid gap-1.5 text-[11px] leading-5 text-zinc-500' }, [
+          h('li', {}, 'Repairs to rotten timber or damaged brickwork found once the old frames come out.'),
+          h('li', {}, 'Building control notification, if your installer isn’t FENSA or Certass registered — most are, and then it’s covered.'),
+          h('li', {}, 'Anything structural: widening an opening, a new lintel, moving a window.'),
+        ]),
 
       state.uploadedBase64 ? h('button', {
         type: 'button',

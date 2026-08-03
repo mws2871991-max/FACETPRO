@@ -124,3 +124,36 @@ test('a photo too big for the provider does not spend a paid slot', async () => 
   assert.strictEqual(body.reason, 'image_too_large');
   assert.strictEqual(upstream.anthropic, before, 'it reached the provider anyway');
 });
+
+test('the size limits stay in an order that keeps the message useful', () => {
+  /* body 12mb > render 8MB > detect 5MB, with room for base64's extra third.
+     If the body limit ever drops below the base64 size of either ceiling,
+     body-parser answers first with a generic message and the homeowner loses
+     the one that tells them how big their photo actually was. */
+  const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'server.js'), 'utf8');
+  const detect = Number(src.match(/ANTHROPIC_MAX_IMAGE_BYTES = (\d+) \* 1024 \* 1024/)[1]);
+  const render = Number(src.match(/REPLICATE_MAX_IMAGE_BYTES = (\d+) \* 1024 \* 1024/)[1]);
+  const body = Number(src.match(/'\/api\/detect', '\/api\/render'\], express\.json\(\{ limit: '(\d+)mb'/)[1]);
+  assert.ok(render > detect, `render ${render}MB should exceed detect ${detect}MB`);
+  assert.ok(body > render * 4 / 3, `body ${body}MB must clear the base64 size of an ${render}MB image`);
+});
+
+test('a render photo is measured decoded, not as base64', async () => {
+  /* The guard used to compare the base64 string against the limit — a third
+     larger than the image — so a photo comfortably under it was refused with
+     no way to work out why. */
+  const before = upstream.replicate;
+  /* 8.5 MB: over the 8 MB render ceiling, and its base64 (11.3 MB) is still
+     under the 12 MB body limit — so our guard answers rather than body-parser.
+     Which is the whole reason those three numbers have to stay in order: at
+     9 MB the body limit fires first and the homeowner gets a generic message
+     instead of one telling them how big their photo was. */
+  const big = Buffer.concat([
+    Buffer.from([0xff, 0xd8, 0xff, 0xc0, 0x00, 0x11, 0x08, 0x02, 0x58, 0x02, 0x80]),
+    Buffer.alloc(Math.round(8.5 * 1024 * 1024)),
+  ]).toString('base64');
+  const { status, body } = await post('/api/render', { image: big, mimeType: 'image/jpeg', claddingName: 'Alabaster' });
+  assert.strictEqual(status, 413);
+  assert.strictEqual(body.reason, 'image_too_large');
+  assert.strictEqual(upstream.replicate, before, 'it reached the provider anyway');
+});

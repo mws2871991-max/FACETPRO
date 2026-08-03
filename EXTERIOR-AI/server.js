@@ -74,8 +74,8 @@ app.set('trust proxy', 1);
 /* Photographs need room; nothing else does. This was one global 20 MB, so
    every endpoint on the site would accept a 20 MB body and parse it before
    any handler saw it. */
-app.use(['/api/detect', '/api/render'], express.json({ limit: '20mb' }));
-app.use(express.json({ limit: '100kb' }));
+app.use(['/api/detect', '/api/render'], express.json({ limit: '12mb' }));
+app.use(express.json({ limit: '128kb' }));
 
 /* ── STATIC FILES ──
    Deny by default. Serving __dirname wholesale published the entire project —
@@ -786,7 +786,6 @@ function pruneDetectionRecords() {
 }
 
 function saveDetectionRecord(detections, size) {
-  pruneDetectionRecords();
   const id = crypto.randomUUID();
   detectionRecords.set(id, {
     at: Date.now(),
@@ -794,6 +793,10 @@ function saveDetectionRecord(detections, size) {
     aspectRatio: size && size.height > 0 ? size.width / size.height : null,
     measurement: null,
   });
+  /* After the insert, not before. Pruning first meant the sweep saw the map at
+     its limit, found nothing over, and then the new record pushed it one past
+     — where it stayed until the next upload. Off by one, permanently. */
+  pruneDetectionRecords();
   return id;
 }
 
@@ -1193,6 +1196,13 @@ function newLeadId() {
 // a wasted daily slot. Client-side downscaling makes this rare; the guard is
 // what stops it costing anything when it happens.
 const ANTHROPIC_MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const REPLICATE_MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+
+/* These three have to stay in this order, with room for base64's extra third:
+   the body limit above the render ceiling above the detect ceiling. If the
+   body limit ever drops below the base64 size of either, body-parser answers
+   first with a generic message and the homeowner loses the one that tells them
+   how big their photo actually was. */
 
 /* ── IS THIS ACTUALLY AN IMAGE? ──
 
@@ -1730,11 +1740,19 @@ app.post('/api/render', renderLimiter, async (req, res) => {
           windowStyleName, doorStyleName, windowDoorColourName } = req.body || {};
   if (!image) return res.status(400).json({ error: 'image required' });
   if (typeof image !== 'string' || image.length < 10) return res.status(400).json({ error: 'Invalid image data.' });
-  if (image.length > 20 * 1024 * 1024) return res.status(413).json({ error: 'Image too large (max 20MB).' });
+  // Size is checked on the decoded bytes below, not on the base64 string —
+  // that is a third larger, so this rejected photographs that were under the
+  // limit and gave no way to work out why.
   /* The type is optional here because the client may send a data: URL that
      carries its own — but whatever it claims, the bytes decide. */
   const img = readImage(image, mimeType, { requireDeclared: false });
   if (!img.ok) return res.status(img.status).json({ error: img.error });
+  if (img.buffer.length > REPLICATE_MAX_IMAGE_BYTES) {
+    return res.status(413).json({
+      error: 'That photo is too large to render — please use one under 8MB.',
+      reason: 'image_too_large',
+    });
+  }
 
   const replicateKey = process.env.REPLICATE_API_TOKEN;
   if (!replicateKey) return res.status(500).json({ error: 'REPLICATE_API_TOKEN not set — see .env.example.' });
