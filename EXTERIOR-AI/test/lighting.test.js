@@ -107,6 +107,25 @@ test('the slider is not dimmed by the light it controls', () => {
   assert.ok(sliderAt > filterAt, 'the slider must come after, as a sibling');
 });
 
+test('the glow is not dimmed by the darkness it is meant to shine through', () => {
+  /* The tint, vignette and lit windows were inside afterPane — clipped, and
+     inside brightness(0.62). Two consequences: at evening mid-drag you got the
+     navy wash and the glowing windows on one side of the seam only, so
+     dragging changed the hour and the frame colour at once; and the glow was
+     38% dimmer than intended, when the whole point is that it stays bright
+     while the house goes dark. */
+  const frameAt = html.indexOf("className: 'media-cap relative aspect-[16/10]");
+  const frame = html.slice(frameAt, html.indexOf('groupsRow', frameAt));
+  const filterAt = frame.indexOf('filter: (LIGHTING');
+  const layersAt = frame.indexOf('...lightingLayers()');
+  assert.ok(filterAt > 0 && layersAt > filterAt, 'the layers should come after the filtered element');
+  assert.ok(frame.slice(filterAt, layersAt).includes('[beforePane, afterPane]'),
+    'the filtered layer holds the panes and closes before the layers are added');
+  // And not back inside the clipped pane.
+  assert.ok(!/afterPane = [\s\S]{0,600}lightingLayers/.test(html),
+    'the layers are inside the clipped pane again');
+});
+
 test('both panes are lit by the same hour', () => {
   /* The filter belongs on the frame that holds the before and the after, not
      on the rendered image alone. Filtering one side meant dragging the slider

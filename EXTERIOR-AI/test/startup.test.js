@@ -47,9 +47,11 @@ test('a deployment taking leads with nowhere safe to put them refuses to start',
   assert.strictEqual(code, 1, 'must exit non-zero so the platform reports a failed deploy');
   assert.match(out, /REFUSING TO START/);
   assert.match(out, /DATABASE_URL/);
-  // The operator needs to be told what to do, not just what is wrong.
+  // The operator needs to be told what to do, not just what is wrong — and
+  // told something that works. This used to require SITE_MODE=beta, which
+  // pinned advice that had stopped having any effect.
   assert.match(out, /LEAD_CAPTURE=off/);
-  assert.match(out, /SITE_MODE=beta/);
+  assert.match(out, /DATABASE_URL/);
 });
 
 test('the same deployment with lead capture off is fine — no personal data is handled', async () => {
@@ -86,4 +88,25 @@ test('and the default is off, so nobody has to remember', async () => {
   const { code, out } = await run({ ...DEPLOYED, SITE_MODE: 'beta', LEAD_CAPTURE: '' });
   assert.notStrictEqual(code, 1, 'unset must be safe, not refused: ' + out.slice(0, 200));
   assert.match(out, /running on http/);
+});
+
+test('every remedy the refusal suggests actually lets it start', async () => {
+  /* The refusal used to list `SITE_MODE=beta`, left over from when the guards
+     keyed off the mode. Since they key off whether this is a deployment, that
+     line did nothing: an operator would set it, redeploy, get the identical
+     message and learn nothing. Wrong instructions in an error message are
+     worse than none, so this reads the remedies out of the message itself and
+     checks each one works. */
+  const { out } = await run({ ...DEPLOYED, LEAD_CAPTURE: 'on' });
+  // Only the ones stated as NAME=value can be checked mechanically; the
+  // others (set DATABASE_URL) need something this test cannot conjure.
+  const suggested = [...out.matchAll(/set ([A-Z_]+)=(\S+)/g)].map(m => [m[1], m[2]]);
+  assert.ok(suggested.length >= 1, `no remedies found in:\n${out}`);
+
+  for (const [name, value] of suggested) {
+    if (name === 'DATABASE_URL') continue;   // needs a real database to prove
+    const attempt = await run({ ...DEPLOYED, LEAD_CAPTURE: 'on', [name]: value });
+    assert.notStrictEqual(attempt.code, 1,
+      `the message tells you to set ${name}=${value}, and it still refuses`);
+  }
 });

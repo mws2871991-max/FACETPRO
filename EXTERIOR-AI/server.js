@@ -2477,10 +2477,15 @@ function refuseToStartIfStorageContradictsTheNotice() {
     'enquiry is stored encrypted and backed up, so this would make the notice untrue',
     'about data you had already collected.',
     '',
+    /* Every line here has to be a remedy that actually works. This used to
+       suggest SITE_MODE=beta, left over from when the guards keyed off the
+       mode — and since they now key off whether this is a deployment, that
+       advice did nothing at all. An operator on a staging box would set it,
+       redeploy, get the identical message and learn nothing. Wrong
+       instructions in an error are worse than no instructions. */
     'Do one of these:',
     '  · set DATABASE_URL   (the intended fix — Postgres, encrypted at rest)',
-    '  · set LEAD_CAPTURE=off   (the site works; it just takes no details)',
-    '  · set SITE_MODE=beta   (for a staging deployment)',
+    '  · set LEAD_CAPTURE=off   (staging, or a public site that takes no details)',
     '',
   ].join('\n'));
   process.exit(1);

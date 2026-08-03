@@ -1192,7 +1192,6 @@ function buildVisualizer() {
     state.uploadedImg
       ? h('img', { src: state.uploadedImg, alt: 'Your home as it looks today', className: 'w-full h-full object-cover opacity-60 grayscale-[0.2]' })
       : h('span', { className: 'text-xs text-zinc-500' }, 'Add a photo to see your home here'),
-    h('div', { className: 'absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-white border border-zinc-200' }, 'Before'),
   ]);
 
   let afterPane;
@@ -1206,8 +1205,6 @@ function buildVisualizer() {
         alt: `Your home with ${state.cladding.name} cladding, ${state.trim.name} trim and a ${state.roof.name} roof`,
         className: 'w-full h-full object-cover',
       }),
-      ...lightingLayers(),
-      h('div', { className: 'absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-emerald-600 text-white' }, 'After • your home, rendered'),
     ]);
   } else {
     afterPane = h('div', { className: 'absolute inset-0', style: { clipPath: `inset(0 ${100 - state.afterPct}% 0 0)` } }, [
@@ -1338,6 +1335,25 @@ function buildVisualizer() {
             className: 'absolute inset-0',
             style: { filter: (LIGHTING[state.timeOfDay] || LIGHTING.afternoon).filter, transition: 'filter .7s' },
           }, [beforePane, afterPane]),
+          /* The tint, the vignette and the lit windows belong out here with
+             the slider, for two reasons.
+
+             They were inside afterPane, which is clipped — so at evening,
+             mid-drag, you got the navy wash and the glowing windows on one
+             side of the seam and nothing on the other. Dragging changed the
+             hour and the frame colour at once, which is the thing the comment
+             on the wrapper above says a before-and-after must not do.
+
+             And the glow was sitting inside brightness(0.62), being dimmed by
+             38% — when the entire point of it is to stay bright while the
+             house goes dark. */
+          ...lightingLayers(),
+          /* Labels too. The slider and the readout were lifted out; these
+             two were missed, and dimmed with the photograph. */
+          h('div', { className: 'absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-white border border-zinc-200' }, 'Before'),
+          state.renderUrl
+            ? h('div', { className: 'absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-emerald-600 text-white', style: { clipPath: `inset(0 ${100 - state.afterPct}% 0 0)` } }, 'After • your home, rendered')
+            : null,
           slider,
           h('div', { className: 'absolute bottom-3 right-3 text-[10px] px-2 py-1 rounded-full bg-white border border-zinc-200' }, `${state.afterPct}% after`),
         ]),
