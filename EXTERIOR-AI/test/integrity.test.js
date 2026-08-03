@@ -225,3 +225,29 @@ test('every test file is guarded, not just the ones that write today', () => {
     .filter(f => !fs.readFileSync(path.join(dir, f), 'utf8').includes("helpers/data-dir"));
   assert.deepStrictEqual(unguarded, [], `these write to the real data/: ${unguarded.join(', ')}`);
 });
+
+test('every setting the code reads is documented', () => {
+  /* DEPLOY.md went stale for four review rounds while the code grew a
+     database CA, a data directory, an installer cap, a safety tolerance and
+     three new endpoints. An undocumented setting is one nobody sets, and the
+     ones here decide whether the connection is verified and whether leads
+     survive a deploy. */
+  const read = new Set();
+  for (const file of ['server.js', 'store.js', 'delivery.js', 'resume.js', 'glazing.js']) {
+    const src = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
+    for (const m of src.matchAll(/process\.env\.([A-Z_0-9]+)/g)) read.add(m[1]);
+  }
+  const deploy = fs.readFileSync(path.join(__dirname, '..', 'DEPLOY.md'), 'utf8');
+  const undocumented = [...read].filter(v => !deploy.includes(v)).sort();
+  assert.deepStrictEqual(undocumented, [], `not in DEPLOY.md: ${undocumented.join(', ')}`);
+});
+
+test('the build step is documented, because the site is unstyled without it', () => {
+  const deploy = fs.readFileSync(path.join(__dirname, '..', 'DEPLOY.md'), 'utf8');
+  assert.match(deploy, /build:css/);
+  assert.match(deploy, /unstyled without it/i);
+  const pkg = require('../package.json');
+  assert.ok(pkg.scripts['build:css'], 'the script itself should exist');
+  assert.strictEqual(pkg.scripts.prestart, 'npm run build:css',
+    'npm start must not serve a stylesheet older than the markup');
+});

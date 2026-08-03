@@ -29,6 +29,29 @@ None of this errors. It silently doesn't work. So:
 `GET /healthz` checks exactly this — it returns 503 if `data/` isn't writable,
 so a missing volume fails the health check rather than passing quietly.
 
+## The build step
+
+`assets/app.css` is compiled ahead of time. The site is **unstyled without it**.
+
+    npm run build:css
+
+`npm start` runs it first via `prestart`, and the output is committed —
+production installs with `npm ci --omit=dev`, so Tailwind is not there to run.
+**If your platform calls `node server.js` directly rather than `npm start`, put
+`npm run build:css` in the build command.**
+
+Pinned to Tailwind 3 deliberately. This replaced the Play CDN, which served v3,
+and v4 changes things this page uses — `border` with no colour, `outline-none`,
+the shadow and space-y scales. Upgrading is its own job with its own visual diff.
+
+One rule that has no error message: **class names must appear whole in the
+source.** The scanner reads `index.html` as text, so
+
+    `bg-white ${active ? 'text-white' : 'text-zinc-500'}`   is found
+    `text-${colour}-500`                                    is not
+
+and the second renders unstyled, silently.
+
 ## Root directory
 
 The app lives in **`EXTERIOR-AI/`**, not the repository root. Set the service's
@@ -68,6 +91,19 @@ way to get this deployment wrong.
 | `DAILY_DETECT_LIMIT` | no | Default 50. |
 | `DAILY_RENDER_LIMIT` | no | Default 50. The only thing bounding render spend. |
 | `PORT` | no | The host sets this. |
+| `LEAD_CAPTURE` | no | Code defaults to `on`; `.env.example` ships `off`. With `off` the form is replaced by an honest explanation and nothing personal is read, parsed or stored. Turn it on when the legal pages have no `[PLACEHOLDERS]` left, the ICO registration is done and `DATABASE_URL` is set — under `SITE_MODE=live` the server refuses to start until the first two are true. |
+| `DATABASE_URL` | **for live** | Postgres. Without it everything lands in JSONL on the container: unencrypted, and gone on the next deploy unless a volume is mounted, while the privacy notice promises encrypted and backed up. Requires `npm install pg`. |
+| `DATABASE_CA_CERT` | with a database | The provider's CA certificate, PEM inline. Verification is **on** — this used to be `rejectUnauthorized: false`, which encrypts the connection carrying every homeowner's contact details without authenticating the far end. Without a CA we fall back to the system trust store, which may simply refuse. |
+| `PGSSLROOTCERT` | alternative | A path to the same certificate, if that suits your platform better. |
+| `DB_SCHEMA` | no | Default `facetpro_visualiser`. Never `public`: seven of these table names already exist in the FastAPI backend's database with entirely different columns. |
+| `NODE_ENV` | **for live** | `production`. Express serves its default error page otherwise — stack traces, absolute paths, dependency versions. |
+| `PRIVACY_EMAIL` | **for live** | Must match `[PRIVACY EMAIL]` in the privacy notice. Shown to anyone whose withdrawal link has expired. Falls back to `LEAD_NOTIFY_EMAIL`, then to `privacy@facetpro.co.uk`. |
+| `LEAD_RECIPIENTS` | for revenue | JSON array of the installers who buy leads: `id`, `name`, https `url`, optional `headers` and `areas`. No `areas` means national. **Carries auth tokens — set it in the platform dashboard, never in a file.** |
+| `CRM_WEBHOOK_URL` | no | The old single-webhook setting. Still honoured when `LEAD_RECIPIENTS` is empty. |
+| `MAX_INSTALLERS_PER_LEAD` | no | Default 3. Can lower the cap, never raise it — the consent wording on the form says "up to three", and that sentence is the limit. `0` stops sharing entirely without unconfiguring the buyers. |
+| `DESIGN_PACK_EMAIL` | no | `off` stops the homeowner's design pack. It does **not** stop the withdrawal link: someone who asked for quotes still gets a confirmation carrying it. |
+| `RENDER_SAFETY_TOLERANCE` | no | Default 2, Replicate's own default and their maximum for image-to-image. 0 is strictest, 6 most permissive. Members of the public upload photographs of their homes, which contain their children and their neighbours. |
+| `FACETPRO_DATA_DIR` | tests only | Where the JSONL files go. The suite points it at a temp directory — without it `npm test` writes into the same directory a deployment mounts its volume on. |
 
 ## Before pointing a domain at it
 
@@ -82,6 +118,20 @@ way to get this deployment wrong.
 4. Run `npm run set-domain -- https://www.facetpro.co.uk` so the canonical
    tags, Open Graph URLs, `robots.txt` and `sitemap.xml` all agree with where
    the site actually lives.
+
+## Endpoints
+
+| | |
+| --- | --- |
+| `/api/detect`, `/api/render` | The paid ones. Daily caps, per-IP limits, and the bytes are checked before either provider is called. |
+| `/api/quote`, `/api/measure`, `/api/whole-house`, `/api/glazing` | Pricing. Client-supplied areas and counts are never trusted. |
+| `/api/coverage` | "Do you have installers near me?" — a count, never names. |
+| `/api/resume`, `/api/resume/:code` | Carrying a design to a phone. Choices only: no photograph, nothing identifying. |
+| `/api/lead` | The only endpoint that stores personal data. Off entirely with `LEAD_CAPTURE=off`. |
+| `/api/leads`, `/api/deliveries` | Installer area. Password, rate limit, access log, `no-store`. |
+| `/withdraw`, `/api/withdraw` | Article 7(3). The GET only shows a page; the POST does the work, because mail scanners open every link in an email. |
+| `/r/:id` | Stored renders. |
+| `/healthz` | Deliberately outside the rate limiters — a platform health check must never be throttled. |
 
 ## After deploying, check these
 
