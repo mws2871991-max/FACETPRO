@@ -35,10 +35,15 @@ so a missing volume fails the health check rather than passing quietly.
 
     npm run build:css
 
-`npm start` runs it first via `prestart`, and the output is committed —
-production installs with `npm ci --omit=dev`, so Tailwind is not there to run.
-**If your platform calls `node server.js` directly rather than `npm start`, put
-`npm run build:css` in the build command.**
+`npm start` runs `scripts/prestart-css.js` first. Where Tailwind is installed
+it rebuilds; where it is not — production, which installs with
+`npm ci --omit=dev` — it checks the committed file is there and warns if
+`index.html` is newer than it. It refuses to start only if the stylesheet is
+missing altogether, because that means every page renders unstyled.
+
+That is why the built file is **committed**. **If your platform calls
+`node server.js` directly rather than `npm start`, put `npm run build:css` in
+the build command** — or make sure the committed CSS is current.
 
 Pinned to Tailwind 3 deliberately. This replaced the Play CDN, which served v3,
 and v4 changes things this page uses — `border` with no colour, `outline-none`,

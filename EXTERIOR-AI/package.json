@@ -5,11 +5,11 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test --test-force-exit --test-concurrency=1 \"test/*.test.js\"",
+    "test": "node test/run.js",
     "validate": "node scripts/validate-measurements.js",
     "set-domain": "node scripts/set-domain.js",
     "build:css": "tailwindcss -i ./assets/tailwind.css -o ./assets/app.css --minify",
-    "prestart": "npm run build:css"
+    "prestart": "node scripts/prestart-css.js"
   },
   "license": "ISC",
   "dependencies": {

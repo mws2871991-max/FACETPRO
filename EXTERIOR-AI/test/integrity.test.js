@@ -248,6 +248,22 @@ test('the build step is documented, because the site is unstyled without it', ()
   assert.match(deploy, /unstyled without it/i);
   const pkg = require('../package.json');
   assert.ok(pkg.scripts['build:css'], 'the script itself should exist');
-  assert.strictEqual(pkg.scripts.prestart, 'npm run build:css',
-    'npm start must not serve a stylesheet older than the markup');
+  assert.strictEqual(pkg.scripts.prestart, 'node scripts/prestart-css.js',
+    'npm start must not serve a stylesheet older than the markup — and must still start without Tailwind');
+});
+
+test('the server still starts where Tailwind is not installed', () => {
+  /* Production runs `npm ci --omit=dev`, so Tailwind is not there at start
+     time — which is why the built stylesheet is committed. A prestart that
+     shelled straight out to it would have taken the whole site down rather
+     than serving the file sitting right beside it. */
+  const script = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'prestart-css.js'), 'utf8');
+  assert.match(script, /require\.resolve\('tailwindcss/, 'it should check before shelling out');
+  assert.match(script, /REFUSING TO START/, 'no stylesheet at all is worth refusing over');
+  assert.match(script, /older than index\.html/, 'a stale one is worth saying out loud');
+
+  const pkg = require('../package.json');
+  assert.strictEqual(pkg.scripts.prestart, 'node scripts/prestart-css.js');
+  assert.ok(fs.existsSync(path.join(__dirname, '..', 'assets', 'app.css')),
+    'the built stylesheet is committed on purpose — production cannot rebuild it');
 });

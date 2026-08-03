@@ -90,6 +90,23 @@ test('it does not claim to simulate light', () => {
   assert.match(body, /no extra renders/, 'free is worth saying, and it is true');
 });
 
+test('the slider is not dimmed by the light it controls', () => {
+  /* A CSS filter applies to every descendant. With the slider inside the
+     filtered element, brightness(0.62) at evening dimmed the control people
+     use to compare before and after — exactly when the image is hardest to
+     read — and the white readout with it. */
+  const start = html.indexOf("className: 'media-cap relative aspect-[16/10]");
+  const end = html.indexOf('groupsRow', start);
+  const frame = html.slice(start, end);
+  const filterAt = frame.indexOf('filter: (LIGHTING');
+  const sliderAt = frame.indexOf('\n          slider,');
+  assert.ok(filterAt > 0 && sliderAt > 0, 'both should be in the frame somewhere');
+  // The filtered layer closes before the slider is added as a sibling.
+  assert.ok(frame.slice(filterAt, sliderAt).includes('[beforePane, afterPane]'),
+    'the filtered layer should hold the panes and nothing else');
+  assert.ok(sliderAt > filterAt, 'the slider must come after, as a sibling');
+});
+
 test('both panes are lit by the same hour', () => {
   /* The filter belongs on the frame that holds the before and the after, not
      on the rendered image alone. Filtering one side meant dragging the slider
@@ -97,8 +114,9 @@ test('both panes are lit by the same hour', () => {
      changes at once, which is the one thing a before-and-after must not do. */
   const start = html.indexOf("className: 'media-cap relative aspect-[16/10]");
   assert.ok(start > 0, 'the media frame should still be there');
-  const frame = html.slice(start - 200, start + 400);
+  const frame = html.slice(start, start + 700);
   assert.match(frame, /filter: \(LIGHTING\[state\.timeOfDay\]/, 'the frame carries the filter');
+  assert.match(frame, /\[beforePane, afterPane\]/, 'and it holds both panes, so they share an hour');
   // And not on the after image on its own.
   const after = html.slice(html.indexOf('src: state.renderUrl'), html.indexOf('src: state.renderUrl') + 400);
   assert.ok(!/filter:/.test(after), 'the after image is filtered separately from the before');

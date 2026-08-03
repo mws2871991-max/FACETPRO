@@ -1311,11 +1311,19 @@ function buildVisualizer() {
            the slider compared this evening's new frames against this
            afternoon's old ones — two changes at once, which is the one thing a
            before-and-after must not do. */
-        h('div', {
-          className: 'media-cap relative aspect-[16/10] bg-zinc-100 overflow-hidden',
-          style: { filter: (LIGHTING[state.timeOfDay] || LIGHTING.afternoon).filter, transition: 'filter .7s' },
-        }, [
-          beforePane, afterPane, slider,
+        /* Two layers, and the controls are deliberately in the outer one.
+
+           A CSS filter applies to every descendant, so with the slider inside
+           the frame, brightness(0.62) at evening dimmed the range input and
+           the white readout along with the photograph — the control people
+           use to compare before and after lost contrast exactly when the
+           image was hardest to read. */
+        h('div', { className: 'media-cap relative aspect-[16/10] bg-zinc-100 overflow-hidden' }, [
+          h('div', {
+            className: 'absolute inset-0',
+            style: { filter: (LIGHTING[state.timeOfDay] || LIGHTING.afternoon).filter, transition: 'filter .7s' },
+          }, [beforePane, afterPane]),
+          slider,
           h('div', { className: 'absolute bottom-3 right-3 text-[10px] px-2 py-1 rounded-full bg-white border border-zinc-200' }, `${state.afterPct}% after`),
         ]),
         lightingControls,
