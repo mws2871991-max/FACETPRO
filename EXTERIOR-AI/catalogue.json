@@ -577,8 +577,8 @@
   },
   "glazing": {
     "note": "Guide prices for supply and fitting, per window and per door, including access and VAT.",
-    "internalNote": "PLACEHOLDER RATES — unlike cladding/roof/labour above, these are NOT from the production backend. They are plausible UK mid-market uPVC figures put here so glazing.js has something to run against. Replace every number below with your own supplier and subcontractor rates before this is shown to a homeowner, and bump `version`.",
-    "source": "Not sourced. Placeholder pending supplier rate card.",
+    "internalNote": "Door rates are real. Window bands are still invented and running at roughly half of trade. See notes/glazing-rates-from-the-trade.md.",
+    "source": "Doors: settled prices from 24 years selling for a national installer, inc VAT, converted to net. Windows: NOT SOURCED — placeholder pending.",
     "windowBands": [
       {
         "id": "small",
@@ -621,12 +621,12 @@
       {
         "id": "composite",
         "name": "Composite Door",
-        "supplyFit": 1250
+        "supplyFit": 2000
       },
       {
         "id": "bifold",
         "name": "Bifold",
-        "supplyFit": 2950
+        "supplyFit": 4000
       }
     ],
     "accessCost": 780,
