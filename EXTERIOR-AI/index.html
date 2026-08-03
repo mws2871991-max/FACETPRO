@@ -556,6 +556,10 @@ const state = {
   renderUnavailable: false,
   // Window/door and roofline preferences. Recorded for the installer; they
   // never move the price, because the quote uses one sourced trim rate.
+  /* How the render is being shown, not what it is. Nothing here reaches the
+     server, the measurement or the stored image — see lightingLayers(). */
+  view: 'outside',          // outside | inside
+  timeOfDay: 'afternoon',   // morning | afternoon | evening
   glazing: null,            // the window and door estimate, once we have one
   glazingLoading: false,
   windowCount: null,        // the homeowner's own count, which beats ours
@@ -1047,6 +1051,110 @@ function buildUploadDetect() {
   ]);
 }
 
+/* ── SEEING IT AT ANOTHER TIME OF DAY ──
+
+   Six variations on one render, and every one of them free. Switching these
+   makes no request and spends no quota: it is a CSS filter over the image we
+   already paid for, plus overlays on the window boxes /api/detect already
+   found. Doing it as six renders would multiply the Replicate bill by six for
+   something a filter does better anyway — instantly, and reversibly.
+
+   Two rules this must not break.
+
+   The filter is display only. The bytes sent to /api/detect and /api/render
+   are the untouched original; measuring a darkened photograph would skew the
+   wall area, the window sizes and therefore the price, and it would do it
+   quietly.
+
+   And it is an impression, not a simulation. The caption says so. We are
+   tinting an image, not modelling light transmission through glazing, and
+   this codebase does not get to imply otherwise. */
+
+const LIGHTING = {
+  morning:   { filter: 'brightness(1.12) contrast(1.04) saturate(1.08)', tint: 'rgba(255,232,184,0.20)' },
+  afternoon: { filter: 'none', tint: null },
+  evening:   { filter: 'brightness(0.62) contrast(1.12) saturate(0.9)',  tint: 'rgba(15,10,42,0.55)' },
+};
+
+/* The same floor glazing.js uses to decide what counts as a window. Real
+   detection means real misdetection, and a warm glow on a patch of brickwork
+   is worse than no effect at all — so a box that doesn't clear it gets no
+   overlay rather than a guess. */
+const OVERLAY_MIN_CONFIDENCE = 0.45;
+
+function litOpenings() {
+  return (state.detections || []).filter(d =>
+    (d?.type === 'window' || d?.type === 'door-front') &&
+    (Number(d?.confidence) || 0) >= OVERLAY_MIN_CONFIDENCE &&
+    Number(d?.w_pct) > 0 && Number(d?.h_pct) > 0);
+}
+
+function lightingLayers() {
+  const time = LIGHTING[state.timeOfDay] || LIGHTING.afternoon;
+  const evening = state.timeOfDay === 'evening';
+  const lit = state.view === 'inside' || evening;
+  const layers = [];
+
+  if (time.tint) {
+    layers.push(h('div', {
+      className: 'absolute inset-0 pointer-events-none transition-colors duration-700',
+      style: { background: time.tint },
+    }));
+  }
+
+  if (evening) {
+    layers.push(h('div', {
+      className: 'absolute inset-0 pointer-events-none',
+      style: { background: 'radial-gradient(120% 90% at 50% 20%, transparent 40%, rgba(0,0,0,0.55) 100%)' },
+    }));
+  }
+
+  for (const d of litOpenings()) {
+    const isDoor = d.type === 'door-front';
+    // Inset a little: a detection box includes the frame, and the glass is
+    // what lights up.
+    const inset = 7;
+    const style = {
+      left: `${Number(d.x_pct) + Number(d.w_pct) * inset / 100}%`,
+      top: `${Number(d.y_pct) + Number(d.h_pct) * inset / 100}%`,
+      width: `${Number(d.w_pct) * (1 - 2 * inset / 100)}%`,
+      height: `${Number(d.h_pct) * (1 - 2 * inset / 100)}%`,
+      borderRadius: '2px',
+      transition: 'opacity .7s, background .7s, box-shadow .7s',
+    };
+
+    if (isDoor) {
+      // A door doesn't light up like a window; it catches the hall light.
+      if (!evening) continue;
+      Object.assign(style, { boxShadow: '0 0 20px rgba(255,200,80,0.35)', opacity: 0.9 });
+    } else if (lit) {
+      Object.assign(style, {
+        background: 'radial-gradient(120% 120% at 50% 30%, #FFE9A8 0%, #FFC86A 55%, #FFAE3D 100%)',
+        boxShadow: '0 0 24px 6px rgba(255,195,80,0.55), inset 0 0 18px rgba(255,255,255,0.6)',
+        opacity: 0.95,
+      });
+    } else {
+      Object.assign(style, {
+        background: 'linear-gradient(180deg, rgba(255,255,255,0.88), rgba(210,225,255,0.3))',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8)',
+        opacity: 0.72,
+      });
+    }
+    layers.push(h('div', { className: 'absolute pointer-events-none', style }));
+
+    /* The specular sweep is what actually reads as "glass" — daytime, and
+       only when we're looking from outside. */
+    if (!lit && !isDoor) {
+      layers.push(h('div', {
+        className: 'absolute pointer-events-none',
+        style: { ...style, background: 'linear-gradient(110deg, transparent 0 35%, rgba(255,255,255,0.75) 50%, transparent 65%)', boxShadow: 'none', opacity: 0.7 },
+      }));
+    }
+  }
+
+  return layers;
+}
+
 function buildVisualizer() {
   const price = state.price || { cladding: 0, roof: 0, trim: 0, labour: 0, total: 0 };
 
@@ -1059,8 +1167,17 @@ function buildVisualizer() {
 
   let afterPane;
   if (state.renderUrl) {
+    /* The filter lives on the <img>, not on anything the server ever sees.
+       state.uploadedBase64 is untouched and is what /api/detect, /api/measure
+       and /api/render receive. */
     afterPane = h('div', { className: 'absolute inset-0', style: { clipPath: `inset(0 ${100 - state.afterPct}% 0 0)` } }, [
-      h('img', { src: state.renderUrl, alt: `Your home with ${state.cladding.name} cladding, ${state.trim.name} trim and a ${state.roof.name} roof`, className: 'w-full h-full object-cover' }),
+      h('img', {
+        src: state.renderUrl,
+        alt: `Your home with ${state.cladding.name} cladding, ${state.trim.name} trim and a ${state.roof.name} roof`,
+        className: 'w-full h-full object-cover',
+        style: { filter: (LIGHTING[state.timeOfDay] || LIGHTING.afternoon).filter, transition: 'filter .7s' },
+      }),
+      ...lightingLayers(),
       h('div', { className: 'absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-emerald-600 text-white' }, 'After • your home, rendered'),
     ]);
   } else {
@@ -1138,6 +1255,32 @@ function buildVisualizer() {
 
   const renderButtonLabel = state.rendering ? 'Creating your picture…' : (state.renderUrl ? 'Try this look again' : 'Show me this on my home');
 
+  /* Only over a real render — there is nothing to light up on a swatch
+     preview, and offering the controls before the picture exists promises
+     something the page can't do yet. */
+  const segmented = (options, current, onPick) =>
+    h('div', { className: 'inline-flex rounded-full border border-zinc-200 bg-white p-0.5' },
+      options.map(o => h('button', {
+        type: 'button',
+        'aria-pressed': current === o.id ? 'true' : 'false',
+        className: `px-3 py-1.5 rounded-full text-[11px] font-medium transition ${current === o.id ? 'bg-zinc-900 text-white' : 'text-zinc-600 hover:text-zinc-900'}`,
+        onClick: () => { onPick(o.id); renderVisualizerOnly(); },
+      }, o.label)));
+
+  const lightingControls = state.renderUrl ? h('div', { className: 'px-4 pb-4 grid gap-2' }, [
+    h('div', { className: 'flex items-center gap-2 flex-wrap' }, [
+      segmented([{ id: 'outside', label: 'Outside' }, { id: 'inside', label: 'Inside glow' }],
+        state.view, (v) => { state.view = v; }),
+      segmented([{ id: 'morning', label: 'Morning' }, { id: 'afternoon', label: 'Afternoon' }, { id: 'evening', label: 'Evening' }],
+        state.timeOfDay, (v) => { state.timeOfDay = v; }),
+    ]),
+    /* Honest, and generous, and both at once. The mockup this came from said
+       "Evening shows real light transmission" — it doesn't, and neither does
+       this: it is a tint and a gradient over one picture. */
+    h('p', { className: 'text-[11px] leading-5 text-zinc-500' },
+      'An idea of how it might look, not a second photograph — try any time of day, it costs nothing and uses no extra renders.'),
+  ]) : null;
+
   return h('section', { id: 'visualizer-section', className: 'rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24' }, [
     h('div', { className: 'flex items-center justify-between gap-3 flex-wrap' }, [
       h('div', {}, [
@@ -1153,6 +1296,7 @@ function buildVisualizer() {
           beforePane, afterPane, slider,
           h('div', { className: 'absolute bottom-3 right-3 text-[10px] px-2 py-1 rounded-full bg-white border border-zinc-200' }, `${state.afterPct}% after`),
         ]),
+        lightingControls,
         h('div', { className: 'p-4 grid gap-4' }, groupsRow),
         h('div', { className: 'px-4 pb-4' }, state.renderUnavailable
           // Cap spent: don't offer a button that can only fail. The colour
