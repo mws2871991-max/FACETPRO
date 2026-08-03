@@ -7,6 +7,9 @@
 
 require('./helpers/data-dir');   // never write to the real data/ — see the file
 
+// Capture defaults to off now, so a test that saves a lead has to ask.
+process.env.LEAD_CAPTURE = 'on';
+
 const { test } = require('node:test');
 const assert = require('node:assert');
 const catalogue = require('../catalogue.json');

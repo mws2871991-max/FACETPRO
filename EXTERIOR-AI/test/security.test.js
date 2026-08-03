@@ -47,6 +47,7 @@ process.env.PORT = String(PORT);
 process.env.ANTHROPIC_API_KEY = 'sk-ant-test';
 process.env.REPLICATE_API_TOKEN = 'r8-test';
 process.env.INSTALLER_PASSWORD = PASSWORD;
+process.env.LEAD_CAPTURE = 'on';   // capture defaults to off; this file saves leads
 process.env.DAILY_DETECT_LIMIT = String(DAILY_DETECT);
 process.env.DAILY_RENDER_LIMIT = String(DAILY_RENDER);
 delete process.env.RESEND_API_KEY;
@@ -290,11 +291,13 @@ test('a malformed request does not spend quota', async () => {
 
 /* ── lead capture ── */
 
-test('lead capture is on by default', async () => {
-  // The switch has to fail safe in the other direction too: a site that has
-  // quietly stopped capturing leads is its own kind of failure.
+test('lead capture is on because this file asked for it', async () => {
+  /* It used to be on by default, and that is how a live service that had
+     never had the variable set took real names and postcodes behind a notice
+     full of placeholders. Nobody set it wrongly; nobody set it at all. The
+     default is off now, so a file that saves leads says so. */
   const { body } = await get('/api/config');
-  assert.strictEqual(body.leadCapture, true, 'LEAD_CAPTURE is unset here, so capture should be on');
+  assert.strictEqual(body.leadCapture, true, 'this file sets LEAD_CAPTURE=on');
 });
 
 test('a lead without consent is refused', async () => {

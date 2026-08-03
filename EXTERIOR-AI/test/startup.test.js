@@ -37,8 +37,13 @@ const run = (env) => new Promise((resolve) => {
   setTimeout(() => { child.kill('SIGKILL'); settle('timed out'); }, 10000).unref();
 });
 
-test('a live deployment taking leads with nowhere safe to put them refuses to start', async () => {
-  const { code, out } = await run({ SITE_MODE: 'live', LEAD_CAPTURE: 'on' });
+/* What tells the server it is deployed rather than on somebody's laptop. The
+   platform sets one of these; the guards key off that rather than off
+   SITE_MODE, because what actually went wrong went wrong in beta. */
+const DEPLOYED = { RAILWAY_ENVIRONMENT: 'production' };
+
+test('a deployment taking leads with nowhere safe to put them refuses to start', async () => {
+  const { code, out } = await run({ ...DEPLOYED, SITE_MODE: 'live', LEAD_CAPTURE: 'on' });
   assert.strictEqual(code, 1, 'must exit non-zero so the platform reports a failed deploy');
   assert.match(out, /REFUSING TO START/);
   assert.match(out, /DATABASE_URL/);
@@ -48,12 +53,37 @@ test('a live deployment taking leads with nowhere safe to put them refuses to st
 });
 
 test('the same deployment with lead capture off is fine — no personal data is handled', async () => {
-  const { code, out } = await run({ SITE_MODE: 'live', LEAD_CAPTURE: 'off' });
+  const { code, out } = await run({ ...DEPLOYED, SITE_MODE: 'live', LEAD_CAPTURE: 'off' });
   assert.notStrictEqual(code, 1, out.slice(0, 400));
 });
 
-test('beta without a database still runs, loudly', async () => {
+test('beta is not an excuse — the guard covers every mode', async () => {
+  /* This is where it actually went wrong. The live Railway service was in
+     beta with LEAD_CAPTURE unset, so a public URL took names, emails and
+     postcodes behind a notice full of placeholders, into storage a deploy
+     erases. The guards only fired under SITE_MODE=live, and beta is exactly
+     the mode a site is in while it is unfinished and pointed at a real
+     address. */
+  const { code, out } = await run({ ...DEPLOYED, SITE_MODE: 'beta', LEAD_CAPTURE: 'on' });
+  assert.strictEqual(code, 1, out.slice(0, 400));
+  assert.match(out, /REFUSING TO START/);
+});
+
+test('but a laptop is warned, not stopped', async () => {
+  /* A guard that stops people working gets switched off, and then it is not
+     a guard. No platform variable means nobody but the developer can reach
+     this, so it says what it would refuse and carries on. */
   const { code, out } = await run({ SITE_MODE: 'beta', LEAD_CAPTURE: 'on' });
-  assert.notStrictEqual(code, 1, out.slice(0, 400));
-  assert.match(out, /Set DATABASE_URL/, 'the warning is still worth having');
+  assert.notStrictEqual(code, 1, out.slice(0, 300));
+  assert.match(out, /fine locally, refused on a deployment/);
+});
+
+test('and the default is off, so nobody has to remember', async () => {
+  /* It defaulted to on. Nobody set it wrongly on the live service — nobody
+     set it at all, and the default decided. A lost lead costs a hundred
+     pounds and you find out; quietly collecting personal data you cannot
+     lawfully explain is not recoverable. */
+  const { code, out } = await run({ ...DEPLOYED, SITE_MODE: 'beta', LEAD_CAPTURE: '' });
+  assert.notStrictEqual(code, 1, 'unset must be safe, not refused: ' + out.slice(0, 200));
+  assert.match(out, /running on http/);
 });

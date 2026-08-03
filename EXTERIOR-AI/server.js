@@ -888,7 +888,22 @@ const SITE_MODE = (process.env.SITE_MODE || 'beta').toLowerCase() === 'live' ? '
 
    Defaults to on: a site that has quietly stopped capturing leads is its own
    kind of failure, so turning it off has to be deliberate. */
-const LEAD_CAPTURE = (process.env.LEAD_CAPTURE || 'on').toLowerCase() !== 'off';
+/* Off unless somebody says otherwise.
+
+   This defaulted to on, with the argument that a site which has quietly
+   stopped taking leads is its own kind of failure. That argument is fine and
+   the conclusion was wrong, because the two failures are not the same size.
+
+   Found out the hard way: the live Railway service had never had this
+   variable set, so a public URL accepted names, emails, phone numbers and
+   postcodes behind a privacy notice still containing [COMPANY LEGAL NAME] —
+   into a container filesystem wiped on every deploy. Nobody set it wrongly.
+   Nobody set it at all, and the default decided.
+
+   A lost lead costs a hundred pounds and you find out. Quietly collecting
+   personal data you cannot lawfully explain, or produce on request, is not
+   recoverable. The default belongs on the side of the mistake you can undo. */
+const LEAD_CAPTURE = (process.env.LEAD_CAPTURE || 'off').toLowerCase() !== 'off';
 
 /* ── GET /healthz ──
    For the host's health check. Deliberately says almost nothing: whether the
@@ -2431,13 +2446,32 @@ const PORT = process.env.PORT || 3000;
    they only open when something is already wrong — so a live deployment that
    is taking personal data and cannot store it as promised is a failure, not a
    caution. Same instinct as SITE_MODE defaulting to beta. */
+/* Is this a deployment, or somebody's laptop?
+
+   Not SITE_MODE. The guards used to key off SITE_MODE=live, and what actually
+   went wrong went wrong in beta: a public Railway URL, badge and all, taking
+   real names and postcodes into storage a deploy erases. Beta is precisely
+   the mode a site is in while it is unfinished and pointed at a real address.
+
+   But refusing on a developer's machine because they have no Postgres would
+   be its own kind of wrong, and a guard that stops people working gets
+   switched off. So the question is whether anybody but the developer can
+   reach this — which the platform will tell us, and NODE_ENV covers the rest. */
+const IS_DEPLOYED = process.env.NODE_ENV === 'production'
+  || !!(process.env.RAILWAY_ENVIRONMENT || process.env.RENDER || process.env.FLY_APP_NAME
+        || process.env.DYNO || process.env.KUBERNETES_SERVICE_HOST);
+
 function refuseToStartIfStorageContradictsTheNotice() {
-  if (store.hasDb || !LEAD_CAPTURE || SITE_MODE !== 'live') return;
+  if (store.hasDb || !LEAD_CAPTURE) return;
+  if (!IS_DEPLOYED) {
+    console.warn('LEAD_CAPTURE=on with no DATABASE_URL — fine locally, refused on a deployment. Leads are going to plain files under data/.');
+    return;
+  }
   console.error([
     '',
     'REFUSING TO START.',
     '',
-    'SITE_MODE=live and LEAD_CAPTURE=on, but DATABASE_URL is not set. Leads would be',
+    'LEAD_CAPTURE=on, but DATABASE_URL is not set. Leads would be',
     'written to plain JSONL files on this container — not encrypted, and lost on the',
     'next deploy unless a volume is mounted. The privacy notice tells people their',
     'enquiry is stored encrypted and backed up, so this would make the notice untrue',
@@ -2461,7 +2495,15 @@ function refuseToStartIfStorageContradictsTheNotice() {
    placeholders are gone — but that is a comment in a template, and templates
    get copied and edited. This is the structural version. */
 function refuseToStartIfTheNoticeIsUnfinished() {
-  if (!LEAD_CAPTURE || SITE_MODE !== 'live') return;
+  if (!LEAD_CAPTURE) return;
+  if (!IS_DEPLOYED) {
+    const left = ['legal/privacy.html', 'legal/terms.html'].reduce((n, page) => {
+      try { return n + (fs.readFileSync(path.join(__dirname, page), 'utf8').match(/\[[A-Z][A-Z0-9 &;#/,.'’-]{2,60}\]/g) || []).length; }
+      catch (_) { return n; }
+    }, 0);
+    if (left) console.warn(`LEAD_CAPTURE=on with ${left} placeholder(s) left in the legal pages — fine locally, refused on a deployment.`);
+    return;
+  }
   const unfinished = [];
   for (const page of ['legal/privacy.html', 'legal/terms.html']) {
     let html = '';
@@ -2474,7 +2516,7 @@ function refuseToStartIfTheNoticeIsUnfinished() {
     '',
     'REFUSING TO START.',
     '',
-    'SITE_MODE=live and LEAD_CAPTURE=on, but the legal pages are unfinished:',
+    'LEAD_CAPTURE=on, but the legal pages are unfinished:',
     ...unfinished,
     '',
     'These are the pages people have to agree to before a lead can be saved, and',
