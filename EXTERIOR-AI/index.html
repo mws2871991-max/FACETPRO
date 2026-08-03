@@ -34,6 +34,12 @@
 <style>
   *{font-family:Geist,sans-serif}
   .serif{font-family:'Instrument Serif',serif}
+  /* Numbers that came from measuring something. Tabular figures so a column
+     of prices lines up and a changing total doesn't shuffle sideways. */
+  .measured{font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-0.01em}
+  /* Room for the fixed total bar, so it never covers the last thing on the
+     page — which would be the consent boxes. */
+  body:has(#total-bar > div){padding-bottom:74px}
   body{background:#FBF8F3}
   details > summary{list-style:none;cursor:pointer}
   details > summary::-webkit-details-marker{display:none}
@@ -434,6 +440,8 @@
 
 </main>
 
+<div id="mount-totalbar"></div>
+
 <footer class="max-w-6xl mx-auto px-6 pb-14">
   <div class="rounded-2xl border border-zinc-200 bg-white p-6">
     <div class="flex flex-wrap items-center justify-between gap-4">
@@ -802,6 +810,7 @@ const MOUNTS = [
   ['mount-details',     buildDetailOptions],
   ['mount-conservatory', buildConservatory],
   ['mount-refine',     buildRefineEstimate],
+  ['mount-totalbar',   buildTotalBar],
   ['mount-lead',       buildSaveFraming],
   ['mount-installer',  buildInstaller],
 ];
@@ -909,6 +918,12 @@ function buildUploadDetect() {
       h('div', { className: 'mt-1 text-xs text-zinc-500' }, 'JPG or PNG — one picture from the pavement is enough'),
       h('div', { className: 'mt-3 text-[11px] leading-5 text-zinc-500 max-w-[34ch] mx-auto' },
         'Stand back far enough to get the whole front in, with the front door visible. That lets us estimate your wall area too.'),
+      /* The same instruction the render prompt gives the model — "do not add,
+         remove, move or resize any window, door or other opening" — said to
+         the person it reassures. It answers the thing that stops people
+         uploading: that we'll show them somebody else's house. */
+      h('div', { className: 'mt-3 text-[11px] leading-5 text-zinc-600 max-w-[34ch] mx-auto' },
+        'We only change the finish. Your brickwork, your windows and the shape of your home stay exactly as they are.'),
     ]));
   }
 
@@ -1249,7 +1264,7 @@ function buildVisualizer() {
 
   function priceRow(label, value, muted) {
     return h('div', { className: `flex justify-between gap-4 ${muted ? 'text-white/60' : 'text-white'}` }, [
-      h('span', {}, label), h('span', {}, fmtMoney(value)),
+      h('span', {}, label), h('span', { className: 'measured' }, fmtMoney(value)),
     ]);
   }
 
@@ -1396,7 +1411,7 @@ function buildPricePanel(price, priceRow) {
       h('div', { className: 'mt-5' }, [
         h('div', { className: 'serif text-[30px] leading-none' }, `${fmtMoney(range.low)} – ${fmtMoney(range.high)}`),
         h('div', { className: 'mt-2 text-[11px] text-white/50' },
-          `Typical ${typeLabel.toLowerCase()} · about ${price.footprintM2} m² of wall`),
+          [`Typical ${typeLabel.toLowerCase()} · about `, h('span', { className: 'measured' }, `${price.footprintM2} m²`), ' of wall']),
       ]),
 
       h('div', { className: 'mt-5 rounded-xl bg-white/5 border border-white/10 p-3' }, [
@@ -1431,9 +1446,9 @@ function buildPricePanel(price, priceRow) {
       priceRow('Waste allowance', price.waste, true),
       priceRow('VAT (20%)', price.vat, true),
       h('div', { className: 'h-px bg-white/10 my-1' }),
-      h('div', { className: 'flex justify-between gap-4 font-medium' }, [h('span', {}, 'Estimated total'), h('span', {}, fmtMoney(price.total))]),
+      h('div', { className: 'flex justify-between gap-4 font-medium' }, [h('span', {}, 'Estimated total'), h('span', { className: 'measured' }, fmtMoney(price.total))]),
     ]),
-    h('p', { className: 'mt-3 text-[10px] leading-4 text-white/50' }, `Based on ${price.footprintM2} m² of wall.`),
+    h('p', { className: 'mt-3 text-[10px] leading-4 text-white/50' }, ['Based on ', h('span', { className: 'measured' }, `${price.footprintM2} m²`), ' of wall.']),
     h('p', { className: 'mt-3 text-[10px] leading-4 text-white/50' }, catalogue_note()),
     h('p', { className: 'mt-2 text-[10px] leading-4 text-white/50' }, 'A planning estimate, not a fixed quote — an installer will confirm the price after a survey.'),
   ]);
@@ -1498,6 +1513,63 @@ async function refreshGlazing() {
   } finally {
     if (ticket === glazingRequest) { state.glazingLoading = false; renderDetailsOnly(); }
   }
+}
+
+/* ── WHAT IT COSTS, WITHOUT SCROLLING ──
+
+   Someone changing a swatch should be able to see what they are buying. The
+   estimate panel is good and it is also two screens away by the time you are
+   choosing window colours, so the number people are actually deciding on was
+   off-screen for most of the journey.
+
+   Composition as well as total, because "£11,200" alone invites the question
+   this answers: eight windows, a door, and a wall area. And it links to the
+   breakdown rather than restating it — one place owns the itemisation.
+
+   Only once there is something real to show. A bar that says nothing is
+   furniture. */
+function buildTotalBar() {
+  const price = state.price;
+  const glaz = state.glazing;
+  if (!price && !glaz?.price) return h('div', { id: 'total-bar' });
+
+  const parts = [];
+  if (glaz?.price) {
+    const n = glaz.windowCount;
+    parts.push(`${n} window${n === 1 ? '' : 's'}`);
+    if (state.prefs.doorStyleId) parts.push('1 door');
+  }
+  if (price?.footprintM2) parts.push(`${price.footprintM2} m² of wall`);
+
+  /* Two figures, and they are not addable: the cladding total is a single
+     number, the glazing is a range. Presenting a sum would be a precision
+     neither of them has. */
+  const cladding = price ? fmtMoney(price.total) : null;
+  const glazing = glaz?.price ? `${fmtMoney(glaz.range.low)}–${fmtMoney(glaz.range.high)}` : null;
+
+  return h('div', {
+    id: 'total-bar',
+    className: 'fixed bottom-0 inset-x-0 z-40 border-t border-zinc-200 bg-[#FBF8F3]/95 backdrop-blur-xl',
+  }, [
+    h('div', { className: 'max-w-6xl mx-auto px-6 py-3 flex items-center justify-between gap-4 flex-wrap' }, [
+      h('div', { className: 'flex items-baseline gap-3 flex-wrap' }, [
+        cladding ? h('span', {}, [
+          h('span', { className: 'measured text-[20px]' }, cladding),
+          h('span', { className: 'text-[11px] text-zinc-500' }, ' walls, roof & trim'),
+        ]) : null,
+        glazing ? h('span', {}, [
+          h('span', { className: 'measured text-[15px]' }, glazing),
+          h('span', { className: 'text-[11px] text-zinc-500' }, ' windows & doors'),
+        ]) : null,
+        h('span', { className: 'text-[11px] text-zinc-500' },
+          parts.length ? `inc VAT · ${parts.join(' · ')}` : 'inc VAT'),
+      ]),
+      h('a', {
+        href: '#visualizer-section',
+        className: 'text-[12px] px-4 py-2 rounded-full border border-zinc-200 hover:border-zinc-900 transition whitespace-nowrap',
+      }, 'See breakdown'),
+    ]),
+  ]);
 }
 
 function buildDetailOptions() {
@@ -1592,7 +1664,7 @@ function buildDetailOptions() {
     return h('div', { className: 'mt-5 rounded-xl bg-[#FDFCF9] border border-zinc-200 p-4', 'aria-live': 'polite' }, [
       h('div', { className: 'flex items-baseline justify-between gap-3 flex-wrap' }, [
         h('span', { className: 'text-[12px] text-zinc-600' }, 'Guide price, supplied and fitted'),
-        h('span', { className: 'serif text-[22px] tracking-tight' },
+        h('span', { className: 'measured text-[19px] tracking-tight' },
           `${fmtMoney(g.range.low)} – ${fmtMoney(g.range.high)}`),
       ]),
       h('p', { className: 'mt-1 text-[11px] leading-5 text-zinc-500' },
@@ -1603,6 +1675,25 @@ function buildDetailOptions() {
         'Separate from the cladding and roof estimate above — windows and doors are quoted and fitted independently.'),
       // Shown next to the corrector, which is the thing that fixes it.
       g.countNote ? h('p', { className: 'mt-2 text-[11px] leading-5 text-amber-800' }, g.countNote) : null,
+
+      /* D-4 — the figure already charges for access, taking the old frames
+         away and a minimum job charge, and showed none of it. Same money,
+         visibly earned: a range with nothing behind it reads as a guess, and
+         the one thing this estimate is not is a guess about what's included. */
+      h('details', { className: 'mt-3 pt-3 border-t border-zinc-200' }, [
+        h('summary', { className: 'text-[12px] text-zinc-600 cursor-pointer' }, "What's included"),
+        h('ul', { className: 'mt-2 grid gap-1.5 text-[11px] leading-5 text-zinc-600' }, [
+          h('li', {}, 'A survey before anything is ordered — the installer measures every opening properly.'),
+          h('li', {}, 'Taking out your old frames and recycling them.'),
+          h('li', {}, 'New frames, glazing units and fitting.'),
+          h('li', {}, 'Cills, trims and making good around each opening.'),
+          g.price.access
+            ? h('li', {}, ['Access for the upstairs windows — a tower or scaffold, ', h('span', { className: 'measured' }, fmtMoney(g.price.access)), '.'])
+            : h('li', {}, 'No access equipment needed — everything is at ground level.'),
+          h('li', {}, 'VAT at 20%, shown separately rather than hidden in the headline.'),
+          h('li', {}, 'The installer’s own guarantee, which they confirm on survey.'),
+        ]),
+      ]),
 
       state.uploadedBase64 ? h('button', {
         type: 'button',
@@ -1619,7 +1710,7 @@ function buildDetailOptions() {
             className: 'w-11 h-11 rounded-full border border-zinc-200 hover:border-zinc-900 transition text-lg leading-none',
             onClick: () => setCount(counted - 1),
           }, '−'),
-          h('span', { className: 'text-[13px] tabular-nums min-w-[2ch] text-center' }, String(counted)),
+          h('span', { className: 'measured text-[13px] min-w-[2ch] text-center' }, String(counted)),
           h('button', {
             type: 'button', 'aria-label': 'One more window',
             className: 'w-11 h-11 rounded-full border border-zinc-200 hover:border-zinc-900 transition text-lg leading-none',
@@ -2030,7 +2121,7 @@ function buildRefineEstimate() {
       h('span', { className: 'text-zinc-500' }, 'Sizing your estimate: '),
       `${state.price?.footprintM2 ?? '—'} m² — ${sourceLabel}`,
     ]),
-    state.postcode ? h('div', {}, [h('span', { className: 'text-zinc-500' }, 'Postcode: '), state.postcode.toUpperCase()]) : null,
+    state.postcode ? h('div', {}, [h('span', { className: 'text-zinc-500' }, 'Postcode: '), h('span', { className: 'measured' }, state.postcode.toUpperCase())]) : null,
     state.trimLengthM ? h('div', {}, [h('span', { className: 'text-zinc-500' }, 'Roofline run: '), `${state.trimLengthM} m`]) : null,
     state.footprint && state.useMeasurement
       ? h('div', { className: 'text-zinc-500' }, 'Your typed figure overrides the measurement.')

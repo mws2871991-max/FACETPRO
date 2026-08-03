@@ -32,3 +32,18 @@
   font-display: swap;
   src: url('/assets/fonts/instrument-serif-400-italic.woff2') format('woff2');
 }
+
+/* A monospace numeral reads as measured; a proportional one reads as
+   marketing. On a product whose whole pitch is that it measured your house
+   from a photograph, that is an argument rather than decoration — so every
+   number that came from a measurement is set in this, and every number that
+   didn't isn't.
+
+   One variable file covering 400–500, latin only. */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url('/assets/fonts/jetbrains-mono-variable.woff2') format('woff2');
+}

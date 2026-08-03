@@ -80,7 +80,14 @@ test('the two estimates say how they relate', () => {
 });
 
 test('the count buttons are big enough to hit', () => {
-  const panel = html.slice(html.indexOf('function glazingPanel'), html.indexOf('function glazingPanel') + 4000);
+  /* Scoped to the function rather than to a character count — the panel grew
+     and a fixed slice quietly stopped reaching the buttons, which is a test
+     that passes by not looking. */
+  const start = html.indexOf('function glazingPanel');
+  // The container, not the early return that bails when there is no catalogue.
+  const end = html.indexOf("id: 'detail-options', className:");
+  assert.ok(start > 0 && end > start, 'glazingPanel should sit above the return');
+  const panel = html.slice(start, end);
   assert.ok(!/w-8 h-8/.test(panel), '32px is below the 44px floor for a touch target');
   assert.match(panel, /w-11 h-11/);
   assert.match(panel, /aria-live/, 'the range changes without a page change; it should be announced');
