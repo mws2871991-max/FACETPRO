@@ -36,13 +36,33 @@ if (process.env.DATABASE_URL) {
      connection is a better outcome than an unauthenticated one. */
   const caPem = process.env.DATABASE_CA_CERT
     || (process.env.PGSSLROOTCERT && fs.readFileSync(process.env.PGSSLROOTCERT, 'utf8'));
-  if (!caPem) {
+
+  /* A Postgres with no TLS at all is a real thing — a container on a CI
+     runner, a developer's local instance — and passing an ssl object made
+     those impossible to connect to. Not a preference: "the server does not
+     support SSL connections", every time, which is how the integration suite
+     failed the first time it ran.
+
+     libpq spells this sslmode=disable, so that is what we honour, rather than
+     inventing a setting. Anywhere else, verification stays on.
+
+     Loud when it is disabled against something that is not local, because
+     that combination is either a mistake or somebody routing round the thing
+     this connection exists to protect. */
+  const dsn = process.env.DATABASE_URL;
+  const sslDisabled = /[?&]sslmode=disable(&|$)/.test(dsn) || process.env.PGSSLMODE === 'disable';
+  const host = (() => { try { return new URL(dsn).hostname; } catch (_) { return ''; } })();
+  const isLocal = ['localhost', '127.0.0.1', '::1', 'postgres'].includes(host);
+
+  if (sslDisabled && !isLocal) {
+    console.warn(`TLS is DISABLED on the database connection to ${host}. Every homeowner's name, email, phone number and postcode crosses that link in clear. Remove sslmode=disable unless this is a private network you control.`);
+  } else if (!sslDisabled && !caPem) {
     console.warn('No DATABASE_CA_CERT or PGSSLROOTCERT set — verifying the database certificate against the system trust store. If the connection is refused, download your provider\'s CA certificate.');
   }
 
   pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: true, ...(caPem ? { ca: caPem } : {}) },
+    connectionString: dsn,
+    ssl: sslDisabled ? false : { rejectUnauthorized: true, ...(caPem ? { ca: caPem } : {}) },
     max: 10,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 5_000,

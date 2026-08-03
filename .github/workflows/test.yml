@@ -56,8 +56,11 @@ jobs:
     env:
       # localhost and a database named for testing — which is what the guard in
       # test/postgres.test.js insists on before it deletes anything.
-      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/facetpro_test
-      PGSSLMODE: disable
+      # sslmode=disable in the DSN, which is what libpq calls it and what
+      # store.js honours. A container has no TLS, and an unconditional ssl
+      # object made it unconnectable — which is exactly what this job caught
+      # the first time it ran.
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/facetpro_test?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
