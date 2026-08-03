@@ -166,3 +166,83 @@ test('no recipients at all is not a crash', () => {
   assert.deepStrictEqual(chosen, []);
   assert.deepStrictEqual(routing.skipped, []);
 });
+
+/* ── who does what ──
+
+   Postcode was only half the question. The two installers with signed
+   per-lead contracts buy windows and doors; render, roofline and roof go to
+   different contractors. One flat list meant everybody got everything — so a
+   homeowner who priced their whole exterior generated a lead only the window
+   firms ever saw, and the render contractors never heard about work they
+   would have paid for. */
+
+const T = (id, trades, areas) => ({ id, name: id, url: `https://${id}.test/h`, trades: trades || [], areas: areas || [], headers: {} });
+const FLEET = [
+  T('anglian', ['windows', 'doors']),
+  T('zenith', ['windows', 'doors'], ['SW']),
+  T('render-co', ['cladding', 'roofline']),
+  T('roofer', ['roof']),
+];
+const windowsLead = { id: 'LD-W', postcode: 'SW11 4NP', glazing: { price: { total: 9000 } } };
+const wholeLead = { ...windowsLead, id: 'LD-A', selections: { cladding: 'Sage Slate', roof: 'Terracotta', trim: 'Cedar' } };
+
+test('a windows lead does not go to the render contractor', () => {
+  const { chosen, routing } = chooseRecipients(FLEET, windowsLead, { max: 3 });
+  assert.deepStrictEqual(chosen.map(r => r.id).sort(), ['anglian', 'zenith']);
+  assert.deepStrictEqual(routing.trades.sort(), ['doors', 'windows']);
+  assert.match(routing.skipped.find(s => s.id === 'render-co').reason, /does not do/);
+});
+
+test('a render lead reaches the render contractor, which it never used to', () => {
+  const { chosen } = chooseRecipients(FLEET, { id: 'LD-R', postcode: 'M1 1AE', selections: { cladding: 'Sage Slate' } }, { max: 3 });
+  assert.deepStrictEqual(chosen.map(r => r.id), ['render-co']);
+});
+
+test('a whole-exterior lead covers trades before doubling up on one', () => {
+  /* Three installers in total, not three per trade — the consent says "up to
+     three vetted installers", and three window firms plus three render firms
+     would be six companies holding somebody's details on a permission for
+     three. So a render contractor beats a second window firm, because the
+     second window firm adds a quote the homeowner already has. */
+  const { chosen } = chooseRecipients(FLEET, wholeLead, { max: 3 });
+  assert.strictEqual(chosen.length, 3, 'the cap is still three companies');
+  assert.ok(chosen.some(r => r.id === 'render-co'), 'the render trade should be covered');
+  assert.ok(chosen.filter(r => r.trades.includes('windows')).length <= 2);
+});
+
+test('the log says whether a trade was covered or squeezed out', () => {
+  // Different facts, and the delivery log is what somebody reads when a
+  // contractor asks why they never saw a job.
+  const { routing } = chooseRecipients(FLEET, wholeLead, { max: 3 });
+  const roofer = routing.skipped.find(s => s.id === 'roofer');
+  assert.match(roofer.reason, /nobody is covering roof/);
+});
+
+test('a recipient with no trades listed still gets everything', () => {
+  // Backwards compatible: every recipient configured before this existed.
+  const legacy = [T('everything'), T('windows-only', ['windows'])];
+  const { chosen } = chooseRecipients(legacy, { id: 'LD-C', postcode: 'SW11 4NP', selections: { cladding: 'X' } }, { max: 3 });
+  assert.deepStrictEqual(chosen.map(r => r.id), ['everything']);
+});
+
+test('a lead that chose nothing in particular goes to everyone eligible', () => {
+  // Somebody who saved a design without picking much. Guessing a trade would
+  // be worse than sharing it.
+  const { chosen } = chooseRecipients(FLEET, { id: 'LD-N', postcode: 'SW11 4NP' }, { max: 9 });
+  assert.strictEqual(chosen.length, 4);
+});
+
+test('trades are read from what they chose, never from the request', () => {
+  const { tradesIn } = require('../routing');
+  assert.deepStrictEqual(tradesIn({ selections: { cladding: 'X' } }), ['cladding']);
+  assert.deepStrictEqual(tradesIn({ conservatory: { id: 'lean-to' } }), ['conservatory']);
+  assert.deepStrictEqual(tradesIn({}), []);
+});
+
+test('an unrecognised trade is reported, not silently ignored', () => {
+  const { recipients, problems } = parseRecipients(JSON.stringify([
+    { id: 'oops', url: 'https://o.test/h', trades: ['guttering'] },
+  ]));
+  assert.deepStrictEqual(recipients[0].trades, [], 'nothing recognised means all trades');
+  assert.match(problems[0], /unrecognised trades: guttering/);
+});

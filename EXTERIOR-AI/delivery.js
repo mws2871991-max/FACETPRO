@@ -61,11 +61,16 @@ function parseRecipients(raw, { legacyUrl } = {}) {
          installer covers. Absent means national — see routing.js. */
       const { areas, bad } = routing.normaliseAreas(r?.areas);
       if (bad.length) problems.push(`LEAD_RECIPIENTS[${i}] (${id}) has unrecognised areas: ${bad.join(', ')} — expected a postcode area like "SW" or an outward code like "SW11".`);
+      /* Which trades they buy. Absent means all of them, which is what every
+         recipient configured before this existed is assumed to mean. */
+      const { trades, bad: badTrades } = routing.normaliseTrades(r?.trades);
+      if (badTrades.length) problems.push(`LEAD_RECIPIENTS[${i}] (${id}) has unrecognised trades: ${badTrades.join(', ')} — expected any of ${routing.TRADES.join(', ')}.`);
       out.push({
         id,
         name: String(r?.name || id).trim(),
         url,
         areas,
+        trades,
         headers: (r && typeof r.headers === 'object' && r.headers) || {},
       });
     });
@@ -73,7 +78,7 @@ function parseRecipients(raw, { legacyUrl } = {}) {
 
   // Backwards compatibility with the single-webhook setup.
   if (!out.length && legacyUrl && /^https:\/\//i.test(legacyUrl)) {
-    out.push({ id: 'crm', name: 'CRM webhook', url: legacyUrl, areas: [], headers: {} });
+    out.push({ id: 'crm', name: 'CRM webhook', url: legacyUrl, areas: [], trades: [], headers: {} });
   }
 
   const seen = new Set();
