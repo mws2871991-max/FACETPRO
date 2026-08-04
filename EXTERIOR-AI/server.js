@@ -1828,7 +1828,22 @@ app.post('/api/render', renderLimiter, async (req, res) => {
     const predRes = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-kontext-pro/predictions', {
       method: 'POST',
       signal: controller.signal,
-      headers: { 'Authorization': `Bearer ${replicateKey}`, 'Content-Type': 'application/json', 'Prefer': 'wait=90' },
+      /* wait=60, not 90. Replicate caps this header at 60 and rejects
+         anything higher with a 422 before it looks at the request at all:
+
+           Prefer: wait=x header must specify a value between 1 and 60
+
+         So every render this application has ever attempted was refused, and
+         the failure was invisible from outside — the endpoint answered
+         "Render failed (422)", which reads like a bad photograph rather than
+         a header we control. It surfaced only because the live host finally
+         had a Replicate token, got far enough to be rejected on merit, and
+         logged Replicate's own reason.
+
+         Nothing is lost by asking for less: the polling loop below covers a
+         further 90 seconds, so a render slower than the wait is picked up
+         there exactly as it always was. */
+      headers: { 'Authorization': `Bearer ${replicateKey}`, 'Content-Type': 'application/json', 'Prefer': 'wait=60' },
       body: JSON.stringify({ input: { prompt, input_image: inputImage, output_format: 'jpg', safety_tolerance: RENDER_SAFETY_TOLERANCE } })
     });
     clearTimeout(renderTimeout);
