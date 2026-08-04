@@ -578,7 +578,7 @@
   "glazing": {
     "note": "Guide prices for supply and fitting, per window and per door, including access and VAT.",
     "internalNote": "Door rates are real. Window bands are still invented and running at roughly half of trade. See notes/glazing-rates-from-the-trade.md.",
-    "source": "Doors: settled prices from 24 years selling for a national installer, inc VAT, converted to net. Windows: STILL NOT SOURCED — placeholders, uplifted 20% on the owner's trade judgement on 2026-08-04. Closer to trade than they were, still not a supplier rate card.",
+    "source": "Doors: settled prices from 24 years selling for a national installer. The figures given were INCLUSIVE of VAT and are stored here net — composite £2,000 inc becomes £1,667 net, bifold £4,000 inc becomes £3,333 net — because the catalogue adds VAT at the end. Windows: STILL NOT SOURCED — placeholders, uplifted 20% on the owner's trade judgement on 2026-08-04, and on no stated VAT basis at all.",
     "windowBands": [
       {
         "id": "small",
@@ -621,12 +621,12 @@
       {
         "id": "composite",
         "name": "Composite Door",
-        "supplyFit": 2000
+        "supplyFit": 1667
       },
       {
         "id": "bifold",
         "name": "Bifold",
-        "supplyFit": 4000
+        "supplyFit": 3333
       }
     ],
     "accessCost": 780,

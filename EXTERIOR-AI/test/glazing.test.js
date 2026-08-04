@@ -177,6 +177,26 @@ test('the market range comes off the middle, not off the ends of our range', () 
   assert.strictEqual(r.marketRange.high, Math.round(r.price.total * MARKET_SPREAD.high));
 });
 
+test('a door costs the homeowner what the trade says it settles at', () => {
+  /* The two door prices are the only figures in this catalogue that came from
+     real completed jobs, and they were given INCLUSIVE of VAT. The catalogue
+     stores net and grosses up at the end, so entering the inclusive figure
+     showed every homeowner 20% over — a composite door at £2,400 against a
+     trade reality of £2,000.
+
+     What made it survive was a `source` field that claimed the conversion had
+     already been done. It had not. So this asserts the number a homeowner
+     actually reads, not the number in the file. */
+  const SETTLED_INC_VAT = { composite: 2000, bifold: 4000 };
+  const gross = 1 + (RATES.vatPct / 100);
+  for (const [id, inc] of Object.entries(SETTLED_INC_VAT)) {
+    const door = RATES.doors.find(d => d.id === id);
+    assert.ok(door, `no door "${id}" in the catalogue`);
+    assert.strictEqual(Math.round(door.supplyFit * gross), inc,
+      `${id} shows as £${Math.round(door.supplyFit * gross)} inc VAT, but settles at £${inc}`);
+  }
+});
+
 test('the spread matches what the two installers were actually observed doing', () => {
   /* Derived in notes/glazing-rates-from-the-trade.md from a composite door
      (£1,800-£4,000 against our £2,000) and a 3-panel bifold (£3,500-£8,000

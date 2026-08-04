@@ -49,11 +49,30 @@ Together they are the reason the estimate has to be a range with the reason
 attached, and the reason the page says the number here does not move on how
 hard you push.
 
-## Still to confirm
+## The VAT basis — settled 2026-08-04
 
-- **Inc or ex VAT?** The catalogue stores net and adds 20% at the end, so
-  £2,300 net shows as £2,760 to a homeowner. Everything above needs to be on
-  one basis.
+The figures in the table above were given **inclusive of VAT**. The catalogue
+stores net and adds 20% at the end, and the door prices had been entered at
+their inclusive value, so every door was being shown 20% over what it
+actually settles at:
+
+| | was stored | is stored | shown to a homeowner |
+|---|---|---|---|
+| Composite front door | £2,000 | £1,667 | £2,000 |
+| Bifold, 3 panels | £4,000 | £3,333 | £4,000 |
+
+The `source` field had claimed these were already "converted to net". They
+were not. That is the more useful lesson than the arithmetic: a note saying a
+conversion happened is not evidence it happened, and the only check that
+means anything is pricing one unit through the endpoint and reading the
+number a homeowner would see.
+
+The window bands are on **no stated VAT basis at all** — they are invented
+figures that have never corresponded to a real quote either way. When the
+four real band prices arrive, take them inclusive, divide by 1.2, and store
+that.
+
+## Still to confirm
 - **Where do most settle?** The ends are the anchor and the floor. The
   estimate should centre where the bulk of jobs land.
 - **Composite door spec** — standard door only, or including a side panel or
