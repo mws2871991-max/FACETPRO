@@ -6,4 +6,7 @@ Disallow: /api/
 Disallow: /data/
 Disallow: /healthz
 
+# Sent to people directly; not for search.
+Disallow: /investors
+
 Sitemap: https://www.facetpro.co.uk/sitemap.xml

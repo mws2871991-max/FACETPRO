@@ -178,7 +178,10 @@ const CSP_LEGAL = [
   "object-src 'none'",
 ].join('; ');
 
-const isLegalPath = (p) => p === '/privacy' || p === '/terms' || p.startsWith('/legal/');
+/* Pages that are nothing but text, and so can carry the policy with
+   script-src 'none'. /investors is here for the same reason /privacy is: it
+   runs no JavaScript, so it should not be permitted any. */
+const isLegalPath = (p) => p === '/privacy' || p === '/terms' || p === '/investors' || p.startsWith('/legal/');
 
 app.use((req, res, next) => {
   res.setHeader('Content-Security-Policy', isLegalPath(req.path) ? CSP_LEGAL : CSP_APP);
@@ -2406,6 +2409,12 @@ async function purgeLeadPii(leadId) {
    back here to keep search engines on one URL. */
 app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, 'legal', 'privacy.html')));
 app.get('/terms', (req, res) => res.sendFile(path.join(__dirname, 'legal', 'terms.html')));
+/* Sent to somebody, not found. Carries noindex, is not linked from the
+   homepage, and is disallowed in robots.txt — a homeowner halfway through
+   pricing their house has no business reading what we tell investors about
+   the state of the window rates. Listed in isLegalPath above so it serves
+   under script-src 'none', which is what a page of pure text should get. */
+app.get('/investors', (req, res) => res.sendFile(path.join(__dirname, 'legal', 'investors.html')));
 
 /* ── NOT FOUND, AND THINGS GOING WRONG ──
    Registered last, after every route, because Express matches in order.
