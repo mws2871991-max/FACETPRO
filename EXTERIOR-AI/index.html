@@ -274,27 +274,36 @@
   <!-- Shown only when the server reports beta mode, so one env var controls it. -->
   <aside id="beta-notice" hidden class="rounded-2xl border border-amber-300 bg-amber-50 p-5">
     <p class="text-[13px] leading-6 text-amber-900">
+      <!-- P11: reframed from disclaimer to purpose, per the investor pack.
+           What it does NOT do is drop the substance. These are planning
+           estimates rather than quotes, the measurement is still being
+           calibrated, and the window rates are not yet from a supplier rate
+           card — all three remain said, because a price shown to a consumer
+           has to be accurate about what it is, and because the alternative is
+           a homeowner who feels misled at survey. Same facts, stated as what
+           the number is for rather than what it isn't. -->
       <strong>Facet Pro is in beta.</strong>
-      Everything here works and the prices come from real supplier and labour rates — but we're still
-      refining how we measure a house from a photo, so treat the figures as a starting point rather
-      than a quote. If something looks wrong for your home, tell us when you save your design; that's
-      exactly what we're trying to get right.
+      These are planning estimates, built to give you a realistic cost early &mdash; while you are still
+      deciding &mdash; rather than a final quotation. They are costed from real supplier and labour
+      rates; window rates are indicative until our supplier card lands, and we are still calibrating
+      how we measure a house from a photograph. If something looks wrong for your home, tell us when
+      you save your design; that is exactly what we are trying to get right.
     </p>
   </aside>
 
   <section class="rounded-2xl bg-zinc-900 text-[#FBF8F3] overflow-hidden p-8 md:p-12" aria-labelledby="hero-heading">
-    <p class="text-[11px] tracking-[0.25em] uppercase text-white/50">Windows &amp; doors · UK</p>
-    <h1 id="hero-heading" class="mt-4 serif text-[36px] md:text-[56px] leading-[0.95] tracking-[-0.03em]">You shouldn&rsquo;t have to haggle<br class="hidden sm:block"> to get a fair price for your windows.</h1>
-    <!-- Names the thing the buyer actually dreads. The doorstep double-glazing
-         sale is the strongest lever in this category and the old copy didn't
-         touch it. -->
-    <p class="mt-5 text-[15px] leading-7 text-white/70 max-w-[58ch]">Two neighbours can buy the same windows and pay wildly different prices — because one of them pushed harder, on a weeknight, in their own front room. That is not a price. It is a negotiation, and not everybody wants one.</p>
-    <p class="mt-4 text-[16px] leading-7 text-white/85 max-w-[58ch]">Upload one photo. See new frames and a new front door on your own house, and what they cost, in about a minute. <strong class="text-white">The same house gets the same number here</strong> — it does not go up because you were polite, or down because you got up to see somebody out.</p>
-    <!-- A third paragraph used to sit here promising the walls, roof, roofline
-         and conservatory off the same photo. It is a good argument and it is
-         made in full under "How it works", where the mechanic is the point.
-         Here it was the fourth thing said in a hero whose one job is the
-         haggling — and a hero that makes two arguments makes neither. -->
+    <!-- P1 from the investor pack: lead with what the platform IS, so a reader
+         ten seconds in can place the company, then carry the customer argument
+         underneath as support rather than as the headline.
+
+         "The same house gets the same number" is promoted to sit directly
+         under the sub — the pack is right that it is the strongest sentence on
+         the page, and it was previously buried mid-paragraph. -->
+    <p class="text-[11px] tracking-[0.25em] uppercase text-white/50">AI property technology · UK</p>
+    <h1 id="hero-heading" class="mt-4 serif text-[36px] md:text-[52px] leading-[0.98] tracking-[-0.03em]">AI-powered exterior renovation<br class="hidden sm:block"> visualisation and instant pricing<br class="hidden sm:block"> from a single photograph.</h1>
+    <p class="mt-5 text-[15px] md:text-[17px] leading-7 text-white/70 max-w-[62ch]">Facet Pro uses computer vision to analyse a home&rsquo;s exterior, generate realistic renovation visualisations, and produce an instant project estimate &mdash; before anybody commits to a survey or an installer visit.</p>
+    <p class="mt-5 serif text-[22px] md:text-[26px] leading-snug text-white">The same house gets the same number.</p>
+    <p class="mt-3 text-[15px] leading-7 text-white/70 max-w-[62ch]">Two neighbours can buy the same windows and pay wildly different prices, because one of them pushed harder on a weeknight in their own front room. Priced from the photograph, the number does not move on how hard you are willing to push.</p>
     <ul class="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-white/60">
       <li>One price, for everyone</li>
       <li>Nobody visits</li>
@@ -302,12 +311,99 @@
       <li>Free, about a minute</li>
     </ul>
     <div class="mt-8 flex flex-wrap gap-3">
-      <button id="hero-upload" type="button" class="cta px-5 py-3 rounded-full text-sm font-medium transition">See it on your house — free</button>
-      <!-- Most first-time visitors are not ready to upload anything. The old
-           secondary sent them to an explainer; this sends them to the proof. -->
-      <a href="#our-work" class="px-5 py-3 rounded-full border border-white/20 text-sm font-medium hover:bg-white/10 transition">Look at our work first</a>
+      <!-- The id stays: the upload handler is bound to it. -->
+      <button id="hero-upload" type="button" class="cta px-5 py-3 rounded-full text-sm font-medium transition">Try the visualiser</button>
+      <a href="#how-it-works" class="px-5 py-3 rounded-full border border-white/20 text-sm font-medium hover:bg-white/10 transition">See how it works</a>
     </div>
   </section>
+
+  <!-- P2: restyled to four steps and moved directly under the hero, per the
+       investor pack. The step copy is unchanged in substance — it was already
+       accurate — but the sequence now names the analysis explicitly, because
+       "AI analyses your home" is the step a reader is being asked to believe. -->
+  <section id="how-it-works" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24" aria-labelledby="how-heading">
+    <h2 id="how-heading" class="serif text-[26px] md:text-[32px] tracking-tight">How it works</h2>
+    <p class="mt-2 text-sm text-zinc-600 max-w-[62ch]">Four steps, start to finish, without anybody coming to your house.</p>
+    <ol class="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
+        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">1</span>
+        <h3 class="mt-4 text-[15px] font-medium">Upload a photo</h3>
+        <p class="mt-2 text-[13px] leading-6 text-zinc-600">One picture of the front of your home, taken from the pavement. No measurements, no visit.</p>
+      </li>
+      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
+        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">2</span>
+        <h3 class="mt-4 text-[15px] font-medium">The photo is analysed</h3>
+        <p class="mt-2 text-[13px] leading-6 text-zinc-600">Computer vision finds every window, door, wall and roof, and measures the elevation &mdash; your front door gives it the scale.</p>
+      </li>
+      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
+        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">3</span>
+        <h3 class="mt-4 text-[15px] font-medium">See it on your house</h3>
+        <p class="mt-2 text-[13px] leading-6 text-zinc-600">Frames, front door, walls, roof, roofline, conservatory &mdash; try them and watch the price move with every choice.</p>
+      </li>
+      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
+        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">4</span>
+        <h3 class="mt-4 text-[15px] font-medium">Get an itemised estimate</h3>
+        <p class="mt-2 text-[13px] leading-6 text-zinc-600">A costed, broken-down planning estimate in seconds. Keep it, and installers quote from what you already chose.</p>
+      </li>
+    </ol>
+    <p class="mt-6 text-sm leading-6 text-zinc-600 max-w-[68ch]">That one photo covers <strong>windows and doors</strong>, <strong>walls &mdash; cladding or render</strong>, <strong>fascias, soffits and guttering</strong>, <strong>the roof</strong>, and <strong>a conservatory</strong> if you want one. Five trades. Five companies you would otherwise be booking, waiting in for, and chasing. Priced here together, so you see what the job really costs instead of five figures that never add up to one.</p>
+  </section>
+
+  <!-- P3 from the investor pack, with one deliberate departure.
+
+       The pack titled this "Proprietary technology" and opened "Facet Pro is
+       not an image editor". The detection model is Anthropic's and the image
+       generation is FLUX Kontext Pro on Replicate; neither is ours, and both
+       are available to anybody with an account. Printing "proprietary" over
+       them on a public commercial page would be a false claim to homeowners
+       and the first thing a technical investor disproves.
+
+       What IS ours is the part described below: measuring a real building
+       from one consumer photograph against the front door, and turning those
+       measurements into six trades priced together. That is the defensible
+       claim, and it is stronger for being true. -->
+  <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="tech-heading">
+    <p class="text-[11px] tracking-[0.25em] uppercase text-zinc-400">The technology</p>
+    <h2 id="tech-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">What happens to your photograph</h2>
+    <p class="mt-3 max-w-[72ch] text-[14px] leading-7 text-zinc-600">
+      A photograph is not a measurement. Turning one into a price means working out how big the building
+      actually is, and there is only one object of known size in almost every picture of a British home:
+      the front door. It is 1.98&nbsp;m. Everything else follows from it.
+    </p>
+    <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Component detection</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">Every window, door, wall and roof located as a distinct element, with a confidence score attached to each.</p></div>
+      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Scale from the door</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">A UK front door is a known height. The elevation is measured against it &mdash; no reference object, no tape measure, no visit.</p></div>
+      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Whole-house inference</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">One elevation is visible; a quote covers the house. Front measurements scale to the whole property by house type.</p></div>
+      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Pricing engine</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">Areas and counts become itemised costs across six trades, computed on the server so the figure cannot be tampered with.</p></div>
+      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Visualisation</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">Your actual house re-finished photorealistically &mdash; the perspective, shadows and openings held exactly as they were.</p></div>
+      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Stated uncertainty</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">Every estimate carries a range and says which method produced it. A number without its error bars is a guess.</p></div>
+    </div>
+    <p class="mt-5 text-[12px] leading-6 text-zinc-500 max-w-[72ch]">
+      The vision and image-generation models are third party. The measurement method, the whole-house
+      inference and the pricing engine are ours.
+    </p>
+  </section>
+
+  <!-- P4: the signature graphic. Plain markup rather than SVG so it reflows on
+       a phone and inherits the palette. -->
+  <section class="rounded-2xl bg-zinc-900 text-[#FBF8F3] p-6 md:p-10" aria-label="From photograph to price">
+    <h2 class="serif text-[24px] md:text-[30px] tracking-tight">From photo to price in one pipeline</h2>
+    <ol class="mt-6 flex flex-col md:flex-row md:items-stretch gap-3 md:gap-2">
+      <li class="flex-1 rounded-xl bg-white/5 border border-white/10 p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-white/40">Input</div><div class="mt-1 text-[15px] font-medium">Home photo</div></li>
+      <li class="hidden md:flex items-center text-white/30" aria-hidden="true">&rarr;</li>
+      <li class="flex-1 rounded-xl bg-white/5 border border-white/10 p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-white/40">Step</div><div class="mt-1 text-[15px] font-medium">Component detection</div></li>
+      <li class="hidden md:flex items-center text-white/30" aria-hidden="true">&rarr;</li>
+      <li class="flex-1 rounded-xl bg-white/5 border border-white/10 p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-white/40">Step</div><div class="mt-1 text-[15px] font-medium">Measurement</div></li>
+      <li class="hidden md:flex items-center text-white/30" aria-hidden="true">&rarr;</li>
+      <li class="flex-1 rounded-xl bg-white/5 border border-white/10 p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-white/40">Step</div><div class="mt-1 text-[15px] font-medium">Visualisation</div></li>
+      <li class="hidden md:flex items-center text-white/30" aria-hidden="true">&rarr;</li>
+      <li class="flex-1 rounded-xl bg-white/5 border border-white/10 p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-white/40">Step</div><div class="mt-1 text-[15px] font-medium">Pricing engine</div></li>
+      <li class="hidden md:flex items-center text-white/30" aria-hidden="true">&rarr;</li>
+      <li class="flex-1 rounded-xl bg-white/10 border border-white/20 p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-white/40">Output</div><div class="mt-1 text-[15px] font-medium">Itemised estimate</div></li>
+    </ol>
+  </section>
+
+
 
   <!-- Proof before the ask. This sat below the entire journey — the upload,
        the visualiser, the finishes, the estimate and the form — so the only
@@ -439,28 +535,126 @@
   <div id="mount-refine"></div>
   <div id="mount-lead"></div>
 
-  <section id="how-it-works" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="how-heading">
-    <h2 id="how-heading" class="serif text-[26px] md:text-[32px] tracking-tight">How it works</h2>
-    <p class="mt-2 text-sm text-zinc-600 max-w-[62ch]">Three steps. No site visit, no appointment, nobody in your house.</p>
-    <p class="mt-2 text-sm leading-6 text-zinc-600 max-w-[68ch]">That one photo covers <strong>windows and doors</strong>, <strong>walls — cladding or render</strong>, <strong>fascias, soffits and guttering</strong>, <strong>the roof</strong>, and <strong>a conservatory</strong> if you want one. Five trades. Five companies you would otherwise be booking, waiting in for, and chasing. Priced here together, so you see what the job really costs instead of five figures that never add up to one.</p>
-    <ol class="mt-8 grid md:grid-cols-3 gap-6">
-      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
-        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">1</span>
-        <h3 class="mt-4 text-[15px] font-medium">Add a photo of your house</h3>
-        <p class="mt-2 text-[13px] leading-6 text-zinc-600">One picture of the front of your home from the pavement is plenty. Facet Pro finds and measures your windows and doors — your front door gives us the scale.</p>
-      </li>
-      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
-        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">2</span>
-        <h3 class="mt-4 text-[15px] font-medium">Choose anything out there</h3>
-        <p class="mt-2 text-[13px] leading-6 text-zinc-600">Frames, front door, walls, roof, roofline, conservatory — try them and watch the price move with every choice. One photo, every trade, no appointment with any of them.</p>
-      </li>
-      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
-        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">3</span>
-        <h3 class="mt-4 text-[15px] font-medium">Save your design</h3>
-        <p class="mt-2 text-[13px] leading-6 text-zinc-600">Keep your before-and-after and your itemised estimate. If you'd like quotes, installers price from what you've already chosen — so nobody turns up trying to sell you something else.</p>
-      </li>
-    </ol>
+  <!-- P5 from the investor pack, rebuilt around what is actually true.
+
+       The pack supplied six tiles as {{HOMES_ANALYSED}}, {{VISUALISATIONS}},
+       {{AVG_ESTIMATE_TIME}}, {{BETA_USERS}}, {{INSTALLER_PARTNERS}} and a
+       roadmap count, with its own warning: real figures or clearly labelled
+       targets, because invented metrics backfire in diligence. Leads captured
+       is zero and beta users is zero, so four of those tiles could only have
+       been filled by making something up.
+
+       What is left is what can be evidenced. A short row of true numbers reads
+       as a company that counts carefully. A long row of invented ones reads as
+       the opposite, to exactly the audience this section is for. -->
+  <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="stats-heading">
+    <h2 id="stats-heading" class="serif text-[26px] md:text-[32px] tracking-tight">By the numbers</h2>
+    <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="rounded-xl border border-zinc-200 p-5 text-center"><div class="serif text-[28px] measured">6</div><div class="mt-1 text-[12px] uppercase tracking-widest text-zinc-500">Trades priced from one photo</div></div>
+      <div class="rounded-xl border border-zinc-200 p-5 text-center"><div class="serif text-[28px] measured">2</div><div class="mt-1 text-[12px] uppercase tracking-widest text-zinc-500">National installers contracted</div></div>
+      <div class="rounded-xl border border-zinc-200 p-5 text-center"><div class="serif text-[28px] measured">1</div><div class="mt-1 text-[12px] uppercase tracking-widest text-zinc-500">Photograph required</div></div>
+      <div class="rounded-xl border border-zinc-200 p-5 text-center"><div class="serif text-[28px] measured">24</div><div class="mt-1 text-[12px] uppercase tracking-widest text-zinc-500">Years in the trade behind the pricing</div></div>
+    </div>
+    <p class="mt-4 text-[11px] leading-5 text-zinc-500 max-w-[72ch]">Facet Pro is in beta and pre-revenue. Usage figures are not shown because there are not yet enough of them to mean anything &mdash; when there are, they will appear here and they will be real.</p>
   </section>
+
+  <!-- P6: who pays. The pack was right that this was nowhere on the page. -->
+  <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="model-heading">
+    <p class="text-[11px] tracking-[0.25em] uppercase text-zinc-400">Business model</p>
+    <h2 id="model-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">Who pays for this</h2>
+    <p class="mt-3 max-w-[72ch] text-[14px] leading-7 text-zinc-600">
+      <strong>You do not.</strong> Facet Pro is free for homeowners, with no account required and
+      nothing to cancel. Installers pay for a lead &mdash; and only when you have asked to be quoted.
+    </p>
+    <ol class="mt-6 flex flex-col md:flex-row md:items-stretch gap-3 md:gap-2">
+      <li class="flex-1 rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-zinc-400">1</div><div class="mt-1 text-[14px] font-medium">You upload a photo</div></li>
+      <li class="hidden md:flex items-center text-zinc-300" aria-hidden="true">&rarr;</li>
+      <li class="flex-1 rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-zinc-400">2</div><div class="mt-1 text-[14px] font-medium">You choose and see the price</div></li>
+      <li class="hidden md:flex items-center text-zinc-300" aria-hidden="true">&rarr;</li>
+      <li class="flex-1 rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-zinc-400">3</div><div class="mt-1 text-[14px] font-medium">You ask to be quoted</div></li>
+      <li class="hidden md:flex items-center text-zinc-300" aria-hidden="true">&rarr;</li>
+      <li class="flex-1 rounded-xl border border-zinc-900 bg-zinc-900 text-[#FBF8F3] p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-white/50">4</div><div class="mt-1 text-[14px] font-medium">Installers pay for the lead</div></li>
+    </ol>
+    <p class="mt-5 max-w-[72ch] text-[14px] leading-7 text-zinc-600">
+      An installer receives somebody who has already chosen a specification and seen a price, which is
+      worth more to them than a name from a call centre. <strong>Three installers at most</strong>, ever
+      &mdash; a limit enforced in the code, not a promise in the copy.
+    </p>
+  </section>
+
+  <!-- P7: comparison cards, straight from the pack. -->
+  <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="diff-heading">
+    <h2 id="diff-heading" class="serif text-[26px] md:text-[32px] tracking-tight">Why this is different</h2>
+    <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="rounded-xl border border-zinc-200 p-5">
+        <div class="text-[12px] uppercase tracking-widest text-zinc-500">The usual way</div>
+        <ul class="mt-3 space-y-2 text-[14px] text-zinc-600">
+          <li>An appointment, in your house</li>
+          <li>A survey before any number at all</li>
+          <li>Days to a quote</li>
+          <li>A separate visit per trade</li>
+          <li>A price that moves on how hard you push</li>
+        </ul>
+      </div>
+      <div class="rounded-xl border border-zinc-900 bg-zinc-900 text-[#FBF8F3] p-5">
+        <div class="text-[12px] uppercase tracking-widest text-white/50">Facet Pro</div>
+        <ul class="mt-3 space-y-2 text-[14px] text-white/90">
+          <li>One photograph</li>
+          <li>Measured from the picture</li>
+          <li>An estimate in about a minute</li>
+          <li>Six trades off the same photo</li>
+          <li>The same house gets the same number</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- P8: roadmap. The pack listed driveways, solar and landscaping alongside
+       the live trades. Those three are not built, not priced and not in the
+       catalogue, so they are separated below rather than mixed in — a reader
+       can see at a glance which is which, which is the only version of this
+       section that survives somebody clicking through to check. -->
+  <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="vision-heading">
+    <p class="text-[11px] tracking-[0.25em] uppercase text-zinc-400">Platform roadmap</p>
+    <h2 id="vision-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">Beyond windows</h2>
+    <p class="mt-3 max-w-[72ch] text-[14px] leading-7 text-zinc-600">
+      Once a house has been measured, the marginal cost of pricing another trade against it is close to
+      nothing. That is what makes this a platform rather than a calculator.
+    </p>
+    <p class="mt-5 text-[12px] uppercase tracking-widest text-zinc-500">Priced today</p>
+    <div class="mt-2 flex flex-wrap gap-2 text-[13px]">
+      <span class="px-3 py-1.5 rounded-full bg-zinc-900 text-white">Windows</span>
+      <span class="px-3 py-1.5 rounded-full bg-zinc-900 text-white">Doors</span>
+      <span class="px-3 py-1.5 rounded-full bg-zinc-900 text-white">Cladding &amp; render</span>
+      <span class="px-3 py-1.5 rounded-full bg-zinc-900 text-white">Fascias, soffits &amp; guttering</span>
+      <span class="px-3 py-1.5 rounded-full bg-zinc-900 text-white">Roofs</span>
+      <span class="px-3 py-1.5 rounded-full bg-zinc-900 text-white">Conservatories</span>
+    </div>
+    <p class="mt-5 text-[12px] uppercase tracking-widest text-zinc-500">On the roadmap &mdash; not built yet</p>
+    <div class="mt-2 flex flex-wrap gap-2 text-[13px]">
+      <span class="px-3 py-1.5 rounded-full border border-dashed border-zinc-300 text-zinc-500">Driveways</span>
+      <span class="px-3 py-1.5 rounded-full border border-dashed border-zinc-300 text-zinc-500">Solar</span>
+      <span class="px-3 py-1.5 rounded-full border border-dashed border-zinc-300 text-zinc-500">Landscaping</span>
+    </div>
+  </section>
+
+  <!-- P9: the founder section. The pack's markup carried {{FOUNDER_NAME}} and
+       {{FOUNDER_PHOTO_URL}}; a broken image and a visible template token would
+       be worse than neither, and putting somebody's name and face on a public
+       page is their decision rather than a developer's. The story is here and
+       it is the part that matters. Add the name and photograph when you want
+       them. -->
+  <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="founder-heading">
+    <p class="text-[11px] tracking-[0.25em] uppercase text-zinc-400">Why this exists</p>
+    <h2 id="founder-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">Built by somebody who sold these for twenty-four years</h2>
+    <div class="mt-5 max-w-[72ch] text-[14px] leading-7 text-zinc-600">
+      <p>Twenty-four years selling windows and doors for a national installer, in people&rsquo;s front rooms, on weeknights. Long enough to know exactly what a job settles at &mdash; and exactly why two identical houses on the same street end up paying wildly different amounts for the same work.</p>
+      <p class="mt-3">It is not the product that varies. It is how long somebody is willing to sit there. Plenty of people do not want that evening, and should not have to have it in order to be charged a fair price.</p>
+      <p class="mt-3">Facet Pro is that knowledge written down: what these jobs actually cost, offered to everybody at the same number, from one photograph, without anybody coming to the house.</p>
+    </div>
+  </section>
+
+
 
   <!-- Real completed work. Static markup, not JS-mounted: it's the strongest
        thing on the page and crawlers should see it. Each card shows the after
