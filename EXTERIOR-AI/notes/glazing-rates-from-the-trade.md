@@ -4,8 +4,8 @@
 national installers who buy leads here. This is what jobs go out at, not a
 published rate card — a rate card is list, and list is the opening move.
 
-**Status:** being collected. `catalogue.glazing` still holds the invented
-placeholder rates until this is complete and the VAT basis is confirmed.
+**Status:** doors done. Windows still being collected — `catalogue.glazing`
+holds placeholders for all four bands, and the VAT basis is still unconfirmed.
 
 ## The pattern so far
 
@@ -14,6 +14,25 @@ the dangerous one: a homeowner shown £1,250 for a door who is then quoted
 £2,800 does not conclude that installers vary — they conclude the estimate
 was wrong, and the lead dies. Overstating loses a click; understating loses
 the buyer's confidence, and the buyer is the one paying.
+
+## Windows — the 20% uplift of 2026-08-04
+
+| band | was | now | example |
+|---|---|---|---|
+| Small | £420 | £504 | 600 x 900 — WC, landing, porch |
+| Standard | £590 | £708 | 1200 x 1200 — most bedroom and lounge |
+| Large | £860 | £1,032 | 1800 x 1350 — front lounge, patio-side |
+| Extra large | £1,180 | £1,416 | picture windows, wide mullioned units |
+
+An across-the-board 20% on the owner's trade judgement, not a rate card and
+not derived from the doors. It moves the numbers toward trade without
+claiming to have arrived: if the half-of-real estimate above is right, these
+are still roughly 40% light, because 0.5 x 1.2 = 0.6.
+
+So this changes the size of the error, not its direction, and everything the
+`source` field says about these being unsourced still holds. The four real
+band prices remain the outstanding item, and when they land they should
+*replace* these rather than be reconciled with them.
 
 ## Doors — supplied and fitted, 3-panel where stated
 

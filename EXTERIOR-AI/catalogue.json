@@ -578,34 +578,34 @@
   "glazing": {
     "note": "Guide prices for supply and fitting, per window and per door, including access and VAT.",
     "internalNote": "Door rates are real. Window bands are still invented and running at roughly half of trade. See notes/glazing-rates-from-the-trade.md.",
-    "source": "Doors: settled prices from 24 years selling for a national installer, inc VAT, converted to net. Windows: NOT SOURCED — placeholder pending.",
+    "source": "Doors: settled prices from 24 years selling for a national installer, inc VAT, converted to net. Windows: STILL NOT SOURCED — placeholders, uplifted 20% on the owner's trade judgement on 2026-08-04. Closer to trade than they were, still not a supplier rate card.",
     "windowBands": [
       {
         "id": "small",
         "label": "Small",
         "maxAreaM2": 0.75,
-        "supplyFit": 420,
+        "supplyFit": 504,
         "example": "600 x 900 — WC, landing, porch"
       },
       {
         "id": "standard",
         "label": "Standard",
         "maxAreaM2": 1.6,
-        "supplyFit": 590,
+        "supplyFit": 708,
         "example": "1200 x 1200 — most bedroom and lounge windows"
       },
       {
         "id": "large",
         "label": "Large",
         "maxAreaM2": 2.6,
-        "supplyFit": 860,
+        "supplyFit": 1032,
         "example": "1800 x 1350 — front lounge, patio-side"
       },
       {
         "id": "xlarge",
         "label": "Extra large",
         "maxAreaM2": null,
-        "supplyFit": 1180,
+        "supplyFit": 1416,
         "example": "Picture windows and wide mullioned units"
       }
     ],
