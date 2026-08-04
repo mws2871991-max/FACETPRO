@@ -1,8 +1,19 @@
 <!DOCTYPE html>
-<html lang="en-GB">
+<html lang="en-GB" class="no-js">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- The stylesheet carries a `.no-js .work-before` rule so the before/after
+     gallery falls back to the finished photograph instead of a half-clipped
+     one. The class it depends on was never set on <html> and never removed,
+     so the rule could not fire and the fallback had never once run.
+
+     Set in the markup and removed here rather than added by script, so the
+     failure is the safe direction: a browser that never reaches this line is
+     exactly the browser that needs the fallback. First thing in the head, so
+     no styled frame is ever painted with the wrong class. -->
+<script>document.documentElement.classList.remove('no-js');</script>
 
 <title>A Fair Price For Windows, Without Haggling — One Photo | Facet Pro</title>
 <meta name="description" content="See new windows and doors on your own house and what they cost, in about a minute — no home visit, no salesman, no obligation. Walls, roof and roofline price off the same photo when you are ready.">
