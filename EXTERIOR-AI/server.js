@@ -1342,7 +1342,21 @@ Finally add: {"type":"analysis","summary":"2-3 sentence overview of the property
     if (anthropicRes.status === 401) return res.status(500).json({ error: 'API key rejected.' });
     if (anthropicRes.status === 429) return res.status(429).json({ error: 'Rate limit hit — try again shortly.' });
     if (anthropicRes.status >= 500) return res.status(502).json({ error: 'Detection service error — try again.' });
-    return res.status(502).json({ error: `Detection failed (HTTP ${anthropicRes.status}).${detail ? ' ' + detail : ''}` });
+    /* Everything else, including 400, without the upstream text. It used to
+       be appended, and the first live call proved why that was wrong:
+
+         Detection failed (HTTP 400). Your credit balance is too low to
+         access the Anthropic API. Please go to Plans & Billing…
+
+       A homeowner who uploaded a photograph of their house was shown the
+       state of our account. The other branches above had all been written
+       carefully; this one was the fallback, so it was the one nobody pictured
+       a real person reading.
+
+       The reason is already on the line above, in the log, where whoever can
+       act on it will look. What reaches the browser is what the person can
+       act on: nothing they did was wrong, and trying again is worth a go. */
+    return res.status(502).json({ error: "We couldn't measure that photo just now — please try again." });
   }
 
   let data;
@@ -1851,7 +1865,11 @@ app.post('/api/render', renderLimiter, async (req, res) => {
     if (!predRes.ok) {
       const err = await predRes.json().catch(() => ({}));
       console.error('Replicate render error:', predRes.status, err);
-      return res.status(502).json({ error: `Render failed (${predRes.status}).` });
+      /* Not the upstream status. "Render failed (422)" reads to a homeowner
+         as though their photograph was rejected, and it was nothing of the
+         sort — it was a header this code sent. The number belongs in the log
+         line above, which is where it was eventually found. */
+      return res.status(502).json({ error: "We couldn't create that image just now — please try again." });
     }
 
     const pred = await predRes.json();
