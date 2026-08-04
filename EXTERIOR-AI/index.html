@@ -349,21 +349,27 @@
     <p class="mt-6 text-sm leading-6 text-zinc-600 max-w-[68ch]">That one photo covers <strong>windows and doors</strong>, <strong>walls &mdash; cladding or render</strong>, <strong>fascias, soffits and guttering</strong>, <strong>the roof</strong>, and <strong>a conservatory</strong> if you want one. Five trades. Five companies you would otherwise be booking, waiting in for, and chasing. Priced here together, so you see what the job really costs instead of five figures that never add up to one.</p>
   </section>
 
-  <!-- P3 from the investor pack, with one deliberate departure.
+  <!-- P3 from the investor pack.
 
-       The pack titled this "Proprietary technology" and opened "Facet Pro is
-       not an image editor". The detection model is Anthropic's and the image
-       generation is FLUX Kontext Pro on Replicate; neither is ours, and both
-       are available to anybody with an account. Printing "proprietary" over
-       them on a public commercial page would be a false claim to homeowners
-       and the first thing a technical investor disproves.
+       The pack asked for the heading "Proprietary technology" and it is used,
+       because everything under it is: the door-reference measurement, the
+       whole-house inference, the pricing engine and the rate catalogue behind
+       it are all ours and are the hard part.
+
+       What is NOT claimed is that the models are. Detection runs on
+       Anthropic's API and image generation on FLUX Kontext Pro via Replicate.
+       Both are available to anybody with an account, so asserting otherwise
+       would be false to a homeowner and the first thing a technical investor
+       disproves — and it is unnecessary, because the models are the commodity
+       layer and the measurement is not. The closing line says which is which,
+       and a reader who checks finds the page was straight with them.
 
        What IS ours is the part described below: measuring a real building
        from one consumer photograph against the front door, and turning those
        measurements into six trades priced together. That is the defensible
        claim, and it is stronger for being true. -->
   <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="tech-heading">
-    <p class="text-[11px] tracking-[0.25em] uppercase text-zinc-400">The technology</p>
+    <p class="text-[11px] tracking-[0.25em] uppercase text-zinc-400">Proprietary technology</p>
     <h2 id="tech-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">What happens to your photograph</h2>
     <p class="mt-3 max-w-[72ch] text-[14px] leading-7 text-zinc-600">
       A photograph is not a measurement. Turning one into a price means working out how big the building
@@ -382,6 +388,29 @@
       The vision and image-generation models are third party. The measurement method, the whole-house
       inference and the pricing engine are ours.
     </p>
+    <!-- The pack lists four questions an investor arrives with: what is
+         proprietary, how does it scale, what is the business model, and why
+         can't somebody else build this. Three are answered by sections. The
+         fourth was answered nowhere, and it is the one that decides a meeting.
+
+         It sits here rather than in a section of its own because the honest
+         answer is not a feature — it is that the models are cheap and the
+         pricing knowledge is not. That lands hardest immediately after a
+         reader has been told exactly what the models are. -->
+    <div class="mt-6 rounded-xl bg-[#FDFCF9] border border-zinc-200 p-5">
+      <h3 class="text-[15px] font-medium">Why this is hard to copy</h3>
+      <p class="mt-2 max-w-[72ch] text-[13px] leading-6 text-zinc-600">
+        The models can be rented by anybody. What cannot be rented is knowing what a job settles at
+        &mdash; not the list price, but the number it actually goes out at once the discounting is
+        done. That came from twenty-four years of selling these in people&rsquo;s houses, and it is what
+        the whole estimate rests on. A competitor with the same models and a published rate card
+        produces confident figures that are wrong, and finds out at survey.
+      </p>
+      <p class="mt-3 max-w-[72ch] text-[13px] leading-6 text-zinc-600">
+        The second half is supply. Installers who will pay for leads have to be signed, and they sign
+        with somebody they already know. Both of ours were.
+      </p>
+    </div>
   </section>
 
   <!-- P4: the signature graphic. Plain markup rather than SVG so it reflows on
@@ -549,10 +578,12 @@
        the opposite, to exactly the audience this section is for. -->
   <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="stats-heading">
     <h2 id="stats-heading" class="serif text-[26px] md:text-[32px] tracking-tight">By the numbers</h2>
-    <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="mt-6 grid grid-cols-2 md:grid-cols-3 gap-4">
       <div class="rounded-xl border border-zinc-200 p-5 text-center"><div class="serif text-[28px] measured">6</div><div class="mt-1 text-[12px] uppercase tracking-widest text-zinc-500">Trades priced from one photo</div></div>
-      <div class="rounded-xl border border-zinc-200 p-5 text-center"><div class="serif text-[28px] measured">2</div><div class="mt-1 text-[12px] uppercase tracking-widest text-zinc-500">National installers contracted</div></div>
       <div class="rounded-xl border border-zinc-200 p-5 text-center"><div class="serif text-[28px] measured">1</div><div class="mt-1 text-[12px] uppercase tracking-widest text-zinc-500">Photograph required</div></div>
+      <div class="rounded-xl border border-zinc-200 p-5 text-center"><div class="serif text-[28px] measured">&lt;60s</div><div class="mt-1 text-[12px] uppercase tracking-widest text-zinc-500">Photo to itemised estimate</div></div>
+      <div class="rounded-xl border border-zinc-200 p-5 text-center"><div class="serif text-[28px] measured">2</div><div class="mt-1 text-[12px] uppercase tracking-widest text-zinc-500">National installers contracted</div></div>
+      <div class="rounded-xl border border-zinc-200 p-5 text-center"><div class="serif text-[28px] measured">3</div><div class="mt-1 text-[12px] uppercase tracking-widest text-zinc-500">Installers per lead, capped</div></div>
       <div class="rounded-xl border border-zinc-200 p-5 text-center"><div class="serif text-[28px] measured">24</div><div class="mt-1 text-[12px] uppercase tracking-widest text-zinc-500">Years in the trade behind the pricing</div></div>
     </div>
     <p class="mt-4 text-[11px] leading-5 text-zinc-500 max-w-[72ch]">Facet Pro is in beta and pre-revenue. Usage figures are not shown because there are not yet enough of them to mean anything &mdash; when there are, they will appear here and they will be real.</p>
