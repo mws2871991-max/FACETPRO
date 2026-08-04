@@ -274,20 +274,21 @@
   <!-- Shown only when the server reports beta mode, so one env var controls it. -->
   <aside id="beta-notice" hidden class="rounded-2xl border border-amber-300 bg-amber-50 p-5">
     <p class="text-[13px] leading-6 text-amber-900">
-      <!-- P11: reframed from disclaimer to purpose, per the investor pack.
-           What it does NOT do is drop the substance. These are planning
-           estimates rather than quotes, the measurement is still being
-           calibrated, and the window rates are not yet from a supplier rate
-           card — all three remain said, because a price shown to a consumer
-           has to be accurate about what it is, and because the alternative is
-           a homeowner who feels misled at survey. Same facts, stated as what
-           the number is for rather than what it isn't. -->
+      <!-- Final review, point 1: the detail moves down to sit beside the
+           estimate it qualifies, and what stays up here is short.
+
+           The detail is not dropped, and this is the one refinement worth
+           being deliberate about. A price shown to a consumer has to be
+           accurate about what it is, and the full statement — planning
+           estimate not quotation, window rates indicative, measurement still
+           being calibrated — now sits in "What your estimate actually
+           includes", directly under the number. Beside the figure is arguably
+           where it always belonged: a caveat at the top of a page is read
+           before there is anything to apply it to, and forgotten by the time
+           there is. -->
       <strong>Facet Pro is in beta.</strong>
-      These are planning estimates, built to give you a realistic cost early &mdash; while you are still
-      deciding &mdash; rather than a final quotation. They are costed from real supplier and labour
-      rates; window rates are indicative until our supplier card lands, and we are still calibrating
-      how we measure a house from a photograph. If something looks wrong for your home, tell us when
-      you save your design; that is exactly what we are trying to get right.
+      Costed from real supplier and labour rates, and honest about what it doesn&rsquo;t know yet &mdash;
+      <a href="#honest-heading" class="underline">what your estimate includes</a>.
     </p>
   </aside>
 
@@ -299,8 +300,12 @@
          "The same house gets the same number" is promoted to sit directly
          under the sub — the pack is right that it is the strongest sentence on
          the page, and it was previously buried mid-paragraph. -->
+    <!-- Final review, point 2: lead with the capability, carry the technology
+         underneath. The previous headline named the category before it named
+         the outcome, which reads as a description of an industry rather than
+         of a thing that does something. -->
     <p class="text-[11px] tracking-[0.25em] uppercase text-white/50">AI property technology · UK</p>
-    <h1 id="hero-heading" class="mt-4 serif text-[36px] md:text-[52px] leading-[0.98] tracking-[-0.03em]">AI-powered exterior renovation<br class="hidden sm:block"> visualisation and instant pricing<br class="hidden sm:block"> from a single photograph.</h1>
+    <h1 id="hero-heading" class="mt-4 serif text-[36px] md:text-[52px] leading-[0.98] tracking-[-0.03em]">Measure, visualise and price<br class="hidden sm:block"> an entire home&rsquo;s exterior<br class="hidden sm:block"> from one photograph.</h1>
     <p class="mt-5 text-[15px] md:text-[17px] leading-7 text-white/70 max-w-[62ch]">Facet Pro uses computer vision to analyse a home&rsquo;s exterior, generate realistic renovation visualisations, and produce an instant project estimate &mdash; before anybody commits to a survey or an installer visit.</p>
     <p class="mt-5 serif text-[22px] md:text-[26px] leading-snug text-white">The same house gets the same number.</p>
     <p class="mt-3 text-[15px] leading-7 text-white/70 max-w-[62ch]">Two neighbours can buy the same windows and pay wildly different prices, because one of them pushed harder on a weeknight in their own front room. Priced from the photograph, the number does not move on how hard you are willing to push.</p>
@@ -384,9 +389,15 @@
       <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Visualisation</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">Your actual house re-finished photorealistically &mdash; the perspective, shadows and openings held exactly as they were.</p></div>
       <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Stated uncertainty</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">Every estimate carries a range and says which method produced it. A number without its error bars is a guess.</p></div>
     </div>
+    <!-- Final review, point 4: put the emphasis on what is owned rather than
+         on what is rented. The fact itself is unchanged and still stated — a
+         technical reader establishes it in a minute either way, and a page
+         that volunteered it first is trusted on everything else it says. What
+         changes is which half of the sentence leads. -->
     <p class="mt-5 text-[12px] leading-6 text-zinc-500 max-w-[72ch]">
-      The vision and image-generation models are third party. The measurement method, the whole-house
-      inference and the pricing engine are ours.
+      Facet Pro combines industry-leading AI models with its own proprietary measurement, pricing and
+      renovation intelligence. The vision and image-generation models are licensed; the measurement
+      method, the whole-house inference, the pricing engine and the rate catalogue behind it are ours.
     </p>
     <!-- The pack lists four questions an investor arrives with: what is
          proprietary, how does it scale, what is the business model, and why
@@ -409,6 +420,20 @@
       <p class="mt-3 max-w-[72ch] text-[13px] leading-6 text-zinc-600">
         The second half is supply. Installers who will pay for leads have to be signed, and they sign
         with somebody they already know. Both of ours were.
+      </p>
+      <!-- Final review, point 5: the scaling story. Written as what the system
+           is built to do rather than what it already does, because it does not
+           do it yet — there is no feedback loop wired in, and the calibration
+           set is data/survey-samples.json with seventeen rows and no known
+           wall areas in them. "Every property analysed strengthens…" as a
+           present-tense claim is the kind a technically curious investor asks
+           to see, and there would be nothing to show. Stated as design, it is
+           true today and becomes truer with every completed job. -->
+      <p class="mt-3 max-w-[72ch] text-[13px] leading-6 text-zinc-600">
+        And it compounds. The system is built so that every property analysed and every job completed
+        feeds back into the pricing intelligence, the measurement accuracy and the picture of what
+        people are actually renovating &mdash; so the estimates get sharper as the platform grows,
+        and the gap in front of anybody starting from scratch widens.
       </p>
     </div>
   </section>
@@ -679,7 +704,11 @@
     <p class="text-[11px] tracking-[0.25em] uppercase text-zinc-400">Why this exists</p>
     <h2 id="founder-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">Built by somebody who sold these for twenty-four years</h2>
     <div class="mt-5 max-w-[72ch] text-[14px] leading-7 text-zinc-600">
-      <p>Twenty-four years selling windows and doors for a national installer, in people&rsquo;s front rooms, on weeknights. Long enough to know exactly what a job settles at &mdash; and exactly why two identical houses on the same street end up paying wildly different amounts for the same work.</p>
+      <!-- Final review, point 3: "twenty-four years" was in the heading above
+           and again in this first line. Kept in the heading, where it carries
+           weight, and dropped here — the paragraph says the same thing better
+           by describing the rooms rather than counting them. -->
+      <p>Front rooms, on weeknights, for a national installer. Long enough to know exactly what a job settles at &mdash; and exactly why two identical houses on the same street end up paying wildly different amounts for the same work.</p>
       <p class="mt-3">It is not the product that varies. It is how long somebody is willing to sit there. Plenty of people do not want that evening, and should not have to have it in order to be charged a fair price.</p>
       <p class="mt-3">Facet Pro is that knowledge written down: what these jobs actually cost, offered to everybody at the same number, from one photograph, without anybody coming to the house.</p>
     </div>
@@ -702,7 +731,19 @@
       <div class="rounded-xl border border-zinc-200 p-4"><strong class="font-medium">Waste allowance</strong><p class="mt-1 text-zinc-600">Offcuts and breakages, so the number holds up on site.</p></div>
       <div class="rounded-xl border border-zinc-200 p-4"><strong class="font-medium">VAT at 20%</strong><p class="mt-1 text-zinc-600">Shown separately, never hidden in the headline price.</p></div>
     </div>
-    <p class="mt-5 text-[12px] leading-6 text-zinc-500 max-w-[70ch]">Facet Pro gives you a planning estimate, not a fixed quote. Your final price depends on the condition of your walls and roof, access, and what an installer finds when they survey your home.</p>
+    <!-- The full statement the beta banner used to carry, moved here by the
+         final review so it sits beside the number it qualifies rather than at
+         the top of the page, where it was read before there was anything to
+         apply it to. Nothing was dropped in the move: planning estimate not
+         quotation, window rates indicative, measurement still being
+         calibrated. Those three are what makes a price shown to a consumer
+         accurate about what it is, and the alternative to saying them is a
+         homeowner who feels misled at survey. -->
+    <div class="mt-6 rounded-xl border border-zinc-200 bg-[#FDFCF9] p-5">
+      <h3 class="text-[14px] font-medium">What it doesn&rsquo;t know yet</h3>
+      <p class="mt-2 text-[12px] leading-6 text-zinc-600 max-w-[70ch]">This is a planning estimate, not a fixed quote &mdash; built to give you a realistic cost while you are still deciding. Your final price depends on the condition of your walls and roof, access, and what an installer finds on survey.</p>
+      <p class="mt-2 text-[12px] leading-6 text-zinc-600 max-w-[70ch]">Two things we are still sharpening, and would rather say than not: window rates are indicative until our supplier rate card lands, and we are still calibrating how we measure a house from a photograph against surveyed properties. If a figure looks wrong for your home, tell us when you save your design &mdash; that is exactly what we are trying to get right.</p>
+    </div>
   </section>
 
   <section id="faq" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="faq-heading">
