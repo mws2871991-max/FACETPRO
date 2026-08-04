@@ -1792,6 +1792,24 @@ function buildDetailOptions() {
       ]),
       h('p', { className: 'mt-1 text-[11px] leading-5 text-zinc-500' },
         `Based on ${counted} window${counted === 1 ? '' : 's'} — ${g.sourceLabel}. Includes VAT${g.price.access ? ', and scaffolding or ladder access for the upstairs windows' : ''}.`),
+
+      /* The estimate range above is our measurement error. This is the number
+         the whole page is actually about, and until now it was only ever
+         asserted in prose at the top of the site: the same job, quoted by
+         somebody else, lands anywhere across a span this wide.
+
+         Kept visually separate from the guide price rather than merged into
+         it. Merged, our defensible ±18% would present as ±100% and read as a
+         shrug. Side by side, the gap is the product. */
+      g.marketRange ? h('div', { className: 'mt-3 pt-3 border-t border-zinc-200' }, [
+        h('div', { className: 'flex items-baseline justify-between gap-3 flex-wrap' }, [
+          h('span', { className: 'text-[12px] text-zinc-600' }, 'The same job, quoted elsewhere'),
+          h('span', { className: 'measured text-[15px] tracking-tight text-zinc-500' },
+            `${fmtMoney(g.marketRange.low)} – ${fmtMoney(g.marketRange.high)}`),
+        ]),
+        h('p', { className: 'mt-1 text-[11px] leading-5 text-zinc-500' },
+          'Same windows, same house. What moves is the discount you are offered on the night — which is why the top of that range is roughly double the bottom.'),
+      ]) : null,
       /* Two money figures on one page, and nothing said how they related.
          Someone could reasonably read the range as the whole job. */
       h('p', { className: 'mt-1 text-[11px] leading-5 text-zinc-500' },

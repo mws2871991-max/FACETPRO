@@ -86,6 +86,38 @@ const UPPER_STOREY_TOLERANCE_PCT = 1.5;
    terrace is a 20% error, and no amount of geometric precision recovers it. */
 const UNCERTAINTY = { door: 0.18, prior: 0.30 };
 
+/* ── WHAT THE SAME JOB GETS QUOTED AT ELSEWHERE ──
+
+   UNCERTAINTY above is our own measurement error: how unsure we are about the
+   size of the job. It is not the biggest number on this page and never was.
+   The biggest number is that two installers price identical work miles apart,
+   and one installer prices it differently depending on how the evening goes.
+
+   From notes/glazing-rates-from-the-trade.md, against the settled prices now
+   in the catalogue:
+
+     Composite door   ours £2,000   market £1,800 – £4,000   0.90× – 2.00×
+     Bifold, 3 panels ours £4,000   market £3,500 – £8,000   0.88× – 2.00×
+
+   Two products, two installers, and the same shape both times: the floor sits
+   just under our figure and the ceiling sits at double it. So the multiple is
+   taken as 0.88× to 2.0× rather than averaged into something tidier — the
+   agreement between the two rows is the finding.
+
+   This is deliberately NOT folded into `range`. Blurring the two would take a
+   number we can defend to ±18% and present it as ±100%, which reads as not
+   knowing rather than as knowing something worth knowing. They are different
+   claims and the page makes them separately: here is the job, and here is what
+   the market would charge you for it.
+
+   Honest limits, because someone will ask. Two products, both doors, both from
+   one person's experience of two national installers. Windows are assumed to
+   behave the same way and that assumption is untested — notes/ records it as
+   an open question. Replace this the moment the window bands arrive with the
+   ranges attached, and widen or narrow it per band if the gap moves with
+   size. */
+const MARKET_SPREAD = { low: 0.88, high: 2.0 };
+
 /* Typical glazing by house type, for the fallback. Counts are front, side
    and rear — a whole-house replacement, which is what people price.
 
@@ -481,6 +513,15 @@ function estimateGlazing({
       low: round(price.total * (1 - spread)),
       high: round(price.total * (1 + spread)),
     },
+    /* Taken off the middle rather than off the ends of `range`, so this
+       answers "what would somebody else charge for this job" and not "what
+       would somebody else charge for the largest job this might be". The
+       second question compounds two uncertainties and produces a number
+       nobody should act on. */
+    marketRange: {
+      low: round(price.total * MARKET_SPREAD.low),
+      high: round(price.total * MARKET_SPREAD.high),
+    },
     // What the UI should say about where this number came from. Keep the
     // wording here so the page and the lead email can never disagree.
     sourceLabel: {
@@ -500,6 +541,7 @@ module.exports = {
   },
   HOUSE_TYPE_GLAZING_PRIORS,
   FRONT_TO_TOTAL_WINDOWS,
+  MARKET_SPREAD,
   MIN_WINDOWS,
   MAX_WINDOWS,
 };

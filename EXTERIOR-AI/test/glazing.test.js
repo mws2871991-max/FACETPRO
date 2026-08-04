@@ -148,6 +148,46 @@ test('always returns a usable estimate, even with nothing to go on', () => {
   assert.strictEqual(r.countSource, 'house_type_prior');
 });
 
+/* ── what the market charges, as opposed to what we measured ── */
+
+test('the market range brackets our own figure', () => {
+  const r = base();
+  assert.ok(r.marketRange, 'no market range at all');
+  assert.ok(r.marketRange.low < r.price.total, 'somebody always undercuts us');
+  assert.ok(r.marketRange.high > r.price.total, 'somebody always beats us');
+});
+
+test('the market range is far wider than our measurement error', () => {
+  /* The whole argument of the site is that the spread between installers
+     dwarfs any uncertainty about the size of the job. If this ever inverts,
+     the page is claiming something its own numbers contradict. */
+  const r = base();
+  const ours = (r.range.high - r.range.low) / r.price.total;
+  const market = (r.marketRange.high - r.marketRange.low) / r.price.total;
+  assert.ok(market > ours * 2,
+    `market spread ${market.toFixed(2)} should dwarf our own ${ours.toFixed(2)}`);
+});
+
+test('the market range comes off the middle, not off the ends of our range', () => {
+  /* Compounding the two uncertainties would put the ceiling at 2.36x rather
+     than 2x — a number nobody should be shown, let alone act on. */
+  const r = base();
+  const { MARKET_SPREAD } = require('../glazing');
+  assert.strictEqual(r.marketRange.low, Math.round(r.price.total * MARKET_SPREAD.low));
+  assert.strictEqual(r.marketRange.high, Math.round(r.price.total * MARKET_SPREAD.high));
+});
+
+test('the spread matches what the two installers were actually observed doing', () => {
+  /* Derived in notes/glazing-rates-from-the-trade.md from a composite door
+     (£1,800-£4,000 against our £2,000) and a 3-panel bifold (£3,500-£8,000
+     against our £4,000). If somebody widens these for effect, this fails. */
+  const { MARKET_SPREAD } = require('../glazing');
+  assert.ok(MARKET_SPREAD.low >= 0.85 && MARKET_SPREAD.low <= 0.95,
+    'the floor sits just under our price, per both observed products');
+  assert.strictEqual(MARKET_SPREAD.high, 2.0,
+    'both observed products topped out at double; do not inflate this');
+});
+
 /* ── whole-house scaling ── */
 
 test('scales the measured front elevation to the whole house', () => {
