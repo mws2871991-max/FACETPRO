@@ -13,7 +13,7 @@
 
 require('./helpers/data-dir');   // never write to the real data/ — see the file
 
-const { test } = require('node:test');
+const {test, before } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
@@ -53,6 +53,11 @@ process.env.DAILY_RENDER_LIMIT = String(DAILY_RENDER);
 delete process.env.RESEND_API_KEY;
 
 require('../server');
+
+/* The server listens asynchronously. Against JSONL that is a tick; against
+   Postgres it is a schema, and a fetch issued before the socket exists fails
+   with "fetch failed". See test/helpers/server-ready.js. */
+before(async () => { await require('./helpers/server-ready')(BASE); });
 
 const get = async (p, headers = {}) => {
   const res = await realFetch(BASE + p, { headers });

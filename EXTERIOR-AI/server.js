@@ -2659,8 +2659,21 @@ async function start() {
   });
 }
 
-start().then((server) => {
-  if (!server) return;
+/* Kept, rather than discarded, so a test can wait for it.
+
+   start() is async, and against Postgres it has a schema to build before it
+   listens: CREATE SCHEMA, several CREATE TABLE, an ALTER on leads and a unique
+   index. Against JSONL that resolves within a tick, so a test file that
+   requires this module and fetches immediately has always won the race by
+   accident. Against a database it loses — 131 of the suite fail on `fetch
+   failed`, which reads like a server bug and is really a stopwatch.
+
+   That matters more than a flaky suite. refuseToStartIfStorageContradictsThe-
+   Notice requires DATABASE_URL on any deployment, so Postgres is the only
+   backend that will ever run in production, and it is the one the endpoint
+   tests could never cover. */
+const ready = start().then((server) => {
+  if (!server) return null;
 
   /* A request that has been running for two minutes is not going to finish.
      Without these, a stuck upstream holds a socket open indefinitely. */
@@ -2691,6 +2704,7 @@ start().then((server) => {
   };
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
+  return server;
 }).catch(err => {
   console.error('Failed to start:', err.message);
   process.exit(1);
@@ -2700,4 +2714,4 @@ start().then((server) => {
    that matters is that fifty thousand of them are fifty thousand distinct
    values, and there is no way to observe that through an endpoint that allows
    five submissions a minute. */
-module.exports = { _internals: { newLeadId, readImage } };
+module.exports = { ready, _internals: { newLeadId, readImage } };

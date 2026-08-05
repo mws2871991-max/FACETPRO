@@ -49,6 +49,15 @@ services:
       - key: INSTALLER_PASSWORD
         sync: false
 
+      # Gates /investors, which describes a pre-revenue company and itemises
+      # what money would be spent on. Unset means that page 404s, which is the
+      # deliberate default — s.21 FSMA restricts inducements to invest to
+      # people who have certified themselves beforehand, and a public URL
+      # cannot do that. Leave it unset on any environment that does not need
+      # to serve the page.
+      - key: INVESTOR_PASSWORD
+        sync: false
+
       # Required for detection and renders. Without them both endpoints return
       # a clear error rather than crashing.
       - key: ANTHROPIC_API_KEY

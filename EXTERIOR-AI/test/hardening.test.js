@@ -12,7 +12,7 @@ require('./helpers/data-dir');   // never write to the real data/ — see the fi
 // Capture defaults to off now, so a test that saves a lead has to ask.
 process.env.LEAD_CAPTURE = 'on';
 
-const { test } = require('node:test');
+const {test, before } = require('node:test');
 const assert = require('node:assert');
 
 const PORT = 3084;
@@ -22,6 +22,11 @@ delete process.env.RESEND_API_KEY;
 
 const realFetch = globalThis.fetch;
 const { _internals } = require('../server');
+
+/* The server listens asynchronously. Against JSONL that is a tick; against
+   Postgres it is a schema, and a fetch issued before the socket exists fails
+   with "fetch failed". See test/helpers/server-ready.js. */
+before(async () => { await require('./helpers/server-ready')(BASE); });
 const { newLeadId } = _internals;
 
 const post = async (p, payload, raw) => {

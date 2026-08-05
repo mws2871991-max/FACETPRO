@@ -23,7 +23,7 @@
 
 require('./helpers/data-dir');
 
-const { test } = require('node:test');
+const {test, before } = require('node:test');
 const assert = require('node:assert');
 const path = require('path');
 const fs = require('fs');
@@ -36,6 +36,11 @@ process.env.PORT = String(PORT);
 process.env.INVESTOR_PASSWORD = PASSWORD;
 
 require('../server');
+
+/* The server listens asynchronously. Against JSONL that is a tick; against
+   Postgres it is a schema, and a fetch issued before the socket exists fails
+   with "fetch failed". See test/helpers/server-ready.js. */
+before(async () => { await require('./helpers/server-ready')(BASE); });
 
 const get = (p, opts) => fetch(BASE + p, opts);
 

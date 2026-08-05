@@ -16,7 +16,7 @@
 
 require('./helpers/data-dir');   // never write to the real data/ — see the file
 
-const { test } = require('node:test');
+const {test, before } = require('node:test');
 const assert = require('node:assert');
 
 const PORT = 3085;
@@ -34,6 +34,11 @@ globalThis.fetch = async (url, opts) => {
 };
 
 require('../server');
+
+/* The server listens asynchronously. Against JSONL that is a tick; against
+   Postgres it is a schema, and a fetch issued before the socket exists fails
+   with "fetch failed". See test/helpers/server-ready.js. */
+before(async () => { await require('./helpers/server-ready')(BASE); });
 
 const save = async (fields) => {
   const res = await realFetch(`${BASE}/api/lead`, {
