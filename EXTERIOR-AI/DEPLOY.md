@@ -127,6 +127,39 @@ way to get this deployment wrong.
    tags, Open Graph URLs, `robots.txt` and `sitemap.xml` all agree with where
    the site actually lives.
 
+## Running the tests against Postgres
+
+`npm test` on its own exercises the JSONL backend. Postgres is the only
+backend a deployment will ever use — `refuseToStartIfStorageContradictsThe-
+Notice` requires `DATABASE_URL` — so the run that matters needs a database,
+and **without one the Postgres tests skip, which in a green summary is
+indistinguishable from passing.**
+
+```bash
+docker run -d --name facetpro-pg -p 5433:5432 \
+  -e POSTGRES_PASSWORD=test -e POSTGRES_DB=facetpro_test postgres:16
+
+DATABASE_URL="postgres://postgres:test@localhost:5433/facetpro_test?sslmode=disable" npm test
+```
+
+Two things that will otherwise cost an afternoon:
+
+- **`?sslmode=disable` is not optional for a local container.** Without it you
+  get `The server does not support SSL connections` and dozens of failures
+  that look like broken tests. `store.js` warns loudly about disabled TLS
+  unless the host is local, which is the right behaviour — but nothing else
+  tells you the flag exists.
+- **`looksDisposable()` in `test/postgres.test.js` will refuse a database
+  whose name does not contain `test`, or one that is not on localhost**, unless
+  you set `FACETPRO_ALLOW_DESTRUCTIVE_DB_TESTS=yes`. That is deliberate:
+  `replaceAll` truncates tables by design, and the obvious database to point
+  this at is the Railway one that also holds the FastAPI tables. It is a guard,
+  not a bug.
+
+CI runs the suite both ways on every push — see `.github/workflows/test.yml`.
+The Postgres job is the one that covers the code path production executes; if
+it is red, the JSONL job being green means very little.
+
 ## Endpoints
 
 | | |

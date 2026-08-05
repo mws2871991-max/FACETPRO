@@ -1,6 +1,6 @@
 # Facet Pro — developer handover
 
-Written 2026-08-04 against commit `cda90e4`. Every claim below was checked
+Written 2026-08-04, corrected 2026-08-05 against the current commit. Every claim below was checked
 against the running service rather than inferred from the code, because the
 two previous handovers were both wrong in the same direction: they described
 what somebody intended to do as though it had been done.
@@ -15,7 +15,9 @@ handover that is confidently wrong costs more than no handover at all.
 
 ```
 cd EXTERIOR-AI
-npm test                                    # 371 tests, 362 pass, 9 skip without a DB
+npm test                                    # JSONL backend only — see DEPLOY.md
+                                            # for how to run it against Postgres,
+                                            # which is the backend production uses
 railway variables --service facetpro-visualiser --json   # names AND values — do not paste output anywhere
 curl -sI https://facetpro-visualiser-production.up.railway.app/
 ```
@@ -66,12 +68,13 @@ Checked 2026-08-04.
 | Variable | State | Consequence |
 |---|---|---|
 | `REPLICATE_API_TOKEN` | **set** | Renders work. Verified with a real photograph |
-| `ANTHROPIC_API_KEY` | **missing** | **No detection.** A visitor cannot get past the first step |
+| `ANTHROPIC_API_KEY` | **set** | The key authenticates. **The account has no credit**, so detection returns a 502 and the journey still stops at the first step. Top up at console.anthropic.com/settings/billing |
 | `RESEND_API_KEY` | missing | No email at all |
 | `LEAD_FROM_EMAIL` | missing | Needs a domain verified at resend.com |
 | `LEAD_RECIPIENTS` | missing | `/api/coverage` reports `installers: 0` |
 | `DATABASE_URL` | missing | See storage, below |
-| `INSTALLER_PASSWORD` | missing | Installer routes 404 — fails closed, by design |
+| `INSTALLER_PASSWORD` | missing | Installer routes 503 — fails closed, by design |
+| `INVESTOR_PASSWORD` | **set** | Gates `/investors`. Unset means that page 404s, deliberately — see below |
 | `LEAD_CAPTURE` | set (`off`) | Correct. Must stay off until the legal pages are finished |
 | `SITE_MODE` | `beta` | Shows the calibration honesty badge. Keep until measurements are validated |
 
@@ -116,8 +119,10 @@ Run **one replica**. Detection records and the usage counter are in memory.
 
 ## What does not work
 
-- **Detection and measurement.** No Anthropic key. This is the half that finds
-  the windows and sizes the house, so the journey stops at the first step
+- **Detection and measurement.** The key is set and valid; the Anthropic
+  account has no credit, so `/api/detect` returns a 502. This is the half that
+  finds the windows and sizes the house, so the journey stops at the first
+  step. One top-up fixes it.
 - **Email, and therefore the paid path.** The startup log says it plainly:
   *"Installer quotes: UNAVAILABLE — no homeowner email, so no withdrawal link,
   so that consent is refused and the box is hidden. This is the paid path."*
@@ -140,6 +145,30 @@ from no rule at all. Fixed in `bfbea77`; guarded by `test/no-js.test.js`.
 
 Both were invisible to the test suite and to anyone using the site normally.
 Both were found by reading, not by running. Assume there are more.
+
+**The investor page was served to anybody with the link.** `/investors`
+describes a pre-revenue company and itemises what money would be spent on.
+s.21 FSMA 2000 restricts communicating an inducement to invest, and the
+exemptions need the reader to have certified themselves beforehand — which a
+public URL cannot do. What stood in for access control was `Disallow:
+/investors` in `robots.txt`, which keeps it out of search results and keeps
+nobody out. It is now behind `INVESTOR_PASSWORD`, and the file moved from
+`legal/` (a public static directory, so it was also served underneath the
+route) to `gated/`. Guarded by `test/investors.test.js`. The FCA-prescribed
+risk warning and the exemption being relied on are still placeholders for the
+solicitor.
+
+**The Postgres CI job had been red for days and nobody looked.** 131 of the
+suite failed because server-based tests fetched before `start()` had built the
+schema — so every endpoint that writes a lead was covered only against JSONL,
+which is the backend that never runs in production. Fixed with an exported
+readiness promise and `test/helpers/server-ready.js`. The last eight failures
+after that were fixtures, not code: `ts: 'A'` against a `timestamptz` column,
+and two tests reading `leads.jsonl` off the disk when the rows were in
+Postgres.
+
+Three bugs, one shape: a stated intention that nothing enforced. Assume there
+are more.
 
 ---
 
