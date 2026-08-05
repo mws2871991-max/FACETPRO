@@ -65,12 +65,32 @@ function parseRecipients(raw, { legacyUrl } = {}) {
          recipient configured before this existed is assumed to mean. */
       const { trades, bad: badTrades } = routing.normaliseTrades(r?.trades);
       if (badTrades.length) problems.push(`LEAD_RECIPIENTS[${i}] (${id}) has unrecognised trades: ${badTrades.join(', ')} — expected any of ${routing.TRADES.join(', ')}.`);
+      /* What this buyer pays for a lead, in pounds.
+
+         Optional, because a recipient may be a CRM rather than a buyer. But
+         where it exists it is the number that goes in the delivery record,
+         and the delivery record is the billing evidence — so it has to be
+         what was agreed at the time the lead was sent, not what a contract
+         says months later when somebody is reconciling an invoice.
+
+         Two buyers here pay £100 and £130. One flat figure could not describe
+         that, and the log could not say what any lead was worth. */
+      let leadPrice = null;
+      if (r?.leadPrice !== undefined && r?.leadPrice !== null && r?.leadPrice !== '') {
+        const n = Number(r.leadPrice);
+        if (!Number.isFinite(n) || n < 0) {
+          problems.push(`LEAD_RECIPIENTS[${i}] (${id}) has leadPrice "${r.leadPrice}" — expected a number of pounds, so no fee will be recorded for this buyer.`);
+        } else {
+          leadPrice = n;
+        }
+      }
       out.push({
         id,
         name: String(r?.name || id).trim(),
         url,
         areas,
         trades,
+        leadPrice,
         headers: (r && typeof r.headers === 'object' && r.headers) || {},
       });
     });
@@ -123,7 +143,7 @@ async function deliverTo(recipient, lead, { fetchImpl, attempts = DEFAULT_ATTEMP
 
       lastStatus = res?.status ?? null;
       if (res && res.ok) {
-        return { id: recipient.id, name: recipient.name, ok: true, status: lastStatus, attempts: attempt, at: new Date().toISOString(), startedAt: started };
+        return { id: recipient.id, name: recipient.name, leadPrice: recipient.leadPrice ?? null, ok: true, status: lastStatus, attempts: attempt, at: new Date().toISOString(), startedAt: started };
       }
       lastError = `HTTP ${lastStatus}`;
 
@@ -138,7 +158,7 @@ async function deliverTo(recipient, lead, { fetchImpl, attempts = DEFAULT_ATTEMP
     if (attempt < attempts) await onSleep(BACKOFF_MS[attempt - 1] ?? BACKOFF_MS[BACKOFF_MS.length - 1]);
   }
 
-  return { id: recipient.id, name: recipient.name, ok: false, status: lastStatus, attempts: spent, error: lastError, at: new Date().toISOString(), startedAt: started };
+  return { id: recipient.id, name: recipient.name, leadPrice: recipient.leadPrice ?? null, ok: false, status: lastStatus, attempts: spent, error: lastError, at: new Date().toISOString(), startedAt: started };
 }
 
 /* All recipients, concurrently. One slow buyer shouldn't delay the rest. */
@@ -147,10 +167,23 @@ async function deliverLead(lead, recipients, opts = {}) {
   return Promise.all(recipients.map(r => deliverTo(r, lead, opts)));
 }
 
-const summarise = (results) => ({
-  total: results.length,
-  delivered: results.filter(r => r.ok).length,
-  failed: results.filter(r => !r.ok).length,
-});
+const summarise = (results) => {
+  const ok = results.filter(r => r.ok);
+  const priced = ok.filter(r => typeof r.leadPrice === 'number');
+  return {
+    total: results.length,
+    delivered: ok.length,
+    failed: results.filter(r => !r.ok).length,
+    /* Only what actually arrived, and only where a price was configured. A
+       failed delivery is not a lead sold, and counting one would put a number
+       on an invoice that the delivery log itself contradicts.
+
+       null rather than 0 when no recipient had a price, because "nobody was
+       charged" and "we do not know what this was worth" are different facts
+       and only one of them is an accounting problem. */
+    feeTotal: priced.length ? Number(priced.reduce((n, r) => n + r.leadPrice, 0).toFixed(2)) : null,
+    feeUnpriced: ok.length - priced.length,
+  };
+};
 
 module.exports = { parseRecipients, deliverTo, deliverLead, summarise, DEFAULT_ATTEMPTS, DEFAULT_TIMEOUT_MS };

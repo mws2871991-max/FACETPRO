@@ -142,7 +142,11 @@ test('one buyer being down must not stop the others being paid for', async () =>
 
   assert.strictEqual(results.length, 3, 'every recipient must produce a record');
   const s = summarise(results);
-  assert.deepStrictEqual(s, { total: 3, delivered: 2, failed: 1 });
+  /* feeTotal is null and not 0: none of these three has a leadPrice
+     configured, so nothing is known about what the lead was worth. Two
+     deliveries succeeded and both are unpriced, which is a fact worth
+     carrying rather than rounding to zero on an invoice. */
+  assert.deepStrictEqual(s, { total: 3, delivered: 2, failed: 1, feeTotal: null, feeUnpriced: 2 });
   assert.strictEqual(results.find(r => r.id === 'broken').ok, false);
   assert.ok(results.filter(r => r.id !== 'broken').every(r => r.ok), 'the working buyers still got it');
 });
@@ -177,4 +181,74 @@ test('per-recipient headers are sent, so each buyer can authenticate us', async 
 test('no recipients configured is a no-op, not a crash', async () => {
   const results = await deliverLead(LEAD, [], { fetchImpl: async () => ok() });
   assert.deepStrictEqual(results, []);
+});
+
+/* ── what a lead was worth ──
+
+   Two signed contracts at £100 and £130. Before this the code had one cap and
+   no price at all, so a delivery record — which is the billing evidence —
+   could not say what any lead was worth. Reconciling an invoice meant looking
+   up a contract that may have changed since.
+
+   The fee recorded is the fee that applied when the lead was sent. */
+
+test('a per-recipient price is parsed and kept', () => {
+  const { recipients } = parseRecipients(JSON.stringify([
+    { id: 'anglian', url: 'https://a.test/hook', leadPrice: 130 },
+    { id: 'zenith', url: 'https://z.test/hook', leadPrice: 100 },
+  ]));
+  assert.deepStrictEqual(recipients.map(r => r.leadPrice), [130, 100]);
+});
+
+test('a recipient with no price is allowed, and recorded as unpriced', () => {
+  /* A recipient may be a CRM rather than a buyer. Absent must not become 0,
+     because "not charged" and "we do not know" are different facts. */
+  const { recipients, problems } = parseRecipients(JSON.stringify([
+    { id: 'crm', url: 'https://c.test/hook' },
+  ]));
+  assert.strictEqual(recipients[0].leadPrice, null);
+  assert.strictEqual(problems.length, 0, 'an absent price is not a problem');
+});
+
+test('a price that is not a number is refused loudly rather than guessed at', () => {
+  const { recipients, problems } = parseRecipients(JSON.stringify([
+    { id: 'bad', url: 'https://b.test/hook', leadPrice: 'free' },
+  ]));
+  assert.strictEqual(recipients[0].leadPrice, null, 'a bad price became a real one');
+  assert.match(problems.join(' '), /leadPrice/, 'nothing was said about it');
+});
+
+test('a negative price is refused', () => {
+  const { recipients, problems } = parseRecipients(JSON.stringify([
+    { id: 'neg', url: 'https://n.test/hook', leadPrice: -50 },
+  ]));
+  assert.strictEqual(recipients[0].leadPrice, null);
+  assert.match(problems.join(' '), /leadPrice/);
+});
+
+test('the fee total counts what arrived, not what was attempted', () => {
+  /* A failed delivery is not a lead sold. Billing one would put a number on
+     an invoice that the delivery log itself contradicts. */
+  const s = summarise([
+    { id: 'a', ok: true, leadPrice: 130 },
+    { id: 'z', ok: true, leadPrice: 100 },
+    { id: 'f', ok: false, leadPrice: 130 },
+  ]);
+  assert.strictEqual(s.delivered, 2);
+  assert.strictEqual(s.feeTotal, 230, 'the failed delivery was billed');
+});
+
+test('unpriced deliveries are counted separately, not silently valued at zero', () => {
+  const s = summarise([
+    { id: 'a', ok: true, leadPrice: 130 },
+    { id: 'crm', ok: true, leadPrice: null },
+  ]);
+  assert.strictEqual(s.feeTotal, 130);
+  assert.strictEqual(s.feeUnpriced, 1, 'the unpriced delivery vanished from the record');
+});
+
+test('no priced recipient means null, not zero', () => {
+  const s = summarise([{ id: 'crm', ok: true, leadPrice: null }]);
+  assert.strictEqual(s.feeTotal, null,
+    '"nobody was charged" and "we do not know what this was worth" must not look the same');
 });
