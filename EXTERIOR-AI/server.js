@@ -737,6 +737,64 @@ function constantTimeEquals(a, b) {
   return crypto.timingSafeEqual(ha, hb);
 }
 
+/* ── THE INVESTOR PAGE ──
+
+   /investors describes a pre-revenue UK company and itemises what money would
+   be spent on. In the UK, communicating an invitation or inducement to engage
+   in investment activity in the course of business is restricted by s.21 FSMA
+   2000, and shares in an unlisted company are a controlled investment. The
+   exemptions normally relied on — certified high net worth individual,
+   self-certified sophisticated investor — need the recipient to certify
+   BEFORE the communication reaches them, which a public URL cannot do.
+   Breach is a criminal offence and can make the resulting agreement
+   unenforceable against the investor.
+
+   It shipped served to anybody. robots.txt carried `Disallow: /investors`
+   with a comment saying "sent to people directly; not for search", which is a
+   request to crawlers and not access control — an intention the server did
+   not enforce. Exactly the shape of the .no-js rule guarded by a class
+   nothing ever set: the comment described behaviour that did not exist.
+
+   The file also moved out of legal/ and into gated/, because /legal/ is in
+   PUBLIC_DIRS and express.static was serving legal/investors.html directly,
+   underneath any gate on the route. A blocklist entry would have fixed that
+   for as long as somebody remembered it; a directory that was never public
+   fixes it by construction.
+
+   404 rather than 401 when unconfigured, and 401 with no detail otherwise: a
+   visitor who has not been sent the link should not learn the page exists.
+
+   This is not legal advice, and whether a given page is a financial promotion
+   is a solicitor's judgement. The fix is cheap and the shape is textbook, so
+   it is gated now and the advice can follow. The FCA-prescribed risk warning
+   and certification statement still need to go on the page itself. */
+function requireInvestorPassword(req, res, next) {
+  const expected = process.env.INVESTOR_PASSWORD;
+  const notFound = () => res.status(404).type('html')
+    .send('<!doctype html><meta charset="utf-8"><title>Not found</title><p>Not found.');
+
+  if (!expected) {
+    console.error('INVESTOR_PASSWORD is not set — refusing to serve /investors.');
+    return notFound();
+  }
+
+  const header = req.get('authorization') || '';
+  const supplied = header.toLowerCase().startsWith('bearer ')
+    ? header.slice(7).trim()
+    // A link that can be pasted into an email. Drop this if you would rather
+    // hand the password over separately — it is the weakest part of the gate,
+    // because a URL ends up in browser history and referrer headers.
+    : (req.query.k || req.get('x-investor-password') || '');
+
+  // Compared even when nothing was supplied, so a missing password takes the
+  // same time as a wrong one.
+  if (!constantTimeEquals(String(supplied), expected)) {
+    res.setHeader('WWW-Authenticate', 'Bearer realm="Facet Pro investors"');
+    return notFound();
+  }
+  next();
+}
+
 function requireInstallerPassword(req, res, next) {
   const expected = process.env.INSTALLER_PASSWORD;
   if (!expected) {
@@ -2409,12 +2467,13 @@ async function purgeLeadPii(leadId) {
    back here to keep search engines on one URL. */
 app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, 'legal', 'privacy.html')));
 app.get('/terms', (req, res) => res.sendFile(path.join(__dirname, 'legal', 'terms.html')));
-/* Sent to somebody, not found. Carries noindex, is not linked from the
-   homepage, and is disallowed in robots.txt — a homeowner halfway through
-   pricing their house has no business reading what we tell investors about
-   the state of the window rates. Listed in isLegalPath above so it serves
-   under script-src 'none', which is what a page of pure text should get. */
-app.get('/investors', (req, res) => res.sendFile(path.join(__dirname, 'legal', 'investors.html')));
+/* Gated — see requireInvestorPassword. noindex and robots.txt remain, but
+   they were never the control; they only keep it out of search results.
+   Served from gated/, which is not in PUBLIC_DIRS, so there is no static path
+   to the file. Listed in isLegalPath above so it serves under
+   script-src 'none', which is what a page of pure text should get. */
+app.get('/investors', requireInvestorPassword, (req, res) =>
+  res.sendFile(path.join(__dirname, 'gated', 'investors.html')));
 
 /* ── NOT FOUND, AND THINGS GOING WRONG ──
    Registered last, after every route, because Express matches in order.
