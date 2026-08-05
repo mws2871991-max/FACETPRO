@@ -1,0 +1,107 @@
+/* Knowing when something has broken.
+
+   Before this there were thirty-seven console.error sites and no way to read
+   any of them without a platform log viewer. That is not hypothetical: the
+   Replicate `Prefer: wait=90` header refused every render the application
+   ever attempted, and it surfaced only because somebody happened to be
+   watching a log at the moment it failed. The information existed. Nobody was
+   looking.
+
+   Two things are tested here, and the second matters more than it looks.
+
+   That failures are recorded at all — an operator can ask "is anything
+   broken" and get an answer.
+
+   And that the answer contains no personal data. An operational log is read
+   casually, pasted into messages, and left open on screens. Error messages
+   interpolate the input that caused them, so a homeowner's email address ends
+   up inside a string somebody throws. If this endpoint leaks one, it is worse
+   than not having it — a place personal data goes that the privacy notice
+   never mentions and retention never reaches. */
+
+'use strict';
+
+require('./helpers/data-dir');
+
+const { test, beforeEach } = require('node:test');
+const assert = require('node:assert');
+const obs = require('../observability');
+
+beforeEach(() => obs.reset());
+
+test('a failure is recorded and comes back in the summary', () => {
+  obs.record('render', 'Replicate refused the render', { status: 422 });
+  const s = obs.summary();
+  assert.strictEqual(s.totalRecorded, 1);
+  assert.strictEqual(s.byKind[0].kind, 'render');
+  assert.strictEqual(s.recent[0].detail.status, 422);
+});
+
+test('counts survive the ring filling up', () => {
+  /* The ring is bounded so a crash loop cannot exhaust memory. The counts
+     must not be bounded with it, or "this has happened 4,000 times" becomes
+     "this has happened 200 times" and the thing looks less urgent than it
+     is. */
+  for (let i = 0; i < obs.MAX_EVENTS + 50; i++) obs.record('detect', 'failure ' + i);
+  const s = obs.summary({ limit: obs.MAX_EVENTS });
+  assert.strictEqual(s.recent.length, obs.MAX_EVENTS, 'the ring grew past its bound');
+  assert.strictEqual(s.byKind[0].count, obs.MAX_EVENTS + 50, 'the count was truncated with the ring');
+});
+
+test('newest first, because that is what you came to see', () => {
+  obs.record('a', 'older');
+  obs.record('b', 'newer');
+  assert.strictEqual(obs.summary().recent[0].message, 'newer');
+});
+
+test('an email address in an error message is scrubbed', () => {
+  obs.record('request', 'could not send to jane.smith@example.com — bounced');
+  const m = obs.summary().recent[0].message;
+  assert.ok(!/jane\.smith@example\.com/.test(m), 'an email address reached the ops log: ' + m);
+  assert.match(m, /\[email\]/);
+});
+
+test('a postcode and a phone number are scrubbed', () => {
+  obs.record('request', 'no coverage for SW11 4NP, tried 07700900000');
+  const m = obs.summary().recent[0].message;
+  assert.ok(!/SW11\s*4NP/i.test(m), 'a postcode reached the ops log: ' + m);
+  assert.ok(!/07700900000/.test(m), 'a phone number reached the ops log: ' + m);
+});
+
+test('an API key pasted into an error is scrubbed', () => {
+  /* Upstream clients put the request in the message often enough that this is
+     worth having — and a key in an operational log outlives the log. */
+  for (const secret of ['sk-ant-abcd1234efgh', 'r8_ABCDEFGH1234', 're_test_abcdef123']) {
+    obs.reset();
+    obs.record('detect', 'auth failed using ' + secret);
+    const m = obs.summary().recent[0].message;
+    assert.ok(!m.includes(secret), 'a credential reached the ops log: ' + m);
+  }
+});
+
+test('personal fields in the detail object are redacted by name', () => {
+  obs.record('delivery', 'webhook rejected the lead', {
+    status: 500, recipientId: 'anglian', email: 'jane@example.com', postcode: 'SW11 4NP', name: 'Jane',
+  });
+  const d = obs.summary().recent[0].detail;
+  assert.strictEqual(d.status, 500, 'the useful field was dropped');
+  assert.strictEqual(d.recipientId, 'anglian', 'a non-personal field was redacted');
+  for (const k of ['email', 'postcode', 'name']) {
+    assert.strictEqual(d[k], '[redacted]', `${k} was not redacted`);
+  }
+});
+
+test('the summary says out loud that it does not survive a restart', () => {
+  /* The live service has no volume, so this is memory only. A summary that
+     looks like a history and is not would be another claim with nothing
+     behind it — which is the failure this whole file exists to catch. */
+  assert.match(obs.summary().retention, /in memory only/i);
+});
+
+test('the ops endpoint is behind the installer password', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  assert.match(server, /app\.get\('\/api\/ops',\s*requireInstallerPassword/,
+    'the ops endpoint is open — its counts alone describe the traffic and what is failing');
+});

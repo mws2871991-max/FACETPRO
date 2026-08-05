@@ -9,6 +9,7 @@ const measure = require('./measure');
 const emails = require('./emails');
 const delivery = require('./delivery');
 const retention = require('./retention');
+const obs = require('./observability');
 const withdrawal = require('./withdrawal');
 const routing = require('./routing');
 const glazing = require('./glazing');
@@ -1414,6 +1415,7 @@ Finally add: {"type":"analysis","summary":"2-3 sentence overview of the property
   if (!anthropicRes.ok) {
     let detail = '';
     try { detail = (await anthropicRes.json())?.error?.message || ''; } catch (_) {}
+    obs.record('detect', 'Anthropic refused the request', { status: anthropicRes.status, detail });
     console.error(`Anthropic error: HTTP ${anthropicRes.status} — ${detail}`);
     if (anthropicRes.status === 401) return res.status(500).json({ error: 'API key rejected.' });
     if (anthropicRes.status === 429) return res.status(429).json({ error: 'Rate limit hit — try again shortly.' });
@@ -1940,6 +1942,7 @@ app.post('/api/render', renderLimiter, async (req, res) => {
 
     if (!predRes.ok) {
       const err = await predRes.json().catch(() => ({}));
+      obs.record('render', 'Replicate refused the render', { status: predRes.status, detail: err?.detail });
       console.error('Replicate render error:', predRes.status, err);
       /* Not the upstream status. "Render failed (422)" reads to a homeowner
          as though their photograph was rejected, and it was nothing of the
@@ -2514,6 +2517,35 @@ const purgeLeadPii = (leadId) => purgeLeadPiiFor(new Set([leadId]));
    Clean URLs for the privacy notice and terms. The files also sit under
    /legal/ via express.static, so each page carries a canonical tag pointing
    back here to keep search engines on one URL. */
+/* ── GET /api/ops ──
+
+   The answer to "is anything broken", in one request, behind the same
+   password as the installer area.
+
+   Thirty-seven console.error sites existed before this and there was no way
+   to read any of them without a platform log viewer. The render was refused
+   by Replicate for the entire life of the codebase and nobody knew, because
+   knowing required somebody to be watching at the moment it happened. This is
+   the version where you can look afterwards.
+
+   Behind the installer password rather than open: the counts alone tell an
+   outsider how much traffic there is and what is failing, which is nobody's
+   business. Behind the SAME password because a second one is a second thing
+   to lose, and this is an operator surface either way.
+
+   /healthz stays open and stays dumb — a platform health check must not
+   depend on anything that can be slow or wrong. */
+app.get('/api/ops', requireInstallerPassword, (req, res) => {
+  const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 50));
+  res.json({
+    ...obs.summary({ limit }),
+    usage: { day: usage.day, detect: usage.detect, render: usage.render, caps: DAILY_LIMITS },
+    storage: store.hasDb ? 'postgres' : 'jsonl files (lost on restart without a volume)',
+    leadCapture: LEAD_CAPTURE ? 'on' : 'off',
+    siteMode: SITE_MODE,
+  });
+});
+
 app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, 'legal', 'privacy.html')));
 app.get('/terms', (req, res) => res.sendFile(path.join(__dirname, 'legal', 'terms.html')));
 /* Gated — see requireInvestorPassword. noindex and robots.txt remain, but
@@ -2559,6 +2591,10 @@ app.use((err, req, res, next) => {
   }
 
   const ref = crypto.randomBytes(6).toString('hex');
+  /* Recorded as well as logged. The log line is for whoever is watching at
+     the time; the record is for whoever looks afterwards, which is the case
+     that has never been served. */
+  obs.record('request', err?.message || 'request failed', { ref, method: req.method, path: req.path });
   console.error(`[${ref}] ${req.method} ${req.path} failed:`, err?.stack || err?.message || err);
   res.status(500).json({ error: 'Something went wrong on our side.', ref });
 });
@@ -2572,12 +2608,14 @@ app.use((err, req, res, next) => {
 
    A crash is not always the wrong answer, but an undiagnosable one is. */
 process.on('unhandledRejection', (reason) => {
+  obs.record('crash', 'unhandled promise rejection: ' + (reason?.message || reason));
   console.error('Unhandled promise rejection:', reason instanceof Error ? reason.stack : reason);
 });
 
 process.on('uncaughtException', (err) => {
   /* Genuinely unexpected: the process may be in an unknown state, so log
      properly and let the platform restart us rather than limping on. */
+  obs.record('crash', 'uncaught exception: ' + (err?.message || err));
   console.error('Uncaught exception — exiting:', err.stack || err.message);
   process.exit(1);
 });
