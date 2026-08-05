@@ -2002,8 +2002,20 @@ function buildDetailOptions() {
       ]),
       h('div', { className: `mt-1 text-[11px] leading-4 ${active ? 'text-white/60' : 'text-zinc-500'}` },
         item.tagline || item.detail || ''),
+      /* "25-year guarantee" was the whole claim. A manufacturer's warranty is
+         near-always conditional — registration, approved installation, a
+         maintenance regime — so the number without the conditions is the kind
+         of omission the DMCC Act treats as misleading, and it is the sort a
+         homeowner only discovers when they try to claim on it.
+
+         Whose guarantee it is, and that terms apply, both belong on the face
+         of it. The full conditions come from the manufacturer and are
+         confirmed on survey, which the tooltip says. */
       item.guaranteeYears
-        ? h('div', { className: `mt-1.5 text-[10px] ${active ? 'text-emerald-300' : 'text-emerald-600'}` }, `${item.guaranteeYears}-year guarantee`)
+        ? h('div', {
+            className: `mt-1.5 text-[10px] ${active ? 'text-emerald-300' : 'text-emerald-600'}`,
+            title: `${item.guaranteeYears}-year manufacturer's guarantee. Guarantees are given by the manufacturer, not by Facet Pro, and are subject to their terms — typically registration, installation by an approved fitter, and reasonable maintenance. Your installer confirms the exact terms on survey.`,
+          }, `${item.guaranteeYears}-yr manufacturer's guarantee — terms apply`)
         : null,
       opts.bestseller && item.bestseller
         ? h('div', { className: `mt-1 text-[10px] ${active ? 'text-amber-300' : 'text-amber-600'}` }, '★ Most chosen')
@@ -2069,6 +2081,22 @@ function buildDetailOptions() {
       ]),
       h('p', { className: 'mt-1 text-[11px] leading-5 text-zinc-500' },
         `Based on ${counted} window${counted === 1 ? '' : 's'} — ${g.sourceLabel}. Includes VAT${g.price.access ? ', and scaffolding or ladder access for the upstairs windows' : ''}.`),
+
+      /* The window rates are invented, and this is where that has to be said.
+
+         The beta badge discloses that the measurement is still being
+         calibrated, and the estimate section says the rates are indicative —
+         but neither sits beside this number, and a homeowner reading "guide
+         price" next to a figure to the pound will not infer that the rate
+         behind it was somebody's judgement. Different problem, different
+         disclosure, and the endpoint already reports which it is.
+
+         Goes away by itself when a supplier rate card lands, because that is
+         what clears `ratesSourced`. */
+      g.ratesSourced === false
+        ? h('p', { className: 'mt-2 text-[11px] leading-5 text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2' },
+            'Window rates are our own estimate rather than a supplier rate card, so treat this figure as a guide and expect an installer’s quote to differ. Door prices come from real completed jobs.')
+        : null,
 
       /* The estimate range above is our measurement error. This is the number
          the whole page is actually about, and until now it was only ever
