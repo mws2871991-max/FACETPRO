@@ -70,20 +70,34 @@ test('the guard ignores ordinary prose in brackets', () => {
 
 test('every page that carries placeholders is actually checked', () => {
   /* The investor page had two — the exemption being relied on and the FCA
-     risk warning — and was not in the list at all, so a financial promotion
-     could have gone out with a solicitor's placeholder in it. */
-  assert.match(server, /gated\/investors\.html/,
-    'the investor page is not among the pages the guard reads');
+     risk warning — and was checked nowhere, so a financial promotion could
+     have gone out with a solicitor's placeholder in it.
+
+     Matched on the path components rather than on "gated/investors.html",
+     because the path is assembled with path.join and the literal string with
+     a slash in it does not appear in the source. An earlier version of this
+     assertion looked for that string and passed only by luck. */
+  assert.match(server, /'gated',\s*'investors\.html'/,
+    'nothing reads the investor page to check it for placeholders');
+  assert.match(server, /function investorPageUnfinished/,
+    'the investor page placeholder check has gone');
   assert.match(server, /PAGES_WITH_PLACEHOLDERS = \[[^\]]*legal\/privacy\.html[^\]]*legal\/terms\.html/,
-    'the legal pages are no longer in the guard list');
+    'the legal pages are no longer in the startup guard list');
 });
 
-test('the investor page is checked on its own condition, not on lead capture', () => {
-  /* Whether we are taking leads today has nothing to do with whether a
-     financial promotion is finished. Coupling them would let the page serve
-     with placeholders on any deployment that had lead capture off. */
-  assert.match(server, /INVESTOR_PASSWORD \? \['gated\/investors\.html'\]/,
-    'the investor page is gated on LEAD_CAPTURE rather than on being servable');
+test('an unfinished investor page is refused at the door, not at startup', () => {
+  /* The first version of this refused to START when the page had placeholders
+     and INVESTOR_PASSWORD was set. Both were true on the deployment, so the
+     next restart would have taken the whole site down over one gated page.
+
+     Refusing to boot is right for an unfinished privacy notice — the
+     alternative is collecting personal data behind it. It is wrong for an
+     unfinished financial promotion, where not serving that one page costs
+     nothing else. */
+  assert.match(server, /if \(IS_DEPLOYED\) \{\s*const left = investorPageUnfinished\(\)/,
+    'the investor page is no longer checked when it is requested');
+  assert.doesNotMatch(server, /INVESTOR_PASSWORD \? \['gated\/investors\.html'\]/,
+    'the startup guard still takes the whole process down over the investor page');
 });
 
 test('the pages on disk match what the guard reports', () => {

@@ -778,6 +778,21 @@ function requireInvestorPassword(req, res, next) {
     return notFound();
   }
 
+  /* Unfinished means unserved, on a deployment. The two placeholders on that
+     page are the exemption being relied on and the FCA-prescribed risk
+     warning — the parts a solicitor supplies, and the parts that make the
+     difference between a document and a financial promotion nobody may
+     lawfully send. Checked per request rather than at boot so the file can be
+     corrected without a restart, and so this never costs more than the page
+     it protects. */
+  if (IS_DEPLOYED) {
+    const left = investorPageUnfinished();
+    if (left.length) {
+      console.error(`/investors requested, and refused: ${left.length} placeholder(s) still in it — ${left.map(s => s.slice(0, 40)).join(', ')}`);
+      return notFound();
+    }
+  }
+
   const header = req.get('authorization') || '';
   const supplied = header.toLowerCase().startsWith('bearer ')
     ? header.slice(7).trim()
@@ -2629,18 +2644,35 @@ const countPlaceholders = (page) => {
   catch (_) { return 0; }
 };
 
+/* The investor page, checked at the door rather than at startup.
+
+   The first version of this refused to start when INVESTOR_PASSWORD was set
+   and the page still had placeholders. That was the wrong lever, and it was a
+   live hazard for about an hour: INVESTOR_PASSWORD is set on the deployment,
+   the page does have two placeholders, and RAILWAY_ENVIRONMENT makes
+   IS_DEPLOYED true — so the next restart would have taken the whole site down
+   over one gated page that nobody had opened.
+
+   Refusing to start is the right response to an unfinished privacy notice,
+   because the alternative is collecting personal data behind it and there is
+   no safe half-measure. It is the wrong response to an unfinished financial
+   promotion, where there is an obvious one: do not serve that page. The
+   homepage, the visualiser and the estimate have nothing to do with it.
+
+   Proportion is the point. A guard that takes down more than the thing it is
+   guarding gets deleted by whoever is on the end of the outage. */
+function investorPageUnfinished() {
+  const found = [...new Set((() => {
+    try { return fs.readFileSync(path.join(__dirname, 'gated', 'investors.html'), 'utf8').match(PLACEHOLDER) || []; }
+    catch (_) { return []; }
+  })())];
+  return found;
+}
+
 function refuseToStartIfTheNoticeIsUnfinished() {
-  /* Two different conditions, deliberately. The legal pages are checked when
-     LEAD_CAPTURE is on, because that is when somebody's details are taken
-     behind them. The investor page is checked whenever INVESTOR_PASSWORD is
-     set, because that is when it can be read — and whether we are taking
-     leads that day has nothing to do with it. Coupling them would have meant
-     a financial promotion going out with a solicitor's placeholder in it on
-     any deployment that happened to have lead capture off. */
-  const pages = [
-    ...(LEAD_CAPTURE ? PAGES_WITH_PLACEHOLDERS : []),
-    ...(process.env.INVESTOR_PASSWORD ? ['gated/investors.html'] : []),
-  ];
+  /* The legal pages only, and only when LEAD_CAPTURE is on — that is when
+     somebody's details are taken behind them. */
+  const pages = LEAD_CAPTURE ? PAGES_WITH_PLACEHOLDERS : [];
   if (!pages.length) return;
 
   if (!IS_DEPLOYED) {
