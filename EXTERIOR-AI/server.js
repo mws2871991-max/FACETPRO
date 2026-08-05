@@ -2600,21 +2600,59 @@ function refuseToStartIfStorageContradictsTheNotice() {
    .env.example already says to turn lead capture on only once the
    placeholders are gone — but that is a comment in a template, and templates
    get copied and edited. This is the structural version. */
+/* Anchor on the brackets, not on what is inside them.
+
+   The previous pattern enumerated the characters a placeholder may contain —
+   /\[[A-Z][A-Z0-9 &;#/,.'’-]{2,60}\]/ — and enumerating was the mistake. It
+   allowed & and ; so that HTML entities would pass, but an entity's name is
+   lowercase and only A-Z was in the class, so &mdash; broke the match. It also
+   capped the run at sixty characters, and had no literal em dash.
+
+   Six real placeholders slipped through, and the startup line that reports the
+   count was under-reporting by the same six. Three of them were the same
+   field: the international-transfer mechanism in the privacy notice, which is
+   the one that says under what legal instrument a homeowner's photograph
+   reaches a company in the United States. Not a field to ship blank, and it
+   was invisible to the guard written to prevent exactly that.
+
+   A placeholder is defined by its brackets. Match those. */
+const PLACEHOLDER = /\[[A-Z][^\]]{2,200}\]/g;
+
+/* The pages the guard reads. investors.html is here because a financial
+   promotion carrying [FCA-PRESCRIBED RISK WARNING] is a problem in the same
+   way an unfinished privacy notice is — see the LEAD_CAPTURE note below for
+   why it is checked on a different condition. */
+const PAGES_WITH_PLACEHOLDERS = ['legal/privacy.html', 'legal/terms.html'];
+
+const countPlaceholders = (page) => {
+  try { return (fs.readFileSync(path.join(__dirname, page), 'utf8').match(PLACEHOLDER) || []).length; }
+  catch (_) { return 0; }
+};
+
 function refuseToStartIfTheNoticeIsUnfinished() {
-  if (!LEAD_CAPTURE) return;
+  /* Two different conditions, deliberately. The legal pages are checked when
+     LEAD_CAPTURE is on, because that is when somebody's details are taken
+     behind them. The investor page is checked whenever INVESTOR_PASSWORD is
+     set, because that is when it can be read — and whether we are taking
+     leads that day has nothing to do with it. Coupling them would have meant
+     a financial promotion going out with a solicitor's placeholder in it on
+     any deployment that happened to have lead capture off. */
+  const pages = [
+    ...(LEAD_CAPTURE ? PAGES_WITH_PLACEHOLDERS : []),
+    ...(process.env.INVESTOR_PASSWORD ? ['gated/investors.html'] : []),
+  ];
+  if (!pages.length) return;
+
   if (!IS_DEPLOYED) {
-    const left = ['legal/privacy.html', 'legal/terms.html'].reduce((n, page) => {
-      try { return n + (fs.readFileSync(path.join(__dirname, page), 'utf8').match(/\[[A-Z][A-Z0-9 &;#/,.'’-]{2,60}\]/g) || []).length; }
-      catch (_) { return n; }
-    }, 0);
-    if (left) console.warn(`LEAD_CAPTURE=on with ${left} placeholder(s) left in the legal pages — fine locally, refused on a deployment.`);
+    const left = pages.reduce((n, page) => n + countPlaceholders(page), 0);
+    if (left) console.warn(`${left} placeholder(s) left in ${pages.join(', ')} — fine locally, refused on a deployment.`);
     return;
   }
   const unfinished = [];
-  for (const page of ['legal/privacy.html', 'legal/terms.html']) {
+  for (const page of pages) {
     let html = '';
     try { html = fs.readFileSync(path.join(__dirname, page), 'utf8'); } catch (_) { continue; }
-    const found = [...new Set(html.match(/\[[A-Z][A-Z0-9 &;#/,.'’-]{2,60}\]/g) || [])];
+    const found = [...new Set(html.match(PLACEHOLDER) || [])];
     if (found.length) unfinished.push(`  ${page} — ${found.length} left: ${found.slice(0, 6).join(', ')}${found.length > 6 ? ' …' : ''}`);
   }
   if (!unfinished.length) return;
@@ -2622,7 +2660,7 @@ function refuseToStartIfTheNoticeIsUnfinished() {
     '',
     'REFUSING TO START.',
     '',
-    'LEAD_CAPTURE=on, but the legal pages are unfinished:',
+    'A page that has to be finished before it is served is not:',
     ...unfinished,
     '',
     'These are the pages people have to agree to before a lead can be saved, and',
