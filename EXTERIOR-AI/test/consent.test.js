@@ -14,6 +14,7 @@ process.env.LEAD_CAPTURE = 'on';
 
 const {test, before } = require('node:test');
 const assert = require('node:assert');
+const store = require('../store');
 const fs = require('fs');
 const path = require('path');
 
@@ -49,9 +50,19 @@ const send = async (consent) => {
   });
   return { status: res.status, body: await res.json().catch(() => ({})) };
 };
-const lastDelivery = () => {
-  const raw = fs.existsSync(DELIVERIES) ? fs.readFileSync(DELIVERIES, 'utf8').trim() : '';
-  return raw ? JSON.parse(raw.split('\n').pop()) : null;
+/* Read through the store, not off the disk.
+
+   These used to open data/deliveries.jsonl and data/leads.jsonl directly. That
+   works only against the JSONL backend — with DATABASE_URL set the rows are in
+   Postgres, the files never exist, and the assertions failed with ENOENT and a
+   null delivery record. Which is the wrong way round: Postgres is the backend
+   production runs on, so it was the one these tests could not see.
+
+   store.readAll() presents the same rows over either backend, which is what
+   these tests were always trying to ask about. */
+const lastDelivery = async () => {
+  const rows = await store.readAll('deliveries');
+  return rows.length ? rows[rows.length - 1] : null;
 };
 
 test('agreeing to the Terms is required', async () => {
@@ -76,7 +87,7 @@ test('a design saves with BOTH optional boxes unticked — the Article 7(4) fix'
 
   // And nobody receives their details — the point of a separate box.
   await new Promise(r => setTimeout(r, 400));
-  const d = lastDelivery();
+  const d = await lastDelivery();
   assert.ok(d, 'the decision is still recorded');
   assert.strictEqual(d.total, 0, 'no recipient was contacted');
   assert.match(d.withheld, /no consent/i, 'and the record says why');
@@ -123,8 +134,7 @@ test('the installer portal shows only leads that asked for quotes', async () => 
     'every lead in the portal must carry installer consent');
 
   // And the ones that declined really were captured — they are just not here.
-  const stored = fs.readFileSync(path.join(process.env.FACETPRO_DATA_DIR, 'leads.jsonl'), 'utf8')
-    .trim().split('\n').filter(Boolean).map(JSON.parse);
+  const stored = await store.readAll('leads');
   const declined = stored.filter(l => l.consent?.installerQuotes !== true);
   assert.ok(declined.length > 0, 'declining leads should still be saved');
   const visible = new Set(leads.map(l => l.id));

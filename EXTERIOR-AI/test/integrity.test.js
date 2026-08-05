@@ -65,6 +65,17 @@ test('imageSize still answers the question it always did', () => {
 /* ── one writer at a time ── */
 
 const table = 'accessLog';                 // not leads: no test needs to fight over those
+
+/* These rows used to carry ts: 'A', 'B', 'C' — labels, chosen so a human could
+   tell them apart, and never read by any assertion here. Against the JSONL
+   backend they were simply JSON. Against Postgres, ts is a timestamptz column,
+   and 'A' is not a timestamp: every one of these tests failed with
+
+     invalid input syntax for type timestamp with time zone: "A"
+
+   which read like a bug in mutate() and was a bug in the fixture. Distinct,
+   ordered, valid timestamps keep what the labels were for. */
+const at = (n) => new Date(Date.UTC(2026, 0, 1, 0, 0, n)).toISOString();
 const reset = async () => { await store.replaceAll(table, []); };
 
 test('a write landing mid-mutation is not lost', async () => {
@@ -72,13 +83,13 @@ test('a write landing mid-mutation is not lost', async () => {
      so anything appended in between was overwritten by rows read before it
      existed. Here the append is fired while the transform is still running. */
   await reset();
-  await store.append(table, { ts: 'A', endpoint: '/first' });
+  await store.append(table, { ts: at(1), endpoint: '/first' });
 
   const slowMutate = store.mutate(table, async (rows) => {
     await new Promise(r => setTimeout(r, 40));            // the window
-    return [...rows, { ts: 'B', endpoint: '/from-mutate' }];
+    return [...rows, { ts: at(2), endpoint: '/from-mutate' }];
   });
-  const concurrentAppend = store.append(table, { ts: 'C', endpoint: '/concurrent' });
+  const concurrentAppend = store.append(table, { ts: at(3), endpoint: '/concurrent' });
   await Promise.all([slowMutate, concurrentAppend]);
 
   const rows = await store.readAll(table);
@@ -90,10 +101,10 @@ test('a write landing mid-mutation is not lost', async () => {
 test('two mutations of the same table both take effect', async () => {
   // Two withdrawals arriving together: one used to be lost.
   await reset();
-  await store.append(table, { ts: 'A', endpoint: '/base' });
+  await store.append(table, { ts: at(1), endpoint: '/base' });
   await Promise.all([
-    store.mutate(table, async (rows) => { await new Promise(r => setTimeout(r, 30)); return [...rows, { ts: 'X', endpoint: '/one' }]; }),
-    store.mutate(table, async (rows) => [...rows, { ts: 'Y', endpoint: '/two' }]),
+    store.mutate(table, async (rows) => { await new Promise(r => setTimeout(r, 30)); return [...rows, { ts: at(4), endpoint: '/one' }]; }),
+    store.mutate(table, async (rows) => [...rows, { ts: at(5), endpoint: '/two' }]),
   ]);
   const seen = (await store.readAll(table)).map(r => r.endpoint).sort();
   assert.deepStrictEqual(seen, ['/base', '/one', '/two']);
@@ -101,8 +112,8 @@ test('two mutations of the same table both take effect', async () => {
 
 test('the transform sees the rows as they are, not as they were', async () => {
   await reset();
-  await store.append(table, { ts: 'A', endpoint: '/a' });
-  await store.mutate(table, (rows) => [...rows, { ts: 'B', endpoint: '/b' }]);
+  await store.append(table, { ts: at(1), endpoint: '/a' });
+  await store.mutate(table, (rows) => [...rows, { ts: at(2), endpoint: '/b' }]);
   await store.mutate(table, (rows) => {
     assert.strictEqual(rows.length, 2, 'the second mutation must see the first');
     return rows;
@@ -111,7 +122,7 @@ test('the transform sees the rows as they are, not as they were', async () => {
 
 test('returning undefined writes nothing', async () => {
   await reset();
-  await store.append(table, { ts: 'A', endpoint: '/kept' });
+  await store.append(table, { ts: at(1), endpoint: '/kept' });
   const result = await store.mutate(table, () => undefined);
   assert.strictEqual(result, null);
   assert.strictEqual((await store.readAll(table)).length, 1, 'nothing should have been rewritten');
@@ -120,13 +131,13 @@ test('returning undefined writes nothing', async () => {
 test('a failed mutation does not wedge the queue behind it', async () => {
   await reset();
   await assert.rejects(store.mutate(table, () => { throw new Error('boom'); }), /boom/);
-  await store.append(table, { ts: 'A', endpoint: '/after' });
+  await store.append(table, { ts: at(1), endpoint: '/after' });
   assert.strictEqual((await store.readAll(table)).length, 1, 'writes must still work afterwards');
 });
 
 test('a failed mutation leaves the store as it was', async () => {
   await reset();
-  await store.append(table, { ts: 'A', endpoint: '/original' });
+  await store.append(table, { ts: at(1), endpoint: '/original' });
   await assert.rejects(store.mutate(table, () => { throw new Error('boom'); }));
   const rows = await store.readAll(table);
   assert.deepStrictEqual(rows.map(r => r.endpoint), ['/original'], 'a half-applied change is worse than none');
