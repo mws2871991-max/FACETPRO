@@ -20,3 +20,8 @@ data/delivery-failures.jsonl
 
 # Stored renders — photorealistic images of identified homes.
 data/renders/
+
+# Database dumps written by scripts/backup-and-verify.js. They contain
+# every row in the database, including homeowners. Never commit one.
+backup-*.json
+*.backup.json
