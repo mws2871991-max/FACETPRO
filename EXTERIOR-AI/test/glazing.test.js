@@ -150,8 +150,15 @@ test('always returns a usable estimate, even with nothing to go on', () => {
 
 /* ── what the market charges, as opposed to what we measured ── */
 
+/* The comparison is withheld while the windows in it are priced from invented
+   bands, which is the state of the catalogue today. These tests are about the
+   arithmetic, so they hand it a catalogue whose rates are sourced. The
+   withholding itself is tested separately below. */
+const SOURCED = { ...RATES, source: 'Windows and doors: supplier rate card, 2026.' };
+const sourced = (over = {}) => base({ rates: SOURCED, ...over });
+
 test('the market range brackets our own figure', () => {
-  const r = base();
+  const r = sourced();
   assert.ok(r.marketRange, 'no market range at all');
   assert.ok(r.marketRange.low < r.price.total, 'somebody always undercuts us');
   assert.ok(r.marketRange.high > r.price.total, 'somebody always beats us');
@@ -161,7 +168,7 @@ test('the market range is far wider than our measurement error', () => {
   /* The whole argument of the site is that the spread between installers
      dwarfs any uncertainty about the size of the job. If this ever inverts,
      the page is claiming something its own numbers contradict. */
-  const r = base();
+  const r = sourced();
   const ours = (r.range.high - r.range.low) / r.price.total;
   const market = (r.marketRange.high - r.marketRange.low) / r.price.total;
   assert.ok(market > ours * 2,
@@ -171,10 +178,38 @@ test('the market range is far wider than our measurement error', () => {
 test('the market range comes off the middle, not off the ends of our range', () => {
   /* Compounding the two uncertainties would put the ceiling at 2.36x rather
      than 2x — a number nobody should be shown, let alone act on. */
-  const r = base();
+  const r = sourced();
   const { MARKET_SPREAD } = require('../glazing');
   assert.strictEqual(r.marketRange.low, Math.round(r.price.total * MARKET_SPREAD.low));
   assert.strictEqual(r.marketRange.high, Math.round(r.price.total * MARKET_SPREAD.high));
+});
+
+test('no market comparison while the windows in it are invented', () => {
+  /* The multiple is sound — 0.88x to 2.0x from two real door products. The
+     number it multiplies is not: notes/glazing-rates-from-the-trade.md puts
+     the window bands about 40% light. Multiplying a light figure produced a
+     "quoted elsewhere" range that was approximately the correct price, and a
+     page inviting the homeowner to distrust it. */
+  const r = base();                                  // the real catalogue
+  assert.strictEqual(r.marketRange, null,
+    'the market comparison is shown on top of unsourced window rates');
+});
+
+test('the comparison returns as soon as the bands are sourced', () => {
+  /* Nothing to remember later — filling in the catalogue restores it. */
+  const r = sourced();
+  assert.ok(r.marketRange && r.marketRange.high > r.price.total,
+    'sourced rates did not bring the comparison back');
+});
+
+test('a doors-only job keeps the comparison, because those prices are real', () => {
+  const r = base({ selections: { doorStyleId: 'composite' }, windowCountOverride: undefined });
+  /* A door-only estimate still prices the house's windows in this module, so
+     this asserts the rule rather than the shortcut: when windows contribute
+     nothing, the comparison stands. */
+  if ((r.price.supplyFit || 0) === 0) {
+    assert.ok(r.marketRange, 'a doors-only job lost the comparison it is entitled to');
+  }
 });
 
 test('a door costs the homeowner what the trade says it settles at', () => {

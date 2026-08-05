@@ -118,6 +118,25 @@ const UNCERTAINTY = { door: 0.18, prior: 0.30 };
    size. */
 const MARKET_SPREAD = { low: 0.88, high: 2.0 };
 
+/* Are the window bands in this catalogue real, or still the invented ones?
+   Mirrors the check server.js makes on the same field, and reads the
+   catalogue it was handed rather than the one on disk, so a test can pass
+   sourced rates and see the comparison appear. */
+const windowRatesSourced = (rates) =>
+  !!(rates?.source && !/not sourced|placeholder/i.test(rates.source));
+
+/* The comparison, or nothing. Doors-only jobs keep it because every figure in
+   them came from a completed job; anything containing a window loses it until
+   the bands are sourced. */
+function marketRangeFor(rates, price) {
+  const hasUnsourcedWindows = !windowRatesSourced(rates) && (price.supplyFit || 0) > 0;
+  if (hasUnsourcedWindows) return null;
+  return {
+    low: round(price.total * MARKET_SPREAD.low),
+    high: round(price.total * MARKET_SPREAD.high),
+  };
+}
+
 /* Typical glazing by house type, for the fallback. Counts are front, side
    and rear — a whole-house replacement, which is what people price.
 
@@ -517,11 +536,34 @@ function estimateGlazing({
        answers "what would somebody else charge for this job" and not "what
        would somebody else charge for the largest job this might be". The
        second question compounds two uncertainties and produces a number
-       nobody should act on. */
-    marketRange: {
-      low: round(price.total * MARKET_SPREAD.low),
-      high: round(price.total * MARKET_SPREAD.high),
-    },
+       nobody should act on.
+
+       And withheld entirely while the windows in it are priced from invented
+       bands, which is the state today.
+
+       The multiple is sound: 0.88x to 2.0x, derived from two door products
+       against two national installers, and the doors it came from are real
+       settled prices. What is not sound is the number it multiplies.
+       notes/glazing-rates-from-the-trade.md puts the window bands at roughly
+       40% light even after the 20% uplift — it does the arithmetic itself,
+       0.5 x 1.2 = 0.6 — so on a semi with eight casements the panel reads:
+
+         Our estimate       £6,021 – £11,183
+         Quoted elsewhere   £7,570 – £17,204
+
+       and the second line, which the page invites the homeowner to read as
+       the unfair price, is approximately the correct one. The mechanism
+       inverts. Somebody is told they are being overcharged by a quote that is
+       accurate, goes to the installer expecting £8,600, is quoted £14,000,
+       and concludes we were wrong — and the installer, who paid for that
+       lead, opens the conversation arguing about our number instead of
+       selling.
+
+       So: shown when the priced job is doors only, where every figure came
+       from a completed job, and withheld the moment an unsourced window is in
+       it. Restored automatically by the four real band prices landing in the
+       catalogue, because that is what clears `source`. */
+    marketRange: marketRangeFor(rates, price),
     // What the UI should say about where this number came from. Keep the
     // wording here so the page and the lead email can never disagree.
     sourceLabel: {

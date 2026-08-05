@@ -2187,6 +2187,32 @@ async function runRetention({ dryRun = false } = {}) {
       summary.rendersRemoved = removed;
     }
 
+    /* The copies, which retention had been leaving behind.
+
+       purgeLeadPii existed and was called from exactly one place — the
+       withdrawal handler. So a homeowner who asked to be erased had their
+       delivery-failure and notification-failure rows scrubbed, and a
+       homeowner who simply reached the end of the retention period did not.
+       Their name, email, phone and postcode stayed on file indefinitely,
+       past the periods the privacy notice states, and survived the redaction
+       that is supposed to leave only the consent record.
+
+       Installer webhooks fail sometimes by nature, so this was not an edge
+       case. What hid it was a passing test: withdrawal.test.js covers
+       "erasure reaches the copies, the render and the ancillary records" and
+       covers it only down the withdrawal path, which reads as though the
+       whole subject is handled.
+
+       Both sets, deleted and redacted. A deleted lead is gone from `leads`
+       entirely, so anything of theirs left elsewhere is unreferenced personal
+       data; a redacted one is meant to keep the consent record and nothing
+       else. */
+    const erasedIds = new Set([...p.delete, ...p.redact].map(l => l.id).filter(Boolean));
+    if (erasedIds.size) {
+      try { await purgeLeadPiiFor(erasedIds); }
+      catch (err) { console.error('Retention: could not purge ancillary records:', err.message); }
+    }
+
     /* Resume codes hold no personal data, so this is housekeeping rather
        than retention — but a store that only grows is its own problem. */
     try {
@@ -2461,20 +2487,28 @@ app.post('/api/withdraw', withdrawLimiter, async (req, res) => {
 /* Erasure has to reach the copies too. The delivery-failure and notification-
    failure records each carry a name, an email and a phone number so a failed
    lead can be chased by hand — which is exactly why they cannot be left behind
-   when the lead itself is erased. */
-async function purgeLeadPii(leadId) {
+   when the lead itself is erased.
+
+   Takes a set rather than one id because retention erases in batches, and a
+   loop would be two table mutations per lead. One pass per table, however
+   many leads. */
+async function purgeLeadPiiFor(leadIds) {
+  const ids = leadIds instanceof Set ? leadIds : new Set([leadIds].flat());
+  if (!ids.size) return;
   const scrub = (row) => {
-    if (row?.leadId !== leadId) return row;
+    if (!ids.has(row?.leadId)) return row;
     const { name, email, phone, postcode, ...rest } = row;
     return { ...rest, erased: true };
   };
   for (const table of ['deliveries', 'notificationFailures']) {
     try {
       await store.mutate(table, (rows) =>
-        rows.some(r => r?.leadId === leadId) ? rows.map(scrub) : undefined);
+        rows.some(r => ids.has(r?.leadId)) ? rows.map(scrub) : undefined);
     } catch (_) { /* table may not exist yet */ }
   }
 }
+
+const purgeLeadPii = (leadId) => purgeLeadPiiFor(new Set([leadId]));
 
 /* ── LEGAL PAGES ──
    Clean URLs for the privacy notice and terms. The files also sit under
@@ -2784,4 +2818,4 @@ const ready = start().then((server) => {
    that matters is that fifty thousand of them are fifty thousand distinct
    values, and there is no way to observe that through an endpoint that allows
    five submissions a minute. */
-module.exports = { ready, _internals: { newLeadId, readImage } };
+module.exports = { ready, _internals: { newLeadId, readImage, runRetention, purgeLeadPiiFor } };
