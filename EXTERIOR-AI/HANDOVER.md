@@ -59,11 +59,19 @@ half once.
 | Service | What it is |
 |---|---|
 | `facetpro-visualiser` | **The live site.** This is what you deploy to |
-| `facetpro-backend` | Serves nothing. Holds a Replicate token, a Resend key and `DATABASE_URL` |
+| `facetpro-backend` | **Not dead.** It is the FastAPI API behind the older Facet Pro, the one `www.facetpro.co.uk` currently serves from Vercel. 63 endpoints, lead claiming, quotes, PDFs. Its lead routes require auth (401 unauthenticated, checked). Holds a Replicate token, a Resend key and `DATABASE_URL` because it uses them |
 | `Postgres` | The database. Currently reachable only from `facetpro-backend` |
 
-The project is *named* `facetpro-backend`, which is why earlier notes said the
-site was served from a service of that name. It is not.
+The project is *named* `facetpro-backend` and so is one of its services, which
+is why earlier notes confused the two.
+
+**Correction to an earlier version of this file, which said `facetpro-backend`
+serves nothing.** It serves the older Facet Pro: a FastAPI backend behind a
+Vercel frontend on `www.facetpro.co.uk`, sharing this project's Postgres —
+which is what `test/postgres.test.js` means when it warns about the database
+that "also holds the FastAPI backend's tables". Two complete products exist and
+the domain points at the older one. Deciding which is Facet Pro is a business
+question, not a DNS change.
 
 ---
 
