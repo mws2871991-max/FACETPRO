@@ -26,12 +26,18 @@ curl -sI https://facetpro-visualiser-production.up.railway.app/
 
 ## Deployment — read this before you push
 
-**Pushing to `main` does NOT deploy.** Railway's GitHub connection is broken
-and has been since the repository was renamed `facetpro` → `FACETPRO`.
-Reconnecting it failed: the repo does not appear in Railway's list, because
-Railway's GitHub App grant still refers to the old name.
+**Pushing to `main` deploys only once `RAILWAY_TOKEN` is set.**
+Railway's own GitHub connection has been broken since the repository was
+renamed `facetpro` → `FACETPRO`; reconnecting failed because Railway's GitHub
+App grant still refers to the old name.
 
-Deploys are currently made from a working copy:
+`.github/workflows/deploy.yml` routes around it: on a push to `main` it runs
+the suite and then deploys with the Railway CLI, which needs nothing from the
+GitHub App. **It needs one secret to work.** Until `RAILWAY_TOKEN` exists the
+job builds, tests, and prints a warning saying nothing was deployed — see the
+setup note at the top of that file.
+
+Deploys can still be made by hand from a working copy:
 
 ```
 cd EXTERIOR-AI

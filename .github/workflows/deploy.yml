@@ -1,0 +1,99 @@
+# Deploy to Railway on a green push to main.
+#
+# Railway's own GitHub integration has been broken since the repository was
+# renamed facetpro -> FACETPRO. Reconnecting it failed: the repo does not
+# appear in Railway's list, because Railway's GitHub App grant still refers to
+# the old name. Deploys have been made by hand from a working copy since, with
+# the obvious hazard — anyone who pushes to main and walks away believes they
+# have shipped something they have not. That already cost a day and a half.
+#
+# This route needs nothing from Railway's GitHub App. It uses the CLI with a
+# project token, which is the same thing a developer runs locally.
+#
+# ONE SETUP STEP, in a browser:
+#
+#   1. railway.app -> project facetpro-backend -> Settings -> Tokens
+#      Create a token scoped to this project. Copy it.
+#   2. github.com/mws2871991-max/FACETPRO -> Settings -> Secrets and variables
+#      -> Actions -> New repository secret
+#      Name:  RAILWAY_TOKEN
+#      Value: the token
+#
+# After that, every push to main that passes the tests deploys itself.
+#
+# Until the secret exists this workflow does nothing but say so — it does not
+# fail the build, because a red cross on every push teaches people to ignore
+# red crosses.
+
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  # So a deploy can be forced from the Actions tab without an empty commit.
+  workflow_dispatch:
+
+concurrency:
+  # A queued deploy behind a newer one is a deploy of stale code.
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Railway
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: EXTERIOR-AI
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: EXTERIOR-AI/package-lock.json
+
+      - run: npm ci
+
+      # The tests run here as well as in tests.yml, deliberately. This job can
+      # be triggered by hand, and a manual deploy is exactly when somebody is
+      # in a hurry and least likely to have checked.
+      - name: Test before deploying
+        run: npm test
+
+      - name: Check the token is present
+        id: token
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          if [ -z "$RAILWAY_TOKEN" ]; then
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::RAILWAY_TOKEN is not set, so nothing was deployed. See the setup note at the top of .github/workflows/deploy.yml — this push built and tested, but the live site is unchanged."
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy
+        if: steps.token.outputs.present == 'true'
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          npm i -g @railway/cli
+          # --ci exits when the build finishes rather than streaming forever.
+          railway up --service facetpro-visualiser --ci
+
+      - name: Confirm the site answers
+        if: steps.token.outputs.present == 'true'
+        run: |
+          URL=https://facetpro-visualiser-production.up.railway.app/healthz
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$URL" || true)
+            if [ "$code" = "200" ]; then
+              echo "healthz returned 200 after $((i * 10))s"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::The site did not return 200 on /healthz within five minutes of deploying."
+          exit 1
