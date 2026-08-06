@@ -86,6 +86,7 @@ way to get this deployment wrong.
 | Variable | Required | Notes |
 | --- | --- | --- |
 | `INSTALLER_PASSWORD` | **yes** | Without it `/api/leads` returns 503 and the installer area is unusable. `openssl rand -base64 24`. |
+| `INSTALLER_TOKEN_SECRET` | with installer accounts | Signs the short-lived tokens `/api/installer/login` issues. Unset means one is generated at startup, which signs every installer out on each deploy — the right failure, because a predictable default would let anyone who read the source mint a token for any installer. `openssl rand -base64 32`. |
 | `INVESTOR_PASSWORD` | to serve `/investors` | Gates the investor page, which describes a pre-revenue company and what money would be spent on. s.21 FSMA restricts inducements to invest to people who have certified themselves beforehand, which a public URL cannot do — so **unset means the page 404s**, deliberately, rather than serving open. Share the link as `/investors?k=<password>` or with an `Authorization: Bearer` header. `openssl rand -base64 24`. |
 | `ANTHROPIC_API_KEY` | for detection | Without it uploads return a clear error. |
 | `REPLICATE_API_TOKEN` | for renders | Without it renders return a clear error. |

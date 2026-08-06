@@ -10,6 +10,7 @@ const emails = require('./emails');
 const delivery = require('./delivery');
 const retention = require('./retention');
 const obs = require('./observability');
+const installers = require('./installers');
 const withdrawal = require('./withdrawal');
 const routing = require('./routing');
 const glazing = require('./glazing');
@@ -808,6 +809,49 @@ function requireInvestorPassword(req, res, next) {
     res.setHeader('WWW-Authenticate', 'Bearer realm="Facet Pro investors"');
     return notFound();
   }
+  next();
+}
+
+/* The secret that signs installer tokens.
+
+   Generated at startup when unset, which logs every installer out on each
+   deploy. That is the right failure: a predictable default would let anyone
+   who read the source mint a token for any installer, and an installer
+   signing in again is an inconvenience. */
+const INSTALLER_TOKEN_SECRET = process.env.INSTALLER_TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
+if (!process.env.INSTALLER_TOKEN_SECRET) {
+  console.warn('INSTALLER_TOKEN_SECRET is not set — installer sessions will end on every deploy. Set it to keep them signed in.');
+}
+
+/* Who is asking, or nobody.
+
+   Accepts an installer token first. Falls back to INSTALLER_PASSWORD, which
+   is the shared credential the portal used before accounts existed — kept so
+   a deployment configured the old way keeps working, and marked as the whole
+   estate rather than one installer, because that is what it grants. */
+function identifyInstaller(req) {
+  const header = req.get('authorization') || '';
+  const bearer = header.toLowerCase().startsWith('bearer ') ? header.slice(7).trim() : '';
+  const supplied = bearer || req.get('x-installer-password') || '';
+  if (!supplied) return null;
+
+  const claim = installers.readToken(supplied, INSTALLER_TOKEN_SECRET);
+  if (claim) {
+    const who = LEAD_RECIPIENTS.find(r => r.id === claim.id);
+    return who ? { id: who.id, name: who.name, scope: 'installer' } : null;
+  }
+  const shared = process.env.INSTALLER_PASSWORD;
+  if (shared && constantTimeEquals(supplied, shared)) return { id: null, name: 'shared password', scope: 'all' };
+  return null;
+}
+
+function requireInstaller(req, res, next) {
+  const who = identifyInstaller(req);
+  if (!who) {
+    res.setHeader('WWW-Authenticate', 'Bearer realm="Facet Pro installers"');
+    return res.status(401).json({ error: 'Sign in to see your leads.' });
+  }
+  req.installer = who;
   next();
 }
 
@@ -2297,7 +2341,31 @@ app.get('/api/deliveries', installerLimiter, requireInstallerPassword, logAccess
 /* ── GET /api/leads ──
    Leads captured so far, newest first. Password-protected — see
    requireInstallerPassword above. */
-app.get('/api/leads', installerLimiter, requireInstallerPassword, logAccess('/api/leads'), async (req, res) => {
+/* ── POST /api/installer/login ──
+   An account per installer, replacing one password shared by everybody.
+   Returns a short-lived token so the browser never stores the credential. */
+app.post('/api/installer/login', installerLimiter, (req, res) => {
+  const id = String(req.body?.id || '').trim();
+  const password = String(req.body?.password || '');
+  const who = LEAD_RECIPIENTS.find(r => r.id === id);
+
+  /* The compare runs even when the id is unknown, so a wrong name and a wrong
+     password take the same time and neither confirms the other. */
+  const hash = who?.passwordHash || 'scrypt$00$00';
+  const ok = !!who?.passwordHash && installers.verifyPassword(password, hash);
+  if (!ok) {
+    obs.record('installer-login', 'failed sign-in', { id: id ? 'supplied' : 'missing' });
+    return res.status(401).json({ error: 'That name or password is not right.' });
+  }
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({
+    token: installers.issueToken(who.id, INSTALLER_TOKEN_SECRET),
+    expiresInSeconds: Math.round(installers.TOKEN_TTL_MS / 1000),
+    installer: { id: who.id, name: who.name, verification: who.verification?.fields || {} },
+  });
+});
+
+app.get('/api/leads', installerLimiter, requireInstaller, logAccess('/api/leads'), async (req, res) => {
   // Homeowners' contact details: not for any cache between us and the browser.
   res.setHeader('Cache-Control', 'no-store');
   /* Only leads whose owner asked for installer contact.
@@ -2311,11 +2379,37 @@ app.get('/api/leads', installerLimiter, requireInstallerPassword, logAccess('/ap
 
      Redacted leads are excluded too: retention has already stripped them of
      personal data, and there is nothing in one an installer can act on. */
-  const leads = (await store.readAll('leads'))
+  let leads = (await store.readAll('leads'))
     .filter(l => l.consent?.installerQuotes === true && !l.redacted)
     // The withdrawal token's hash is ours, not theirs.
     .map(({ withdrawTokenHash, ...rest }) => rest);
-  res.json({ leads: leads.slice().reverse() });
+
+  /* An installer signed in with their own account sees only the leads that
+     were actually delivered to them.
+
+     Read from the delivery log rather than recomputed from today's routing.
+     Routing changes — areas get added, a contract ends, the cap moves — and
+     what governs disclosure is who received a lead at the time, not who would
+     receive it now. The delivery record is the only thing that knows, and it
+     is also the billing evidence, so the two agree by construction.
+
+     The shared password still sees everything, because that is what a single
+     credential shared by every buyer always meant. It is scoped 'all' rather
+     than pretending otherwise, and the response says which it was. */
+  if (req.installer?.scope === 'installer') {
+    const mine = new Set();
+    for (const d of await store.readAll('deliveries')) {
+      if (!Array.isArray(d?.results)) continue;
+      if (d.results.some(r => r?.id === req.installer.id && r?.ok)) mine.add(d.leadId);
+    }
+    leads = leads.filter(l => mine.has(l.id));
+  }
+
+  res.json({
+    leads: leads.slice().reverse(),
+    scope: req.installer?.scope || 'all',
+    installer: req.installer?.id || null,
+  });
 });
 
 /* ── WITHDRAWING CONSENT ──

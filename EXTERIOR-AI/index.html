@@ -932,7 +932,13 @@ const state = {
   windowCount: null,        // the homeowner's own count, which beats ours
   prefs: { windowStyleId: null, doorStyleId: null, windowDoorColourId: null,
            fasciaId: null, soffitId: null, gutteringId: null, rooflineCladdingId: null },
-  installerPassword: sessionStorage.getItem('fp_installer_pw') || '',
+  /* The password is never persisted. What survives a reload is a token the
+     server signed, good for four hours and for one installer — so a future
+     DOM mistake leaks something that expires, rather than the credential for
+     every installer for ever. The old key is cleared on sight. */
+  installerPassword: '',
+  installerId: sessionStorage.getItem('fp_installer_id') || '',
+  installerToken: (() => { try { sessionStorage.removeItem('fp_installer_pw'); } catch (_) {} return sessionStorage.getItem('fp_installer_token') || ''; })(),
   installerAuthed: false,
   installerError: '',
   installerChecking: false,
@@ -1018,23 +1024,50 @@ async function loadCatalogue() {
 
 // Leads hold homeowner contact details, so this is only ever called with an
 // installer password — never on page load.
-async function loadLeads(password) {
+function forgetInstaller() {
+  state.installerAuthed = false;
+  state.installerToken = '';
+  state.leads = [];
+  try { sessionStorage.removeItem('fp_installer_token'); sessionStorage.removeItem('fp_installer_id'); } catch (_) {}
+}
+
+/* Exchange a name and password for a token, once. */
+async function installerSignIn(id, password) {
+  const res = await fetch('/api/installer/login', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, password }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.token) return { ok: false, error: data.error || 'Could not sign in.' };
+  state.installerToken = data.token;
+  state.installerId = id;
+  try {
+    sessionStorage.setItem('fp_installer_token', data.token);
+    sessionStorage.setItem('fp_installer_id', id);
+  } catch (_) { /* private browsing: the session simply ends with the tab */ }
+  return { ok: true };
+}
+
+async function loadLeads(token) {
   state.installerChecking = true;
   state.installerError = '';
   try {
-    const res = await fetch('/api/leads', { headers: { 'Authorization': `Bearer ${password}` } });
+    const res = await fetch('/api/leads', { headers: { 'Authorization': `Bearer ${token}` } });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      state.installerAuthed = false;
-      state.leads = [];
-      sessionStorage.removeItem('fp_installer_pw');
-      state.installerError = data.error || (res.status === 401 ? 'Incorrect password.' : 'Could not sign in.');
+      forgetInstaller();
+      /* A token that has expired is not a wrong password, and telling
+         somebody their password is wrong when it is not sends them looking
+         for a problem that does not exist. */
+      state.installerError = res.status === 401
+        ? 'Your session has ended — please sign in again.'
+        : (data.error || 'Could not load your leads.');
       return false;
     }
     state.leads = data.leads || [];
+    state.installerScope = data.scope || null;
     state.installerAuthed = true;
     state.leadsLoaded = true;
-    sessionStorage.setItem('fp_installer_pw', password);
     return true;
   } catch (err) {
     state.installerError = 'Could not reach the server.';
@@ -2893,6 +2926,15 @@ function buildSaveFraming() {
 
 function buildInstaller() {
   if (!state.installerAuthed) {
+    /* Accounts have a name now. Left blank with a shared INSTALLER_PASSWORD
+       still configured, the server falls back to that — so a deployment set
+       up before accounts existed keeps working with the password alone. */
+    const idInput = h('input', {
+      type: 'text', placeholder: 'Installer name', value: state.installerId,
+      'aria-label': 'Installer name', autocomplete: 'username',
+      className: 'flex-1 min-w-[150px] px-3 py-2.5 rounded-xl bg-white/5 border border-white/15 text-sm text-white placeholder:text-white/55 outline-none focus:border-white/50',
+      onInput: (e) => { state.installerId = e.target.value.trim(); },
+    });
     const pwInput = h('input', {
       type: 'password', placeholder: 'Installer password', value: state.installerPassword,
       'aria-label': 'Installer password', autocomplete: 'current-password',
@@ -2901,17 +2943,32 @@ function buildInstaller() {
     });
     const submit = async () => {
       if (!state.installerPassword) { state.installerError = 'Enter your password.'; renderInstallerOnly(); return; }
+      state.installerChecking = true; renderInstallerOnly();
+      if (state.installerId) {
+        const signed = await installerSignIn(state.installerId, state.installerPassword);
+        state.installerPassword = '';         // out of memory as soon as it has been exchanged
+        state.installerChecking = false;
+        if (!signed.ok) { state.installerError = signed.error; renderInstallerOnly(); return; }
+      } else {
+        /* No name: the shared password, which the server still accepts and
+           which sees every lead. Not persisted either way. */
+        state.installerToken = state.installerPassword;
+        state.installerPassword = '';
+        state.installerChecking = false;
+      }
       renderInstallerOnly();
-      const ok = await loadLeads(state.installerPassword);
+      const ok = await loadLeads(state.installerToken);
       renderInstallerOnly();
       if (ok) U('Signed in — showing homeowner designs');
     };
+    idInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
     pwInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
 
     return h('div', { id: 'installer', className: 'rounded-2xl bg-zinc-900 text-white p-5' }, [
       h('h3', { className: 'text-[11px] tracking-widest uppercase text-white/50' }, 'Installer sign in'),
-      h('p', { className: 'mt-2 text-[13px] leading-6 text-white/60 max-w-[54ch]' }, 'Homeowner designs include personal contact details, so this area is password-protected. Enter your installer password to continue.'),
+      h('p', { className: 'mt-2 text-[13px] leading-6 text-white/60 max-w-[54ch]' }, 'Homeowner designs include personal contact details, so this area is protected. Sign in with your installer name and password to see the enquiries sent to you.'),
       h('div', { className: 'mt-4 flex flex-wrap gap-2' }, [
+        idInput,
         pwInput,
         h('button', {
           type: 'button', disabled: state.installerChecking,
@@ -2934,8 +2991,8 @@ function buildInstaller() {
           type: 'button',
           className: 'text-[10px] px-2 py-1 rounded-full border border-white/20 text-white/70 hover:bg-white/10 transition',
           onClick: () => {
-            sessionStorage.removeItem('fp_installer_pw');
-            state.installerAuthed = false; state.installerPassword = ''; state.leads = []; state.installerError = '';
+            forgetInstaller();
+            state.installerPassword = ''; state.installerId = ''; state.installerError = '';
             renderInstallerOnly();
             U('Signed out of the installer area');
           }
@@ -3244,8 +3301,8 @@ document.getElementById('hero-upload')?.addEventListener('click', () => {
   await Promise.all([refreshPrice(), refreshWholeHouse()]);
   render();
   // If this tab already signed in to the installer area, restore it quietly.
-  if (state.installerPassword) {
-    await loadLeads(state.installerPassword);
+  if (state.installerToken) {
+    await loadLeads(state.installerToken);
     renderInstallerOnly();
   }
 })();

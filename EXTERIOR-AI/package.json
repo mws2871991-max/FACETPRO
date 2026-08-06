@@ -9,7 +9,8 @@
     "validate": "node scripts/validate-measurements.js",
     "set-domain": "node scripts/set-domain.js",
     "build:css": "node scripts/prestart-css.js",
-    "prestart": "node scripts/prestart-css.js"
+    "prestart": "node scripts/prestart-css.js",
+    "installer-password": "node scripts/installer-password.js"
   },
   "license": "ISC",
   "dependencies": {

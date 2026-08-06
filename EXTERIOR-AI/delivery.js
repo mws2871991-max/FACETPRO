@@ -19,6 +19,7 @@
 'use strict';
 
 const routing = require('./routing');
+const installers = require('./installers');
 
 const DEFAULT_ATTEMPTS = 3;
 const DEFAULT_TIMEOUT_MS = 10000;
@@ -84,6 +85,24 @@ function parseRecipients(raw, { legacyUrl } = {}) {
           leadPrice = n;
         }
       }
+      /* An account, so this installer can log in and see their own leads
+         rather than everybody's. Optional: a recipient may be a CRM with no
+         human behind it, and one that cannot log in is not a fault.
+
+         Stored as a hash — nobody needs to read it back, and LEAD_RECIPIENTS
+         is visible to anyone with dashboard access. Generate one with
+         `npm run installer-password`. */
+      const passwordHash = String(r?.passwordHash || '').trim() || null;
+      if (r?.password) {
+        problems.push(`LEAD_RECIPIENTS[${i}] (${id}) has a plaintext "password" — use passwordHash and \`npm run installer-password\` to make one. The plaintext value has been ignored.`);
+      }
+      if (passwordHash && !/^scrypt\$/.test(passwordHash)) {
+        problems.push(`LEAD_RECIPIENTS[${i}] (${id}) has a passwordHash that is not in the expected format — that installer cannot log in.`);
+      }
+
+      /* What was checked before calling them vetted. See installers.js. */
+      const verification = installers.readVerification(r);
+
       out.push({
         id,
         name: String(r?.name || id).trim(),
@@ -91,6 +110,8 @@ function parseRecipients(raw, { legacyUrl } = {}) {
         areas,
         trades,
         leadPrice,
+        passwordHash,
+        verification,
         headers: (r && typeof r.headers === 'object' && r.headers) || {},
       });
     });
