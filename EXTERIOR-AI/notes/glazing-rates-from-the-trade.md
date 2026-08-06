@@ -79,6 +79,31 @@ Two dimensions the catalogue does not model: **bifold width** (a 3 m unit is
 quoted, ours is one flat price) and **opener count** (×2.37 on a standard
 window).
 
+### The model is right. One number is wrong.
+
+A sash window, 900 x 1700 including the box, at £3,890 list. Against the
+standard casement with two openers at £2,247, Anglian's implied sash premium
+is **x1.73**. Our styleMultipliers has sliding-sash at **x1.65**.
+
+That is close enough to say the multipliers were well judged. And it holds
+across the rest:
+
+| | ours | Anglian settled | factor |
+|---|---|---|---|
+| Composite door | £2,000 | £3,241 | x1.62 |
+| Standard window, 2 openers | £850 | £1,348 | x1.59 |
+| Sash 900 x 1700 | £1,402 | £2,334 | x1.66 |
+| Bifold, 3 m | £4,000 | £7,982 | **x2.00** |
+
+Everything but the bifold sits at about **x1.6**, and the bifold is out
+because width is not modelled — a 3 m unit is a bigger thing than our generic
+one, so the gap there is a missing dimension rather than a wrong price.
+
+**So this is not a rebuild.** The structure, the bands and the multipliers all
+hold. What is wrong is a single scalar on the base prices, and it is only
+wrong at all if the estimate is meant to describe Anglian rather than Zenith —
+which is the open decision, not a defect.
+
 **Still unknown: whether these are inclusive or exclusive of VAT.** The
 figures given on 3 August were inclusive. These have not been stated, and it
 moves everything by 20%.
