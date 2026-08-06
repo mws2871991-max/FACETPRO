@@ -104,7 +104,41 @@ hold. What is wrong is a single scalar on the base prices, and it is only
 wrong at all if the estimate is meant to describe Anglian rather than Zenith —
 which is the open decision, not a defect.
 
-**Still unknown: whether these are inclusive or exclusive of VAT.** The
+### VAT basis confirmed — all inclusive
+
+Every figure given on 6 August is **inclusive of VAT**, and the 40% discount
+comes off the inclusive price. Our catalogue stores net and grosses up, so all
+the comparisons above were inclusive against inclusive and none of them needs
+revising.
+
+| product | list | settled | ours | factor |
+|---|---|---|---|---|
+| uPVC front / back door | £2,893 | £1,736 | not priced | — |
+| Composite door | £5,401 | £3,241 | £2,000 | x1.62 |
+| Sliding / double | £5,058 | £3,035 | not priced | — |
+| Bifold, 3 m | £13,304 | £7,982 | £4,000 | x2.00 |
+| Window, **no** openers | £950 | £570 | £850 | **x0.67** |
+| Window, 2 openers | £2,247 | £1,348 | £850 | x1.59 |
+| Sash 900 x 1700 | £3,890 | £2,334 | £1,402 | x1.66 |
+
+### The windows need a dimension, not a scalar
+
+That x0.67 is the important row. Against a window with **no** openers our £850
+is **49% too dear**; against the same window with two it is **37% too cheap**.
+One number is standing in for a x2.37 spread, so it is wrong in both
+directions and the average is right for almost nobody.
+
+A scalar cannot fix that. Openers have to be a dimension of the price.
+
+Doors are different: there the gap is a clean x1.6 and a scalar does fix it,
+once uPVC, sliding and double are added. Bifold needs width.
+
+So the work divides:
+
+- **doors** — add three products, apply the scalar if the estimate is to
+  describe Anglian
+- **windows** — add opener count, which the photograph cannot supply, so ask
+- **bifold** — add width The
 figures given on 3 August were inclusive. These have not been stated, and it
 moves everything by 20%.
 
