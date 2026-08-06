@@ -936,6 +936,9 @@ const state = {
      server signed, good for four hours and for one installer — so a future
      DOM mistake leaks something that expires, rather than the credential for
      every installer for ever. The old key is cleared on sight. */
+  /* How many of their windows open. Null until asked, because "not told"
+     and "none" are different answers and only one of them changes the price. */
+  openerCount: null,
   installerPassword: '',
   installerId: sessionStorage.getItem('fp_installer_id') || '',
   installerToken: (() => { try { sessionStorage.removeItem('fp_installer_pw'); } catch (_) {} return sessionStorage.getItem('fp_installer_token') || ''; })(),
@@ -1965,6 +1968,7 @@ async function refreshGlazing() {
         doorStyleId: state.prefs.doorStyleId,
         windowDoorColourId: state.prefs.windowDoorColourId,
         windowCount: state.windowCount,
+        openerCount: state.openerCount,
       }),
     });
     const data = await res.json();
@@ -2248,6 +2252,35 @@ function buildDetailOptions() {
         ]),
       ]),
 
+      /* The one thing a photograph cannot tell us.
+
+         A fixed light and a top-opener look identical from the pavement, and
+         the difference between them is x2.37 — £570 against £1,348 on a
+         standard window once the discount is applied. One band price is
+         therefore wrong in both directions, and no amount of measuring fixes
+         it, so the product asks.
+
+         Optional on purpose. Unanswered leaves the typical case standing,
+         which is what the estimate has always been — a required question here
+         would cost more in abandoned estimates than it gains in accuracy. */
+      h('div', { className: 'mt-3 pt-3 border-t border-zinc-200' }, [
+        h('div', { className: 'text-[12px] text-zinc-600' }, 'How many parts of a typical window open?'),
+        h('p', { className: 'mt-1 text-[11px] leading-5 text-zinc-500' },
+          'The panes that swing or tilt, not the fixed ones. It changes the price more than the size does, and it is the one thing your photo cannot show us.'),
+        h('div', { className: 'mt-2 flex flex-wrap gap-2' },
+          [['None', 0], ['One', 1], ['Two', 2], ['Three', 3], ['Not sure', null]].map(function (opt) {
+            var label = opt[0], n = opt[1];
+            var on = state.openerCount === n;
+            return h('button', {
+              type: 'button',
+              className: 'px-3 py-1.5 rounded-full border text-[12px] transition ' + (on ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-300 hover:border-zinc-900'),
+              onClick: function () { state.openerCount = n; refreshGlazing(); },
+            }, label);
+          })),
+        state.openerCount === null
+          ? h('p', { className: 'mt-2 text-[11px] leading-5 text-zinc-500' }, 'Most windows have one. That is what this estimate assumes.')
+          : null,
+      ]),
       /* The rates behind this are not sourced yet, and saying so is not
          optional: an itemised, VAT-inclusive figure built from placeholder
          rates, presented as though it were the sourced cladding pricing, is

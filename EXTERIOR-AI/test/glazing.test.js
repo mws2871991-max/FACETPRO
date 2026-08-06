@@ -366,3 +366,58 @@ test('a plausible semi lands in a plausible range', () => {
   const t = base().price.total;
   assert.ok(t > 3000 && t < 30000, `£${t} is not a plausible semi`);
 });
+
+/* ── opening lights ──
+
+   A photograph cannot show whether a pane opens, and the difference is x2.37:
+   £570 against £1,348 on a standard window once the 40% discount is applied.
+   One band price was therefore wrong in both directions — 49% dear against a
+   fixed pane, 37% cheap against one with two openers — and the average suited
+   almost nobody.
+
+   So the product asks, and this is what the answer does. */
+
+test('the bands assume one opener, so saying "one" changes nothing', () => {
+  const none = sourced({ openerCount: undefined });
+  const one = sourced({ openerCount: 1 });
+  assert.strictEqual(one.price.total, none.price.total,
+    'the typical case moved, which means the bands and typicalOpeners disagree');
+});
+
+test('fewer openers costs less and more costs more, per window', () => {
+  const r = (n) => sourced({ openerCount: n });
+  const fixed = r(0), one = r(1), two = r(2);
+  assert.ok(fixed.price.total < one.price.total, 'a fixed pane cost the same as an opening one');
+  assert.ok(two.price.total > one.price.total);
+  /* The step is the same in both directions and scales with the house. */
+  const down = one.price.total - fixed.price.total;
+  const up = two.price.total - one.price.total;
+  assert.ok(Math.abs(down - up) <= 2, `steps disagree: ${down} vs ${up}`);
+});
+
+test('the step matches the trade figures it came from', () => {
+  /* £389 inclusive per opener, per window — from £570 with none and £1,348
+     with two. Wrong here means the estimate has quietly drifted from the only
+     measurement behind it. */
+  const one = sourced({ openerCount: 1 });
+  const two = sourced({ openerCount: 2 });
+  const perWindowInc = (two.price.total - one.price.total) / one.windowCount;
+  assert.ok(Math.abs(perWindowInc - 389) < 12,
+    `£${Math.round(perWindowInc)} per opener per window, expected about £389`);
+});
+
+test('an implausible or missing answer leaves the typical case alone', () => {
+  /* Nought to six is a window. Seven is a mistyped answer, and a number
+     somebody fat-fingered must not multiply into a price they act on. */
+  const typical = sourced({ openerCount: undefined }).price.total;
+  for (const bad of [null, undefined, -1, 7, 99, 'two', NaN]) {
+    assert.strictEqual(sourced({ openerCount: bad }).price.total, typical,
+      `openerCount=${String(bad)} changed the price`);
+  }
+});
+
+test('the answer is reported back, so the lead records what was asked', () => {
+  assert.strictEqual(sourced({ openerCount: 2 }).openerCount, 2);
+  assert.strictEqual(sourced({ openerCount: undefined }).openerCount, null,
+    '"not asked" and "none" must not look the same');
+});

@@ -1816,7 +1816,7 @@ app.post('/api/coverage', coverageLimiter, (req, res) => {
    caveat the client renders — every figure here is a guide until a supplier
    rate card replaces catalogue.glazing. */
 app.post('/api/glazing', (req, res) => {
-  const { detectionId, houseType, windowStyleId, doorStyleId, windowDoorColourId, windowCount } = req.body || {};
+  const { detectionId, houseType, windowStyleId, doorStyleId, windowDoorColourId, windowCount, openerCount } = req.body || {};
 
   /* No style chosen, no price. The module will happily price a default set,
      which is the right behaviour for a module and the wrong one for an
@@ -1840,6 +1840,7 @@ app.post('/api/glazing', (req, res) => {
       selections: { windowStyleId, doorStyleId, windowDoorColourId },
       rates: catalogue.glazing,
       windowCountOverride: windowCount,
+      openerCount,
     });
     res.json({ ...result, ratesSourced: GLAZING_RATES_SOURCED });
   } catch (err) {

@@ -361,7 +361,35 @@ function priorWindows({ houseType, bands }) {
    Rates come from catalogue.glazing. Nothing here invents a number, and a
    missing rate throws rather than silently defaulting to zero — a glazing
    quote that quietly omits a line is worse than no quote. */
-function priceGlazing({ windows, totalCount, selections, rates, houseType }) {
+/* How many opening lights, and what they cost.
+
+   A window with none and the same window with two are a x2.37 difference —
+   £570 against £1,348 once the discount is applied — so one band price is
+   wrong in both directions at once. Ours was 49% dear against a fixed pane
+   and 37% cheap against one with two openers, and the average was right for
+   almost nobody.
+
+   A photograph cannot supply this. A fixed light and a top-opener look the
+   same from the pavement, and guessing would put a number the homeowner acts
+   on behind an inference the picture does not support. So the product asks,
+   and when it is not answered the band price stands as the typical case.
+
+   The band prices are treated as the one-opener price because that is the
+   common window. Zero subtracts one opener, three adds two. */
+function openerAdjustment(rates, windows, openerCount) {
+  const cost = Number(rates?.openerCost);
+  const typical = Number(rates?.typicalOpeners ?? 1);
+  if (!Number.isFinite(cost) || cost <= 0) return 0;
+  if (openerCount === undefined || openerCount === null) return 0;
+  const n = Number(openerCount);
+  /* Nought to six. Above that it is a curtain wall, not a window, and a
+     number somebody mistyped should not multiply into the estimate. */
+  if (!Number.isFinite(n) || n < 0 || n > 6) return 0;
+  const units = windows.reduce((t, w) => t + (w.count || 1), 0);
+  return (n - typical) * cost * units;
+}
+
+function priceGlazing({ windows, totalCount, selections, rates, houseType , openerCount }) {
   // Unreachable through estimateGlazing, which enforces a minimum — but this
   // is exported, and dividing by zero here turns every money field into NaN
   // quietly rather than loudly.
@@ -426,7 +454,12 @@ function priceGlazing({ windows, totalCount, selections, rates, houseType }) {
      Disposal of the old frames is a separate, per-unit line. */
   const disposal = (rates.disposalPerUnit ?? 0) * (Math.round(totalCount) + doorSelections.length);
 
-  let net = supplyFit + doors + access + disposal;
+  /* Opening lights, if the homeowner told us. Scaled to the whole-house count
+     the same way supplyFit is, because the answer describes their windows
+     rather than the four visible in the photograph. */
+  const openers = openerAdjustment(rates, [{ count: Math.round(totalCount) }], openerCount);
+
+  let net = supplyFit + doors + access + disposal + openers;
 
   // A minimum job charge, because two windows do not cost two-elevenths of
   // eleven windows — the van, the survey and the day are the same.
@@ -441,6 +474,7 @@ function priceGlazing({ windows, totalCount, selections, rates, houseType }) {
 
   return {
     supplyFit: round(supplyFit),
+    openers: round(openers),
     doors: round(doors),
     access: round(access),
     disposal: round(disposal),
@@ -468,6 +502,7 @@ function priceGlazing({ windows, totalCount, selections, rates, houseType }) {
    uploaded a photo of their house should never be told the tool has no
    opinion about it. */
 function estimateGlazing({
+  openerCount,
   detections = [],
   aspectRatio,
   houseType,
@@ -532,6 +567,7 @@ function estimateGlazing({
     selections,
     rates,
     houseType: key,
+    openerCount,
   });
 
   const spread = countSource === 'manual_entry'
@@ -540,6 +576,7 @@ function estimateGlazing({
 
   return {
     countSource,
+    openerCount: (openerCount === undefined || openerCount === null) ? null : Number(openerCount),
     houseType: key,
     windowCount: totalCount,
     countCapped,

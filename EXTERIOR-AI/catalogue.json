@@ -640,6 +640,9 @@
       "semi": 2.6,
       "detached": 3,
       "bungalow": 2.4
-    }
+    },
+    "openerCost": 324,
+    "typicalOpeners": 1,
+    "openerNote": "Cost of one opening light, net, on top of the band price. The bands assume one opener, which is the common case. Derived from a standard window quoted at £950 with none and £2,247 with two, less the 40% discount: £570 and £1,348 inclusive, so £389 inclusive per opener, £324 net. Flat rather than scaled by band, because an opening light is hardware and frame rather than glass — it costs much the same in a small window as a large one. One measured product; revisit when there are more."
   }
 }
