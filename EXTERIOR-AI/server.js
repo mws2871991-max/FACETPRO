@@ -88,17 +88,20 @@ app.use(express.json({ limit: '128kb' }));
    /legal. Anything else 404s. */
 const PUBLIC_FILES = new Set([
   '/index.html',
-  /* guided-demo.html is deliberately not here. It is an unmaintained fork of
-     the product UI: it asks for a real email address and posts it to
-     /api/lead with no consent object at all, derives a name by splitting the
-     email on "@", and links to neither the privacy notice nor the terms.
-     Nothing links to it, and it carries a canonical tag, so the only visitors
-     it would ever have had were search engines.
+  /* guided-demo.html used to sit in the repository, deliberately absent from
+     this list. It was an unmaintained fork of the product UI: it asked for a
+     real email address and posted it to /api/lead with no consent object,
+     derived a name by splitting the address on "@", and linked to neither the
+     privacy notice nor the terms.
 
-     The consent gate on /api/lead means no lead was ever created from it —
-     but the address still reached us, from a page that told the visitor
-     nothing about what we do with it. Kept in the repo for the walkthrough
-     copy; not served. */
+     It is now deleted rather than merely unlisted. The only thing standing
+     between that file and a live form collecting personal data with no lawful
+     basis was one entry missing from a set, and this codebase has spent a
+     week finding things guarded by exactly that kind of arrangement — a CSS
+     class nothing set, robots.txt used as access control, a CI job nobody
+     read. A file that must never be served is safest when it does not exist.
+
+     It is in the git history if the walkthrough copy is ever wanted back. */
   '/robots.txt',
   '/sitemap.xml',
 ]);

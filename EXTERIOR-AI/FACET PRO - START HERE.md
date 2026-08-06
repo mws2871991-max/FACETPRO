@@ -15,7 +15,7 @@ Features:
 - Installer: homeowner designs and their estimates, measurement_source flag, CRM push
 
 ## Demo Video (Option C)
-- `guided-demo.html` — upload your screen recording MP4
+
 - Chapters at 0s/12s/28s/45s/68s/82s, captions, voiceover speak, speed 1x/1.5x/2x, CC toggle
 - Not linked from the site and marked noindex: it's a sales/demo tool, reachable
   by direct URL only

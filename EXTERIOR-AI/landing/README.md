@@ -2,7 +2,7 @@
 
 Not served. `exterior-v5.html` is a design candidate under review, not part of
 the app — `PUBLIC_FILES` in `server.js` does not list it, so it 404s like
-`guided-demo.html` does. It lives here to be version-controlled and diffable
+the old guided demo did, before it was deleted. It lives here to be version-controlled and diffable
 while the claims in it are worked through, because that is the whole problem
 with these artifacts: the untrue parts are not the ones that look untrue.
 

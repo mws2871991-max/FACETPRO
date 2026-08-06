@@ -14,7 +14,10 @@
 
    and the second fails silently, rendering unstyled with no error. */
 module.exports = {
-  content: ['./index.html', './legal/*.html', './guided-demo.html'],
+  /* guided-demo.html was here and is deleted — it collected an email with no
+     consent object. A glob pointing at a missing file is tolerated silently,
+     which is exactly how a stale one survives. */
+  content: ['./index.html', './legal/*.html', './gated/*.html'],
   theme: { extend: {} },
   plugins: [],
 };

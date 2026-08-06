@@ -347,11 +347,21 @@ test('an invalid email is refused', async () => {
   assert.strictEqual(status, 400);
 });
 
-test('the guided demo is not published', async () => {
-  /* An unmaintained fork of the product UI that asks for a real email address
-     and posts it to /api/lead with no consent object, and links to neither the
-     privacy notice nor the terms. Nothing links to it, and it carried a
-     canonical tag, so its only visitors would have been search engines. */
+test('the guided demo is gone, not merely unlisted', async () => {
+  /* It was an unmaintained fork of the product UI that asked for a real email
+     address and posted it to /api/lead with no consent object, linking to
+     neither the privacy notice nor the terms.
+
+     The 404 is still asserted, but the file is asserted absent too. Unlisted
+     meant one missing entry in a set stood between it and a live form
+     collecting personal data with no lawful basis — the same shape as a CSS
+     class nothing set and robots.txt used as access control. A file that must
+     never be served is safest when it is not there. */
   const { status } = await get('/guided-demo.html');
   assert.strictEqual(status, 404, 'it collects an email address from a page with no privacy notice');
+
+  const fsync = require('fs');
+  const p = require('path');
+  assert.ok(!fsync.existsSync(p.join(__dirname, '..', 'guided-demo.html')),
+    'guided-demo.html is back in the repository — it collects an email with no consent object');
 });

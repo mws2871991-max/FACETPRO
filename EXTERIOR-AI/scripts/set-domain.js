@@ -17,7 +17,6 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 const FILES = [
   'index.html',
-  'guided-demo.html',
   'legal/privacy.html',
   'legal/terms.html',
   'robots.txt',

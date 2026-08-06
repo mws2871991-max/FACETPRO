@@ -541,7 +541,7 @@ blocked even inside a public directory, and dotfiles are denied outright.
 If you add a new public page or asset directory, add it to `PUBLIC_FILES` or
 `PUBLIC_DIRS` in `server.js` — it will 404 until you do.
 
-`guided-demo.html` is deliberately **not** served. It is an unmaintained fork
+`guided-demo.html` has been **deleted**. It was an unmaintained fork
 of the product UI: it asks for a real email address and posts it to
 `/api/lead` with no consent object, and links to neither the privacy notice
 nor the terms. It stays in the repo for the walkthrough copy.
