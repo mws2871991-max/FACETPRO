@@ -77,7 +77,7 @@ question, not a DNS change.
 
 ## What is actually configured on the live service
 
-Checked 2026-08-04.
+Checked 2026-08-04, and again on 2026-08-06 — the Anthropic key and INSTALLER_TOKEN_SECRET rows are from the later check.
 
 | Variable | State | Consequence |
 |---|---|---|
@@ -87,7 +87,7 @@ Checked 2026-08-04.
 | `LEAD_FROM_EMAIL` | missing | Needs a domain verified at resend.com |
 | `LEAD_RECIPIENTS` | missing | `/api/coverage` reports `installers: 0` |
 | `DATABASE_URL` | missing | See storage, below |
-| `INSTALLER_PASSWORD` | missing | Installer routes 503 — fails closed, by design |
+| `INSTALLER_PASSWORD` | missing | The shared credential, from before accounts existed. Unauthenticated installer requests get 401 either way. Once any installer account is configured this is refused on a deployment, so it cannot reopen the whole estate behind the privacy notice |
 | `INVESTOR_PASSWORD` | **set** | Gates `/investors`. Unset means that page 404s, deliberately — see below |
 | `INSTALLER_TOKEN_SECRET` | missing | Signs installer sign-in tokens. Unset means one is generated at boot, so every installer is signed out on each deploy |
 | `LEAD_CAPTURE` | set (`off`) | Correct. Must stay off until the legal pages are finished |
