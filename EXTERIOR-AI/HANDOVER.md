@@ -1,6 +1,6 @@
 # Facet Pro — developer handover
 
-Written 2026-08-04, corrected 2026-08-05 against the current commit. Every claim below was checked
+Written 2026-08-04, corrected 2026-08-05 and again 2026-08-06 against the current commit. Every claim below was checked
 against the running service rather than inferred from the code, because the
 two previous handovers were both wrong in the same direction: they described
 what somebody intended to do as though it had been done.
@@ -89,6 +89,7 @@ Checked 2026-08-04.
 | `DATABASE_URL` | missing | See storage, below |
 | `INSTALLER_PASSWORD` | missing | Installer routes 503 — fails closed, by design |
 | `INVESTOR_PASSWORD` | **set** | Gates `/investors`. Unset means that page 404s, deliberately — see below |
+| `INSTALLER_TOKEN_SECRET` | missing | Signs installer sign-in tokens. Unset means one is generated at boot, so every installer is signed out on each deploy |
 | `LEAD_CAPTURE` | set (`off`) | Correct. Must stay off until the legal pages are finished |
 | `SITE_MODE` | `beta` | Shows the calibration honesty badge. Keep until measurements are validated |
 
@@ -186,13 +187,62 @@ are more.
 
 ---
 
+## Added 6 August
+
+**Installer accounts.** `installers.js`. One account per installer, as a
+`passwordHash` on the `LEAD_RECIPIENTS` entry — scrypt, per-installer salt.
+`POST /api/installer/login` exchanges a name and password for a token good
+for four hours and for one installer, and the browser stores that rather than
+the password. `/api/leads` shows a signed-in installer only the leads the
+delivery log says they actually received; the shared `INSTALLER_PASSWORD`
+still works and is scoped `all` rather than pretending to be somebody.
+`npm run installer-password -- "the password"` makes a hash.
+
+Verification evidence is stored with them — company number, insurance provider
+and expiry, trade body, parent company. That is the answer to the placeholder
+in `legal/terms.html` asking what "vetted" means.
+
+**Observability.** `observability.js` and `GET /api/ops`, behind the
+installer password. A bounded ring of recent failures, counts by kind, today's
+spend against the caps. Six of its nine tests are about scrubbing personal
+data out of error messages rather than about recording them. In memory only,
+and it says so in its own output, because the live service has no volume.
+
+**Backups.** `scripts/backup-and-verify.js` exports every table, restores it
+into a scratch schema and compares by checksum. The privacy notice promises
+"we test that we can restore them" and nobody ever had. The first run failed:
+every timestamp shifted by the machine's UTC offset and microseconds were
+truncated, because a JavaScript `Date` carries neither. Row counts matched
+perfectly throughout. Fixed by round-tripping raw text.
+
+**A second Facet Pro.** `facetpro-backend` is not dead weight — see the
+services table above and `notes/from-the-first-facetpro.md`, which records
+what its schema knew before that database is deleted.
+
+---
+
 ## Pricing: what is real and what is not
+
+Substantially rewritten on 6 August from list prices the owner supplied. See
+`notes/glazing-rates-from-the-trade.md` for the working.
 
 | | Source |
 |---|---|
 | Cladding, roof, roofline, scaffolding, waste, VAT | Real rates from the production backend. **Never validated against a completed job** |
-| Composite door £2,000 · bifold £4,000 (inc VAT) | Real settled prices, 24 years in the trade |
-| **Window bands £504 / £708 / £1,032 / £1,416** | **Invented.** Uplifted 20% on judgement, on no stated VAT basis |
+| Six doors, £1,085 to £4,988 inc VAT | Derived as Anglian list less the 40% discount, divided by 1.6. The composite door is the check on that rule rather than a product of it |
+| Four window bands, plus **£324 net per opening light** | Confirmed by the owner, then checked against Anglian list prices for six products |
+
+**The estimate is a range across both installers**, ×0.88 to ×1.6, with a
+separate "if you don't negotiate" figure at ×2.0. Those multiples were derived
+from two door products and have since held across six.
+
+**Openers are a dimension, not a scalar.** A standard window is £570 with none
+and £1,348 with two — ×2.37 — so one band price was 49% dear against a fixed
+pane and 37% cheap against one with two. A photograph cannot tell which, so
+the product asks and leaves the typical case standing when it is not answered.
+
+Still not modelled: bifold widths between 2.4 m and 3 m, anything wider, and
+whether the flat per-opener cost holds across band sizes.
 
 `catalogue.glazing.source` says so in the file, and the app labels every window
 estimate as a guide. Do not present window figures as firm. When real band
