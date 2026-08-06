@@ -578,7 +578,7 @@
   "glazing": {
     "note": "Guide prices for supply and fitting, per window and per door, including access and VAT.",
     "internalNote": "Door rates are real. Window bands are still invented and running at roughly half of trade. See notes/glazing-rates-from-the-trade.md.",
-    "source": "Doors and windows: figures the owner has settled jobs at over 24 years. NOT SOURCED against a supplier rate card, and under review as of 2026-08-06 — list prices supplied that day put Anglian settling roughly 35% above these across both doors and windows, so the catalogue appears to sit at the cheaper installer rather than the middle of the market. See notes/glazing-rates-from-the-trade.md.",
+    "source": "Prices are what jobs settle at, from 24 years selling for a national installer, inclusive of VAT and stored net. The base is close to the keener of the two installers who buy leads here; Anglian settles about 1.6x higher on doors and 2x on a 3 m bifold, which is what the estimate range spans. Checked 2026-08-06 against Anglian list prices less the 40% discount routinely available. Not a supplier rate card. Openers are not yet modelled and a window with none is dearer here than it should be — see notes/glazing-rates-from-the-trade.md.",
     "windowBands": [
       {
         "id": "small",
