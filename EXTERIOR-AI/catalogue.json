@@ -411,16 +411,40 @@
     ],
     "doorStyles": [
       {
+        "id": "upvc",
+        "name": "uPVC door",
+        "detail": "Front or back",
+        "description": "The everyday front or back door — uPVC frame and panel, weather-sealed and low maintenance. The most common choice, and the least expensive."
+      },
+      {
         "id": "composite",
         "name": "Composite Door",
         "detail": "Solid panel",
         "description": "Solid, high-security composite panel door — durable, low-maintenance, and available in any colour."
       },
       {
+        "id": "double",
+        "name": "Double doors",
+        "detail": "Two opening leaves",
+        "description": "A pair of doors opening from the middle, usually onto a garden or a patio."
+      },
+      {
+        "id": "sliding",
+        "name": "Sliding patio door",
+        "detail": "Slides on a track",
+        "description": "Two or more panels sliding past each other. Takes no floor space to open, which suits a smaller room."
+      },
+      {
         "id": "bifold",
-        "name": "Bifold",
+        "name": "Bifold, up to 2.4 m",
         "detail": "3-panel fold",
         "description": "Folding panels that stack to one side, opening the full width onto a garden or patio."
+      },
+      {
+        "id": "bifold-3m",
+        "name": "Bifold, 3 m",
+        "detail": "Wider fold",
+        "description": "The same folding doors across a wider opening. Priced separately because width is most of the cost."
       }
     ],
     "colours": [
@@ -619,14 +643,34 @@
     "nonWhiteUplift": 1.08,
     "doors": [
       {
+        "id": "upvc",
+        "name": "uPVC front or back door",
+        "supplyFit": 904
+      },
+      {
         "id": "composite",
         "name": "Composite Door",
         "supplyFit": 1667
       },
       {
+        "id": "double",
+        "name": "Double doors",
+        "supplyFit": 1581
+      },
+      {
+        "id": "sliding",
+        "name": "Sliding patio door",
+        "supplyFit": 1581
+      },
+      {
         "id": "bifold",
-        "name": "Bifold",
+        "name": "Bifold, up to 2.4 m",
         "supplyFit": 3333
+      },
+      {
+        "id": "bifold-3m",
+        "name": "Bifold, 3 m",
+        "supplyFit": 4157
       }
     ],
     "accessCost": 780,
@@ -643,6 +687,7 @@
     },
     "openerCost": 324,
     "typicalOpeners": 1,
-    "openerNote": "Cost of one opening light, net, on top of the band price. The bands assume one opener, which is the common case. Derived from a standard window quoted at £950 with none and £2,247 with two, less the 40% discount: £570 and £1,348 inclusive, so £389 inclusive per opener, £324 net. Flat rather than scaled by band, because an opening light is hardware and frame rather than glass — it costs much the same in a small window as a large one. One measured product; revisit when there are more."
+    "openerNote": "Cost of one opening light, net, on top of the band price. The bands assume one opener, which is the common case. Derived from a standard window quoted at £950 with none and £2,247 with two, less the 40% discount: £570 and £1,348 inclusive, so £389 inclusive per opener, £324 net. Flat rather than scaled by band, because an opening light is hardware and frame rather than glass — it costs much the same in a small window as a large one. One measured product; revisit when there are more.",
+    "doorNote": "Prices are net; VAT is added at the end. The new entries were derived on the same basis as the composite door already here: Anglian's list price, less the 40% discount routinely available, divided by 1.6 to bring it to the keener installer the rest of the catalogue describes. The check that the rule holds: composite comes out at £2,025 against the £2,000 already stored. Sliding and double doors are quoted at the same figure by Anglian and are stored the same. Bifold width rests on two points only — the existing entry and a 3 m unit at £13,304 list — so anything between them is not modelled and anything above 3 m is not priced."
   }
 }

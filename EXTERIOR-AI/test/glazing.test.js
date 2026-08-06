@@ -421,3 +421,40 @@ test('the answer is reported back, so the lead records what was asked', () => {
   assert.strictEqual(sourced({ openerCount: undefined }).openerCount, null,
     '"not asked" and "none" must not look the same');
 });
+
+/* ── the door range ── */
+
+test('every door offered can be priced, and every priced door is offered', () => {
+  /* Two lists in one file, and nothing kept them together. A door in the
+     picker with no rate throws when somebody chooses it; a rate with no
+     picker entry is money left on the table quietly. */
+  const priced = new Set(catalogue.glazing.doors.map(d => d.id));
+  const offered = new Set(catalogue.windowsDoors.doorStyles.map(d => d.id));
+  assert.deepStrictEqual([...offered].filter(id => !priced.has(id)), [],
+    'a door is offered that cannot be priced');
+  assert.deepStrictEqual([...priced].filter(id => !offered.has(id)), [],
+    'a door is priced that nobody can choose');
+});
+
+test('the doors sit in the order the trade sells them', () => {
+  /* uPVC is the volume product and the cheapest; a 3 m bifold is the dearest
+     thing on the list. If that inverts, a price has been mistyped. */
+  const p = (id) => catalogue.glazing.doors.find(d => d.id === id).supplyFit;
+  assert.ok(p('upvc') < p('composite'), 'uPVC is not cheaper than composite');
+  assert.ok(p('composite') < p('bifold'), 'a composite door costs more than a bifold');
+  assert.ok(p('bifold') < p('bifold-3m'), 'a 3 m bifold is not dearer than a narrower one');
+  assert.strictEqual(p('sliding'), p('double'), 'sliding and double are quoted alike and were stored alike');
+});
+
+test('the new doors were derived on the same basis as the one already here', () => {
+  /* base = Anglian settled / 1.6. The composite was in the catalogue before
+     that rule was written down, so it is the check on the rule: if the
+     arithmetic is right it reproduces a figure nobody derived that way. */
+  const vat = 1 + (catalogue.glazing.vatPct / 100);
+  const fromList = (listInc) => (listInc * 0.6) / 1.6 / vat;
+  const p = (id) => catalogue.glazing.doors.find(d => d.id === id).supplyFit;
+  assert.ok(Math.abs(fromList(5401) - p('composite')) / p('composite') < 0.03,
+    'the rule does not reproduce the composite door already in the catalogue');
+  assert.ok(Math.abs(fromList(2893) - p('upvc')) / p('upvc') < 0.03, 'uPVC does not follow the rule');
+  assert.ok(Math.abs(fromList(5058) - p('sliding')) / p('sliding') < 0.03, 'sliding does not follow the rule');
+});

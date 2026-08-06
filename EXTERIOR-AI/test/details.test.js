@@ -48,7 +48,9 @@ const lead = (extra) => post('/api/lead', {
 test('both catalogue sections are present and complete', () => {
   const wd = catalogue.windowsDoors;
   assert.strictEqual(wd.windowStyles.length, 4);
-  assert.strictEqual(wd.doorStyles.length, 2);
+  /* Was 2, composite and bifold. Now six: uPVC, composite, double, sliding,
+     and bifolds at two widths — the products Anglian actually quotes. */
+  assert.strictEqual(wd.doorStyles.length, 6);
   assert.strictEqual(wd.colours.length, 6);
   for (const c of wd.colours) assert.match(c.hex, /^#[0-9A-Fa-f]{6}$/, `${c.id} needs a hex`);
   for (const s of [...wd.windowStyles, ...wd.doorStyles]) {
@@ -97,7 +99,9 @@ test('preferences are resolved from our catalogue onto the lead', async () => {
   assert.strictEqual(status, 200);
   const p = body.lead.preferences;
   assert.strictEqual(p.windows.style.name, 'Sliding Sash');
-  assert.strictEqual(p.windows.door.name, 'Bifold');
+  /* Renamed when a 3 m bifold was added beside it — width is most of the
+     cost, so the two are separate products and the narrower one says so. */
+  assert.strictEqual(p.windows.door.name, 'Bifold, up to 2.4 m');
   assert.strictEqual(p.windows.colour.hex, '#5B7C5B');
   assert.strictEqual(p.roofline.fascia.name, 'Ogee');
   assert.strictEqual(p.roofline.soffit.name, 'Vented');
