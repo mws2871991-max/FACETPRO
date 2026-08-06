@@ -1141,6 +1141,35 @@ async function fileToBase64(file) {
 
 // ---------- small DOM helpers ----------
 
+/* A render URL we are willing to put in a src attribute.
+
+   /api/render returns one of two things: "/r/<id>" when the image was stored
+   and served from here, or the provider's https URL when storage failed and
+   we fell back. Everything else is refused.
+
+   emails.js has had safeUrl() doing exactly this for the email templates
+   since the beginning, and test/renders.test.js proves javascript: and
+   data:text/html are refused there. The DOM path never had the equivalent —
+   the test suite and the code disagreed about whether this mattered, and the
+   tests were right.
+
+   Exploiting it would need our own server to return a hostile url, which
+   today means Replicate returning one, and an <img src> is a poor place to
+   execute anything anyway. It is one line, the pattern already exists, and
+   "not currently reachable" is a worse reason to leave a hole than "cheap to
+   close" is to close it.
+
+   A reviewer proposed /^https?:\/\//, which would have refused "/r/<id>" —
+   the normal case — and broken every render that stored correctly. The shape
+   has to be checked against what the server actually returns. */
+const RENDER_ID = /^\/r\/[A-Za-z0-9_-]{8,}$/;
+function safeRenderUrl(u) {
+  const s = typeof u === 'string' ? u.trim() : '';
+  if (RENDER_ID.test(s)) return s;
+  if (/^https:\/\//i.test(s)) return s;
+  return null;
+}
+
 function h(tag, attrs = {}, children = []) {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) {
@@ -2515,7 +2544,7 @@ async function generateRealRender() {
     }
     if (!res.ok) throw new Error(data.error || 'Render failed');
     state.renderUnavailable = false;
-    state.renderUrl = data.url;
+    state.renderUrl = safeRenderUrl(data.url);
     state.renderId = data.renderId || null;
     U('Your new look is ready — drag the slider to compare');
   } catch (err) {

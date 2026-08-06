@@ -78,3 +78,64 @@ test('deleting counts renders, not the files behind them', async () => {
   assert.strictEqual(await store.deleteRenders(ids), ids.length);
   assert.strictEqual(await store.deleteRenders(ids), 0, 'gone means gone');
 });
+
+/* ── the same guarantee, on the DOM path ──
+
+   The test above proves a hostile renderUrl is refused in an email template,
+   because emails.js has had safeUrl() from the beginning. index.html assigned
+   the same value straight into an <img src> with nothing in between:
+
+     state.renderUrl = data.url;
+
+   So the suite and the code disagreed about whether the value could be
+   trusted, and the suite was right. This closes the asymmetry rather than
+   documenting it.
+
+   The function is read out of index.html and run, rather than checked for by
+   pattern — a regex that proves a validator is *mentioned* proves nothing
+   about what it accepts. */
+
+const { readFileSync } = require('fs');
+const { join } = require('path');
+
+function loadSafeRenderUrl() {
+  const html = readFileSync(join(__dirname, '..', 'index.html'), 'utf8');
+  const m = html.match(/const RENDER_ID = [^\n]+\nfunction safeRenderUrl\(u\) \{[\s\S]*?\n\}/);
+  assert.ok(m, 'safeRenderUrl has been renamed or removed from index.html');
+  return new Function(m[0].replace('const RENDER_ID', 'var RENDER_ID') + '; return safeRenderUrl;')();
+}
+
+test('the render URL the browser is given is validated before it reaches the DOM', () => {
+  const safe = loadSafeRenderUrl();
+
+  /* Both shapes /api/render actually returns: a stored render served from
+     here, and the provider URL we fall back to when storage failed. A
+     reviewer proposed testing for https only, which would have refused the
+     first — the normal case — and broken every render that worked. */
+  assert.strictEqual(safe('/r/abc123def456'), '/r/abc123def456', 'a stored render was refused');
+  assert.strictEqual(safe('https://replicate.delivery/x.jpg'), 'https://replicate.delivery/x.jpg');
+
+  for (const bad of [
+    'javascript:alert(1)',
+    'data:text/html,<script>alert(1)</script>',
+    '//evil.example/x.jpg',          // protocol-relative: inherits the page's scheme
+    'http://insecure.example/x.jpg', // a render of somebody's home over plain http
+    '/r/short',                      // too little entropy to be one of ours
+    '/etc/passwd',
+    null, undefined, '', 42, {},
+  ]) {
+    assert.strictEqual(safe(bad), null, `accepted a hostile render URL: ${String(bad)}`);
+  }
+});
+
+test('nothing assigns an unvalidated render URL', () => {
+  /* The validator only helps where it is called. This fails if somebody adds
+     a second assignment later and forgets. */
+  const html = readFileSync(join(__dirname, '..', 'index.html'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+  const assignments = [...html.matchAll(/state\.renderUrl\s*=\s*([^;\n]+)/g)].map(m => m[1].trim());
+  for (const a of assignments) {
+    assert.ok(/^null$/.test(a) || /safeRenderUrl\(/.test(a),
+      `state.renderUrl is assigned without validation: ${a.slice(0, 60)}`);
+  }
+});
