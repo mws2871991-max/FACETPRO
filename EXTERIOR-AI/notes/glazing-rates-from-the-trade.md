@@ -7,7 +7,59 @@ published rate card — a rate card is list, and list is the opening move.
 **Status:** doors done. Windows confirmed by the owner on 6 August 2026 — see
 "The bands, confirmed" below. Neither is a supplier rate card.
 
-## The bands, confirmed — 6 August 2026
+## Anglian list prices — 6 August 2026, and what they show
+
+Given the same day the bands were confirmed, and they change the picture.
+
+| item | Anglian list | less 40% | our catalogue, inc VAT | ours is |
+|---|---|---|---|---|
+| Composite door | £5,401 | £3,241 | £2,000 | 38% below |
+| Composite door (alt) | £4,979 | £2,987 | £2,000 | 33% below |
+| Sliding / double door | £5,058 | £3,035 | not priced | — |
+| Standard window, 2 openers | £2,247 | £1,348 | £850 | 37% below |
+
+Standard window with **no** openers: £950. Basis not stated.
+
+**The gap is consistent — about 35% — and it is the same for doors as for
+windows.** The doors were the figures treated as real from the start, so this
+is not a windows problem. Set against the earlier note that Zenith settles a
+composite door at £1,800–£2,500, our £2,000 sits squarely in Zenith's range
+and roughly a third below Anglian's.
+
+So the likely reading is not that the catalogue is wrong, but that it
+describes **the cheaper of the two installers rather than the middle of the
+market**. That is a product decision and it is not obviously wrong — but it
+should be deliberate, and it should be said, because a homeowner shown £2,000
+and quoted £3,241 by Anglian concludes the estimate was wrong.
+
+Two things still unknown, and both change the numbers:
+
+- **Inclusive or exclusive of VAT?** The doors given earlier were inclusive.
+  These have not been stated.
+- **Is £950 a list price or a settled one?** If list, the settled no-opener
+  price is £570, which looks too low for a fitted window and makes me doubt
+  that reading.
+
+### Openers matter more than size
+
+£950 with no openers against £2,247 with two is **×2.37**. Four size bands
+cannot carry that, and a photograph cannot reliably show whether a pane opens
+— a fixed light and a top-opener look the same from the pavement.
+
+So the model has to ask rather than infer, or the range has to be wide enough
+to be honest about not knowing. That is a design decision waiting on the two
+answers above.
+
+### And the number the whole company is built on
+
+The same composite door: **Anglian list £5,401, Zenith settled £1,800.** Three
+times the price for identical product, depending only on who knocks and how
+hard the customer pushes. The 40% discount is not a rumour; it is a documented
+lever with a number on it.
+
+That is the homepage argument, quantified by the person who sold it.
+
+## The bands, confirmed — 6 August 2026 (superseded the same day, see above)
 
 The four window bands were reviewed by the owner and confirmed correct, on the
 same basis as the door prices: what jobs settle at, from twenty-four years
