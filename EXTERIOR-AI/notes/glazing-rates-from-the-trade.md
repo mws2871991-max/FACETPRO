@@ -32,13 +32,56 @@ market**. That is a product decision and it is not obviously wrong — but it
 should be deliberate, and it should be said, because a homeowner shown £2,000
 and quoted £3,241 by Anglian concludes the estimate was wrong.
 
-Two things still unknown, and both change the numbers:
+### The list/settled question is answered
 
-- **Inclusive or exclusive of VAT?** The doors given earlier were inclusive.
-  These have not been stated.
-- **Is £950 a list price or a settled one?** If list, the settled no-opener
-  price is £570, which looks too low for a fitted window and makes me doubt
-  that reading.
+A 3 m bifold was given as **£13,304**. Less 40% that is **£7,982**, which
+lands exactly at the top of the Anglian range recorded on 3 August
+(£5,990–£8,000). The two sets of figures are the same prices seen from
+different ends:
+
+| | |
+|---|---|
+| the figures given on 6 August | **Anglian list** |
+| less 40% | **Anglian settled** |
+| the ranges given on 3 August | **settled**, both installers |
+| our catalogue | **≈ Zenith settled** |
+
+So nothing contradicts anything. The catalogue is internally consistent and
+describes the cheaper installer.
+
+| product | ours | Anglian settled | ours is |
+|---|---|---|---|
+| Composite door | £2,000 | £3,241 | 38% below |
+| Standard window, 2 openers | £850 | £1,348 | 37% below |
+| Bifold, 3 m | £4,000 | £7,982 | **50% below** |
+
+The gap widens as the job gets bigger. A homeowner pricing a bifold off this
+site and then calling Anglian sees double.
+
+### Anglian list prices collected so far
+
+| product | list | less 40% | in our catalogue? |
+|---|---|---|---|
+| uPVC front / back door | £2,893 | £1,736 | **no — not priced at all** |
+| Composite door | £5,401 / £4,979 | £3,241 / £2,987 | yes, at £2,000 |
+| Sliding door | £5,058 | £3,035 | **no** |
+| Double doors | £5,058 | £3,035 | **no** |
+| Bifold, 3 m | £13,304 | £7,982 | yes, at £4,000, no width |
+| Standard window, no openers | £950 | £570 | one band, £850, no opener count |
+| Standard window, 2 openers | £2,247 | £1,348 | as above |
+
+Three products the catalogue does not have: **uPVC doors, sliding doors and
+double doors.** uPVC is 46% cheaper than composite and is the volume product —
+most back doors and a good share of front doors. Offering only composite
+prices every door as though it were the expensive option.
+
+Two dimensions the catalogue does not model: **bifold width** (a 3 m unit is
+quoted, ours is one flat price) and **opener count** (×2.37 on a standard
+window).
+
+**Still unknown: whether these are inclusive or exclusive of VAT.** The
+figures given on 3 August were inclusive. These have not been stated, and it
+moves everything by 20%.
 
 ### Openers matter more than size
 
