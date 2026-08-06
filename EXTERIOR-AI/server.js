@@ -1679,6 +1679,25 @@ async function keepRender(replicateUrl) {
     await store.putRender(id, bytes, { mime: res.headers.get('content-type') || 'image/jpeg' });
     return { url: `/r/${id}`, renderId: id };
   } catch (err) {
+    /* Recorded, not just logged. This is the degraded path and it has a
+       privacy consequence rather than only a quality one.
+
+       When it fires, the homeowner still sees their render, which is the
+       right priority. But the image is then sitting on the provider's CDN at
+       an unauthenticated URL we do not control and cannot delete, and the
+       privacy notice says the generated image is kept for the same period as
+       the lead and then removed. A Replicate URL does not honour that — it
+       expires on their schedule, not ours, and until it does the URL is the
+       only credential protecting a photorealistic picture of somebody's
+       identified home.
+
+       It is also why the CSP has to allow replicate.delivery at all. If this
+       turns out to be rare, that allowance can go and the fallback can become
+       an honest failure instead. If it turns out to be common, that is a
+       storage problem worth fixing before launch rather than a footnote. The
+       only way to know which is to be able to count it, and a console.error
+       nobody reads afterwards cannot. */
+    obs.record('render', 'could not keep the render, fell back to the provider URL', { reason: err.message });
     console.error('Could not keep the render, falling back to the provider URL:', err.message);
     return { url: replicateUrl, renderId: null, ephemeral: true };
   }

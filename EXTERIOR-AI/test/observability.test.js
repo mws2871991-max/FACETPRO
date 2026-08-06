@@ -105,3 +105,16 @@ test('the ops endpoint is behind the installer password', () => {
   assert.match(server, /app\.get\('\/api\/ops',\s*requireInstallerPassword/,
     'the ops endpoint is open — its counts alone describe the traffic and what is failing');
 });
+
+test('a render that could not be kept is recorded, not just logged', () => {
+  /* The degraded path, and the one with a privacy consequence: the image ends
+     up on the provider's CDN at a URL we cannot delete, while the notice says
+     it is removed with the lead. Whether that allowance in the CSP can ever
+     go depends on how often this fires, and a console.error nobody reads
+     afterwards cannot answer that. */
+  const fs = require('fs');
+  const path = require('path');
+  const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  assert.match(server, /obs\.record\('render',\s*'could not keep the render/,
+    'the ephemeral fallback is logged but not counted');
+});
