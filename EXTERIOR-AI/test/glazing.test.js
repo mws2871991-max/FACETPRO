@@ -239,14 +239,42 @@ test('a door costs the homeowner what the trade says it settles at', () => {
 });
 
 test('the spread matches what the two installers were actually observed doing', () => {
-  /* Derived in notes/glazing-rates-from-the-trade.md from a composite door
-     (£1,800-£4,000 against our £2,000) and a 3-panel bifold (£3,500-£8,000
-     against our £4,000). If somebody widens these for effect, this fails. */
-  const { MARKET_SPREAD } = require('../glazing');
+  /* Measured against six products in notes/glazing-rates-from-the-trade.md.
+     The floor is where the keener installer settles; the ceiling is where the
+     dearer one settles with the 40% discount properly applied — observed at
+     x1.59 on a standard window and x1.62 on a composite door.
+
+     It used to be x2.0. That figure is real but answers a different question:
+     it is the same installer with the discount NOT applied, which is a
+     customer who did not push rather than a different company. Conflating the
+     two produced a headline 43% above anything Anglian actually settles at.
+     It now lives in NO_HAGGLE. */
+  const { MARKET_SPREAD, INSTALLER_SPREAD, NO_HAGGLE } = require('../glazing');
   assert.ok(MARKET_SPREAD.low >= 0.85 && MARKET_SPREAD.low <= 0.95,
     'the floor sits just under our price, per both observed products');
-  assert.strictEqual(MARKET_SPREAD.high, 2.0,
-    'both observed products topped out at double; do not inflate this');
+  assert.ok(MARKET_SPREAD.high >= 1.55 && MARKET_SPREAD.high <= 1.7,
+    'the ceiling is the dearer installer settling, observed at x1.59 to x1.62');
+  assert.strictEqual(MARKET_SPREAD, INSTALLER_SPREAD, 'the old name must keep meaning the installer spread');
+  assert.strictEqual(NO_HAGGLE, 2.0, 'the no-discount figure was observed at double; do not inflate it');
+});
+
+test('not negotiating costs more than the difference between installers', () => {
+  /* The claim the page makes out loud, so it fails if the numbers stop
+     supporting it. */
+  const r = sourced();
+  assert.ok(r.noHaggle > r.marketRange.high, 'the no-haggle figure is inside the installer range');
+  const haggling = r.noHaggle - r.marketRange.high;
+  const betweenInstallers = r.marketRange.high - r.marketRange.low;
+  assert.ok(haggling > 0 && betweenInstallers > 0);
+});
+
+test('the no-haggle figure is withheld whenever the comparison is', () => {
+  /* Both rest on the same base. One appearing without the other would say the
+     base is trustworthy enough for the bigger claim and not the smaller. */
+  const UNSOURCED = { ...RATES, source: 'Windows: placeholder rates, not sourced.' };
+  const r = base({ rates: UNSOURCED });
+  assert.strictEqual(r.marketRange, null);
+  assert.strictEqual(r.noHaggle, null, 'the no-haggle figure survived on an unsourced base');
 });
 
 /* ── whole-house scaling ── */

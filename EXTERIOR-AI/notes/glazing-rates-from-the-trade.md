@@ -79,6 +79,32 @@ Two dimensions the catalogue does not model: **bifold width** (a 3 m unit is
 quoted, ours is one flat price) and **opener count** (×2.37 on a standard
 window).
 
+### x1.6 and x2.0 are two different questions
+
+The spread was one band, x0.88 to x2.0, and the x2.0 end came from the bifold
+— the one product where our base is wrong for an unrelated reason. Applied to
+windows it produced a headline of £17,204 for a semi, against roughly £12,058
+for what Anglian actually settles at. Forty-three per cent above anything real.
+
+Going back to the 3 August figures explains it. Anglian composite ran
+£2,300–£4,000. The £4,000 top is x2.0 of our base; £3,241 is the same door at
+list less the full 40%. So:
+
+| multiple | what it is |
+|---|---|
+| **x1.6** | the dearer installer, discount properly applied |
+| **x2.0** | **the same installer**, discount not applied |
+
+x2.0 is not another company. It is one conversation on a weeknight.
+
+They are now separate: INSTALLER_SPREAD (x0.88 to x1.6) is the estimate, and
+NO_HAGGLE (x2.0) is shown beneath it as what not negotiating costs — about
+£3,441 on a semi, £4,568 on a detached.
+
+Which is the better product as well as the truer one. One wide band said
+"somewhere between £7,570 and £17,204", which is true and useless. Apart, the
+first number is the price and the second is what the haggling is worth.
+
 ### The model is right. One number is wrong.
 
 A sash window, 900 x 1700 including the box, at £3,890 list. Against the

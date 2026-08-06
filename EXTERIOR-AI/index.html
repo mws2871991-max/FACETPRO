@@ -2172,13 +2172,21 @@ function buildDetailOptions() {
          installer spread, so this explains what its two ends are rather than
          offering a second opinion. */
       g.marketRange ? h('div', { className: 'mt-3 pt-3 border-t border-zinc-200' }, [
-        h('div', { className: 'flex items-baseline justify-between gap-3 flex-wrap' }, [
-          h('span', { className: 'text-[12px] text-zinc-600' }, 'What the two ends are'),
-          h('span', { className: 'measured text-[13px] tracking-tight text-zinc-500' },
-            `${fmtMoney(g.marketRange.low)} · ${fmtMoney(g.marketRange.high)}`),
-        ]),
-        h('p', { className: 'mt-1 text-[11px] leading-5 text-zinc-500' },
-          'Same windows, same house, same work. The lower figure is close to what the keener of the national installers settles at; the higher one is what the same job goes out at elsewhere once the discount has been argued over. Nothing about the product changes between them.'),
+        h('p', { className: 'text-[11px] leading-5 text-zinc-500' },
+          'That range is which company quotes you. The lower end is close to what the keener of the two national installers settles at, the higher end what the same job goes out at elsewhere — same windows, same house, same work, and nothing about the product changing between them.'),
+        /* The second number, and the one the whole company exists because of.
+           Not another installer: the same installer, and a customer who did
+           not push. Shown as what it costs rather than as a discount you
+           might be offered, because that is the direction it is actually
+           experienced from. */
+        g.noHaggle ? h('div', { className: 'mt-3 pt-3 border-t border-zinc-200' }, [
+          h('div', { className: 'flex items-baseline justify-between gap-3 flex-wrap' }, [
+            h('span', { className: 'text-[12px] text-zinc-900 font-medium' }, 'If you don\u2019t negotiate'),
+            h('span', { className: 'measured text-[17px] tracking-tight' }, `up to ${fmtMoney(g.noHaggle)}`),
+          ]),
+          h('p', { className: 'mt-1 text-[11px] leading-5 text-zinc-600' },
+            `That is ${fmtMoney(g.noHaggle - g.marketRange.high)} more than the same job from the same company, for the same windows. It is not a different product. It is one conversation on a weeknight, and it is the reason this site exists.`),
+        ]) : null,
       ]) : null,
       /* Two money figures on one page, and nothing said how they related.
          Someone could reasonably read the range as the whole job. */

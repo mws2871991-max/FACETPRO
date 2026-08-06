@@ -116,7 +116,30 @@ const UNCERTAINTY = { door: 0.18, prior: 0.30 };
    an open question. Replace this the moment the window bands arrive with the
    ranges attached, and widen or narrow it per band if the gap moves with
    size. */
-const MARKET_SPREAD = { low: 0.88, high: 2.0 };
+/* Two different things, kept apart because they are two different questions.
+
+   INSTALLER_SPREAD is which company quoted: x0.88 at the keener of the two
+   national installers, x1.6 at the other, with the discount properly applied
+   at both. That is the range a homeowner faces before they have done anything
+   at all, and it is what the estimate spans.
+
+   NO_HAGGLE is the same installer and a customer who did not push. Anglian's
+   settled range on 3 August ran to x2.0 of our base, against x1.62 for the
+   same door with the full 40% taken off. The difference is not the product,
+   the company or the specification. It is one conversation on a weeknight.
+
+   Putting them in one band said "somewhere between £7,570 and £17,204", which
+   is true and useless. Apart, the first number is the price and the second is
+   what the negotiation is worth — about £3,400 on a semi, which is the whole
+   argument of this company expressed as a figure a homeowner can act on. */
+const INSTALLER_SPREAD = { low: 0.88, high: 1.6 };
+const NO_HAGGLE = 2.0;
+
+/* Kept under the old name because the whole codebase and its tests refer to
+   it, and it still means "the range across the market". Its high end now
+   describes the dearer installer rather than the dearer installer plus a
+   customer who did not negotiate. */
+const MARKET_SPREAD = INSTALLER_SPREAD;
 
 /* Are the window bands in this catalogue real, or still the invented ones?
    Mirrors the check server.js makes on the same field, and reads the
@@ -564,6 +587,10 @@ function estimateGlazing({
        it. Restored automatically by the four real band prices landing in the
        catalogue, because that is what clears `source`. */
     marketRange: marketRangeFor(rates, price),
+    /* What the same job costs from the same installer if nobody negotiates.
+       Null whenever the comparison itself is withheld, so the two can never
+       disagree about whether the base is trustworthy. */
+    noHaggle: marketRangeFor(rates, price) ? round(price.total * NO_HAGGLE) : null,
     // What the UI should say about where this number came from. Keep the
     // wording here so the page and the lead email can never disagree.
     sourceLabel: {
@@ -584,6 +611,8 @@ module.exports = {
   HOUSE_TYPE_GLAZING_PRIORS,
   FRONT_TO_TOTAL_WINDOWS,
   MARKET_SPREAD,
+  INSTALLER_SPREAD,
+  NO_HAGGLE,
   MIN_WINDOWS,
   MAX_WINDOWS,
 };
