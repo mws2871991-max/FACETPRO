@@ -4,10 +4,40 @@
 national installers who buy leads here. This is what jobs go out at, not a
 published rate card — a rate card is list, and list is the opening move.
 
-**Status:** doors done. Windows still being collected — `catalogue.glazing`
-holds placeholders for all four bands, and the VAT basis is still unconfirmed.
+**Status:** doors done. Windows confirmed by the owner on 6 August 2026 — see
+"The bands, confirmed" below. Neither is a supplier rate card.
 
-## The pattern so far
+## The bands, confirmed — 6 August 2026
+
+The four window bands were reviewed by the owner and confirmed correct, on the
+same basis as the door prices: what jobs settle at, from twenty-four years
+selling them.
+
+| band | net | inc VAT | example |
+|---|---|---|---|
+| Small | £504 | £605 | 600 x 900 — WC, landing, porch |
+| Standard | £708 | £850 | 1200 x 1200 — most bedroom and lounge |
+| Large | £1,032 | £1,238 | 1800 x 1350 — front lounge, patio-side |
+| Extra large | £1,416 | £1,699 | picture windows, wide mullioned units |
+
+**The estimate below that these run at roughly half of trade is withdrawn.**
+It was inferred from the gap between the placeholder door price and the real
+one, and generalised to windows on the assumption they behaved the same way.
+The person who sells them says they do not. That inference was mine and it was
+wrong; the paragraph is kept rather than deleted because the reasoning is
+still worth seeing, and because the direction it warns about is still the
+dangerous one.
+
+What this changes in the product: `catalogue.glazing.source` no longer
+contains "placeholder" or "not sourced", so `ratesSourced` is true, the amber
+caveat beside the window price is gone, and the market comparison — withheld
+while the base was unsourced — is shown again.
+
+What it does not change: these are one person's knowledge, not a supplier rate
+card. When a rate card exists, check the bands against it rather than assuming
+they agree, and expect the band *boundaries* to move as well as the prices.
+
+## The pattern so far (superseded — see above)
 
 The placeholders are running at roughly **half** of real. That direction is
 the dangerous one: a homeowner shown £1,250 for a door who is then quoted

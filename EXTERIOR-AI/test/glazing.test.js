@@ -184,13 +184,19 @@ test('the market range comes off the middle, not off the ends of our range', () 
   assert.strictEqual(r.marketRange.high, Math.round(r.price.total * MARKET_SPREAD.high));
 });
 
-test('no market comparison while the windows in it are invented', () => {
-  /* The multiple is sound — 0.88x to 2.0x from two real door products. The
-     number it multiplies is not: notes/glazing-rates-from-the-trade.md puts
-     the window bands about 40% light. Multiplying a light figure produced a
-     "quoted elsewhere" range that was approximately the correct price, and a
-     page inviting the homeowner to distrust it. */
-  const r = base();                                  // the real catalogue
+test('no market comparison while the windows in it are unsourced', () => {
+  /* The multiple is sound — 0.88x to 2.0x from two real door products — but
+     it is only worth showing on a base somebody stands behind. Multiplying an
+     invented figure produced a "quoted elsewhere" range that was roughly the
+     correct price, on a page inviting the homeowner to distrust it.
+
+     Tested against an explicitly unsourced catalogue rather than the real one.
+     An earlier version asserted this using the live rates, which was true on
+     the day it was written and stopped being true the moment the bands were
+     confirmed — a test that fails when the data changes rather than when the
+     behaviour does. */
+  const UNSOURCED = { ...RATES, source: 'Windows: placeholder rates, not sourced.' };
+  const r = base({ rates: UNSOURCED });
   assert.strictEqual(r.marketRange, null,
     'the market comparison is shown on top of unsourced window rates');
 });

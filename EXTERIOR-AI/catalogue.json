@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updated": "2026-07-22",
+  "updated": "2026-08-06",
   "note": "Based on current UK material and labour rates, including scaffolding, a waste allowance and VAT.",
   "internalNote": "Real UK material rates and quote methodology, taken from the actual facetpro.co.uk production backend (material_detector.py and quote_generator.py) — not invented placeholders. Not shown to homeowners; `note` is the customer-facing line rendered under the price breakdown.",
   "source": "homeai/backend/app/services/material_detector.py (ROOF_MATERIALS, CLADDING_MATERIALS) + quote_generator.py (labour rates, scaffolding, waste, VAT)",
@@ -578,7 +578,7 @@
   "glazing": {
     "note": "Guide prices for supply and fitting, per window and per door, including access and VAT.",
     "internalNote": "Door rates are real. Window bands are still invented and running at roughly half of trade. See notes/glazing-rates-from-the-trade.md.",
-    "source": "Doors: settled prices from 24 years selling for a national installer. The figures given were INCLUSIVE of VAT and are stored here net — composite £2,000 inc becomes £1,667 net, bifold £4,000 inc becomes £3,333 net — because the catalogue adds VAT at the end. Windows: STILL NOT SOURCED — placeholders, uplifted 20% on the owner's trade judgement on 2026-08-04, and on no stated VAT basis at all.",
+    "source": "Doors: settled prices from 24 years selling for a national installer, given inclusive of VAT and stored net — composite £2,000 inc, bifold £4,000 inc. Windows: the four bands were reviewed and confirmed correct by the owner on 2026-08-06, on the same basis as the doors — what jobs settle at, from 24 years in the trade. Not a supplier rate card; replace them with one when it exists, and re-check the bands against it rather than assuming they agree.",
     "windowBands": [
       {
         "id": "small",
