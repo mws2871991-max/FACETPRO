@@ -171,12 +171,24 @@
            received what, and /api/leads could filter off the delivery log. If
            that gets built, this paragraph goes back to the original wording,
            which will by then be true. -->
-      <!-- The suggested replacement opened "Access to enquiries is restricted
-           and every access is logged", which the bullet above already says
-           almost word for word. Two adjacent bullets making the same promise
-           reads like padding, and on a legal page padding is what people stop
-           reading. Dropped the opening; the rest is what this bullet is for. -->
-      <li>The installer area is protected by a password, and enquiries are only visible there once you have asked us to share them. We are moving to individual installer accounts with two-factor authentication, and will update this notice when that is in place.</li>
+      <!-- Strengthened once the code could back it.
+
+           This said installers had individual accounts, two-factor
+           authentication, and could see only their own area. All three were
+           false: one shared password, no second factor, and a portal that
+           handed every holder every consented enquiry. It was corrected to
+           describe what the system did, and now describes what it does again
+           — installers.js gives each installer an account and scopes the
+           portal to the leads the delivery log says they actually received.
+
+           The shared password is refused on a deployment once any account
+           exists, so this sentence cannot quietly become false again by
+           somebody signing in the old way.
+
+           Two-factor is still not built, and is named as an intention rather
+           than dropped, because it is the one part of the original claim that
+           remains untrue. -->
+      <li>Each installer has their own account, and can only see the enquiries that were actually sent to them &mdash; not anybody else's, and only ones where you asked us to share your details. Every access is logged. We do not yet require two-factor authentication on those accounts, and will update this notice when we do.</li>
       <li>We check every supplier's security and data protection terms before we use them, and we keep those checks under review.</li>
       <li>Enquiries are backed up, and we test that we can restore them.</li>
       <li>If something goes wrong and your data is at risk, we will tell the Information Commissioner within 72 hours where we are required to, and we will tell you directly if there is a high risk to you.</li>

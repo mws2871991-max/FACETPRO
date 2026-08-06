@@ -843,8 +843,28 @@ function identifyInstaller(req) {
     const who = LEAD_RECIPIENTS.find(r => r.id === claim.id);
     return who ? { id: who.id, name: who.name, scope: 'installer' } : null;
   }
+  /* The shared password sees every consented lead, which is what one
+     credential shared by every buyer has always meant. Once accounts exist it
+     stops working on a deployment.
+
+     Not tidiness. legal/privacy.html tells homeowners that each installer has
+     their own account and sees only the enquiries sent to them. A shared
+     password that still opened the whole estate would make that sentence
+     false again the moment somebody used it — and this codebase has spent a
+     week finding claims that nothing enforced. If the notice says it, the
+     server has to mean it.
+
+     Still works locally, because development needs a way in and no
+     homeowner's details are behind it there. */
+  const accountsExist = LEAD_RECIPIENTS.some(r => r.passwordHash);
   const shared = process.env.INSTALLER_PASSWORD;
-  if (shared && constantTimeEquals(supplied, shared)) return { id: null, name: 'shared password', scope: 'all' };
+  if (shared && constantTimeEquals(supplied, shared)) {
+    if (accountsExist && IS_DEPLOYED) {
+      obs.record('installer-login', 'shared password refused: installer accounts are configured');
+      return null;
+    }
+    return { id: null, name: 'shared password', scope: 'all' };
+  }
   return null;
 }
 

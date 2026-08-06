@@ -215,3 +215,39 @@ test('a failed delivery does not entitle an installer to the lead', async () => 
   const { leads } = await (await fetch(`${BASE}/api/leads`, { headers: { authorization: `Bearer ${token}` } })).json();
   assert.ok(!leads.some(l => l.id === 'LD-FAILED'), 'a lead that never arrived was shown anyway');
 });
+
+test('the shared password stops working on a deployment once accounts exist', async () => {
+  /* legal/privacy.html tells homeowners each installer has their own account
+     and sees only the enquiries sent to them. A shared credential that still
+     opened the whole estate would make that false the moment anybody used it.
+
+     Locally it still works — development needs a way in, and no homeowner's
+     details are behind it there. */
+  const fs = require('fs');
+  const path = require('path');
+  const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  assert.match(server, /accountsExist && IS_DEPLOYED/,
+    'the shared password still opens everything even where accounts exist');
+  assert.match(server, /const accountsExist = LEAD_RECIPIENTS\.some\(r => r\.passwordHash\)/,
+    'nothing checks whether accounts exist');
+});
+
+test('the privacy notice describes what the code actually does', () => {
+  /* This sentence has been false once already — individual accounts, two-factor
+     and per-area visibility, none of which existed. It is only safe to make
+     again because installers.js exists, so it is pinned to the thing that
+     makes it true. */
+  const fs = require('fs');
+  const path = require('path');
+  const notice = fs.readFileSync(path.join(__dirname, '..', 'legal', 'privacy.html'), 'utf8');
+  const visible = notice.replace(/<!--[\s\S]*?-->/g, '');
+
+  assert.match(visible, /Each installer has their own account/,
+    'the notice no longer claims individual accounts — check installers.js still provides them');
+  assert.match(visible, /only see the enquiries that were actually sent to them/,
+    'the scoping promise has gone');
+  assert.match(visible, /do not yet require two-factor/,
+    'two-factor is claimed, and it is not built');
+  assert.ok(!/protected by two-factor authentication/.test(visible),
+    'the notice claims two-factor authentication, which does not exist');
+});
