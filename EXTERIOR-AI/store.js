@@ -222,6 +222,44 @@ async function ensureSchema() {
     console.error('COULD NOT ADD THE UNIQUE INDEX ON leads.lead_id:', err.message);
     console.error('There are duplicate lead references in the database. Run: node scripts/check-lead-ids.js');
   }
+
+  /* Indexes on the columns we actually join and filter by.
+
+     There was exactly one index in the whole store — the unique key above —
+     and everything else was a sequential scan. That is invisible at the
+     hundreds of rows this holds today and it is not a performance nicety
+     later: the paths that scan are withdrawal, erasure and the retention run,
+     which are the ones with a deadline attached. A subject access or erasure
+     request has a statutory month, and the work it does grows with every lead
+     ever taken.
+
+     lead_id on the four tables that carry it, because erasure correctness is a
+     join across all of them — the delivery log says who received somebody's
+     details, and that is what has to be found and purged.
+
+     ts on access_log and leads, because retention selects by age and the
+     access log is the one table that only ever grows.
+
+     IF NOT EXISTS on every one, so this is safe to run on each boot. Cheap
+     against an empty table and a one-off cost against a full one. */
+  const indexes = [
+    ['deliveries_lead_id_idx', 'deliveries (lead_id)'],
+    ['notification_failures_lead_id_idx', 'notification_failures (lead_id)'],
+    ['withdrawals_lead_id_idx', 'withdrawals (lead_id)'],
+    ['renders_lead_id_idx', 'renders (lead_id)'],
+    ['access_log_ts_idx', 'access_log (ts)'],
+    ['leads_ts_idx', 'leads (ts)'],
+  ];
+  for (const [name, target] of indexes) {
+    try {
+      await pool.query(`CREATE INDEX IF NOT EXISTS ${name} ON ${SCHEMA_NAME}.${target}`);
+    } catch (err) {
+      /* An index is an optimisation, not a correctness guarantee — unlike the
+         unique key above, which is why that one is separate. Losing one should
+         never stop the service starting. */
+      console.error(`Could not create index ${name}:`, err.message);
+    }
+  }
 }
 
 const TABLE_NAMES = { leads: 'leads', deliveries: 'deliveries', notificationFailures: 'notification_failures', accessLog: 'access_log', resumes: 'resumes', withdrawals: 'withdrawals', retentionRuns: 'retention_runs', quotes: 'quotes', waitlist: 'waitlist', feedback: 'feedback', detections: 'detections' };
@@ -345,6 +383,59 @@ function withWriteLock(fn) {
    what it is changing itself rather than relying on anything read earlier.
    Returning undefined means "nothing to do", and nothing is written. */
 async function mutate(table, transform) {
+  /* Under Postgres the in-process queue is not enough.
+
+     writeAll is DELETE-everything then reinsert. Two processes doing that to
+     `leads` at once is not a lost update, it is an empty table: the second
+     DELETE removes rows the first has already committed, and its reinsert only
+     puts back what it read before the first one started. Every lead in the gap
+     is gone, and with it the consent records that are the evidence of the
+     lawful basis for everything already done with those people's details.
+
+     One process was the assumption, and railway.json pins numReplicas to 1 to
+     hold it — but a rolling deploy runs the old container and the new one at
+     the same time by design, which is exactly when a retention run and a
+     withdrawal are most likely to overlap. The assumption is not enforceable
+     from inside the application.
+
+     So the database arbitrates. An advisory lock keyed on the schema and
+     table, taken inside the transaction that does the read and the write, so
+     the whole read-modify-write is serialised across every process pointed at
+     this database. It releases on commit or rollback without any unlocking
+     code to forget, and it is scoped per table so retention on `leads` does
+     not block a withdrawal writing to `withdrawals`.
+
+     The JSONL path keeps the in-process queue, which is all a single
+     development process needs and all it can have. */
+  if (pool) {
+    return withWriteLock(async () => {
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        await client.query('SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))', [SCHEMA_NAME, table]);
+
+        const { rows } = await client.query(SELECT_SQL[table]);
+        const next = await transform(shapeRows(table, rows));
+        if (next === undefined) {
+          await client.query('ROLLBACK');
+          return null;
+        }
+
+        await client.query(`DELETE FROM ${SCHEMA_NAME}.${TABLE_NAMES[table]}`);
+        for (const row of next) {
+          await client.query(INSERT_SQL[table], INSERT_PARAMS[table](row));
+        }
+        await client.query('COMMIT');
+        return next;
+      } catch (err) {
+        try { await client.query('ROLLBACK'); } catch (_) { /* the connection may already be gone */ }
+        throw err;
+      } finally {
+        client.release();
+      }
+    });
+  }
+
   return withWriteLock(async () => {
     const rows = await readAll(table);
     const next = await transform(rows);
@@ -355,6 +446,8 @@ async function mutate(table, transform) {
 }
 
 async function replaceAll(table, rows) {
+  /* Same reasoning as mutate: a bare replace is the destructive half on its
+     own, so it takes the same lock. */
   return withWriteLock(() => writeAll(table, rows));
 }
 
@@ -363,6 +456,8 @@ async function writeAll(table, rows) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
+      // The same cross-process lock mutate() takes — see the comment there.
+      await client.query('SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))', [SCHEMA_NAME, table]);
       await client.query(`DELETE FROM ${SCHEMA_NAME}.${TABLE_NAMES[table]}`);
       for (const row of rows) {
         await client.query(INSERT_SQL[table], INSERT_PARAMS[table](row));
@@ -450,15 +545,22 @@ async function getResume(code) {
   return rows[0]?.record || null;
 }
 
+/* Leads are stored whole in the `design` JSONB column, so unwrap them —
+   callers expect the same shape the JSONL path returns, not a row with a
+   nested object. Anything without it falls back to the row itself.
+
+   Its own function because mutate() reads on its own client, inside the
+   locked transaction, and the two readers must not disagree about shape. */
+function shapeRows(table, rows) {
+  if (table === 'leads') return rows.map(r => r.design || r);
+  if (table === 'deliveries' || table === 'notificationFailures' || table === 'accessLog' || table === 'retentionRuns' || table === 'withdrawals' || table === 'resumes') return rows.map(r => r.record || r);
+  return rows;
+}
+
 async function readAll(table) {
   if (pool) {
     const { rows } = await pool.query(SELECT_SQL[table]);
-    // Leads are stored whole in the `design` JSONB column, so unwrap them —
-    // callers expect the same shape the JSONL path returns, not a row with a
-    // nested object. Anything without it falls back to the row itself.
-    if (table === 'leads') return rows.map(r => r.design || r);
-    if (table === 'deliveries' || table === 'notificationFailures' || table === 'accessLog' || table === 'retentionRuns' || table === 'withdrawals' || table === 'resumes') return rows.map(r => r.record || r);
-    return rows;
+    return shapeRows(table, rows);
   }
   return readLines(FILE_NAMES[table]);
 }

@@ -2129,15 +2129,32 @@ app.post('/api/render', renderLimiter, async (req, res) => {
   // forwarded to Replicate verbatim.
   const inputImage = `data:${img.mime};base64,${img.payload}`;
 
+  /* Everything below has to finish inside the server's own requestTimeout.
+
+     It did not. Prefer: wait=60 could hold the initial request for a minute,
+     then the loop below slept 45 times for two seconds — 150 seconds against a
+     requestTimeout of 120, so the socket was closed under it and the homeowner
+     saw the connection drop rather than the 504 written for them here.
+
+     A deadline rather than a count, set below the server's limit with room
+     left to store the image afterwards, so the two can no longer disagree. */
+  const renderStartedAt = Date.now();
+  const RENDER_DEADLINE_MS = 100_000;
+
   try {
     const controller = new AbortController();
     const renderTimeout = setTimeout(() => controller.abort(), 120000);
 
-    const predRes = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-kontext-pro/predictions', {
-      method: 'POST',
-      signal: controller.signal,
-      /* wait=60, not 90. Replicate caps this header at 60 and rejects
-         anything higher with a 422 before it looks at the request at all:
+    /* clearTimeout in a finally, not after the await. A throw from the fetch
+       skipped it and left a 120-second timer holding the process, pointed at
+       an AbortController nobody was listening to any more. */
+    let predRes;
+    try {
+      predRes = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-kontext-pro/predictions', {
+        method: 'POST',
+        signal: controller.signal,
+        /* wait=60, not 90. Replicate caps this header at 60 and rejects
+           anything higher with a 422 before it looks at the request at all:
 
            Prefer: wait=x header must specify a value between 1 and 60
 
@@ -2151,10 +2168,12 @@ app.post('/api/render', renderLimiter, async (req, res) => {
          Nothing is lost by asking for less: the polling loop below covers a
          further 90 seconds, so a render slower than the wait is picked up
          there exactly as it always was. */
-      headers: { 'Authorization': `Bearer ${replicateKey}`, 'Content-Type': 'application/json', 'Prefer': 'wait=60' },
-      body: JSON.stringify({ input: { prompt, input_image: inputImage, output_format: 'jpg', safety_tolerance: RENDER_SAFETY_TOLERANCE } })
-    });
-    clearTimeout(renderTimeout);
+        headers: { 'Authorization': `Bearer ${replicateKey}`, 'Content-Type': 'application/json', 'Prefer': 'wait=60' },
+        body: JSON.stringify({ input: { prompt, input_image: inputImage, output_format: 'jpg', safety_tolerance: RENDER_SAFETY_TOLERANCE } })
+      });
+    } finally {
+      clearTimeout(renderTimeout);
+    }
 
     if (!predRes.ok) {
       const err = await predRes.json().catch(() => ({}));
@@ -2173,17 +2192,69 @@ app.post('/api/render', renderLimiter, async (req, res) => {
       return res.json(await keepRender(url));
     }
 
-    for (let i = 0; i < 45; i++) {
+    /* Poll until the deadline.
+
+       Three things went unchecked here. The poll had no timeout of its own —
+       Node's fetch has no default, so one hung connection held the whole
+       request until the socket died. Nothing looked at poll.ok, so a 429 or a
+       500 parsed into an object with no status field, matched neither branch,
+       and the loop went round again for the full ninety seconds against a
+       provider that was refusing us — silently, and nowhere in the logs. And a
+       cancelled prediction is a terminal state that was treated as "not
+       finished yet", so it also ran the clock out.
+
+       A run of upstream failures is now given up on rather than ridden out:
+       three in a row is Replicate having a bad time, and telling somebody to
+       try again is more honest than making them wait for the timeout. */
+    let consecutiveFailures = 0;
+
+    while (Date.now() - renderStartedAt < RENDER_DEADLINE_MS) {
       await new Promise(r => setTimeout(r, 2000));
-      const poll = await fetch(`https://api.replicate.com/v1/predictions/${pred.id}`, {
-        headers: { 'Authorization': `Bearer ${replicateKey}` }
-      });
-      const p = await poll.json();
+
+      const pollController = new AbortController();
+      const pollTimeout = setTimeout(() => pollController.abort(), 10000);
+      let poll;
+      try {
+        poll = await fetch(`https://api.replicate.com/v1/predictions/${pred.id}`, {
+          headers: { 'Authorization': `Bearer ${replicateKey}` },
+          signal: pollController.signal,
+        });
+      } catch (err) {
+        /* A refused or hung poll is not a failed render — the prediction is
+           still running at the other end — so this retries rather than giving
+           up on the first one. */
+        if (++consecutiveFailures >= 3) {
+          obs.record('render', 'could not reach Replicate while polling', { attempts: consecutiveFailures });
+          return res.status(502).json({ error: "We couldn't create that image just now — please try again." });
+        }
+        continue;
+      } finally {
+        clearTimeout(pollTimeout);
+      }
+
+      if (!poll.ok) {
+        if (++consecutiveFailures >= 3) {
+          obs.record('render', 'Replicate kept refusing the status check', { status: poll.status });
+          console.error('Replicate poll error:', poll.status);
+          return res.status(502).json({ error: "We couldn't create that image just now — please try again." });
+        }
+        continue;
+      }
+      consecutiveFailures = 0;
+
+      const p = await poll.json().catch(() => null);
+      if (!p) continue;
+
       if (p.status === 'succeeded') {
         const url = Array.isArray(p.output) ? p.output[0] : p.output;
         return res.json(await keepRender(url));
       }
-      if (p.status === 'failed') return res.status(502).json({ error: 'Render failed — try again.' });
+      /* Terminal either way. Waiting out the clock on a prediction that has
+         already stopped is ninety seconds of a homeowner watching a spinner. */
+      if (p.status === 'failed' || p.status === 'canceled') {
+        obs.record('render', 'the render did not complete', { status: p.status, detail: p.error });
+        return res.status(502).json({ error: 'Render failed — try again.' });
+      }
     }
     return res.status(504).json({ error: 'Render timed out — try again.' });
 

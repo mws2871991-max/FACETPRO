@@ -177,3 +177,81 @@ test('our tables live in their own schema, never in public', opts, async () => {
   }
   assert.ok(!/INSERT INTO public\./.test(Object.values(_internals.INSERT_SQL).join(' ')));
 });
+
+test('the indexes the deadline-bound paths depend on exist', opts, async () => {
+  /* There was one index in the whole store — the unique key on leads.lead_id —
+     and everything else was a sequential scan. Invisible at hundreds of rows,
+     and not a performance nicety later: the paths that scan are withdrawal,
+     erasure and the retention run, which are the ones with a statutory month
+     attached and which grow with every lead ever taken. */
+  const { Client } = require('pg');
+  const c = new Client({ connectionString: url });
+  await c.connect();
+  const { rows } = await c.query(
+    `SELECT indexname FROM pg_indexes WHERE schemaname = current_setting('search_path') OR schemaname = $1`,
+    [process.env.DB_SCHEMA || 'facetpro_visualiser']);
+  await c.end();
+
+  const have = new Set(rows.map(r => r.indexname));
+  for (const name of [
+    'deliveries_lead_id_idx',
+    'notification_failures_lead_id_idx',
+    'withdrawals_lead_id_idx',
+    'renders_lead_id_idx',
+    'access_log_ts_idx',
+    'leads_ts_idx',
+  ]) {
+    assert.ok(have.has(name), `missing index ${name} — erasure joins across these tables`);
+  }
+});
+
+test('two processes rewriting the same table cannot erase each other', opts, async () => {
+  /* writeAll is DELETE-everything then reinsert. Two processes doing that to
+     leads at once is not a lost update, it is an empty table: the second
+     DELETE removes rows the first has committed, and its reinsert only puts
+     back what it read before the first one started.
+
+     numReplicas is 1 to prevent that, but a rolling deploy runs the old
+     container and the new one at the same time by design — which is exactly
+     when a retention run and a withdrawal overlap. So the database arbitrates,
+     with an advisory lock held across the read and the write.
+
+     One store module cannot be two processes, but it can be two connections
+     racing through the same code path, which is what the lock has to
+     serialise. Without it the two interleave and one set of rows is lost. */
+  await store.replaceAll('leads', []);
+  await store.append('leads', lead('BASE-1'));
+
+  await Promise.all([
+    store.mutate('leads', async (rows) => {
+      await new Promise(r => setTimeout(r, 60));      // widen the window
+      return [...rows, lead('FROM-A')];
+    }),
+    store.mutate('leads', async (rows) => {
+      await new Promise(r => setTimeout(r, 10));
+      return [...rows, lead('FROM-B')];
+    }),
+  ]);
+
+  const ids = (await store.readAll('leads')).map(r => r.id).sort();
+  assert.deepStrictEqual(ids, ['BASE-1', 'FROM-A', 'FROM-B'],
+    'one of the two rewrites overwrote the other — a lost lead is a lost consent record');
+});
+
+test('the read and the write happen under one lock, not two', () => {
+  /* Taking the lock inside writeAll alone would still leave the read outside
+     it, which is the whole race. Asserted on the source because the ordering
+     is the point and a passing concurrency test does not prove it. */
+  const fs = require('fs');
+  const path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'store.js'), 'utf8');
+  const mutateBody = src.slice(src.indexOf('async function mutate'), src.indexOf('async function replaceAll'));
+
+  const lockAt = mutateBody.indexOf('pg_advisory_xact_lock');
+  const readAt = mutateBody.indexOf('SELECT_SQL[table]');
+  const writeAt = mutateBody.indexOf('DELETE FROM');
+
+  assert.ok(lockAt > -1, 'mutate does not take the advisory lock');
+  assert.ok(readAt > lockAt, 'mutate reads before taking the lock — the race is still open');
+  assert.ok(writeAt > readAt, 'mutate writes before it reads');
+});
