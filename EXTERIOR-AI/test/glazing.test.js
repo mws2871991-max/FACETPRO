@@ -127,12 +127,54 @@ test('discards a box too small to be a window at scale', () => {
 
 /* ── fallback ── */
 
-test('falls back to the house-type prior when no door was detected', () => {
+test('with no door it counts the windows rather than inventing a number', () => {
+  /* Counting and measuring are two different questions, and this used to
+     answer neither when it could not answer both.
+
+     The door is the scale reference — 1.98 m is what turns percentages of an
+     image into metres — so without one there is no way to SIZE a window. There
+     is still a perfectly good way to COUNT them, and that needs no scale.
+
+     What happened instead: a real photograph with seven clearly detected
+     windows and no door in shot fell through to the house-type prior and
+     priced eleven. The tool discarded seven things it had seen in favour of a
+     number it made up, and then showed the homeowner both at once — seven
+     labelled windows on a photograph of their own house, beside an estimate
+     that said it covered eleven typical ones. £10,050–£18,272 against
+     £18,438–£33,523 on the same photograph. */
   const noDoor = semiPhoto.filter(d => d.type !== 'door-front');
+  const windowsInPhoto = noDoor.filter(d => d.type === 'window').length;
+
   const r = base({ detections: noDoor });
+  assert.strictEqual(r.countSource, 'photo_count');
+  assert.strictEqual(r.frontCount, windowsInPhoto,
+    'the front count should be the windows actually detected');
+  assert.ok(r.windowCount > windowsInPhoto,
+    'a front elevation still has to be scaled to the whole house');
+  assert.match(r.sourceLabel, /counted/i);
+  assert.doesNotMatch(r.sourceLabel, /measured/i,
+    'counting is a weaker claim than measuring and must never borrow the word');
+});
+
+test('the prior is still there for a photo with no windows in it at all', () => {
+  /* A photograph of a hedge, or a detection that found nothing. There is
+     genuinely nothing to count, and a typical figure is the honest answer. */
+  const noWindows = semiPhoto.filter(d => d.type !== 'window' && d.type !== 'door-front');
+  const r = base({ detections: noWindows });
   assert.strictEqual(r.countSource, 'house_type_prior');
-  assert.strictEqual(r.windowCount, 8);
   assert.strictEqual(r.frontCount, null);
+  assert.match(r.sourceLabel, /typical/i);
+});
+
+test('counting is surer than guessing and less sure than measuring', () => {
+  const spread = (r) => (r.range.high - r.range.low) / r.price.total;
+  const measured = base();
+  const counted = base({ detections: semiPhoto.filter(d => d.type !== 'door-front') });
+  const guessed = base({ detections: [], aspectRatio: null });
+  assert.ok(spread(measured) < spread(counted),
+    'a counted estimate should not claim to be as tight as a measured one');
+  assert.ok(spread(counted) < spread(guessed),
+    'counting the windows should narrow the range against knowing nothing');
 });
 
 test('the prior range is wider than the measured range', () => {

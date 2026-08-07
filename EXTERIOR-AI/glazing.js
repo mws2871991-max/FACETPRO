@@ -84,7 +84,12 @@ const UPPER_STOREY_TOLERANCE_PCT = 1.5;
 /* How wide a range to show, by method. Wider than measure.js's equivalents
    because window count is discrete: one missed window on a five-window
    terrace is a 20% error, and no amount of geometric precision recovers it. */
-const UNCERTAINTY = { door: 0.18, prior: 0.30 };
+/* How unsure we are about the size of the job, by how we arrived at it.
+
+   `count` sits between the other two on purpose: the number of windows is
+   observed rather than assumed, which is most of the answer, but their sizes
+   are typical rather than measured, which is the rest of it. */
+const UNCERTAINTY = { door: 0.18, count: 0.24, prior: 0.30 };
 
 /* ── WHAT THE SAME JOB GETS QUOTED AT ELSEWHERE ──
 
@@ -330,6 +335,40 @@ function measureWindows({ detections, aspectRatio, bands }) {
    No door to scale against, or the detections were rejected. Build a notional
    front elevation from the prior's mix so the rest of the pipeline is
    identical — one code path for pricing, whatever produced the counts. */
+/* Windows we counted but could not size.
+
+   The count is real — these are windows detected on the photograph. The sizes
+   are not: with no door there is no scale, so each one is given the typical
+   band for the house type rather than a measured area. That is a genuinely
+   better answer than the prior, which invents the count as well, and a
+   genuinely weaker one than a measurement, which is why it reports its own
+   method rather than borrowing either name.
+
+   Upper storey is taken from the geometry, which needs no scale: a window in
+   the top half of the frame is upstairs. That decides the access charge, and
+   it is the one thing a scaleless photograph still tells us plainly. */
+function countWindows({ detections, houseType, bands }) {
+  const key = houseTypeKey(houseType);
+  const found = detections.filter(d =>
+    d.type === 'window' && Number.isFinite(d.w_pct) && Number.isFinite(d.h_pct) && d.w_pct > 0 && d.h_pct > 0);
+  if (!found.length) return null;
+
+  /* The commonest band for this house type — what a typical window here is,
+     since we cannot tell what these ones are. */
+  const prior = HOUSE_TYPE_GLAZING_PRIORS[key];
+  const commonestId = Object.entries(prior.mix).sort((a, b) => b[1] - a[1])[0][0];
+  const band = bands.find(b => b.id === commonestId) || bands[0];
+
+  const windows = found.map(d => ({
+    widthM: null, heightM: null, areaM2: null,
+    bandId: band.id, bandLabel: band.label,
+    upperStorey: (d.y_pct + d.h_pct / 2) < 50,
+    confidence: Number.isFinite(d.confidence) ? d.confidence : null,
+  }));
+
+  return { method: 'count', frontCount: windows.length, windows };
+}
+
 function priorWindows({ houseType, bands }) {
   const key = houseTypeKey(houseType);
   const prior = HOUSE_TYPE_GLAZING_PRIORS[key];
@@ -518,17 +557,45 @@ function estimateGlazing({
   const bands = rates.windowBands;
 
   const measured = measureWindows({ detections, aspectRatio, bands });
-  const base = measured || priorWindows({ houseType: key, bands });
+
+  /* Counting and measuring are two different questions, and this used to
+     answer neither when it could not answer both.
+
+     The front door is the scale reference — 1.98 m, which is what turns
+     percentages of an image into metres. Without one in shot there is no way
+     to size a window. But there is still a perfectly good way to *count* them,
+     which is to count them, and that does not need a scale at all.
+
+     What happened instead: a photograph with seven clearly detected windows
+     and no door fell straight through to the house-type prior and priced
+     eleven — the tool discarded seven things it had seen in favour of a
+     number it made up, then displayed both on the same screen. A homeowner
+     looking at seven labelled windows on a photograph of their own house was
+     told the estimate covered eleven typical ones. On a real photograph that
+     was the difference between £10,050–£18,272 and £18,438–£33,523.
+
+     So: measure if there is a door, count if there is not, and only fall back
+     to the prior when the photograph shows no windows at all. The three cases
+     report different countSource values and the page says which one it used —
+     "counted" is a weaker claim than "measured" and must never be dressed up
+     as it. */
+  const counted = (!measured && detections.some(d => d.type === 'window'))
+    ? countWindows({ detections, houseType: key, bands })
+    : null;
+
+  const base = measured || counted || priorWindows({ houseType: key, bands });
 
   const frontToTotal = rates.frontToTotal?.[key] ?? FRONT_TO_TOTAL_WINDOWS[key];
 
-  // The prior is already a whole-house count; only a measured front elevation
-  // needs scaling up.
-  let totalCount = base.method === 'door'
+  /* Both photo-derived counts describe the front elevation and need scaling to
+     the whole house. The prior is already a whole-house figure. */
+  let totalCount = (base.method === 'door' || base.method === 'count')
     ? base.frontCount * frontToTotal
     : base.frontCount;
 
-  let countSource = base.method === 'door' ? 'photo_door' : 'house_type_prior';
+  let countSource = base.method === 'door' ? 'photo_door'
+    : base.method === 'count' ? 'photo_count'
+    : 'house_type_prior';
 
   /* A typed count beats everything, and is bounded for the same reason the
      manual wall area is: there is no honest client that sends 400 windows,
@@ -572,7 +639,7 @@ function estimateGlazing({
 
   const spread = countSource === 'manual_entry'
     ? UNCERTAINTY.door
-    : UNCERTAINTY[base.method === 'door' ? 'door' : 'prior'];
+    : UNCERTAINTY[base.method === 'door' ? 'door' : base.method === 'count' ? 'count' : 'prior'];
 
   return {
     countSource,
@@ -583,8 +650,8 @@ function estimateGlazing({
     countNote: countCapped
       ? `We've capped this at ${MAX_WINDOWS} windows. If your home has more, tell us the number and we'll price it properly.`
       : null,
-    frontCount: base.method === 'door' ? base.frontCount : null,
-    frontToTotal: base.method === 'door' ? frontToTotal : null,
+    frontCount: (base.method === 'door' || base.method === 'count') ? base.frontCount : null,
+    frontToTotal: (base.method === 'door' || base.method === 'count') ? frontToTotal : null,
     windows: base.windows,
     discarded: base.discarded,
     price,
@@ -632,6 +699,10 @@ function estimateGlazing({
     // wording here so the page and the lead email can never disagree.
     sourceLabel: {
       photo_door: 'measured from your photo',
+      /* Deliberately not "measured". We counted the windows on the
+         photograph, which is real, and assumed their sizes, which is not —
+         and the difference is the whole reason there are three of these. */
+      photo_count: 'counted from your photo, at typical sizes',
       house_type_prior: 'a typical figure for your house type',
       manual_entry: 'the number of windows you entered',
     }[countSource],
