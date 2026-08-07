@@ -1451,7 +1451,23 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
         model: 'claude-sonnet-5',
-        max_tokens: 1200,
+        /* 1200 was not enough and failed silently.
+
+           The prompt used to ask for a "notes" sentence on every element,
+           which nothing has ever read. A normal semi has a dozen elements, so
+           the reply ran past the limit and stopped mid-object:
+
+             {"type":"fascia","label":"Fascia
+
+           The parser looks for a bracketed array, finds no closing bracket,
+           and the JSON.parse failure was swallowed by an empty catch. So a
+           perfectly good photograph of a perfectly ordinary house came back
+           with zero detections and no error at all — the caller was told the
+           house had nothing on it.
+
+           Notes are gone from the prompt and the budget is four thousand,
+           which fits about forty elements of pure geometry. */
+        max_tokens: 4000,
         messages: [{
           role: 'user',
           content: [
@@ -1466,7 +1482,8 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
 - "soffit": the soffit (underside of the roof overhang)
 - "guttering": guttering/downpipes
 
-Each item must have: {"type":"one of above","label":"short human label e.g. Main Roof","confidence":0.0-1.0,"x_pct":0-100,"y_pct":0-100,"w_pct":1-100,"h_pct":1-100,"notes":"one sentence description including material/colour if visible"}
+Each item must have exactly: {"type":"one of above","label":"short human label e.g. Main Roof","confidence":0.0-1.0,"x_pct":0-100,"y_pct":0-100,"w_pct":1-100,"h_pct":1-100}
+Do not add any other keys, and do not describe anything in prose. Only the array.
 
 Coordinates: x_pct/y_pct = top-left corner, w_pct/h_pct = width/height, all as % of image dimensions.
 
@@ -1512,8 +1529,32 @@ Finally add: {"type":"analysis","summary":"2-3 sentence overview of the property
   const raw = data.content?.filter(b => b.type === 'text').map(b => b.text).join('') || '';
   const arrMatch = raw.replace(/```json|```/g, '').trim().match(/\[[\s\S]*\]/);
   let detections = [];
+  let parseFailed = null;
   if (arrMatch) {
-    try { detections = JSON.parse(arrMatch[0]); } catch (_) {}
+    try { detections = JSON.parse(arrMatch[0]); }
+    catch (err) { parseFailed = err.message; }
+  } else {
+    parseFailed = 'no JSON array in the reply';
+  }
+
+  /* Silence here is what hid the truncation for as long as it lasted. An
+     empty catch turns "the model was cut off mid-sentence" into "this house
+     has no windows", and the caller cannot tell the difference — nor could
+     anybody reading the logs, because there were none.
+
+     Truncation is called out separately because it has a specific cause and a
+     specific fix, and because it is the failure that will come back if the
+     prompt ever grows again. */
+  if (data.stop_reason === 'max_tokens') {
+    obs.record('detect', 'the model was cut off before finishing the list', {
+      outputTokens: data.usage?.output_tokens, parsed: detections.length,
+    });
+    console.error(`Detection truncated at max_tokens (${data.usage?.output_tokens} out) — the reply was cut off mid-array.`);
+  }
+  if (parseFailed) {
+    obs.record('detect', 'could not read the detection list', { reason: parseFailed, replyChars: raw.length });
+    console.error('Detection parse failed:', parseFailed, '— reply was', raw.length, 'chars');
+    return res.status(502).json({ error: "We couldn't read your photo properly — please try again." });
   }
 
   const elementCount = detections.filter(d => d.type !== 'analysis').length;
