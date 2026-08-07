@@ -58,10 +58,18 @@ function jpeg(width = 640, height = 480) {
   return Buffer.concat([Buffer.from([0xff, 0xd8]), sof, Buffer.alloc(64)]).toString('base64');
 }
 
+/* A different photograph per call.
+
+   Detection remembers its answer against the image now, so every test here
+   sending the identical jpeg meant the first successful reply was handed back
+   to all the later ones — the honest-empty-array test cached `[]`, and the
+   good-reply test that followed got the empty list instead of asking again.
+   Each test wants a fresh reading, so each gets its own house. */
+let seq = 0;
 const detect = () => realFetch(`${BASE}/api/detect`, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ image: jpeg(), mimeType: 'image/jpeg' }),
+  body: JSON.stringify({ image: jpeg(640 + (++seq)), mimeType: 'image/jpeg' }),
 });
 
 const GOOD = [

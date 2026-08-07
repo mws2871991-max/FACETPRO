@@ -71,10 +71,19 @@ const post = async (p, payload) => {
   });
   return { status: res.status, body: await res.json().catch(() => ({})) };
 };
-const tinyJpeg = () => {
+/* Each call is a different photograph by default.
+
+   Detection now remembers its answer against the image, so sending one
+   photograph twice reaches the provider once — which is the point of it, and
+   which quietly broke the cap tests below, since they exhaust a budget by
+   repeating a request. A counter in the declared width makes every call a
+   distinct house without changing anything the tests care about. Pass a fixed
+   width where a test genuinely wants the same photograph twice. */
+let jpegSeq = 0;
+const tinyJpeg = (width = 640 + (++jpegSeq)) => {
   const sof = Buffer.alloc(11);
   sof.writeUInt16BE(0xffc0, 0); sof.writeUInt16BE(8, 2); sof[4] = 8;
-  sof.writeUInt16BE(480, 5); sof.writeUInt16BE(640, 7);
+  sof.writeUInt16BE(480, 5); sof.writeUInt16BE(width, 7);
   return Buffer.concat([Buffer.from([0xff, 0xd8]), sof, Buffer.alloc(32)]).toString('base64');
 };
 
@@ -237,15 +246,16 @@ test('/healthz reports storage, and says nothing else', async () => {
 
 test('the detect cap stops calling Anthropic once spent', async () => {
   const before = upstream.anthropic;
-  const payload = { image: tinyJpeg(), mimeType: 'image/jpeg' };
 
+  /* A different photograph each time. The cap counts calls to the provider,
+     and a repeat of one photograph no longer is one. */
   for (let i = 0; i < DAILY_DETECT; i++) {
-    const { status } = await post('/api/detect', payload);
+    const { status } = await post('/api/detect', { image: tinyJpeg(), mimeType: 'image/jpeg' });
     assert.strictEqual(status, 200, `call ${i + 1} should succeed`);
   }
   assert.strictEqual(upstream.anthropic, before + DAILY_DETECT, 'each allowed call reaches the provider');
 
-  const { status, body } = await post('/api/detect', payload);
+  const { status, body } = await post('/api/detect', { image: tinyJpeg(), mimeType: 'image/jpeg' });
   assert.strictEqual(status, 429);
   // Assert the machine-readable reason, not the wording — the copy is written
   // to keep the homeowner going and is expected to change.

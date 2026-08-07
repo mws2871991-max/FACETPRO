@@ -212,8 +212,12 @@ app.use((req, res, next) => {
 });
 
 /* ── RATE LIMITERS ── */
+/* Ten a minute is the right number for a homeowner and the wrong number for a
+   test that sends one photograph fifteen times on purpose. Overridable so the
+   suite can have its own budget; unset everywhere else, which is where it
+   should stay. */
 const detectLimiter = rateLimit({
-  windowMs: 60 * 1000, max: 10,
+  windowMs: 60 * 1000, max: Number(process.env.DETECT_RATE_LIMIT) || 10,
   standardHeaders: true, legacyHeaders: false,
   message: { error: 'Too many requests — please wait a minute and try again.' }
 });
@@ -918,6 +922,28 @@ const DETECTION_TTL_MS = 2 * 60 * 60 * 1000;   // 2 hours
 const DETECTION_MAX = 500;
 const detectionRecords = new Map();
 
+/* The same photograph, sent twice, used to come back different.
+
+   The model is sampled, not deterministic, and `temperature` is deprecated on
+   this model — so there is no dial to turn it down with. Five runs of one
+   photograph through the live service found 5, 7, 7, 8 and 8 front windows,
+   which priced the same house at £16,889–£30,707 on one run and
+   £25,166–£45,757 on another. Forty-nine per cent apart, every one of them
+   labelled "measured from your photo", and the homepage promising in as many
+   words that the same house gets the same number.
+
+   So the answer is remembered against the bytes of the image. Identical
+   photograph, identical detection, identical price — not because the model
+   settled down but because it is only asked once. A homeowner who reloads,
+   goes back, or sends the link to their partner sees the figure they saw
+   before, and it costs nothing to show them.
+
+   Keyed on a hash of the image rather than the base64 text so a re-encode of
+   the same bytes still hits. Bounded by the same TTL and ceiling as the
+   records themselves, and cleared alongside them — a hash pointing at a record
+   that has been pruned is a miss, not a crash. */
+const detectionByImage = new Map();
+
 function pruneDetectionRecords() {
   const cutoff = Date.now() - DETECTION_TTL_MS;
   for (const [id, rec] of detectionRecords) {
@@ -927,6 +953,15 @@ function pruneDetectionRecords() {
   while (detectionRecords.size > DETECTION_MAX) {
     detectionRecords.delete(detectionRecords.keys().next().value);
   }
+  /* Drop any hash whose record has gone, so the cache cannot outgrow the thing
+     it points into. */
+  for (const [hash, id] of detectionByImage) {
+    if (!detectionRecords.has(id)) detectionByImage.delete(hash);
+  }
+}
+
+function imageFingerprint(buffer) {
+  return crypto.createHash('sha256').update(buffer).digest('hex');
 }
 
 function saveDetectionRecord(detections, size) {
@@ -1438,6 +1473,20 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
     });
   }
 
+  /* Have we already read this exact photograph? Answered before the quota and
+     before the key, because a cached answer costs neither. */
+  const fingerprint = imageFingerprint(img.buffer);
+  const seenId = detectionByImage.get(fingerprint);
+  const seen = seenId ? detectionRecords.get(seenId) : null;
+  if (seen) {
+    return res.json({
+      detections: seen.detections,
+      detectionId: seenId,
+      canMeasure: seen.detections.some(d => d.type === 'cladding'),
+      scaleReference: seen.detections.some(d => d.type === 'door-front') && seen.aspectRatio !== null,
+    });
+  }
+
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set — see .env.example.' });
 
@@ -1564,6 +1613,7 @@ Finally add: {"type":"analysis","summary":"2-3 sentence overview of the property
   // was already read at the gate above, so there is nothing left to fail here.
   const size = { width: img.width, height: img.height };
   const detectionId = saveDetectionRecord(detections, size);
+  detectionByImage.set(fingerprint, detectionId);
 
   // canMeasure tells the UI whether to offer the step at all, so we don't
   // invite someone to measure a photo we already know we can't scale.
