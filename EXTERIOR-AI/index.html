@@ -1352,14 +1352,63 @@ function buildUploadDetect() {
   }
 
   if (state.detections.length > 0) {
-    const overlay = h('div', { className: 'absolute inset-0' });
-    state.detections.forEach(d => {
+    /* This screen is the one that has to be believed, and it was illegible.
+
+       Three faults, all visible the moment anybody looked at a rendered page
+       rather than at the markup. The model returns an "analysis" entry with no
+       box and no confidence, and it was drawn like everything else — a label
+       reading "0%" floating at the top-left corner, twice. Every label sat at
+       the same offset above its own box, so the five elements clustered round
+       a porch stacked into an unreadable pile. And a label on a box near the
+       right-hand edge ran off the picture.
+
+       Fixed by drawing only real elements, nudging a label down when it would
+       land on one already placed, and turning it round when it would overflow
+       the edge it is anchored to. */
+    const elements = state.detections.filter(d =>
+      d.type !== 'analysis' && Number.isFinite(d.w_pct) && Number.isFinite(d.h_pct) && d.w_pct > 0 && d.h_pct > 0);
+
+    const overlay = h('div', { className: 'absolute inset-0 pointer-events-none' });
+    /* Rough label geometry in percentage terms. A label is one line, so the
+       only thing that matters is how tall a row is and roughly how wide the
+       text runs — close enough to keep two of them apart. */
+    const ROW_H = 5.2;
+    const placed = [];
+    /* Biggest first, so the large obvious shapes take the natural positions
+       and the fiddly ones do the moving. */
+    const order = elements.slice().sort((a, b) => (b.w_pct * b.h_pct) - (a.w_pct * a.h_pct));
+
+    order.forEach(d => {
+      const x = d.x_pct ?? 0, y = d.y_pct ?? 0, w = d.w_pct ?? 0;
+      const text = `${d.label}${Number.isFinite(d.confidence) ? ' ' + Math.round(d.confidence * 100) + '%' : ''}`;
+      const widthPct = Math.min(46, 2 + text.length * 1.15);   // ~9px glyphs on a 640-ish box
+      /* Anchor right when the label would otherwise leave the picture. */
+      const flip = x + widthPct > 97;
+      const leftEdge = flip ? Math.max(0, x + w - widthPct) : x;
+
+      /* Above the box by default; inside it when there is no room above. */
+      let top = y - ROW_H;
+      let inside = false;
+      if (top < 0) { top = y + 0.6; inside = true; }
+
+      /* Step down until this label is not sitting on one already drawn. */
+      for (let guard = 0; guard < 8; guard++) {
+        const clash = placed.some(q =>
+          Math.abs(q.top - top) < ROW_H * 0.9 &&
+          leftEdge < q.left + q.width && leftEdge + widthPct > q.left);
+        if (!clash) break;
+        top += ROW_H;
+      }
+      placed.push({ top, left: leftEdge, width: widthPct });
+
       overlay.appendChild(h('div', {
         className: 'absolute border border-zinc-900/70 bg-zinc-900/10',
-        style: { left: (d.x_pct ?? 0) + '%', top: (d.y_pct ?? 0) + '%', width: (d.w_pct ?? 0) + '%', height: (d.h_pct ?? 0) + '%' },
-      }, [
-        h('span', { className: 'absolute -top-5 left-0 text-[9px] px-1.5 py-0.5 bg-zinc-900 text-white rounded' }, `${d.label} ${Math.round((d.confidence || 0) * 100)}%`),
-      ]));
+        style: { left: x + '%', top: y + '%', width: w + '%', height: (d.h_pct ?? 0) + '%' },
+      }));
+      overlay.appendChild(h('span', {
+        className: `absolute text-[9px] px-1.5 py-0.5 rounded whitespace-nowrap ${inside ? 'bg-zinc-900/90' : 'bg-zinc-900'} text-white`,
+        style: { left: leftEdge + '%', top: top + '%' },
+      }, text));
     });
     dropArea.appendChild(overlay);
   }
