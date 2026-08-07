@@ -1,0 +1,110 @@
+[
+  {
+    "type": "roof",
+    "label": "Main Roof",
+    "confidence": 0.95,
+    "x_pct": 10,
+    "y_pct": 0,
+    "w_pct": 75,
+    "h_pct": 45
+  },
+  {
+    "type": "cladding",
+    "label": "Brick Wall - Bay Section",
+    "confidence": 0.9,
+    "x_pct": 15,
+    "y_pct": 40,
+    "w_pct": 55,
+    "h_pct": 50
+  },
+  {
+    "type": "cladding",
+    "label": "Brick Wall - Side Section",
+    "confidence": 0.85,
+    "x_pct": 65,
+    "y_pct": 40,
+    "w_pct": 30,
+    "h_pct": 45
+  },
+  {
+    "type": "window",
+    "label": "Upper Bay Window Left",
+    "confidence": 0.92,
+    "x_pct": 22,
+    "y_pct": 15,
+    "w_pct": 18,
+    "h_pct": 15
+  },
+  {
+    "type": "window",
+    "label": "Upper Bay Window Center",
+    "confidence": 0.92,
+    "x_pct": 38,
+    "y_pct": 13,
+    "w_pct": 18,
+    "h_pct": 15
+  },
+  {
+    "type": "window",
+    "label": "Upper Bay Window Right",
+    "confidence": 0.92,
+    "x_pct": 55,
+    "y_pct": 15,
+    "w_pct": 18,
+    "h_pct": 15
+  },
+  {
+    "type": "window",
+    "label": "Lower Bay Window Left",
+    "confidence": 0.92,
+    "x_pct": 18,
+    "y_pct": 42,
+    "w_pct": 18,
+    "h_pct": 18
+  },
+  {
+    "type": "window",
+    "label": "Lower Bay Window Center",
+    "confidence": 0.92,
+    "x_pct": 36,
+    "y_pct": 42,
+    "w_pct": 18,
+    "h_pct": 18
+  },
+  {
+    "type": "window",
+    "label": "Lower Bay Window Right",
+    "confidence": 0.92,
+    "x_pct": 54,
+    "y_pct": 42,
+    "w_pct": 18,
+    "h_pct": 18
+  },
+  {
+    "type": "fascia",
+    "label": "Fascia Board Under Roofline",
+    "confidence": 0.75,
+    "x_pct": 10,
+    "y_pct": 40,
+    "w_pct": 75,
+    "h_pct": 4
+  },
+  {
+    "type": "soffit",
+    "label": "Soffit Under Eaves",
+    "confidence": 0.7,
+    "x_pct": 10,
+    "y_pct": 38,
+    "w_pct": 75,
+    "h_pct": 3
+  },
+  {
+    "type": "guttering",
+    "label": "Guttering Right Side",
+    "confidence": 0.8,
+    "x_pct": 83,
+    "y_pct": 30,
+    "w_pct": 5,
+    "h_pct": 40
+  }
+]
