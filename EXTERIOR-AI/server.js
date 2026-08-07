@@ -2801,7 +2801,14 @@ const purgeLeadPii = (leadId) => purgeLeadPiiFor(new Set([leadId]));
 
    /healthz stays open and stays dumb — a platform health check must not
    depend on anything that can be slow or wrong. */
-app.get('/api/ops', requireInstallerPassword, (req, res) => {
+/* installerLimiter, like every other route behind this password.
+
+   It was the one gated route without it: sixty wrong passwords got sixty 401s
+   and no throttle at all, while /api/leads next door refuses after twenty. The
+   same password opens every consenting homeowner's name, email, phone number
+   and postcode, so an unthrottled guess-as-fast-as-you-like endpoint against it
+   is the whole login throttle undone by the door nobody looked at. */
+app.get('/api/ops', installerLimiter, requireInstallerPassword, (req, res) => {
   const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 50));
   res.json({
     ...obs.summary({ limit }),

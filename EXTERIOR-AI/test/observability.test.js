@@ -102,7 +102,9 @@ test('the ops endpoint is behind the installer password', () => {
   const fs = require('fs');
   const path = require('path');
   const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
-  assert.match(server, /app\.get\('\/api\/ops',\s*requireInstallerPassword/,
+  /* Middleware may sit in front of the guard — a rate limiter now does — so
+     this checks the guard is on the route, not that it comes first. */
+  assert.match(server, /app\.get\('\/api\/ops'[^)]*requireInstallerPassword/,
     'the ops endpoint is open — its counts alone describe the traffic and what is failing');
 });
 

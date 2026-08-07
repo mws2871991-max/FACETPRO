@@ -57,7 +57,28 @@ function tlsFor(dsn) {
   } else if (!disabled && !caPem) {
     console.warn('  No DATABASE_CA_CERT or PGSSLROOTCERT — verifying against the system trust store. If the connection is refused, download your provider\'s CA.');
   }
-  return disabled ? false : { rejectUnauthorized: true, ...(caPem ? { ca: caPem } : {}) };
+  /* Railway issues every Postgres a certificate for CN=localhost, so no
+     hostname we can dial will ever match it — not the private name and not
+     the public proxy. This tool runs from a laptop, so the public proxy is
+     the only way in, and that link crosses the internet rather than staying
+     inside the project.
+
+     Same shape as store.js and one step weaker by circumstance: keep the
+     chain check, pin the CA, waive only the name, and only for a host we
+     recognise as Railway's with a CA actually supplied. An attacker still
+     needs a certificate signed by that pinned root. If you want the stronger
+     position, run this inside Railway against the private host instead. */
+  const railwayHost = /\.proxy\.rlwy\.net$|\.railway\.internal$/.test(host);
+  const waive = caPem && railwayHost;
+  if (waive) {
+    console.log(`  TLS: chain verified against the pinned CA; hostname check waived for ${host} (Railway issues CN=localhost).`);
+  }
+
+  return disabled ? false : {
+    rejectUnauthorized: true,
+    ...(caPem ? { ca: caPem } : {}),
+    ...(waive ? { checkServerIdentity: () => undefined } : {}),
+  };
 }
 
 /* Take every value as the text Postgres sent, and send it back unchanged.
@@ -93,6 +114,18 @@ const VARS = process.argv[2];
 const OUT = process.argv[3];
 const SCRATCH = 'restore_test_' + process.argv[4];
 
+/* The schema the application actually writes to.
+
+   This script read table_schema='public' while store.js has always written to
+   facetpro_visualiser. The database is shared with the FastAPI backend, whose
+   tables ARE in public and whose names collide with seven of ours — so the
+   backup faithfully exported the other product's data, restored it, compared
+   it to itself and printed PASSED. Nothing it protected was ours, and the
+   privacy notice says we test that we can restore.
+
+   Read from the same variable store.js reads, so the two cannot drift. */
+const SCHEMA = (process.env.DB_SCHEMA || 'facetpro_visualiser').replace(/[^a-zA-Z0-9_]/g, '');
+
 (async () => {
   const v = JSON.parse(fs.readFileSync(VARS, 'utf8'));
   const dsn = v.DATABASE_PUBLIC_URL;
@@ -101,15 +134,26 @@ const SCRATCH = 'restore_test_' + process.argv[4];
 
   const tables = (await c.query(`
     SELECT table_name FROM information_schema.tables
-    WHERE table_schema='public' AND table_type='BASE TABLE' ORDER BY table_name`)).rows.map(r => r.table_name);
+    WHERE table_schema=$1 AND table_type='BASE TABLE' ORDER BY table_name`, [SCHEMA])).rows.map(r => r.table_name);
 
+  console.log(`  schema: ${SCHEMA}`);
   console.log('  tables to back up: ' + tables.length);
+
+  /* A backup of nothing must never report success. Comparing an empty set to
+     an empty set passes every check there is, which is exactly how this said
+     PASSED while protecting the wrong schema. */
+  if (!tables.length) {
+    console.error(`\n  FAILED — no tables found in schema "${SCHEMA}".`);
+    console.error('  Nothing was backed up. Check DB_SCHEMA and that the app has started at least once.');
+    await c.end();
+    process.exit(1);
+  }
 
   /* ── 1. export ── */
   const dump = { takenAt: new Date().toISOString(), server: (await c.query('select version()')).rows[0].version, tables: {} };
   let rows = 0;
   for (const t of tables) {
-    const q = await c.query(`SELECT * FROM public."${t}"`);
+    const q = await c.query(`SELECT * FROM ${SCHEMA}."${t}"`);
     dump.tables[t] = q.rows;
     rows += q.rows.length;
   }
@@ -124,7 +168,7 @@ const SCRATCH = 'restore_test_' + process.argv[4];
 
   let restored = 0;
   for (const t of tables) {
-    await c.query(`CREATE TABLE ${SCRATCH}."${t}" (LIKE public."${t}" INCLUDING ALL)`);
+    await c.query(`CREATE TABLE ${SCRATCH}."${t}" (LIKE ${SCHEMA}."${t}" INCLUDING ALL)`);
     const data = dump.tables[t];
     if (!data.length) continue;
     const cols = Object.keys(data[0]);
@@ -140,14 +184,16 @@ const SCRATCH = 'restore_test_' + process.argv[4];
 
   /* ── 3. compare ── */
   let mismatches = 0;
+  let withRows = 0;
   for (const t of tables) {
-    const a = await c.query(`SELECT count(*)::int n, md5(coalesce(string_agg(x::text, '' ORDER BY x::text), '')) h FROM public."${t}" x`);
+    const a = await c.query(`SELECT count(*)::int n, md5(coalesce(string_agg(x::text, '' ORDER BY x::text), '')) h FROM ${SCHEMA}."${t}" x`);
     const b = await c.query(`SELECT count(*)::int n, md5(coalesce(string_agg(x::text, '' ORDER BY x::text), '')) h FROM ${SCRATCH}."${t}" x`);
     const ok = a.rows[0].n === b.rows[0].n && a.rows[0].h === b.rows[0].h;
     if (!ok) {
       mismatches++;
       console.log(`   MISMATCH  ${t}: live ${a.rows[0].n} rows / restored ${b.rows[0].n} rows, contents ${a.rows[0].h === b.rows[0].h ? 'match' : 'DIFFER'}`);
     } else if (a.rows[0].n > 0) {
+      withRows++;
       console.log(`   ok        ${t.padEnd(22)} ${String(a.rows[0].n).padStart(4)} rows, checksum matches`);
     }
   }
@@ -157,6 +203,18 @@ const SCRATCH = 'restore_test_' + process.argv[4];
   console.log('  scratch schema dropped');
 
   await c.end();
-  console.log('\n  ' + (mismatches ? `FAILED — ${mismatches} table(s) did not round-trip` : 'PASSED — every table restored identically'));
+  /* Say how much was actually exercised. Every empty table also passes — 0
+     rows against 0 rows with matching checksums is a true comparison and a
+     weak one, and this script has already once reported PASSED while looking
+     at the wrong schema entirely. A reader should be able to see at a glance
+     whether the run proved anything. */
+  if (mismatches) {
+    console.log(`\n  FAILED — ${mismatches} table(s) did not round-trip`);
+  } else if (withRows === 0) {
+    console.log(`\n  PASSED, but every one of the ${tables.length} tables in ${SCHEMA} was empty.`);
+    console.log('  Nothing with data in it was exercised. This proves the plumbing, not the backup.');
+  } else {
+    console.log(`\n  PASSED — ${tables.length} tables restored identically, ${withRows} of them holding ${rows} rows between them`);
+  }
   process.exit(mismatches ? 1 : 0);
 })().catch(e => { console.log('  ERROR: ' + e.message); process.exit(1); });
