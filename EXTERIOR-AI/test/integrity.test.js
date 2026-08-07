@@ -306,7 +306,7 @@ test('everything needed to boot in production is a real dependency', () => {
      be installed in production. This catches the next one by reading the code
      rather than by trusting the list above. */
   const runtime = ['server.js', 'store.js', 'delivery.js', 'resume.js', 'glazing.js', 'measure.js', 'emails.js', 'installers.js', 'observability.js'];
-  const builtin = new Set(['fs', 'path', 'crypto', 'http', 'https', 'os', 'url', 'util', 'events', 'zlib', 'stream', 'child_process', 'timers']);
+  const builtin = new Set(require('module').builtinModules);
   for (const file of runtime) {
     const full = path.join(__dirname, '..', file);
     if (!fs.existsSync(full)) continue;

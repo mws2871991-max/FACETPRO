@@ -1,7 +1,18 @@
 const fs = require('fs');
 const path = require('path');
+const tls = require('tls');
 
 const SCHEMA_NAME = (process.env.DB_SCHEMA || 'facetpro_visualiser').replace(/[^a-zA-Z0-9_]/g, '');
+
+/* Waive the hostname check for one specific, pinned case. Exported because it
+   decides whether an impostor can answer for the database, and a rule that
+   important should be readable and tested rather than buried in a closure —
+   the long explanation is at the call site. Returns undefined to accept, or an
+   Error to reject, which is the contract Node's TLS stack expects. */
+function checkServerIdentity(caPem, host, cert) {
+  if (caPem && host.endsWith('.railway.internal') && cert?.subject?.CN === 'localhost') return undefined;
+  return tls.checkServerIdentity(host, cert);
+}
 
 let pool = null;
 if (process.env.DATABASE_URL) {
@@ -60,9 +71,38 @@ if (process.env.DATABASE_URL) {
     console.warn('No DATABASE_CA_CERT or PGSSLROOTCERT set — verifying the database certificate against the system trust store. If the connection is refused, download your provider\'s CA certificate.');
   }
 
+  /* The one name we will accept that does not match.
+
+     Railway issues every Postgres the same certificate — CN=localhost, with
+     localhost as its only subject alternative name — signed by a self-signed
+     root-ca it also serves. We reach the database over the project's private
+     network, as postgres.railway.internal, so the name in the certificate can
+     never match the name we dialled. Verification fails on the hostname check
+     long before anything looks at the CA.
+
+     The usual escape is rejectUnauthorized: false, which switches off the
+     whole apparatus — chain, signature and name together — and leaves an
+     encrypted pipe to whoever answered. That is what used to be here and what
+     a reviewer was right to call out; it carries every homeowner's name,
+     email, phone number and postcode.
+
+     So: keep the chain check, pin the CA, and waive only the name — and only
+     on the private network, only for that exact CN, and only when a CA has
+     actually been supplied to check against. An attacker still needs a
+     certificate signed by the pinned root. Everywhere else, including the
+     public proxy host, gets ordinary verification with no exceptions.
+
+     If Railway rotates that root the connection fails loudly rather than
+     falling back to trusting anything, which is the correct direction to
+     fail. The current one is valid to October 2028. */
+  const acceptPinnedPrivateHost = (host, cert) => checkServerIdentity(caPem, host, cert);
+
   pool = new Pool({
     connectionString: dsn,
-    ssl: sslDisabled ? false : { rejectUnauthorized: true, ...(caPem ? { ca: caPem } : {}) },
+    ssl: sslDisabled ? false : {
+      rejectUnauthorized: true,
+      ...(caPem ? { ca: caPem, checkServerIdentity: acceptPinnedPrivateHost } : {}),
+    },
     max: 10,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 5_000,
@@ -433,5 +473,5 @@ module.exports = {
   ensureSchema, append, readAll, replaceAll, mutate, end, getResume, DATA_DIR, putRender, getRender, deleteRenders, hasDb: !!pool,
   // Exported for tests: scraping these out of the source with a regex broke
   // the moment another table was added after leads.
-  _internals: { INSERT_PARAMS, INSERT_SQL, SELECT_SQL, FILE_NAMES },
+  _internals: { INSERT_PARAMS, INSERT_SQL, SELECT_SQL, FILE_NAMES, checkServerIdentity },
 };
