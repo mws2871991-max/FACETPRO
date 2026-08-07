@@ -31,6 +31,35 @@ const fs = require('fs');
 const path = require('path');
 const { Client, types } = require('pg');
 
+/* Verify the far end of the connection.
+
+   This was ssl: { rejectUnauthorized: false }, which encrypts the link
+   without authenticating who is on the other side of it — the shape a
+   man-in-the-middle needs. store.js had exactly the same line once and it was
+   fixed there; the script that reads the WHOLE database in one go kept it,
+   which is the wrong way round. A backup pulls every homeowner's name, email,
+   phone number and postcode across that connection at once.
+
+   Same rule as store.js: supply the provider's CA if you have it, otherwise
+   fall back to the system trust store — never to no verification. If that
+   fails the connection fails, and a refused backup is a better outcome than
+   one taken over a link nobody authenticated. sslmode=disable is honoured for
+   a local container, because those genuinely have no TLS. */
+function tlsFor(dsn) {
+  const caPem = process.env.DATABASE_CA_CERT
+    || (process.env.PGSSLROOTCERT && fs.readFileSync(process.env.PGSSLROOTCERT, 'utf8'));
+  const disabled = /[?&]sslmode=disable(&|$)/.test(dsn) || process.env.PGSSLMODE === 'disable';
+  const host = (() => { try { return new URL(dsn).hostname; } catch (_) { return ''; } })();
+  const isLocal = ['localhost', '127.0.0.1', '::1', 'postgres'].includes(host);
+
+  if (disabled && !isLocal) {
+    console.warn(`  TLS is DISABLED against ${host}. Every row of this backup, including homeowner contact details, crosses that link in clear.`);
+  } else if (!disabled && !caPem) {
+    console.warn('  No DATABASE_CA_CERT or PGSSLROOTCERT — verifying against the system trust store. If the connection is refused, download your provider\'s CA.');
+  }
+  return disabled ? false : { rejectUnauthorized: true, ...(caPem ? { ca: caPem } : {}) };
+}
+
 /* Take every value as the text Postgres sent, and send it back unchanged.
 
    The first version of this let node-postgres parse values into JavaScript
@@ -66,7 +95,8 @@ const SCRATCH = 'restore_test_' + process.argv[4];
 
 (async () => {
   const v = JSON.parse(fs.readFileSync(VARS, 'utf8'));
-  const c = new Client({ connectionString: v.DATABASE_PUBLIC_URL, ssl: { rejectUnauthorized: false } });
+  const dsn = v.DATABASE_PUBLIC_URL;
+  const c = new Client({ connectionString: dsn, ssl: tlsFor(dsn) });
   await c.connect();
 
   const tables = (await c.query(`
