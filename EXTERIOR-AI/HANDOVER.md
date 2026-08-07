@@ -287,6 +287,36 @@ actually supplied. `test/db-tls.test.js` is the boundary.
    verification, which its certificate cannot pass. It will fail closed, which
    is right, but the reason will not be obvious at three in the morning.
 
+**Three more, the same afternoon.**
+
+**Two processes could empty a table.** `writeAll` is DELETE-everything then
+reinsert. Two of those overlapping on `leads` is not a lost update: the second
+DELETE removes rows the first has already committed, and its reinsert only puts
+back what it read beforehand. `numReplicas: 1` was holding the assumption, but a
+rolling deploy runs the old container and the new one at once *by design* —
+exactly when a retention run and a withdrawal overlap. `mutate` now does the
+read and the write inside one transaction holding `pg_advisory_xact_lock`, keyed
+per schema and table, so it is serialised across every process on the database
+and retention on `leads` does not block a withdrawal.
+
+**There was one index in the whole store.** Everything else was a sequential
+scan — and the paths that scan are withdrawal, erasure and retention, which are
+the ones with a statutory month attached and which grow with every lead ever
+taken. Six added: `lead_id` on the four tables erasure joins across, `ts` on
+`leads` and `access_log`. Verified present on the live database.
+
+**The render could outlive the request.** `Prefer: wait=60` plus 45 polls at
+two seconds is 150 seconds against a `requestTimeout` of 120, so the socket
+closed under the handler and the homeowner got a dropped connection instead of
+the 504 written for them. It is a deadline now, inside the server's own
+timeout. Polls have an `AbortController` (Node's fetch has no default timeout),
+`poll.ok` is checked — a 429 used to parse into an object matching neither
+branch and ride out the full ninety seconds silently — and `canceled` is
+terminal rather than still-running.
+
+Covered by `test/render-poll.test.js` and three additions to
+`test/postgres.test.js`, including two connections racing through `mutate`.
+
 Also: `DETECT_RATE_LIMIT` now overrides the ten-per-minute detection limit.
 It exists so the suite can send one photograph fifteen times. Leave it unset.
 
