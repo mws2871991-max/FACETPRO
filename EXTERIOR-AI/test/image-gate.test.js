@@ -59,10 +59,19 @@ const post = async (p, payload) => {
 };
 
 const b64 = (s) => Buffer.from(s, 'binary').toString('base64');
-const jpeg = () => {
+/* A different photograph on every call.
+
+   Detection remembers its answer against the image now — in this process and
+   in the store — so eight tests here sending byte-identical JPEGs meant only
+   the first one reached a provider and the rest were cache hits. That is the
+   caching working, and it quietly broke the assertions that count calls to
+   Anthropic. These tests are about the gate in front of the providers, not
+   about the cache behind it, so each gets its own house. */
+let jpegSeq = 0;
+const jpeg = (width = 640 + (++jpegSeq)) => {
   const sof = Buffer.alloc(11);
   sof.writeUInt16BE(0xffc0, 0); sof.writeUInt16BE(8, 2); sof[4] = 8;
-  sof.writeUInt16BE(480, 5); sof.writeUInt16BE(640, 7);
+  sof.writeUInt16BE(480, 5); sof.writeUInt16BE(width, 7);
   return Buffer.concat([Buffer.from([0xff, 0xd8]), sof, Buffer.alloc(32)]).toString('base64');
 };
 

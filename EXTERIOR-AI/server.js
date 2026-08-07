@@ -971,6 +971,18 @@ const detectionRecords = new Map();
    that has been pruned is a miss, not a crash. */
 const detectionByImage = new Map();
 
+/* How long a photograph's measurements are kept, so the same house keeps
+   getting the same number after a deploy or a night's sleep.
+
+   Seven days is a judgement, not a standard. Long enough to cover a reload, a
+   deploy, and coming back tomorrow to show somebody — which is the behaviour
+   that made the instability visible. Short enough that the table never becomes
+   a lasting record of every house ever photographed, which is the thing worth
+   not building. The rows hold a hash and some geometry and nothing that
+   identifies anybody, and they are swept on every write. */
+const DETECTION_CACHE_DAYS = 7;
+const DETECTION_CACHE_MS = DETECTION_CACHE_DAYS * 24 * 60 * 60 * 1000;
+
 function pruneDetectionRecords() {
   const cutoff = Date.now() - DETECTION_TTL_MS;
   for (const [id, rec] of detectionRecords) {
@@ -1501,17 +1513,39 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
   }
 
   /* Have we already read this exact photograph? Answered before the quota and
-     before the key, because a cached answer costs neither. */
+     before the key, because a cached answer costs neither.
+
+     Two places to look, in order of cheapness. The map is this process and
+     lasts until it restarts; the table outlives a deploy, which is the whole
+     point of it — the map alone meant a homeowner who came back the next day,
+     or simply after we shipped something, was quoted a different number for
+     the same house. On a real photograph that was seven windows before a
+     deploy and six after. */
   const fingerprint = imageFingerprint(img.buffer);
+  const answer = (record, id) => res.json({
+    detections: record.detections,
+    detectionId: id,
+    canMeasure: record.detections.some(d => d.type === 'cladding'),
+    scaleReference: record.detections.some(d => d.type === 'door-front') && record.aspectRatio !== null,
+  });
+
   const seenId = detectionByImage.get(fingerprint);
   const seen = seenId ? detectionRecords.get(seenId) : null;
-  if (seen) {
-    return res.json({
-      detections: seen.detections,
-      detectionId: seenId,
-      canMeasure: seen.detections.some(d => d.type === 'cladding'),
-      scaleReference: seen.detections.some(d => d.type === 'door-front') && seen.aspectRatio !== null,
-    });
+  if (seen) return answer(seen, seenId);
+
+  /* Not in this process — ask the store. A failure here is a cache miss and
+     nothing more: the photograph still gets read, it just costs a call. */
+  let stored = null;
+  try {
+    stored = await store.getDetectionCache(fingerprint, DETECTION_CACHE_MS);
+  } catch (err) {
+    obs.record('detect', 'could not read the detection cache', { reason: err.message });
+  }
+  if (stored) {
+    const id = saveDetectionRecord(stored.detections, stored.aspectRatio !== null
+      ? { width: stored.aspectRatio, height: 1 } : null);
+    detectionByImage.set(fingerprint, id);
+    return answer(detectionRecords.get(id), id);
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -1641,6 +1675,19 @@ Finally add: {"type":"analysis","summary":"2-3 sentence overview of the property
   const size = { width: img.width, height: img.height };
   const detectionId = saveDetectionRecord(detections, size);
   detectionByImage.set(fingerprint, detectionId);
+
+  /* Kept so a restart does not change the answer. Awaited rather than fired
+     and forgotten: if this write fails the homeowner should still get their
+     estimate, but we should know, because a silently unwritten cache is the
+     bug this exists to fix wearing a disguise. */
+  try {
+    await store.putDetectionCache(fingerprint,
+      { detections, aspectRatio: size && size.height > 0 ? size.width / size.height : null },
+      DETECTION_CACHE_MS);
+  } catch (err) {
+    obs.record('detect', 'could not save the detection cache', { reason: err.message });
+    console.error('Detection cache write failed:', err.message);
+  }
 
   // canMeasure tells the UI whether to offer the step at all, so we don't
   // invite someone to measure a photo we already know we can't scale.

@@ -162,6 +162,35 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS detections (
     id SERIAL PRIMARY KEY, ts TIMESTAMPTZ NOT NULL, session_id TEXT, element_count INT, mime_type TEXT
   )`,
+  /* Detections, keyed by the image they came from.
+
+     The model is sampled and `temperature` is deprecated on it, so the same
+     photograph does not produce the same answer twice. server.js already holds
+     an in-memory map to make one photograph give one price — but it is in
+     memory, so a deploy empties it and the number a homeowner was shown
+     yesterday is not the number they see today. On a real photograph that was
+     seven windows before a deploy and six after: a seventeen per cent move on
+     the same house, under a homepage promising the same house gets the same
+     number.
+
+     WHAT IS DELIBERATELY NOT IN HERE.
+
+     Not the photograph. legal/privacy.html says "your photograph is used to
+     build your visualisation and is then deleted", and that stays true — this
+     holds a SHA-256 of the bytes, which cannot reconstruct them.
+
+     Not a person. No session id, no lead id, no IP, nothing to join on. A row
+     is a hash and the measurements of a building, and it is not linkable to
+     anybody by design rather than by policy — which is the only kind of
+     unlinkable worth claiming.
+
+     Rows expire (see DETECTION_CACHE_DAYS in server.js) and the sweep runs on
+     write, so the table cannot quietly become a permanent record of every
+     house ever photographed. */
+  `CREATE TABLE IF NOT EXISTS detection_cache (
+    image_hash TEXT PRIMARY KEY, ts TIMESTAMPTZ NOT NULL, aspect_ratio DOUBLE PRECISION, detections JSONB NOT NULL
+  )`,
+
   `CREATE TABLE IF NOT EXISTS renders (
     id TEXT PRIMARY KEY, ts TIMESTAMPTZ NOT NULL, lead_id TEXT, mime TEXT, bytes BYTEA
   )`,
@@ -485,6 +514,55 @@ async function writeAll(table, rows) {
    URLs are public and expire within the hour. */
 const RENDER_DIR = path.join(DATA_DIR, 'renders');
 
+/* ── DETECTIONS, KEYED BY THE PHOTOGRAPH ──
+   See the detection_cache table for why this exists and what it deliberately
+   does not hold. The JSONL path keeps one file, which is all a development
+   machine needs and is wiped with the rest of data/ anyway. */
+
+const CACHE_FILE = 'detection-cache.json';
+
+async function getDetectionCache(hash, maxAgeMs) {
+  if (!/^[a-f0-9]{64}$/.test(String(hash || ''))) return null;   // a sha-256 or nothing
+  const cutoff = Date.now() - maxAgeMs;
+  if (pool) {
+    const { rows } = await pool.query(
+      `SELECT aspect_ratio AS "aspectRatio", detections, ts FROM ${SCHEMA_NAME}.detection_cache WHERE image_hash = $1`, [hash]);
+    if (!rows[0]) return null;
+    if (new Date(rows[0].ts).getTime() <= cutoff) return null;   // expired: treat as a miss
+    return { aspectRatio: rows[0].aspectRatio, detections: rows[0].detections };
+  }
+  try {
+    const all = JSON.parse(fs.readFileSync(path.join(DATA_DIR, CACHE_FILE), 'utf8'));
+    const hit = all[hash];
+    if (!hit || new Date(hit.ts).getTime() <= cutoff) return null;
+    return { aspectRatio: hit.aspectRatio, detections: hit.detections };
+  } catch (_) { return null; }
+}
+
+async function putDetectionCache(hash, { detections, aspectRatio }, maxAgeMs) {
+  if (!/^[a-f0-9]{64}$/.test(String(hash || ''))) return;
+  const now = new Date().toISOString();
+  const cutoff = new Date(Date.now() - maxAgeMs).toISOString();
+  if (pool) {
+    /* Swept on write rather than on a timer: no scheduler to forget, and the
+       only moment the table grows is the only moment it needs trimming. */
+    await pool.query(`DELETE FROM ${SCHEMA_NAME}.detection_cache WHERE ts <= $1`, [cutoff]);
+    await pool.query(
+      `INSERT INTO ${SCHEMA_NAME}.detection_cache (image_hash, ts, aspect_ratio, detections)
+       VALUES ($1,$2,$3,$4)
+       ON CONFLICT (image_hash) DO UPDATE SET ts = EXCLUDED.ts`,
+      [hash, now, aspectRatio ?? null, JSON.stringify(detections)]);
+    return;
+  }
+  let all = {};
+  try { all = JSON.parse(fs.readFileSync(path.join(DATA_DIR, CACHE_FILE), 'utf8')); } catch (_) { /* first write */ }
+  for (const [k, v] of Object.entries(all)) if (v.ts <= cutoff) delete all[k];
+  all[hash] = { ts: now, aspectRatio: aspectRatio ?? null, detections };
+  const tmp = path.join(DATA_DIR, CACHE_FILE + '.tmp');
+  fs.writeFileSync(tmp, JSON.stringify(all));
+  fs.renameSync(tmp, path.join(DATA_DIR, CACHE_FILE));
+}
+
 async function putRender(id, buffer, { mime = 'image/jpeg', leadId = null } = {}) {
   if (pool) {
     await pool.query(
@@ -573,6 +651,7 @@ async function end() {
 
 module.exports = {
   ensureSchema, append, readAll, replaceAll, mutate, end, getResume, DATA_DIR, putRender, getRender, deleteRenders, hasDb: !!pool,
+  getDetectionCache, putDetectionCache,
   // Exported for tests: scraping these out of the source with a regex broke
   // the moment another table was added after leads.
   _internals: { INSERT_PARAMS, INSERT_SQL, SELECT_SQL, FILE_NAMES, checkServerIdentity },
