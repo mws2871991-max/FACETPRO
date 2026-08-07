@@ -189,6 +189,30 @@ test('/api/catalogue does not leak internal provenance fields', async () => {
   }
 });
 
+test('no public response names the installers who buy the leads', async () => {
+  /* catalogue.json explains where the glazing rates came from, and that
+     explanation names a national installer twice — the one the founder works
+     for, and one of the two companies paying for leads here. It is true, it is
+     the reason the numbers are any good, and it must never be served.
+
+     The allowlist in buildPublicCatalogue already keeps it out. That is a
+     property of how the function is written today rather than a rule anybody
+     stated, which is the exact shape of every bug in HANDOVER.md — so it is
+     stated here. Naming a lead-buying customer in public copy is a commercial
+     problem before it is a technical one. */
+  const catalogue = require('../catalogue.json');
+  assert.match(catalogue.glazing.source, /Anglian/,
+    'the private note no longer names the installer — if the rates were re-sourced, update this test with them');
+
+  for (const p of ['/api/catalogue', '/api/config', '/']) {
+    const res = await fetch(`${BASE}${p}`);
+    const text = await res.text();
+    for (const name of ['Anglian', 'Zenith']) {
+      assert.ok(!new RegExp(name, 'i').test(text), `${p} names ${name}`);
+    }
+  }
+});
+
 test('/api/catalogue does not publish the cost model', async () => {
   // Labour rates, the material-vs-labour split on trim, the waste allowance
   // and the scaffolding charge are the basis of every quote. The page never
