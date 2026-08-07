@@ -221,6 +221,40 @@ what its schema knew before that database is deleted.
 
 ---
 
+## Added 7 August
+
+**The same photograph did not give the same price.** The homepage says, in
+those words, that the same house gets the same number. Five runs of one
+photograph through the live service found 5, 7, 7, 8 and 8 front windows, and
+priced the house at £16,889–£30,707 on one run and £25,166–£45,757 on another
+— forty-nine per cent apart, each one labelled "measured from your photo".
+
+The model is sampled, and `temperature` is deprecated on it, so there is no
+setting that turns the variation down. Detection now keeps its answer against
+a SHA-256 of the image bytes: one photograph is read once, and every later
+upload of it returns the same measurement and the same estimate. Re-measured
+on the live host afterwards — five runs, one price, nought per cent apart.
+
+Two things this does not do, and both matter:
+
+- **A second photograph of the same house still varies.** The cache keys on
+  bytes. A homeowner who takes another picture from two steps to the left gets
+  a fresh reading, and it can differ by as much as the figures above. Nothing
+  currently detects that or reconciles the two.
+- **It is in memory.** A deploy empties it, and the service runs one process.
+  Both are fine while the answer is only needed for one session; neither is
+  fine once an estimate is quoted back to somebody days later. The record
+  already persists in `detections`, so the durable fix is to key that table by
+  image hash rather than to add another store.
+
+Guarded by `test/detect-stable.test.js`, whose last test fails if the sentence
+is on the page and the caching is not in the server.
+
+Also: `DETECT_RATE_LIMIT` now overrides the ten-per-minute detection limit.
+It exists so the suite can send one photograph fifteen times. Leave it unset.
+
+---
+
 ## Pricing: what is real and what is not
 
 Substantially rewritten on 6 August from list prices the owner supplied. See
