@@ -278,3 +278,44 @@ test('the server still starts where Tailwind is not installed', () => {
   assert.ok(fs.existsSync(path.join(__dirname, '..', 'assets', 'app.css')),
     'the built stylesheet is committed on purpose — production cannot rebuild it');
 });
+
+test('everything needed to boot in production is a real dependency', () => {
+  /* `pg` sat in devDependencies. Production installs with `--omit=dev`, so it
+     would not have been there — and store.js requires it at load time whenever
+     DATABASE_URL is set, while refuseToStartIfStorageContradictsTheNotice()
+     *requires* DATABASE_URL on any deployment with LEAD_CAPTURE=on.
+
+     So the process could not have started the moment the revenue path was
+     switched on. Not a crash under load or a slow leak: the first boot of the
+     first real launch, with a clear error message nobody would see until it
+     was happening.
+
+     Tailwind is the deliberate exception and is handled — prestart checks
+     require.resolve and falls back to the committed stylesheet, which the test
+     above covers. Anything else the running server needs belongs here. */
+  const pkg = require('../package.json');
+  const dev = Object.keys(pkg.devDependencies || {});
+  const prod = Object.keys(pkg.dependencies || {});
+
+  assert.ok(prod.includes('pg'),
+    'pg must be a dependency — with --omit=dev and DATABASE_URL set, the server cannot start without it');
+  assert.deepStrictEqual(dev, ['tailwindcss'],
+    `only tailwindcss may be dev-only, and only because prestart handles its absence — found: ${dev.join(', ')}`);
+
+  /* Anything require()d at the top level of a module the server loads has to
+     be installed in production. This catches the next one by reading the code
+     rather than by trusting the list above. */
+  const runtime = ['server.js', 'store.js', 'delivery.js', 'resume.js', 'glazing.js', 'measure.js', 'emails.js', 'installers.js', 'observability.js'];
+  const builtin = new Set(['fs', 'path', 'crypto', 'http', 'https', 'os', 'url', 'util', 'events', 'zlib', 'stream', 'child_process', 'timers']);
+  for (const file of runtime) {
+    const full = path.join(__dirname, '..', file);
+    if (!fs.existsSync(full)) continue;
+    const src = fs.readFileSync(full, 'utf8');
+    for (const m of src.matchAll(/require\((['"])([^'".][^'"]*)\1\)/g)) {
+      const name = m[2].replace(/^node:/, '').split('/')[0];
+      if (builtin.has(name)) continue;
+      assert.ok(prod.includes(name),
+        `${file} requires "${name}", which is not a production dependency — the server would not start`);
+    }
+  }
+});

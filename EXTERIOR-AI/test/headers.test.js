@@ -156,3 +156,29 @@ test('the legal stylesheet covers every class the pages use', () => {
   const missing = [...used].filter(c => !css.includes('.' + c.replace(/([.:[\]#\\/])/g, '\\$1')));
   assert.deepStrictEqual(missing, [], `unstyled classes: ${missing.join(' ')}`);
 });
+
+test('fonts and photographs are cached; the stylesheet is not', async () => {
+  /* Everything was max-age=0, so about a megabyte of fonts and before/after
+     photographs was revalidated on every visit — on the first screen a
+     homeowner sees, usually on a phone.
+
+     The split is by whether the filename changes when the content does.
+     assets/app.css keeps its name across deploys, so caching it would show
+     somebody the previous stylesheet with the current markup. That is the
+     failure this test exists to prevent: if the stylesheet ever gets a content
+     hash, move it to the immutable set deliberately, not by widening a regex
+     and finding out later. */
+  const cached = await realFetch(BASE + '/assets/fonts/geist-variable.woff2');
+  assert.match(cached.headers.get('cache-control') || '', /max-age=31536000/,
+    'fonts should be held for a year');
+  assert.match(cached.headers.get('cache-control') || '', /immutable/);
+
+  const revalidated = await realFetch(BASE + '/assets/app.css');
+  assert.match(revalidated.headers.get('cache-control') || '', /max-age=0/,
+    'the stylesheet is not fingerprinted, so it must be revalidated every time');
+  assert.ok(revalidated.headers.get('etag'), 'and an ETag makes that revalidation a 304 rather than a download');
+
+  const page = await realFetch(BASE + '/');
+  assert.match(page.headers.get('cache-control') || '', /max-age=0/,
+    'the page itself must never be held — it carries the app');
+});

@@ -3258,8 +3258,15 @@ async function sendDesignPack() {
     if (!res.ok) throw new Error(data.error || 'Lead submission failed');
     // Only surface it in the installer list if this tab is actually signed in.
     if (state.installerAuthed) state.leads = [data.lead, ...state.leads];
-    // Report what actually happened, not what we hoped would happen.
-    U(data.lead.designPack?.sent
+    /* Report what actually happened, not what we hoped would happen.
+
+       This read `designPack?.sent` for as long as it has existed, and no lead
+       has ever carried a `designPack` key — the server sets `homeownerEmail`
+       and `notification`. So the optional chain returned undefined every
+       time and everybody was told "we'll be in touch" even when the design
+       pack had just landed in their inbox. The comment above was right about
+       the intention and wrong about the field. */
+    U(data.lead.homeownerEmail?.sent
       ? `Design saved — reference ${data.lead.id}. Check your inbox, it’s on its way.`
       : `Design saved — reference ${data.lead.id}. We’ll be in touch.`);
   } catch (err) {

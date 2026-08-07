@@ -129,11 +129,38 @@ function isPublicPath(rawPath) {
   return PUBLIC_DIRS.some(dir => p.startsWith(dir) && p.length > dir.length);
 }
 
+/* Cache what cannot go stale, revalidate what can.
+
+   Everything was served `max-age=0`, so roughly a megabyte of fonts and
+   photographs was revalidated on every visit — cheap per file and a lot of
+   round trips on a phone, on the first screen a homeowner sees.
+
+   The split is by whether the name changes when the content does. It does not
+   here: `assets/app.css` keeps its name across deploys, so a long max-age on
+   it would leave people looking at the previous stylesheet with the current
+   markup, which is worse than any number of round trips. Fonts and the
+   before/after photographs are different — a WOFF2 or a JPEG under a fixed
+   name is replaced by adding a file, not by editing one, so they can be held
+   for a year and revalidated by ETag if they ever are.
+
+   If the stylesheet ever gets a content hash in its filename, it belongs in
+   the immutable set and not before. */
+const IMMUTABLE = /\.(woff2?|ttf|otf|eot|jpe?g|png|gif|webp|avif|svg|ico)$/i;
+
 const serveStatic = express.static(__dirname, {
   dotfiles: 'deny',   // .env, .git, .gitignore — never served
   index: 'index.html',
   redirect: false,
-  setHeaders: (res) => res.setHeader('X-Content-Type-Options', 'nosniff'),
+  setHeaders: (res, filePath) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    if (IMMUTABLE.test(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    } else {
+      /* HTML, CSS and JS: revalidate every time. ETag makes that a 304 with no
+         body, which is the cost of one round trip rather than the file. */
+      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+    }
+  },
 });
 
 /* ── SECURITY HEADERS ──
@@ -1986,7 +2013,17 @@ app.post('/api/measure', (req, res) => {
   const { detectionId, houseType } = req.body || {};
   if (!detectionId) return res.status(400).json({ error: 'detectionId required.' });
 
-  const record = detectionRecords.get(String(detectionId));
+  /* One normalised key for all four operations.
+
+     The lookup used String(detectionId) and the delete and set used the raw
+     value. Send `{"detectionId": ["<a real uuid>"]}` and the array stringifies
+     to the same text, so the lookup succeeds — then the delete finds no such
+     key and does nothing, and the set inserts a *second* entry under an array
+     key that nothing will ever match or evict. Sixty a minute, each holding a
+     whole detections array, and the prune below is what stops it growing
+     without bound. */
+  const id = String(detectionId);
+  const record = detectionRecords.get(id);
   if (!record) {
     return res.status(404).json({ error: 'That photo has expired — please upload it again to measure.' });
   }
@@ -1997,8 +2034,9 @@ app.post('/api/measure', (req, res) => {
      uploaded twenty minutes ago was getting "that photo has expired"
      mid-journey. */
   record.at = Date.now();
-  detectionRecords.delete(detectionId);
-  detectionRecords.set(detectionId, record);
+  detectionRecords.delete(id);
+  detectionRecords.set(id, record);
+  pruneDetectionRecords();
 
   const result = measure.estimateWallArea({
     detections: record.detections,
