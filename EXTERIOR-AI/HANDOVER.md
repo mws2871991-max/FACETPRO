@@ -59,19 +59,34 @@ half once.
 | Service | What it is |
 |---|---|
 | `facetpro-visualiser` | **The live site.** This is what you deploy to |
-| `facetpro-backend` | **Not dead.** It is the FastAPI API behind the older Facet Pro, the one `www.facetpro.co.uk` currently serves from Vercel. 63 endpoints, lead claiming, quotes, PDFs. Its lead routes require auth (401 unauthenticated, checked). Holds a Replicate token, a Resend key and `DATABASE_URL` because it uses them |
-| `Postgres` | The database. Currently reachable only from `facetpro-backend` |
+| `Postgres` | The database. Ours are the 12 tables in the `facetpro_visualiser` schema; `public` is now empty |
 
-The project is *named* `facetpro-backend` and so is one of its services, which
-is why earlier notes confused the two.
+The project is still *named* `facetpro-backend`, after a service that no longer
+exists, which is why older notes confuse the two. The name is cosmetic.
 
-**Correction to an earlier version of this file, which said `facetpro-backend`
-serves nothing.** It serves the older Facet Pro: a FastAPI backend behind a
-Vercel frontend on `www.facetpro.co.uk`, sharing this project's Postgres —
-which is what `test/postgres.test.js` means when it warns about the database
-that "also holds the FastAPI backend's tables". Two complete products exist and
-the domain points at the older one. Deciding which is Facet Pro is a business
-question, not a DNS change.
+**The first Facet Pro was removed on 7 August 2026.** There were two complete
+products: this one, and a FastAPI backend behind a Vercel front end on
+`www.facetpro.co.uk`, sharing this project's Postgres. The `facetpro-backend`
+service is deleted and its 17 tables have been dropped from `public` — which is
+what `test/postgres.test.js` used to be warning about when it mentioned "the
+FastAPI backend's tables", and why seven table names collided.
+
+Before it went: a full export of all 145 rows across 17 tables, with the column
+definitions so the schema is recoverable too, saved to
+`~/Desktop/facetpro-old-system-backup-20260807.json`. The drop refused to run
+until it had checked that every live row was accounted for in that file. Of the
+six homeowner records, five were `example.com` fixtures and the sixth was the
+founder's own Gmail address from a test on 26 July — no third party's data was
+in it. What the schema knew that this product does not is in
+`notes/from-the-first-facetpro.md`.
+
+**Two things it left behind.** `www.facetpro.co.uk` still resolves to the
+Vercel front end, which now has no backend to call — the DNS needs moving to
+this service, and the custom domain must be added from the Railway dashboard
+because the CLI refuses that one mutation on this plan. And the deleted service
+held its own `OPENAI_API_KEY`, `REPLICATE_API_TOKEN` and `RESEND_API_KEY`:
+deleting a service does not revoke a key, so those are still live at the
+providers until somebody revokes them.
 
 ---
 
@@ -215,9 +230,10 @@ every timestamp shifted by the machine's UTC offset and microseconds were
 truncated, because a JavaScript `Date` carries neither. Row counts matched
 perfectly throughout. Fixed by round-tripping raw text.
 
-**A second Facet Pro.** `facetpro-backend` is not dead weight — see the
-services table above and `notes/from-the-first-facetpro.md`, which records
-what its schema knew before that database is deleted.
+**A second Facet Pro.** `facetpro-backend` was not dead weight — it was the
+older product's live API. It was removed on 7 August; see the services table
+above. `notes/from-the-first-facetpro.md` records what its schema knew, which
+is now the only trace of it besides the backup.
 
 ---
 
