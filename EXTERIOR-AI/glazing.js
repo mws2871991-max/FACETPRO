@@ -277,16 +277,28 @@ function bandFor(areaM2, bands) {
 }
 
 /* ── METHOD 1: measure the windows in the photo ── */
-function measureWindows({ detections, aspectRatio, bands }) {
-  if (!isFiniteNumber(aspectRatio) || aspectRatio <= 0) return null;
-  const door = doorReference(detections);
-  if (!door) return null;
+/* Which boxes are windows at all — the hygiene both paths need.
 
-  const candidates = detections
+   This used to live inside measureWindows, and when the counting path was
+   added it grew its own one-line filter instead: type, and positive width and
+   height. That let through everything this drops.
+
+   Three overlapping boxes for one bay window counted as three, and a detection
+   at 0.05 confidence — which this rejects outright — counted the same as one
+   at 0.95. Both were then multiplied by the front-to-total ratio, so one
+   window became nine and six pieces of noise became eighteen. The counting
+   path exists because the prior overstated by half; unfiltered it overstated
+   by more, and said "counted from your photo" while doing it, which is a
+   stronger claim than the one it replaced.
+
+   Only the sizing step needs a door. Everything here is scale-free, so both
+   paths get it. */
+function windowCandidates(detections) {
+  const candidates = (detections || [])
     .filter(d => d?.type === 'window' && (Number(d?.confidence) || 0) >= MIN_CONFIDENCE)
     .map(d => ({ b: box(d), confidence: Number(d?.confidence) || 0 }))
-    .filter(d => d.b)
-    .sort((a, b) => (b.b.w * b.b.h) - (a.b.w * a.b.h));   // larger first, so dedupe keeps the larger
+    .filter(d => d.b)                                     // box() coerces and rejects the unusable
+    .sort((a, b) => (b.b.w * b.b.h) - (a.b.w * a.b.h));    // larger first, so dedupe keeps the larger
 
   const kept = [];
   let duplicates = 0;
@@ -294,6 +306,15 @@ function measureWindows({ detections, aspectRatio, bands }) {
     if (kept.some(k => iou(k.b, c.b) > DUPLICATE_IOU)) { duplicates++; continue; }
     kept.push(c);
   }
+  return { kept, duplicates };
+}
+
+function measureWindows({ detections, aspectRatio, bands }) {
+  if (!isFiniteNumber(aspectRatio) || aspectRatio <= 0) return null;
+  const door = doorReference(detections);
+  if (!door) return null;
+
+  const { kept, duplicates } = windowCandidates(detections);
 
   const doorTop = door.b.y;
   const windows = [];
@@ -349,9 +370,17 @@ function measureWindows({ detections, aspectRatio, bands }) {
    it is the one thing a scaleless photograph still tells us plainly. */
 function countWindows({ detections, houseType, bands }) {
   const key = houseTypeKey(houseType);
-  const found = detections.filter(d =>
-    d.type === 'window' && Number.isFinite(d.w_pct) && Number.isFinite(d.h_pct) && d.w_pct > 0 && d.h_pct > 0);
-  if (!found.length) return null;
+
+  /* The same hygiene the measured path applies. Its own filter used
+     Number.isFinite on the raw fields, which rejects "20" — a string an LLM
+     emits often enough — so the whole counting path silently failed to fire
+     and fell through to the prior. It also read y_pct without checking it, so
+     a detection missing it gave undefined + h/2 = NaN, NaN < 50 is false,
+     every window was ground floor, and the scaffolding charge quietly vanished
+     on a two-storey house. box() coerces and rejects; nothing here reads a raw
+     field any more. */
+  const { kept } = windowCandidates(detections);
+  if (!kept.length) return null;
 
   /* The commonest band for this house type — what a typical window here is,
      since we cannot tell what these ones are. */
@@ -359,11 +388,15 @@ function countWindows({ detections, houseType, bands }) {
   const commonestId = Object.entries(prior.mix).sort((a, b) => b[1] - a[1])[0][0];
   const band = bands.find(b => b.id === commonestId) || bands[0];
 
-  const windows = found.map(d => ({
+  /* No door means no ground-level datum, so "upstairs" is the top half of the
+     frame rather than "above the door". Cruder, and the only thing a scaleless
+     photograph still says plainly — which is what keeps the access charge
+     alive without a scale reference. */
+  const windows = kept.map(c => ({
     widthM: null, heightM: null, areaM2: null,
     bandId: band.id, bandLabel: band.label,
-    upperStorey: (d.y_pct + d.h_pct / 2) < 50,
-    confidence: Number.isFinite(d.confidence) ? d.confidence : null,
+    upperStorey: (c.b.y + c.b.h / 2) < 50,
+    confidence: c.confidence,
   }));
 
   return { method: 'count', frontCount: windows.length, windows };
