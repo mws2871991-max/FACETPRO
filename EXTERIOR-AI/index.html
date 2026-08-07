@@ -29,14 +29,22 @@
 <meta property="og:url" content="https://www.facetpro.co.uk/">
 <meta property="og:title" content="You shouldn&rsquo;t have to haggle to get a fair price for your windows — Facet Pro">
 <meta property="og:description" content="Upload one photo. Try real window styles and frame colours on your home, and get a costed estimate in about a minute.">
-<meta property="og:image" content="https://www.facetpro.co.uk/assets/og-image.png">
+<!-- Absolute, and pointed at the host that actually serves it.
+
+     This said www.facetpro.co.uk, where the DNS still points at the older
+     Facet Pro on Vercel and /assets/og-image.png is a 404 — so every share of
+     this site, by anyone, produced a preview card with no image on it. The
+     same domain question sits under the canonical tag two lines up; that one
+     is an SEO decision and is left alone deliberately, but a broken image is
+     just broken. Move both together once the domain is settled. -->
+<meta property="og:image" content="https://facetpro-visualiser-production.up.railway.app/assets/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Facet Pro — a home exterior shown before and after new cladding.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="You shouldn&rsquo;t have to haggle to get a fair price for your windows — Facet Pro">
 <meta name="twitter:description" content="Upload one photo. Try real window styles and frame colours on your home, and get a costed estimate in about a minute.">
-<meta name="twitter:image" content="https://www.facetpro.co.uk/assets/og-image.png">
+<meta name="twitter:image" content="https://facetpro-visualiser-production.up.railway.app/assets/og-image.png">
 
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='16' fill='%2318181b'/%3E%3Ctext x='16' y='21' font-family='Georgia,serif' font-size='14' fill='%23FBF8F3' text-anchor='middle'%3EFP%3C/text%3E%3C/svg%3E">
 
@@ -243,6 +251,11 @@
 </head>
 <body class="min-h-screen bg-[#FBF8F3] text-zinc-900 selection:bg-zinc-900 selection:text-white">
 
+<!-- Past the header, for anyone arriving by keyboard. Hidden until focused,
+     which is the one state where it is useful and the one state where the
+     usual "visually hidden" trick must not apply. -->
+<a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2 focus:rounded-full focus:bg-zinc-900 focus:text-white focus:text-sm">Skip to the main content</a>
+
 <header class="sticky top-0 z-30 backdrop-blur-xl bg-[#FBF8F3]/80 border-b border-zinc-200">
   <div class="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
     <a href="/" class="flex items-center gap-3" aria-label="Facet Pro home">
@@ -269,7 +282,7 @@
   </div>
 </header>
 
-<main class="max-w-6xl mx-auto px-6 py-8 flex flex-col gap-8">
+<main id="main" tabindex="-1" class="max-w-6xl mx-auto px-6 py-8 flex flex-col gap-8">
 
   <!-- Shown only when the server reports beta mode, so one env var controls it. -->
   <aside id="beta-notice" hidden class="rounded-2xl border border-amber-300 bg-amber-50 p-5">
@@ -887,6 +900,9 @@ const state = {
   leads: [],
   leadsLoaded: false,
   contact: { name: "", email: "", postcode: "", phone: "" },
+  /* Which contact fields failed validation, so the message can sit next to
+     the field rather than in a pill that fades. Cleared as each is fixed. */
+  fieldErrors: {},
   /* Three separate boxes, all starting unticked. Only the Terms one is
      required — bundling "pass my details to installers" into the act of
      saving made that consent a condition of the service, which is the
@@ -2932,13 +2948,53 @@ function consentBox(key, label, { required = false } = {}) {
 }
 
 function buildSaveFraming() {
-  function field(placeholder, key, extraClass, type) {
-    return h('input', {
-      type: type || 'text',
-      placeholder, value: state.contact[key], 'aria-label': placeholder,
-      className: `${extraClass} px-3 py-2.5 rounded-xl border border-zinc-200 text-sm outline-none focus:border-zinc-900`,
-      onInput: (e) => { state.contact[key] = e.target.value; }
-    });
+  /* A label that stays, an autocomplete the browser understands, and somewhere
+     for an error to appear next to the thing that caused it.
+
+     All four fields used the placeholder as the label. A screen reader was
+     fine — there was an aria-label — but a placeholder disappears the moment
+     anybody types, so whoever most needs to check what they have half-filled
+     in is exactly who cannot (WCAG 2.2 SC 3.3.2). And with no autocomplete
+     attribute the browser could not offer the details it already holds, on a
+     form asking for a name, an email, a phone number and a postcode (SC
+     1.3.5). That is friction on the one screen that earns anything.
+
+     Errors used to go to a status pill that fades after six seconds, well away
+     from the field, with nothing to say which one was wrong. */
+  function field(label, key, extraClass, type, autocomplete, optional) {
+    const id = `lead-${key}`;
+    const error = state.fieldErrors[key];
+    return h('div', { className: extraClass }, [
+      h('label', { for: id, className: 'block text-[12px] font-medium text-zinc-700 mb-1' }, [
+        label,
+        optional ? h('span', { className: 'font-normal text-zinc-500' }, ' (optional)') : null,
+      ]),
+      h('input', {
+        type: type || 'text',
+        id,
+        name: key,
+        value: state.contact[key],
+        autocomplete,
+        'aria-invalid': error ? 'true' : null,
+        'aria-describedby': error ? `${id}-error` : null,
+        className: `w-full px-3 py-2.5 rounded-xl border text-sm outline-none ${error ? 'border-red-500 focus:border-red-600' : 'border-zinc-200 focus:border-zinc-900'}`,
+        onInput: (e) => {
+          state.contact[key] = e.target.value;
+          /* Clear the error as they fix it, without a full re-render — that
+             would take the focus back out of the field they are typing in. */
+          if (state.fieldErrors[key]) {
+            delete state.fieldErrors[key];
+            const node = document.getElementById(`${id}-error`);
+            if (node) node.remove();
+            e.target.classList.remove('border-red-500', 'focus:border-red-600');
+            e.target.classList.add('border-zinc-200', 'focus:border-zinc-900');
+            e.target.removeAttribute('aria-invalid');
+            e.target.removeAttribute('aria-describedby');
+          }
+        },
+      }),
+      error ? h('p', { id: `${id}-error`, className: 'mt-1 text-[12px] text-red-600' }, error) : null,
+    ]);
   }
 
   /* With capture off, don't render the form at all. A disabled form still
@@ -2965,12 +3021,21 @@ function buildSaveFraming() {
     h('p', { className: 'mt-3 text-sm leading-6 text-white/60 max-w-[60ch]' }, state.designPackEmail
       ? 'We’ll email you your before-and-after and your itemised estimate to keep. If you’d like quotes, installers work from the design you’ve already made — so nobody arrives with a folder, nobody prices something you didn’t ask for, and nobody needs your evening. No obligation, and you can walk away at any point.'
       : 'We’ll keep your before-and-after and your itemised estimate together. If you’d like quotes, installers work from the design you’ve already made — so nobody arrives with a folder, and nobody needs your evening. No obligation, and you can walk away at any point.'),
-    h('div', { className: 'mt-6 rounded-2xl bg-white text-zinc-900 p-5' }, [
+    /* A real form, so Enter submits.
+
+       This was a div with a type="button" inside it. Pressing Enter in the
+       email field did nothing at all — no submit, no message, nothing — which
+       on a four-field form is the most ordinary thing a person can do. */
+    h('form', {
+      className: 'mt-6 rounded-2xl bg-white text-zinc-900 p-5',
+      noValidate: true,      // our own messages, next to the fields, in our own words
+      onSubmit: (e) => { e.preventDefault(); sendDesignPack(); },
+    }, [
       h('div', { className: 'grid grid-cols-2 gap-3' }, [
-        field('Your name', 'name', 'col-span-2 md:col-span-1'),
-        field('Email address', 'email', 'col-span-2 md:col-span-1', 'email'),
-        field(state.consent?.installerQuotes ? 'Postcode (for installers near you)' : 'Postcode (optional)', 'postcode', ''),
-        field('Phone (optional)', 'phone', '', 'tel'),
+        field('Your name', 'name', 'col-span-2 md:col-span-1', 'text', 'name'),
+        field('Email address', 'email', 'col-span-2 md:col-span-1', 'email', 'email'),
+        field(state.consent?.installerQuotes ? 'Postcode (for installers near you)' : 'Postcode', 'postcode', 'col-span-2 md:col-span-1', 'text', 'postal-code', !state.consent?.installerQuotes),
+        field('Phone', 'phone', 'col-span-2 md:col-span-1', 'tel', 'tel', true),
       ]),
       /* Three boxes, all unticked. The optional ones come first so the
          required one reads as the last step rather than the price of the
@@ -3004,10 +3069,9 @@ function buildSaveFraming() {
           ? 'You don\u2019t have to tick either of the first two. Your visualisation and estimate work the same way without them.'
           : 'You don\u2019t have to tick the first one. Your visualisation and estimate work the same way without it.'),
       h('button', {
-        type: 'button',
+        type: 'submit',
         className: `mt-4 w-full py-3 rounded-full text-sm font-medium ${state.sendingLead ? 'bg-zinc-300 text-zinc-500' : 'cta'}`,
         disabled: state.sendingLead,
-        onClick: sendDesignPack
       }, state.sendingLead ? 'Saving your design…' : (state.consent.installerQuotes ? 'Get my free quotes →' : 'Save my design →')),
       h('p', { className: 'mt-3 text-[11px] leading-5 text-zinc-500' }, [
         'You can withdraw your consent at any time — see the ',
@@ -3195,19 +3259,38 @@ const postcodeLooksReal = (raw) =>
   /^[A-Z]{1,2}\d[A-Z\d]?\d[A-Z]{2}$/.test(String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, ''));
 
 async function sendDesignPack() {
-  if (!state.contact.name || !state.contact.email) {
-    U('Please add your name and email so we know where to send it');
-    return;
-  }
+  /* Every problem at once, on the field that has it.
+
+     These three used to go to the status pill — one at a time, six seconds,
+     and nowhere near the input. Somebody with a missing name and a bad
+     postcode fixed one, pressed the button, and was told about the other. */
+  const errors = {};
+  if (!state.contact.name) errors.name = 'We need a name to put on your design.';
+  if (!state.contact.email) errors.email = 'We need an email address to send it to.';
+  else if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(state.contact.email)) errors.email = 'That doesn’t look like an email address.';
+
   /* Only when they have asked for quotes. An installer cannot quote without
      one, and a lead with no usable postcode reaches only the buyers who claim
      national coverage — so it is the difference between three quotes and one.
      Not required otherwise: if they only want their design emailed, we have no
      business collecting where they live. */
   if (state.consent.installerQuotes && !postcodeLooksReal(state.contact.postcode || state.postcode)) {
-    U('Please add your postcode so we can find installers who cover your area');
+    errors.postcode = 'We need your postcode to find installers who cover your area.';
+  }
+
+  if (Object.keys(errors).length) {
+    state.fieldErrors = errors;
+    render();
+    /* Focus the first one, in the order they appear on screen — the whole
+       point is that they land on the thing to fix rather than hunting for it.
+       After the render, because render() replaces the nodes. */
+    const first = ['name', 'email', 'postcode', 'phone'].find(k => errors[k]);
+    const el = document.getElementById(`lead-${first}`);
+    if (el) { el.focus(); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+    U('Please check the highlighted fields');
     return;
   }
+  state.fieldErrors = {};
   if (!state.consent.terms) {
     U('Please agree to the Terms before we save your design');
     const box = document.getElementById('consent-terms');
