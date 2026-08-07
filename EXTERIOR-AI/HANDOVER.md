@@ -250,6 +250,43 @@ Two things this does not do, and both matter:
 Guarded by `test/detect-stable.test.js`, whose last test fails if the sentence
 is on the page and the caching is not in the server.
 
+**The live service is on Postgres now.** It was running on JSONL files inside
+the container — so every deploy wiped the saved designs, the resume codes and
+`data/usage.json`, which is the only thing bounding Anthropic and Replicate
+spend. `DATABASE_URL`, `DB_SCHEMA` and `INSTALLER_TOKEN_SECRET` are set on the
+service; the twelve tables are in the `facetpro_visualiser` schema, and seven
+of their names collide with the FastAPI backend's tables in `public`, which is
+exactly what the separate schema is for. Verified by running a detection
+against the live host and watching the row appear.
+
+**Two things about that database connection, for whoever is on call.**
+
+Railway issues every Postgres the same certificate — `CN=localhost`, with
+localhost as its only subject alternative name — signed by a self-signed
+`root-ca` it also serves. We connect over the private network as
+`postgres.railway.internal`, so the name can never match and the first deploy
+failed on the hostname check. The fix keeps the chain check and pins that CA
+in `DATABASE_CA_CERT`, waiving only the hostname, only on a
+`.railway.internal` host, only for `CN=localhost`, and only when a CA is
+actually supplied. `test/db-tls.test.js` is the boundary.
+
+1. **The pinned CA expires on 14 October 2028**, and Railway may rotate it
+   sooner. When it does, the service will refuse to start and say
+   `self-signed certificate in certificate chain`. That is the correct
+   direction to fail, but it is a total outage rather than a warning. Re-pin
+   with:
+
+   ```
+   openssl s_client -starttls postgres -connect <public-proxy-host:port> -showcerts </dev/null \
+     | awk '/BEGIN CERTIFICATE/{n++} n==2' | awk '/BEGIN CERT/,/END CERT/' > rootca.pem
+   railway variables --service facetpro-visualiser --set "DATABASE_CA_CERT=$(cat rootca.pem)"
+   ```
+
+2. **Do not point `DATABASE_URL` at `DATABASE_PUBLIC_URL`.** The waiver is
+   scoped to the private host on purpose; the public proxy gets ordinary
+   verification, which its certificate cannot pass. It will fail closed, which
+   is right, but the reason will not be obvious at three in the morning.
+
 Also: `DETECT_RATE_LIMIT` now overrides the ten-per-minute detection limit.
 It exists so the suite can send one photograph fifteen times. Leave it unset.
 
