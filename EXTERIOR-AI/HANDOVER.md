@@ -149,13 +149,55 @@ Run **one replica**. Detection records and the usage counter are in memory.
 
 ## What does not work
 
-- **Detection and measurement.** The key is set and valid; the Anthropic
-  account has no credit, so `/api/detect` returns a 502. This is the half that
-  finds the windows and sizes the house, so the journey stops at the first
-  step. One top-up fixes it.
+- ~~**Detection and measurement.** The Anthropic account has no credit.~~
+  **Fixed 7 August** — the account was topped up and detection has been run
+  against the live host many times since.
 - **Email, and therefore the paid path.** The startup log says it plainly:
   *"Installer quotes: UNAVAILABLE — no homeowner email, so no withdrawal link,
   so that consent is refused and the box is hidden. This is the paid path."*
+
+---
+
+## The measurement has never been checked against a real house
+
+`npm run validate` exists, works, and has never had anything to work on:
+
+```
+Skipping "Detached 4": knownWallAreaM2 is missing or not a positive number.
+No usable samples.
+```
+
+All sixteen rows in `data/survey-samples.example.json` are empty templates. So
+the door-reference photogrammetry — 1.98 m, the number the whole measured path
+turns on — has never been compared against a property whose wall area somebody
+actually surveyed.
+
+Two things make this sharper than it sounds.
+
+**The measured path has not run on a real house either.** Every real photograph
+put through the live service so far has had no front door in shot, so it
+exercised the *counted* path instead. The measured path is covered by
+synthetic fixtures built from metres, which prove the arithmetic is
+self-consistent and prove nothing about a real elevation.
+
+**The page positions us against exactly this failure.** It says a competitor
+*"produces confident figures that are wrong, and finds out at survey."* Nobody
+has checked whether ours survive a survey.
+
+What is *not* wrong: no accuracy figure is claimed anywhere in the copy. The
+headline describes what the product does — measure, visualise, price — and the
+estimate panel says which method produced the number and calls itself an
+estimate throughout. There is no false claim to withdraw. There is an unproven
+one to prove.
+
+**To close it**, `scripts/validate-measurements.js` wants per property: house
+type, frontage, depth, storeys, wall height, and the surveyed `knownWallAreaM2`
+— optionally with the `detections` array from `/api/detect` and the photo's
+aspect ratio, which exercises detection quality as well as the geometry. Six
+properties is enough to state an honest error range. Twenty-four years of
+selling this work is likely to have produced them already.
+
+Until then `SITE_MODE` stays `beta`, which is what that setting is for.
 
 ---
 
