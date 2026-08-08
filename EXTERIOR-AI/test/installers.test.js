@@ -130,6 +130,9 @@ test('verification evidence is stored, and a lapsed insurance is visible', () =>
 const HASH = 'scrypt$7f3c1a9e5b2d84f60c1e93a7d5b28e40$50b0e3dd500f648fd8b8516d9db6492e0887c2f39636f56cb53f53d7ea61c3c1ebca80925277105e5e8a8a414507b83b24ff6bc364b79caf3d75864a268a73e9';   // scrypt of 'anglian-password-1234'
 process.env.PORT = String(PORT);
 process.env.INSTALLER_TOKEN_SECRET = SECRET;
+/* This file deliberately exercises every way a sign-in can be refused, which is
+   more attempts than the real limit allows in a quarter of an hour. */
+process.env.INSTALLER_RATE_LIMIT = '500';
 process.env.INSTALLER_PASSWORD = 'shared-legacy-password';
 process.env.LEAD_RECIPIENTS = JSON.stringify([
   { id: 'anglian', name: 'Anglian', url: 'https://a.test/h', leadPrice: 130, passwordHash: HASH },
@@ -258,4 +261,35 @@ test('the privacy notice describes what the code actually does', () => {
     'two-factor is claimed, and it is not built');
   assert.ok(!/protected by two-factor authentication/.test(visible),
     'the notice claims two-factor authentication, which does not exist');
+});
+
+test('an unknown installer name costs the same as a known one', async () => {
+  /* The comment in server.js has always said the compare runs even when the id
+     is unknown, so a wrong name and a wrong password are indistinguishable.
+     It did not: `!!who?.passwordHash && await verify(...)` short-circuits, so
+     an unknown id skipped the compare entirely and answered in a fraction of a
+     millisecond while a known one took the full scrypt. Anyone could have
+     enumerated the installer names by timing the 401s, and making the hash
+     asynchronous made the gap wider.
+
+     Timing assertions are flaky, so this counts calls instead: the compare
+     must happen on both paths, which is the property that makes the timings
+     match. */
+  const real = I.verifyPassword;
+  let calls = 0;
+  I.verifyPassword = (...args) => { calls++; return real(...args); };
+  try {
+    const known = await login({ id: 'anglian', password: 'wrong-password' });
+    const afterKnown = calls;
+
+    const unknown = await login({ id: 'no-such-installer', password: 'wrong-password' });
+
+    assert.strictEqual(known.status, 401);
+    assert.strictEqual(unknown.status, 401, 'both must refuse identically');
+    assert.strictEqual(afterKnown, 1, 'a known id should reach the compare');
+    assert.strictEqual(calls, 2,
+      'an unknown id skipped the password compare — its 401 comes back faster, which enumerates installer names');
+  } finally {
+    I.verifyPassword = real;
+  }
 });

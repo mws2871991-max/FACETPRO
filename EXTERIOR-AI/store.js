@@ -278,6 +278,9 @@ async function ensureSchema() {
     ['renders_lead_id_idx', 'renders (lead_id)'],
     ['access_log_ts_idx', 'access_log (ts)'],
     ['leads_ts_idx', 'leads (ts)'],
+    /* The detection cache sweeps by age on every write, which was a sequential
+       scan over every photograph measured in the last seven days. */
+    ['detection_cache_ts_idx', 'detection_cache (ts)'],
   ];
   for (const [name, target] of indexes) {
     try {

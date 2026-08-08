@@ -45,6 +45,32 @@ jobs:
     defaults:
       run:
         working-directory: EXTERIOR-AI
+
+    # The same Postgres the tests workflow stands up.
+    #
+    # Without it this job ran `npm test` with no DATABASE_URL, so the eleven
+    # integration tests skipped themselves — including the one asserting two
+    # processes rewriting the same table cannot erase each other. The job that
+    # gates production was the only one not covering the backend production
+    # uses, which is the wrong way round. It also cannot `needs:` the tests
+    # workflow, because that lives in another file.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: facetpro_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      # localhost and a database named for testing, which is what the guard in
+      # test/postgres.test.js insists on before it deletes anything.
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/facetpro_test?sslmode=disable
+
     steps:
       - uses: actions/checkout@v4
 
@@ -59,8 +85,18 @@ jobs:
       # The tests run here as well as in tests.yml, deliberately. This job can
       # be triggered by hand, and a manual deploy is exactly when somebody is
       # in a hurry and least likely to have checked.
+      #
+      # Against Postgres, because that is what production runs. A green deploy
+      # gated on the JSONL backend alone proves the wrong thing.
       - name: Test before deploying
         run: npm test
+
+      - name: Refuse to deploy if the Postgres tests skipped themselves
+        run: |
+          if npm test 2>&1 | grep -qE '^# skipped [1-9]'; then
+            echo "::error::Tests skipped in the deploying job — DATABASE_URL is not reaching the suite, so the backend production uses is untested."
+            exit 1
+          fi
 
       - name: Check the token is present
         id: token

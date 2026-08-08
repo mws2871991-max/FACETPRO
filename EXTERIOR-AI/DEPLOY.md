@@ -97,6 +97,7 @@ way to get this deployment wrong.
 | `SITE_MODE` | no | Defaults to `beta`. Set `live` to drop the beta badge and notices. |
 | `DAILY_DETECT_LIMIT` | no | Default 50. |
 | `DETECT_RATE_LIMIT` | no | Detection requests per minute per IP. Default 10, which is right for a homeowner. Exists so the test suite can send one photograph fifteen times on purpose; leave it unset in production. |
+| `INSTALLER_RATE_LIMIT` | no | Installer sign-in attempts per 15 minutes per IP. Default 20. Exists for the test suite; leave it unset in production. |
 
 > **Do not edit an image or a font in place.** Everything matching
 > `.woff2 .jpg .jpeg .png .gif .webp .avif .svg .ico` is served

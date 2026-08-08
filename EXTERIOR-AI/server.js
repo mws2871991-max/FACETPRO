@@ -787,7 +787,10 @@ async function notifyNewLead(lead, price) {
 
 // Slows password guessing against the installer endpoint.
 const installerLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, max: 20,
+  /* Through envLimit, like the detection limiter and the daily caps. Twenty
+     attempts a quarter of an hour is right for a person signing in and wrong
+     for a suite that exercises every way a sign-in can be refused. */
+  windowMs: 15 * 60 * 1000, max: envLimit('INSTALLER_RATE_LIMIT', 20),
   standardHeaders: true, legacyHeaders: false,
   message: { error: 'Too many attempts — please wait 15 minutes.' }
 });
@@ -2676,9 +2679,20 @@ app.post('/api/installer/login', installerLimiter, async (req, res) => {
   const who = LEAD_RECIPIENTS.find(r => r.id === id);
 
   /* The compare runs even when the id is unknown, so a wrong name and a wrong
-     password take the same time and neither confirms the other. */
+     password take the same time and neither confirms the other.
+
+     It did not. `!!who?.passwordHash && await verify(...)` short-circuits, so
+     an unknown id never reached the compare at all and came back in a
+     fraction of a millisecond while a known one took the full scrypt. That is
+     an oracle for enumerating installer names, and making the hash
+     asynchronous widened it rather than closing it.
+
+     Written as two statements rather than reordered operands, because the
+     order is the security property and `&&` invites tidying. The dummy hash
+     exists precisely so there is always something to compare against. */
   const hash = who?.passwordHash || 'scrypt$00$00';
-  const ok = !!who?.passwordHash && await installers.verifyPassword(password, hash);
+  const matches = await installers.verifyPassword(password, hash);
+  const ok = matches && !!who?.passwordHash;
   if (!ok) {
     obs.record('installer-login', 'failed sign-in', { id: id ? 'supplied' : 'missing' });
     return res.status(401).json({ error: 'That name or password is not right.' });
