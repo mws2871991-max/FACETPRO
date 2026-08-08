@@ -237,7 +237,7 @@ test('no market comparison while the windows in it are unsourced', () => {
      the day it was written and stopped being true the moment the bands were
      confirmed — a test that fails when the data changes rather than when the
      behaviour does. */
-  const UNSOURCED = { ...RATES, source: 'Windows: placeholder rates, not sourced.' };
+  const UNSOURCED = { ...RATES, sourced: false, source: 'Windows: placeholder rates, not sourced.' };
   const r = base({ rates: UNSOURCED });
   assert.strictEqual(r.marketRange, null,
     'the market comparison is shown on top of unsourced window rates');
@@ -313,7 +313,7 @@ test('not negotiating costs more than the difference between installers', () => 
 test('the no-haggle figure is withheld whenever the comparison is', () => {
   /* Both rest on the same base. One appearing without the other would say the
      base is trustworthy enough for the bigger claim and not the smaller. */
-  const UNSOURCED = { ...RATES, source: 'Windows: placeholder rates, not sourced.' };
+  const UNSOURCED = { ...RATES, sourced: false, source: 'Windows: placeholder rates, not sourced.' };
   const r = base({ rates: UNSOURCED });
   assert.strictEqual(r.marketRange, null);
   assert.strictEqual(r.noHaggle, null, 'the no-haggle figure survived on an unsourced base');

@@ -47,24 +47,37 @@ const crypto = require('crypto');
 const TOKEN_TTL_MS = 4 * 60 * 60 * 1000;   // four hours: a working session, not a week
 
 /* scrypt rather than a bare hash: a password that is short and human needs to
-   be expensive to guess. Parameters are the Node defaults, which are current. */
+   be expensive to guess. Parameters are the Node defaults, which are current.
+
+   Asynchronous, because being expensive is the point. scryptSync spends its
+   50–100 ms inside the single thread that also serves every other request, so
+   one installer signing in stalled the homepage for everybody — and the
+   endpoint allows twenty attempts a quarter of an hour per IP, which is twenty
+   chances to do it. crypto.scrypt does the same work on the threadpool.
+
+   The cost is that hashing is now a promise, and three callers had to learn
+   to wait. That is the correct trade: the alternative is a login that is
+   cheap for us, which is the same as a login that is cheap to attack. */
 const KEYLEN = 64;
-const hashPassword = (password, salt) =>
-  crypto.scryptSync(String(password), salt, KEYLEN).toString('hex');
+const hashPassword = (password, salt) => new Promise((resolve, reject) => {
+  crypto.scrypt(String(password), salt, KEYLEN, (err, key) => {
+    if (err) reject(err); else resolve(key.toString('hex'));
+  });
+});
 
 /* "scrypt$<salt>$<hash>" — self-describing, so the format can change later
    without guessing what an old value was. */
-function makePasswordHash(password) {
+async function makePasswordHash(password) {
   const salt = crypto.randomBytes(16).toString('hex');
-  return `scrypt$${salt}$${hashPassword(password, salt)}`;
+  return `scrypt$${salt}$${await hashPassword(password, salt)}`;
 }
 
-function verifyPassword(password, stored) {
+async function verifyPassword(password, stored) {
   const parts = String(stored || '').split('$');
   if (parts.length !== 3 || parts[0] !== 'scrypt') return false;
   const [, salt, expected] = parts;
   let actual;
-  try { actual = hashPassword(password, salt); } catch (_) { return false; }
+  try { actual = await hashPassword(password, salt); } catch (_) { return false; }
   const a = Buffer.from(actual, 'hex');
   const b = Buffer.from(expected, 'hex');
   if (a.length !== b.length) return false;

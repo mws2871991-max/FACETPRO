@@ -299,8 +299,18 @@ test('everything needed to boot in production is a real dependency', () => {
 
   assert.ok(prod.includes('pg'),
     'pg must be a dependency — with --omit=dev and DATABASE_URL set, the server cannot start without it');
-  assert.deepStrictEqual(dev, ['tailwindcss'],
-    `only tailwindcss may be dev-only, and only because prestart handles its absence — found: ${dev.join(', ')}`);
+
+  /* Dev-only is fine for things the running server never loads. Naming them
+     rather than counting them, so adding one is a decision somebody makes on
+     purpose — and so the real check below, which reads the requires out of the
+     code, stays the thing that actually holds. Tailwind is the interesting
+     case: it IS needed at prestart, and is dev-only only because
+     prestart-css.js checks require.resolve and falls back to the committed
+     stylesheet. */
+  const ALLOWED_DEV_ONLY = ['tailwindcss', 'eslint'];
+  const unexpected = dev.filter(d => !ALLOWED_DEV_ONLY.includes(d));
+  assert.deepStrictEqual(unexpected, [],
+    `dev-only dependencies the server might need at runtime: ${unexpected.join(', ')}`);
 
   /* Anything require()d at the top level of a module the server loads has to
      be installed in production. This catches the next one by reading the code

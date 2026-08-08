@@ -8,7 +8,7 @@ require('./helpers/data-dir');   // never write to the real data/ — see the fi
 
 const test = require('node:test');
 const assert = require('node:assert');
-const { estimateWallArea, imageSize, HOUSE_TYPE_PRIORS, DOOR_HEIGHT_M } = require('../measure');
+const { estimateWallArea, imageSize, HOUSE_TYPE_PRIORS } = require('../measure');
 
 const ASPECT_4_3 = 4 / 3;
 

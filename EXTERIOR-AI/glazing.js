@@ -150,8 +150,18 @@ const MARKET_SPREAD = INSTALLER_SPREAD;
    Mirrors the check server.js makes on the same field, and reads the
    catalogue it was handed rather than the one on disk, so a test can pass
    sourced rates and see the comparison appear. */
-const windowRatesSourced = (rates) =>
-  !!(rates?.source && !/not sourced|placeholder/i.test(rates.source));
+/* An explicit field, not a reading of the prose.
+
+   This searched `source` for "not sourced" or "placeholder". The note now
+   ends "Not a supplier rate card", which contains neither phrase, so the
+   guard passed — correctly, as it happens, because the rates ARE real. But it
+   passed by accident: any rewording could flip whether every window estimate
+   is labelled a guide, and the person rewording it would have no idea. A
+   sentence is documentation; a boolean is a decision.
+
+   Absent means NOT sourced. A catalogue that has not said so yet should get
+   the cautious label rather than the confident one. */
+const windowRatesSourced = (rates) => rates?.sourced === true;
 
 /* The comparison, or nothing. Doors-only jobs keep it because every figure in
    them came from a completed job; anything containing a window loses it until

@@ -20,7 +20,6 @@ const path = require('path');
 
 const PORT = 3090;
 const BASE = `http://127.0.0.1:${PORT}`;
-const DELIVERIES = path.join(process.env.FACETPRO_DATA_DIR, 'deliveries.jsonl');
 
 process.env.PORT = String(PORT);
 process.env.INSTALLER_PASSWORD = 'test-pw';

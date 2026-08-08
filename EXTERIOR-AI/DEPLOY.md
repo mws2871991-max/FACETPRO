@@ -97,6 +97,17 @@ way to get this deployment wrong.
 | `SITE_MODE` | no | Defaults to `beta`. Set `live` to drop the beta badge and notices. |
 | `DAILY_DETECT_LIMIT` | no | Default 50. |
 | `DETECT_RATE_LIMIT` | no | Detection requests per minute per IP. Default 10, which is right for a homeowner. Exists so the test suite can send one photograph fifteen times on purpose; leave it unset in production. |
+
+> **Do not edit an image or a font in place.** Everything matching
+> `.woff2 .jpg .jpeg .png .gif .webp .avif .svg .ico` is served
+> `Cache-Control: public, max-age=31536000, immutable`, so a returning visitor
+> will not re-fetch it for a year. Re-cropping `assets/work/hero-after.jpg`
+> under the same name means people who have been here before keep seeing the
+> old crop until 2027. Add a new file and point the markup at it, or put a
+> content hash in the filename. `assets/app.css` and the HTML are deliberately
+> excluded and revalidate on every request, because they *do* change under the
+> same name on every deploy.
+
 | `DAILY_RENDER_LIMIT` | no | Default 50. The only thing bounding render spend. |
 | `PORT` | no | The host sets this. |
 | `LEAD_CAPTURE` | no | Code defaults to `on`; `.env.example` ships `off`. With `off` the form is replaced by an honest explanation and nothing personal is read, parsed or stored. Turn it on when the legal pages have no `[PLACEHOLDERS]` left, the ICO registration is done and `DATABASE_URL` is set — under `SITE_MODE=live` the server refuses to start until the first two are true. |

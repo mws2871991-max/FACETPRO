@@ -18,4 +18,4 @@ if (pw.length < 12) {
   console.error(`That is ${pw.length} characters. Use at least 12 — this guards every lead that installer has bought.`);
   process.exit(1);
 }
-console.log(makePasswordHash(pw));
+makePasswordHash(pw).then(h => console.log(h));

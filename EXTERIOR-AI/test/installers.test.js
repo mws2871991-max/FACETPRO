@@ -18,7 +18,6 @@ require('./helpers/data-dir');
 
 const { test, before } = require('node:test');
 const assert = require('node:assert');
-const crypto = require('crypto');
 
 const PORT = 3108;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -29,25 +28,26 @@ const { parseRecipients } = require('../delivery');
 
 /* ── passwords ── */
 
-test('a password verifies against its own hash and nothing else', () => {
-  const h = I.makePasswordHash('correct horse battery staple');
-  assert.ok(I.verifyPassword('correct horse battery staple', h));
-  assert.ok(!I.verifyPassword('correct horse battery stapl', h), 'a near miss was accepted');
-  assert.ok(!I.verifyPassword('', h));
+test('a password verifies against its own hash and nothing else', async () => {
+  const h = await I.makePasswordHash('correct horse battery staple');
+  assert.ok(await I.verifyPassword('correct horse battery staple', h));
+  assert.ok(!await I.verifyPassword('correct horse battery stapl', h), 'a near miss was accepted');
+  assert.ok(!await I.verifyPassword('', h));
 });
 
-test('two installers with the same password get different hashes', () => {
+test('two installers with the same password get different hashes', async () => {
   /* Salted, so the environment variable cannot show that two installers chose
      the same password — and a rainbow table is no use against either. */
-  const a = I.makePasswordHash('same password');
-  const b = I.makePasswordHash('same password');
+  const a = await I.makePasswordHash('same password');
+  const b = await I.makePasswordHash('same password');
   assert.notStrictEqual(a, b);
-  assert.ok(I.verifyPassword('same password', a) && I.verifyPassword('same password', b));
+  assert.ok(await I.verifyPassword('same password', a));
+  assert.ok(await I.verifyPassword('same password', b));
 });
 
-test('a malformed or absent hash refuses rather than throws', () => {
+test('a malformed or absent hash refuses rather than throws', async () => {
   for (const bad of ['', null, undefined, 'notahash', 'scrypt$onlytwo', 'md5$x$y']) {
-    assert.strictEqual(I.verifyPassword('anything', bad), false, `accepted against: ${bad}`);
+    assert.strictEqual(await I.verifyPassword('anything', bad), false, `accepted against: ${bad}`);
   }
 });
 
@@ -119,7 +119,15 @@ test('verification evidence is stored, and a lapsed insurance is visible', () =>
 
 /* ── the endpoint ── */
 
-const HASH = I.makePasswordHash('anglian-password-1234');
+/* A fixed hash rather than one computed here.
+
+   Hashing is asynchronous now — deliberately, so a sign-in does not stall the
+   event loop for everybody else — and this is needed at module scope to build
+   LEAD_RECIPIENTS before the server is required, where there is nothing to
+   await with. A literal also pins the stored format: if the scheme ever
+   changes, an old value has to keep verifying or existing installers are
+   locked out, and this is the row that would notice. */
+const HASH = 'scrypt$7f3c1a9e5b2d84f60c1e93a7d5b28e40$50b0e3dd500f648fd8b8516d9db6492e0887c2f39636f56cb53f53d7ea61c3c1ebca80925277105e5e8a8a414507b83b24ff6bc364b79caf3d75864a268a73e9';   // scrypt of 'anglian-password-1234'
 process.env.PORT = String(PORT);
 process.env.INSTALLER_TOKEN_SECRET = SECRET;
 process.env.INSTALLER_PASSWORD = 'shared-legacy-password';

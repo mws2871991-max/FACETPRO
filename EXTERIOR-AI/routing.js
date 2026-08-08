@@ -84,7 +84,6 @@ function normaliseTrades(list) {
    off anything the browser told us. */
 function tradesIn(lead) {
   const wanted = new Set();
-  const g = lead?.glazing || lead?.preferences?.windows;
   if (lead?.preferences?.windows?.style || lead?.glazing?.price) wanted.add('windows');
   if (lead?.preferences?.windows?.door || lead?.glazing?.price) wanted.add('doors');
   if (lead?.selections?.cladding) wanted.add('cladding');

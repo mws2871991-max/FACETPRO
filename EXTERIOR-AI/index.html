@@ -2302,7 +2302,17 @@ function buildDetailOptions() {
       }, state.rendering ? 'Creating your picture…' : 'Show these on my house →') : null,
 
       h('div', { className: 'mt-3 pt-3 border-t border-zinc-200 flex items-center gap-3 flex-wrap' }, [
-        h('span', { className: 'text-[12px] text-zinc-600' }, `We counted ${counted}. Not right?`),
+        /* "We counted" only when we counted.
+
+           This said it whatever the number was — including when it came from
+           the house-type prior, which is a typical figure for a kind of house
+           and involves counting nothing. The honest line sits directly beneath
+           it, so the page contradicted itself within two sentences: "we counted
+           8" above "a typical figure for your house type". */
+        h('span', { className: 'text-[12px] text-zinc-600' },
+          g.countSource === 'house_type_prior'
+            ? `We're assuming ${counted}. Not right?`
+            : `We counted ${counted}. Not right?`),
         h('div', { className: 'flex items-center gap-2' }, [
           h('button', {
             type: 'button', 'aria-label': 'One fewer window',

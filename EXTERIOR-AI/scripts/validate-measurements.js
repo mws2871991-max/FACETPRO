@@ -92,7 +92,7 @@ for (const s of real) {
   // What multiplier would this property have needed? Compares directly with
   // the value in use, which is the single most useful number here.
   if (Number.isFinite(Number(s.frontageM)) && Number.isFinite(Number(s.depthM))) {
-    const W = Number(s.frontageM), D = Number(s.depthM);
+    const W = Number(s.frontageM);
     const storeys = Number(s.storeys) || 2;
     const heightM = Number(s.wallHeightM) || storeys * 2.6;
     const frontGross = W * heightM;

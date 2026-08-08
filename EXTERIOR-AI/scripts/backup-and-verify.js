@@ -28,7 +28,6 @@
    and the half a logical backup depends on. */
 
 const fs = require('fs');
-const path = require('path');
 const { Client, types } = require('pg');
 
 /* Verify the far end of the connection.

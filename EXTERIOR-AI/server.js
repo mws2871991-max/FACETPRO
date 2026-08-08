@@ -36,8 +36,9 @@ const CATALOGUE_STALE_AFTER_DAYS = 180;
 
    Delete this the day a supplier rate card replaces them, along with the
    "source" line that makes it true. */
-const GLAZING_RATES_SOURCED = !!(catalogue.glazing?.source
-  && !/not sourced|placeholder/i.test(catalogue.glazing.source));
+/* An explicit field rather than a reading of the prose beside it — see
+   windowRatesSourced in glazing.js for why. Absent means not sourced. */
+const GLAZING_RATES_SOURCED = catalogue.glazing?.sourced === true;
 
 function checkGlazingRates() {
   if (!catalogue.glazing) return;
@@ -46,6 +47,36 @@ function checkGlazingRates() {
     return;
   }
   console.warn('Window and door rates are PLACEHOLDERS — catalogue.glazing.source says so. Every window estimate is labelled as a guide until a supplier rate card replaces them. Ask your installers for one.');
+}
+
+/* The gallery makes a factual claim; can we back it up?
+
+   index.html says of the eight before/after photographs: "Real homes. Real
+   work. No showroom. Photographs, not renders." That is an objective claim in
+   an advertisement, and the CAP Code and the CPUTRs both expect it to be
+   substantiable before publication rather than after somebody asks.
+
+   The swatches have assets/swatches/CREDITS.md. The gallery had nothing, and
+   the files carry no EXIF, so nothing on disk could answer it either way.
+
+   Warned rather than refused: the claim may well be perfectly true and only
+   undocumented, and taking the site down over a missing markdown file would be
+   the wrong trade. But it says so on every boot until somebody settles it. */
+function checkGalleryProvenance() {
+  let page = '';
+  try { page = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8'); } catch (_) { return; }
+  if (!/Photographs, not renders/i.test(page)) return;
+
+  let provenance = '';
+  try { provenance = fs.readFileSync(path.join(__dirname, 'assets', 'work', 'PROVENANCE.md'), 'utf8'); }
+  catch (_) { /* absent, which is the loudest case */ }
+
+  const unknowns = (provenance.match(/UNKNOWN/g) || []).length;
+  if (!provenance) {
+    console.warn('The homepage claims the gallery is "Photographs, not renders" and assets/work/PROVENANCE.md does not exist. That claim is unsubstantiated.');
+  } else if (unknowns) {
+    console.warn(`Gallery provenance is INCOMPLETE — ${unknowns} UNKNOWN entries in assets/work/PROVENANCE.md, while the homepage claims "Real homes. Real work. Photographs, not renders." Substantiate it or change the wording.`);
+  }
 }
 
 function checkCatalogueAge(now = new Date()) {
@@ -244,7 +275,12 @@ app.use((req, res, next) => {
    suite can have its own budget; unset everywhere else, which is where it
    should stay. */
 const detectLimiter = rateLimit({
-  windowMs: 60 * 1000, max: Number(process.env.DETECT_RATE_LIMIT) || 10,
+  /* Through envLimit like every other tuneable, rather than Number(...) || 10.
+     That idiom turns "0" into 10 and "banana" into 10 silently, which is the
+     opposite of what the same file does two hundred lines down for
+     DAILY_DETECT_LIMIT — where a bad value is named in a warning and the
+     default is used deliberately. One convention, not two. */
+  windowMs: 60 * 1000, max: envLimit('DETECT_RATE_LIMIT', 10),
   standardHeaders: true, legacyHeaders: false,
   message: { error: 'Too many requests — please wait a minute and try again.' }
 });
@@ -2634,7 +2670,7 @@ app.get('/api/deliveries', installerLimiter, requireInstallerPassword, logAccess
 /* ── POST /api/installer/login ──
    An account per installer, replacing one password shared by everybody.
    Returns a short-lived token so the browser never stores the credential. */
-app.post('/api/installer/login', installerLimiter, (req, res) => {
+app.post('/api/installer/login', installerLimiter, async (req, res) => {
   const id = String(req.body?.id || '').trim();
   const password = String(req.body?.password || '');
   const who = LEAD_RECIPIENTS.find(r => r.id === id);
@@ -2642,7 +2678,7 @@ app.post('/api/installer/login', installerLimiter, (req, res) => {
   /* The compare runs even when the id is unknown, so a wrong name and a wrong
      password take the same time and neither confirms the other. */
   const hash = who?.passwordHash || 'scrypt$00$00';
-  const ok = !!who?.passwordHash && installers.verifyPassword(password, hash);
+  const ok = !!who?.passwordHash && await installers.verifyPassword(password, hash);
   if (!ok) {
     obs.record('installer-login', 'failed sign-in', { id: id ? 'supplied' : 'missing' });
     return res.status(401).json({ error: 'That name or password is not right.' });
@@ -2975,7 +3011,20 @@ app.use((err, req, res, next) => {
   if (res.headersSent) return next(err);
 
   if (err?.type === 'entity.too.large') {
-    return res.status(413).json({ error: 'That photo is too large — please use one under 15MB.' });
+    /* Say the number that actually applies to what they just tried.
+
+       This said 15MB on every route. Nothing here has ever had a 15MB limit:
+       the photo endpoints take a 12mb body and everything else 128kb, and the
+       gates immediately inside those endpoints refuse a photo over 5MB for
+       detection and 8MB for rendering. So the one message a homeowner sees at
+       the moment their phone picture is refused named a limit that does not
+       exist, and was roughly three times the real one. */
+    const cap = req.path === '/api/detect' ? '5MB'
+      : req.path === '/api/render' ? '8MB'
+      : null;
+    return res.status(413).json(cap
+      ? { error: `That photo is too large — please use one under ${cap}.`, reason: 'image_too_large' }
+      : { error: 'That request was too large.', reason: 'body_too_large' });
   }
   if (err?.type === 'entity.parse.failed' || err instanceof SyntaxError) {
     return res.status(400).json({ error: 'Malformed request.' });
@@ -3177,9 +3226,11 @@ async function start() {
   }
   return app.listen(PORT, () => {
   console.log(`Facet Pro server running on http://localhost:${PORT}`);
+  console.log(`Detection rate limit: ${envLimit('DETECT_RATE_LIMIT', 10)} per minute per IP.`);
   console.log(`Daily caps — detect: ${DAILY_LIMITS.detect}, render: ${DAILY_LIMITS.render} ` +
               `(used today: ${usage.detect}/${usage.render}, UTC day ${usage.day})`);
   checkCatalogueAge();
+  checkGalleryProvenance();
   console.log(SITE_MODE === 'beta'
     ? 'Site mode: BETA — the badge and notice are shown. Set SITE_MODE=live to remove them.'
     : 'Site mode: LIVE — no beta badge.');

@@ -5,12 +5,13 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node test/run.js",
+    "test": "eslint . && node test/run.js",
     "validate": "node scripts/validate-measurements.js",
     "set-domain": "node scripts/set-domain.js",
     "build:css": "node scripts/prestart-css.js",
     "prestart": "node scripts/prestart-css.js",
-    "installer-password": "node scripts/installer-password.js"
+    "installer-password": "node scripts/installer-password.js",
+    "lint": "eslint ."
   },
   "license": "ISC",
   "dependencies": {
@@ -24,6 +25,7 @@
     "node": ">=20"
   },
   "devDependencies": {
+    "eslint": "^10.8.1",
     "tailwindcss": "^3.4.19"
   }
 }
