@@ -15,7 +15,7 @@
      no styled frame is ever painted with the wrong class. -->
 <script>document.documentElement.classList.remove('no-js');</script>
 
-<title>A Fair Price For Windows, Without Haggling — One Photo | Facet Pro</title>
+<title>See Every Facet Of Your Home — A Fair Price For Windows | Facet Pro</title>
 <meta name="description" content="See new windows and doors on your own house and what they cost, in about a minute — no home visit, no salesman, no obligation. Walls, roof and roofline price off the same photo when you are ready.">
 <link rel="canonical" href="https://www.facetpro.co.uk/">
 <meta name="robots" content="index, follow, max-image-preview:large">
@@ -32,21 +32,27 @@
 <!-- Absolute, and pointed at the host that actually serves it.
 
      This said www.facetpro.co.uk, where the DNS still points at the older
-     Facet Pro on Vercel and /assets/og-image.png is a 404 — so every share of
+     Facet Pro on Vercel and /assets/og-card.png is a 404 — so every share of
      this site, by anyone, produced a preview card with no image on it. The
      same domain question sits under the canonical tag two lines up; that one
      is an SEO decision and is left alone deliberately, but a broken image is
      just broken. Move both together once the domain is settled. -->
-<meta property="og:image" content="https://facetpro-visualiser-production.up.railway.app/assets/og-image.png">
+<meta property="og:image" content="https://facetpro-visualiser-production.up.railway.app/assets/og-card.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Facet Pro — a home exterior shown before and after new cladding.">
+<meta property="og:image:alt" content="Facet Pro — see every facet of your home. Measure, visualise and price an entire home’s exterior from one photograph.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="You shouldn&rsquo;t have to haggle to get a fair price for your windows — Facet Pro">
 <meta name="twitter:description" content="Upload one photo. Try real window styles and frame colours on your home, and get a costed estimate in about a minute.">
-<meta name="twitter:image" content="https://facetpro-visualiser-production.up.railway.app/assets/og-image.png">
+<meta name="twitter:image" content="https://facetpro-visualiser-production.up.railway.app/assets/og-card.png">
 
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='16' fill='%2318181b'/%3E%3Ctext x='16' y='21' font-family='Georgia,serif' font-size='14' fill='%23FBF8F3' text-anchor='middle'%3EFP%3C/text%3E%3C/svg%3E">
+<!-- The mark is a letter set in Instrument Serif, the face the site is set in.
+     PNG rather than an inline SVG: an SVG favicon is rendered in a restricted
+     context that will not fetch a webfont, so the old one fell back to Georgia —
+     a typeface used nowhere else here. Rendered at the exact pixel sizes. -->
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
 
 <link rel="stylesheet" href="/assets/fonts.css">
 <link rel="stylesheet" href="/assets/app.css">
@@ -259,7 +265,7 @@
 <header class="sticky top-0 z-30 backdrop-blur-xl bg-[#FBF8F3]/80 border-b border-zinc-200">
   <div class="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
     <a href="/" class="flex items-center gap-3" aria-label="Facet Pro home">
-      <span class="w-8 h-8 rounded-full bg-zinc-900 text-white grid place-items-center text-[11px] tracking-[0.15em] font-semibold" aria-hidden="true">FP</span>
+      <span class="w-8 h-8 rounded-[7px] bg-zinc-900 text-white grid place-items-center serif text-[18px] leading-none" aria-hidden="true">F</span>
       <span class="serif text-[19px] tracking-tight">Facet Pro</span>
       <span id="beta-badge" hidden class="text-[10px] tracking-widest uppercase px-2 py-0.5 rounded-full bg-amber-100 border border-amber-300 text-amber-900">Beta</span>
     </a>
@@ -820,8 +826,9 @@
   <div class="rounded-2xl border border-zinc-200 bg-white p-6">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div class="flex items-center gap-3">
-        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-[10px] tracking-[0.15em] font-semibold" aria-hidden="true">FP</span>
+        <span class="w-7 h-7 rounded-[6px] bg-zinc-900 text-white grid place-items-center serif text-[15px] leading-none" aria-hidden="true">F</span>
         <span class="serif text-[17px] tracking-tight">Facet Pro</span>
+        <span class="text-[12px] text-zinc-500 hidden sm:inline">See every facet of your home.</span>
       </div>
       <nav class="flex flex-wrap gap-x-5 gap-y-2 text-[12px] text-zinc-600" aria-label="Footer">
         <!-- Same four broken anchors as the header carried. A footer link that
