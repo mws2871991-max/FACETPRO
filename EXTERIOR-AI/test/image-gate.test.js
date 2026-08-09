@@ -96,10 +96,32 @@ test('an image lying about its own type is refused, not corrected', async () => 
 });
 
 test('the declared type is still allowlisted', async () => {
+  /* Asserting the machine-readable reason rather than the wording, because the
+     wording is written for a homeowner and is expected to change — it already
+     has once, from a bare "Unsupported image type." that told nobody what to
+     do next. */
   for (const mimeType of ['image/svg+xml', 'text/html']) {
     const { status, body } = await post('/api/detect', { image: jpeg(), mimeType });
     assert.strictEqual(status, 400, mimeType);
-    assert.match(body.error, /unsupported image type/i);
+    assert.strictEqual(body.reason, 'unsupported_image_type', mimeType);
+  }
+});
+
+test('an iPhone photo is named, not just refused', async () => {
+  /* HEIC is what an iPhone shoots by default, and the upload button accepts
+     image/*, which matches it — so the picker offers a file the server then
+     refuses. Safari decodes HEIC and the canvas downscale converts it, so this
+     is never reached there; Chrome and Firefox cannot, fall back to the
+     original bytes, and land exactly here.
+
+     "Unsupported image type." was true and gave a homeowner nothing to act on,
+     at the first step of the journey. */
+  for (const mimeType of ['image/heic', 'image/heif']) {
+    const { status, body } = await post('/api/detect', { image: jpeg(), mimeType });
+    assert.strictEqual(status, 400, mimeType);
+    assert.strictEqual(body.reason, 'heic_not_supported', mimeType);
+    assert.match(body.error, /iPhone/i, 'the message should name what the file actually is');
+    assert.match(body.error, /JPEG|Safari/i, 'and say what to do about it');
   }
 });
 

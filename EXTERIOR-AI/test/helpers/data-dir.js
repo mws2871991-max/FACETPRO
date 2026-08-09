@@ -23,4 +23,28 @@ if (!process.env.FACETPRO_DATA_DIR) {
   process.env.FACETPRO_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'facetpro-test-'));
 }
 
-module.exports = { DATA_DIR: process.env.FACETPRO_DATA_DIR };
+/* One directory per test file, inside the run's directory.
+
+   test/run.js hands every file the same FACETPRO_DATA_DIR so it can check
+   afterwards that nothing wrote outside it. That was harmless while the only
+   shared thing was a set of JSONL tables each file rewrote for itself. It
+   stopped being harmless when detection started caching its answers to disk,
+   keyed on a hash of the image — because the tiny JPEGs these files build are
+   byte-identical between files. security.test.js's `tinyJpeg(641)` and
+   image-gate.test.js's `jpeg(641)` are the same bytes and therefore the same
+   hash, so whichever ran first answered for the other.
+
+   It surfaced as the daily-cap test failing: its third request was served from
+   another file's cache, never reached the provider, never spent the quota, and
+   came back 200 where the test wanted 429. Nothing was wrong with the cap, the
+   cache or the fixtures — only with two files sharing a directory.
+
+   A subdirectory per file keeps run.js's guarantee (everything is still under
+   its temp root) and gives each file a store of its own. argv[1] is the test
+   file, because node:test runs each in its own process. */
+const entry = process.argv[1] ? path.basename(process.argv[1], '.js') : 'shared';
+const perFile = path.join(process.env.FACETPRO_DATA_DIR, entry);
+fs.mkdirSync(perFile, { recursive: true });
+process.env.FACETPRO_DATA_DIR = perFile;
+
+module.exports = { DATA_DIR: perFile };

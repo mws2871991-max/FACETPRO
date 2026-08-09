@@ -520,12 +520,38 @@ function readSize(buffer) {
   // JPEG: walk the segment markers to a start-of-frame and read its dimensions.
   if (buffer[0] === 0xff && buffer[1] === 0xd8) {
     let offset = 2;
+    let orientation = 1;
     while (offset + 9 < buffer.length) {
       if (buffer[offset] !== 0xff) { offset++; continue; }
       const marker = buffer[offset + 1];
+
+      // APP1 may carry the EXIF block, which is where a phone records that the
+      // pixels are stored one way round and meant to be seen another.
+      if (marker === 0xe1) {
+        const length = buffer.readUInt16BE(offset + 2);
+        orientation = exifOrientation(buffer.subarray(offset + 4, offset + 2 + length)) || orientation;
+        if (length < 2) return null;
+        offset += 2 + length;
+        continue;
+      }
+
       // SOF0-SOF15, excluding DHT (c4), JPG (c8) and DAC (cc).
       if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
-        return { mime: 'image/jpeg', height: buffer.readUInt16BE(offset + 5), width: buffer.readUInt16BE(offset + 7) };
+        const height = buffer.readUInt16BE(offset + 5);
+        const width = buffer.readUInt16BE(offset + 7);
+        /* Orientations 5-8 are the quarter turns: the stored pixels are
+           landscape and the photograph is portrait, or the reverse. Report the
+           dimensions as the photograph is seen, because that is what every
+           consumer of this means — aspectRatio is a term in the wall-area
+           formula, and the detection boxes come back as percentages of the
+           image the model was shown, which is the upright one. */
+        const turned = orientation >= 5 && orientation <= 8;
+        return {
+          mime: 'image/jpeg',
+          width: turned ? height : width,
+          height: turned ? width : height,
+          orientation,
+        };
       }
       const length = buffer.readUInt16BE(offset + 2);
       if (length < 2) return null;
@@ -534,6 +560,48 @@ function readSize(buffer) {
   }
 
   return null;
+}
+
+/* The EXIF orientation tag, or 0 if there isn't one.
+
+   A phone stores the sensor's pixels and records which way up the picture was
+   taken. Reading the SOF dimensions alone gets a portrait photograph the wrong
+   way round — and on the measured path that is not cosmetic: area resolves as
+   aspect x 1.98^2 x (wallW% x wallH%) / doorH%^2, so a landscape aspect on a
+   portrait photograph moves every measurement by the square of the frame's
+   proportions. Measured on a real iPhone photograph of a terrace: an average
+   window width of 2.70 m instead of 1.52 m, and an estimate 39% high, labelled
+   "measured from your photo".
+
+   Deliberately small. It reads the first IFD of the first APP1 block and looks
+   for tag 0x0112. Anything unexpected returns 0 and the caller carries on as
+   though the tag were absent, which is what a JPEG without one does anyway. */
+function exifOrientation(block) {
+  try {
+    if (block.length < 14) return 0;
+    if (block.toString('latin1', 0, 6) !== 'Exif\0\0') return 0;
+    const tiff = 6;
+    const endian = block.toString('latin1', tiff, tiff + 2);
+    if (endian !== 'II' && endian !== 'MM') return 0;
+    const little = endian === 'II';
+    const u16 = (at) => little ? block.readUInt16LE(at) : block.readUInt16BE(at);
+    const u32 = (at) => little ? block.readUInt32LE(at) : block.readUInt32BE(at);
+
+    const ifd = tiff + u32(tiff + 4);
+    if (ifd + 2 > block.length) return 0;
+    const count = u16(ifd);
+    for (let i = 0; i < count; i++) {
+      const entry = ifd + 2 + i * 12;
+      if (entry + 12 > block.length) return 0;
+      if (u16(entry) === 0x0112) {
+        const value = u16(entry + 8);
+        return value >= 1 && value <= 8 ? value : 0;
+      }
+    }
+    return 0;
+  } catch (_) {
+    return 0;   // a malformed EXIF block is not a reason to refuse a photograph
+  }
 }
 
 module.exports = {

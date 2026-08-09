@@ -1512,7 +1512,26 @@ function readImage(image, declaredMime, { requireDeclared = true } = {}) {
   const declared = String(declaredMime || dataUrlMime || '').toLowerCase().replace('image/jpg', 'image/jpeg');
   if (requireDeclared && !declared) return { ok: false, status: 400, error: 'Missing image or mimeType.' };
   if (declared && !ACCEPTED_IMAGE_TYPES.includes(declared)) {
-    return { ok: false, status: 400, error: 'Unsupported image type.' };
+    /* Name the format and say what to do about it.
+
+       "Unsupported image type." is true and useless, and the type it refuses
+       most often is HEIC — which is what an iPhone shoots by default. The
+       upload button accepts image/*, which matches HEIC, so the picker offers
+       it and the journey then stops at the first step with a sentence that
+       gives a homeowner nothing to act on.
+
+       Safari decodes HEIC, so the canvas downscale in the page converts it and
+       this is never reached there. Chrome and Firefox cannot, so they fall
+       back to the original bytes and land exactly here. */
+    const heic = /hei[cf]|hevc/.test(declared);
+    return {
+      ok: false,
+      status: 400,
+      error: heic
+        ? 'That looks like an iPhone photo (HEIC), which this browser can’t read. Open it in Photos and share or export it as JPEG, or try again in Safari.'
+        : 'That file isn’t an image we can read. Please use a JPEG, PNG or WEBP.',
+      reason: heic ? 'heic_not_supported' : 'unsupported_image_type',
+    };
   }
 
   let buffer;
@@ -1539,7 +1558,7 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
   const { image, mimeType, sessionId } = req.body || {};
   if (!image || !mimeType) return res.status(400).json({ error: 'Missing image or mimeType.' });
   const img = readImage(image, mimeType);
-  if (!img.ok) return res.status(img.status).json({ error: img.error });
+  if (!img.ok) return res.status(img.status).json({ error: img.error, ...(img.reason ? { reason: img.reason } : {}) });
   /* Before the quota, not after. consumeDailyQuota is irreversible, and a
      photo over the provider's limit is a request guaranteed to fail — so an
      8 MB phone picture spent one of fifty daily slots on a 400 from
@@ -2155,7 +2174,7 @@ app.post('/api/render', renderLimiter, async (req, res) => {
   /* The type is optional here because the client may send a data: URL that
      carries its own — but whatever it claims, the bytes decide. */
   const img = readImage(image, mimeType, { requireDeclared: false });
-  if (!img.ok) return res.status(img.status).json({ error: img.error });
+  if (!img.ok) return res.status(img.status).json({ error: img.error, ...(img.reason ? { reason: img.reason } : {}) });
   if (img.buffer.length > REPLICATE_MAX_IMAGE_BYTES) {
     return res.status(413).json({
       error: 'That photo is too large to render — please use one under 8MB.',
