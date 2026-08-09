@@ -1038,8 +1038,29 @@ function pruneDetectionRecords() {
   }
 }
 
+/* The cache key, versioned.
+
+   A cached row holds the detections AND the aspect ratio derived from the
+   image — so when the meaning of either changes, every stored row is quietly
+   wrong and nothing says so. That happened the moment EXIF orientation was
+   honoured: photographs cached before it kept the landscape ratio read from
+   the header, and went on being priced from it.
+
+   Bumping this invalidates everything in one move, which is cheaper and more
+   honest than reasoning about which rows are still trustworthy. Old rows are
+   never read again and expire on their own within seven days.
+
+   Bump it whenever what we store, or how we derive it, changes:
+     1  original
+     2  EXIF orientation honoured — the aspect ratio of a phone photograph
+        taken in portrait changed by the square of the frame's proportions */
+const DETECTION_VERSION = 2;
+
 function imageFingerprint(buffer) {
-  return crypto.createHash('sha256').update(buffer).digest('hex');
+  return crypto.createHash('sha256')
+    .update(`v${DETECTION_VERSION}:`)
+    .update(buffer)
+    .digest('hex');
 }
 
 function saveDetectionRecord(detections, size) {
