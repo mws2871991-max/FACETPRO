@@ -79,11 +79,10 @@
   :root{
     --brand-navy:#0D1B2A;
     --brand-navy-hover:#16293c;
-    --brand-blue:#1D4ED8;
-    --brand-blue-hover:#1a44bd;
     --brand-cream:#FAF8F5;
     --brand-card:#FFFDFA;
-    --brand-gold:#B98A3E;      /* Pro only — nothing on this page uses it yet */
+    --brand-gold:#B98A3E;
+    --brand-gold-hover:#A87C34;
   }
   body{background:var(--brand-cream)}
   .bg-\[\#FBF8F3\]{background-color:var(--brand-cream)}
@@ -99,8 +98,19 @@
 
   /* Blue is the brief's action colour, so it goes on the things that move
      somebody forward — and nowhere else, or it stops meaning anything. */
-  .cta{background-color:var(--brand-blue) !important;color:#fff !important;border-color:var(--brand-blue) !important}
-  .cta:hover{background-color:var(--brand-blue-hover) !important;border-color:var(--brand-blue-hover) !important}
+  /* Gold, with the text in ink rather than white.
+
+     The primary buttons were the one thing on the page outside the palette —
+     a conventional blue on a site whose whole argument is that it is not the
+     usual double-glazing outfit, and inconsistent with the header's own ink
+     button besides.
+
+     Ink on the gold, not white: white on #B98A3E is 3.10:1, which fails AA for
+     normal text. Ink is 6.09:1, close to the 6.70:1 the blue gave with white,
+     so the contrast does not regress. The hover darkens to #A87C34, still
+     5.03:1. */
+  .cta{background-color:var(--brand-gold) !important;color:#111111 !important;border-color:var(--brand-gold) !important}
+  .cta:hover{background-color:var(--brand-gold-hover) !important;border-color:var(--brand-gold-hover) !important}
   .measured{font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-0.01em}
   /* Room for the fixed total bar, so it never covers the last thing on the
      page — which would be the consent boxes. */
