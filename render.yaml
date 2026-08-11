@@ -1,3 +1,14 @@
+# NOT IN USE. Facet Pro is deployed on Railway, not Render.
+#
+# www.facetpro.co.uk resolves to Railway (see railway.json and the deployment
+# section of EXTERIOR-AI/DEPLOY.md), and has done since 11 August 2026. This
+# blueprint is kept because it is a correct and tested Render configuration —
+# the disk mount in particular is the thing most people get wrong, and its
+# reasoning is worth not losing — but nothing reads it today.
+#
+# If you ever deploy this on Render, read it. If you are deploying today, you
+# want railway.json. Do not let a platform pick this file up by accident.
+#
 # Render blueprint. It has to live at the REPOSITORY ROOT, which is where it
 # now is — it used to sit inside EXTERIOR-AI/ while also declaring
 # `rootDir: EXTERIOR-AI`, so Render would never have found it, and the disk

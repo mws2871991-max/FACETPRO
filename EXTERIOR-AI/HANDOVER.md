@@ -279,6 +279,40 @@ is now the only trace of it besides the backup.
 
 ---
 
+## The apex domain, and a mistake worth not repeating
+
+`www.facetpro.co.uk` is live on Railway. The bare domain is not, and cannot be
+moved the way I first said.
+
+**What I got wrong.** I gave a CNAME record for `@` pointing at a Railway
+target. The apex carries MX records — `mx00.ionos.co.uk`, `mx01.ionos.co.uk` —
+and SPF, and DNS forbids a CNAME coexisting with any other record at the same
+name. Following that instruction at the registrar would at best have been
+rejected and at worst taken the email with it. IONOS also does not offer
+ALIAS, ANAME or CNAME flattening, which is the usual way round the apex
+problem, so there was no version of that advice that worked here.
+
+The custom domain I created on Railway for `facetpro.co.uk` could therefore
+never validate. It has been deleted; the service lists only its Railway URL and
+`www.facetpro.co.uk`.
+
+**Where that leaves the bare domain.** `facetpro.co.uk` still resolves to
+Vercel, which 307s to `www`. It works, and Vercel is load-bearing for exactly
+that one redirect — delete the project and the bare domain stops resolving.
+
+Two ways out, both fine:
+
+- **IONOS domain forwarding** — set `facetpro.co.uk` → `https://www.facetpro.co.uk`
+  in the IONOS panel, confirm the redirect still works, and only then delete
+  the Vercel project. The `76.76.21.21` A record stays until step two passes,
+  so nothing is lost if it does not.
+- **Leave it.** Vercel runs one redirect and nothing else. The risk is somebody
+  deleting it later without knowing it was doing a job.
+
+Do not attempt an apex CNAME on this domain.
+
+---
+
 ## Added 7 August
 
 **The same photograph did not give the same price.** The homepage says, in
