@@ -1437,8 +1437,21 @@ function buildUploadDetect() {
         className: 'absolute border border-zinc-900/70 bg-zinc-900/10',
         style: { left: x + '%', top: y + '%', width: w + '%', height: (d.h_pct ?? 0) + '%' },
       }));
+      /* The text is hidden on a phone, and the boxes are not.
+
+         The width above is estimated as "~9px glyphs on a 640-ish box". On a
+         393px screen the photograph is about 340px wide, so the same label
+         takes nearly twice that share of it — every one collides, they stack
+         into a wall of black boxes, and they cover the photograph they are
+         describing. That is the moment the whole product turns on: somebody
+         seeing their own house understood.
+
+         Nothing is lost by dropping them there. The panel directly below
+         lists every element by name, with its category and confidence, in
+         type that is comfortable to read. The boxes stay, so the analysis is
+         still visible on the photograph itself. */
       overlay.appendChild(h('span', {
-        className: `absolute text-[9px] px-1.5 py-0.5 rounded whitespace-nowrap ${inside ? 'bg-zinc-900/90' : 'bg-zinc-900'} text-white`,
+        className: `hidden sm:block absolute text-[9px] px-1.5 py-0.5 rounded whitespace-nowrap ${inside ? 'bg-zinc-900/90' : 'bg-zinc-900'} text-white`,
         style: { left: leftEdge + '%', top: top + '%' },
       }, text));
     });
