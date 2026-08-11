@@ -292,8 +292,8 @@
            for windows. The menu argued with the page. Two links that work, and
            the whole-exterior story told once, properly, further down. -->
       <a href="#our-work" class="hidden sm:block text-xs px-3 py-2 rounded-full hover:bg-white transition">Our work</a>
-      <a href="#how-it-works" class="hidden sm:block text-xs px-3 py-2 rounded-full hover:bg-white transition">How it works</a>
-      <a href="#your-photo" class="text-xs px-4 py-2 rounded-full bg-zinc-900 text-white hover:bg-zinc-800 transition">Start with a photo</a>
+      <a href="#how-it-works" class="hidden sm:inline-grid place-items-center text-xs px-3 rounded-full hover:bg-white transition min-h-[44px]">How it works</a>
+      <a href="#your-photo" class="text-xs px-4 rounded-full bg-zinc-900 text-white hover:bg-zinc-800 transition min-h-[44px] inline-grid place-items-center">Start with a photo</a>
     </nav>
   </div>
 </header>
@@ -1494,7 +1494,7 @@ function buildUploadDetect() {
     if (state.uploadedImg) return null;        // already across the bridge
 
     const codeInput = h('input', {
-      value: '', placeholder: 'Enter a code', 'aria-label': 'Enter a code from another device',
+      value: '', placeholder: 'Enter a code', 'aria-label': 'Enter a code from another device', style: { minHeight: '44px' },
       maxLength: 8, autocapitalize: 'characters', spellcheck: 'false',
       className: 'w-32 px-3 py-2 rounded-xl border border-zinc-200 text-sm tracking-widest uppercase outline-none focus:border-zinc-900',
       onKeyDown: (e) => { if (e.key === 'Enter') { e.preventDefault(); redeemResumeCode(e.target.value); } },
@@ -1518,7 +1518,7 @@ function buildUploadDetect() {
         : h('div', { className: 'mt-3 flex flex-wrap items-center gap-2' }, [
             h('button', {
               type: 'button',
-              className: 'px-4 py-2 rounded-full bg-zinc-900 text-white text-xs font-medium disabled:bg-zinc-300',
+              className: 'px-4 rounded-full bg-zinc-900 text-white text-xs font-medium disabled:bg-zinc-300 min-h-[44px]',
               disabled: state.resumeBusy,
               onClick: () => getResumeCode(),
             }, state.resumeBusy ? 'One moment…' : 'Take the photo on my phone'),
@@ -1526,7 +1526,7 @@ function buildUploadDetect() {
             codeInput,
             h('button', {
               type: 'button',
-              className: 'px-3 py-2 rounded-full border border-zinc-200 text-xs hover:border-zinc-900 transition',
+              className: 'px-3 rounded-full border border-zinc-200 text-xs hover:border-zinc-900 transition min-h-[44px]',
               onClick: () => redeemResumeCode(codeInput.value),
             }, 'Continue'),
           ]),
@@ -1551,7 +1551,7 @@ function buildUploadDetect() {
         fileInput,
         dropArea,
         h('div', { className: 'mt-3 flex gap-2' }, [
-          h('button', { type: 'button', className: 'cta flex-1 px-3 py-2 rounded-full text-xs', onClick: () => sharedRefs.fileInput?.click() }, 'Choose a photo'),
+          h('button', { type: 'button', className: 'cta flex-1 px-3 rounded-full text-xs min-h-[44px]', onClick: () => sharedRefs.fileInput?.click() }, 'Choose a photo'),
           h('button', {
             type: 'button',
             className: 'px-3 py-2 rounded-full border border-zinc-200 bg-white text-xs',
@@ -1743,7 +1743,7 @@ function buildVisualizer() {
   }
 
   const slider = h('input', {
-    type: 'range', min: 0, max: 100, value: state.afterPct, 'aria-label': 'Slide between before and after',
+    type: 'range', min: 0, max: 100, value: state.afterPct, 'aria-label': 'Slide between before and after', style: { minHeight: '44px' },
     className: 'absolute bottom-3 left-1/2 -translate-x-1/2 w-[60%] accent-zinc-900',
   });
   slider.addEventListener('input', (e) => { state.afterPct = parseInt(e.target.value); renderVisualizerOnly(); });
@@ -2113,6 +2113,18 @@ function buildTotalBar() {
   }, [
     h('div', { className: 'max-w-6xl mx-auto px-6 py-3 flex items-center justify-between gap-4 flex-wrap' }, [
       h('div', { className: 'flex items-baseline gap-3 flex-wrap' }, [
+        /* Say whose house this is.
+
+           A price is on screen from the moment the page loads, so a colour tap
+           moves a number straight away — which is right. But until a
+           photograph has been measured it describes a typical home of the
+           chosen type, and the bar said nothing about that. On a desktop it is
+           a footnote in a wide strip. On a phone it is fixed to the bottom of
+           the screen, it is the largest number in view, and a first-time
+           visitor has no way to know it is not about their house. */
+        (state.useMeasurement && state.detectionId)
+          ? null
+          : h('span', { className: 'text-[10px] uppercase tracking-[0.14em] text-zinc-500 whitespace-nowrap' }, 'Typical home'),
         cladding ? h('span', {}, [
           h('span', { className: 'measured text-[20px]' }, cladding),
           h('span', { className: 'text-[11px] text-zinc-500' }, ' walls, roof & trim'),
@@ -2126,7 +2138,7 @@ function buildTotalBar() {
       ]),
       h('a', {
         href: '#visualizer-section',
-        className: 'text-[12px] px-4 py-2 rounded-full border border-zinc-200 hover:border-zinc-900 transition whitespace-nowrap',
+        className: 'text-[12px] px-4 rounded-full border border-zinc-200 hover:border-zinc-900 transition whitespace-nowrap min-h-[44px] inline-grid place-items-center',
       }, 'See breakdown'),
     ]),
   ]);
@@ -3470,7 +3482,14 @@ document.querySelectorAll('.work-reveal').forEach(card => {
     dot.type = 'button';
     dot.setAttribute('role', 'tab');
     dot.setAttribute('aria-label', `Homes ${i * 2 + 1} and ${i * 2 + 2}`);
-    dot.className = 'h-2.5 rounded-full transition-all';
+    /* The dot stays small; the button around it does not.
+
+       These were ten pixels square, which is the right size for the mark and
+       the wrong size for a thumb — the touch minimum is 44. The visible dot is
+       now a span inside a button that is 44px tall, so it looks identical and
+       can actually be hit. */
+    dot.className = 'grid place-items-center h-11 px-1.5 transition-all';
+    dot.appendChild(document.createElement('span'));
     dot.addEventListener('click', () => show(i));
     dots.appendChild(dot);
   }
@@ -3482,7 +3501,7 @@ document.querySelectorAll('.work-reveal').forEach(card => {
     next.disabled = at === pages - 1;
     [...dots.children].forEach((dot, n) => {
       const here = n === at;
-      dot.className = `h-2.5 rounded-full transition-all ${here ? 'w-6 bg-zinc-900' : 'w-2.5 bg-zinc-300 hover:bg-zinc-400'}`;
+      dot.firstChild.className = `block h-2.5 rounded-full transition-all ${here ? 'w-6 bg-zinc-900' : 'w-2.5 bg-zinc-300'}`;
       dot.setAttribute('aria-selected', here ? 'true' : 'false');
     });
     /* Cards on the page you cannot see should not be reachable by tab —
