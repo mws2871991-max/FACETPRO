@@ -277,3 +277,32 @@ test('the area page slugs match the CSP path pattern', () => {
     assert.match(`/${p.slug}`, pattern, `${p.slug} would not get the strict CSP`);
   }
 });
+
+test('the pages still have their styling once the CSP has had its say', () => {
+  /* They serve under the document CSP: script-src 'none', style-src 'self'.
+     'self' does not permit an inline <style> block, so a page that embeds its
+     CSS has every rule discarded by the browser and renders as raw Times New
+     Roman — while every other test still passes, because the markup, the
+     figures, the caveats and the CSP header are all exactly right.
+
+     Verified in a real browser before this test was written: with the CSS
+     inline, getComputedStyle(document.body).fontFamily came back as "Times"
+     and the background was transparent. With it in a file, the page renders.
+
+     Sixteen pages whose whole purpose is to be found by search and to convert
+     whoever finds them. */
+  const pages = allPages();
+  for (const page of pages) {
+    assert.ok(!/<style[\s>]/i.test(page.html),
+      `${page.slug} embeds a <style> block — style-src 'self' discards it and the page renders unstyled`);
+    assert.match(page.html, /<link[^>]+rel="stylesheet"[^>]+href="\/assets\/[^"]+\.css"/,
+      `${page.slug} has no external stylesheet, so it has no styling at all`);
+  }
+
+  /* And the file every page points at has to exist and be worth serving, or
+     the link is decoration. */
+  const href = pages[0].html.match(/<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"/)[1];
+  const onDisk = path.join(__dirname, '..', href.replace(/^\//, ''));
+  assert.ok(fs.existsSync(onDisk), `${href} is linked but not present on disk`);
+  assert.ok(fs.readFileSync(onDisk, 'utf8').length > 500, `${href} exists but is nearly empty`);
+});
