@@ -131,7 +131,13 @@
      at ~342px of usable width makes them 256px and 214px tall. Stacked, that
      pushes the estimate off the bottom of the screen — the one thing the
      homeowner came for. max-height overrides aspect-ratio, so the box shrinks
-     and the image crops rather than letterboxing. */
+     and the image crops rather than letterboxing.
+
+     Applied only while the box is holding a photograph. Empty, it holds the
+     framing guidance instead — stand back far enough, get the front door in —
+     and 220px cut that off mid-sentence. Cropping a photograph loses nothing;
+     cropping the instruction that decides whether the house can be measured
+     loses the measurement. */
   @media (max-width: 640px) {
     .media-cap { max-height: 220px; }
     .media-cap img { height: 100%; object-fit: cover; }
@@ -402,88 +408,11 @@
        from one consumer photograph against the front door, and turning those
        measurements into six trades priced together. That is the defensible
        claim, and it is stronger for being true. -->
-  <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="tech-heading">
-    <p class="text-[11px] tracking-[0.25em] uppercase text-zinc-400">Proprietary technology</p>
-    <h2 id="tech-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">What happens to your photograph</h2>
-    <p class="mt-3 max-w-[72ch] text-[14px] leading-7 text-zinc-600">
-      A photograph is not a measurement. Turning one into a price means working out how big the building
-      actually is, and there is only one object of known size in almost every picture of a British home:
-      the front door. It is 1.98&nbsp;m. Everything else follows from it.
-    </p>
-    <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Component detection</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">Every window, door, wall and roof located as a distinct element, with a confidence score attached to each.</p></div>
-      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Scale from the door</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">A UK front door is a known height. The elevation is measured against it &mdash; no reference object, no tape measure, no visit.</p></div>
-      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Whole-house inference</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">One elevation is visible; a quote covers the house. Front measurements scale to the whole property by house type.</p></div>
-      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Pricing engine</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">Areas and counts become itemised costs across six trades, computed on the server so the figure cannot be tampered with.</p></div>
-      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Visualisation</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">Your actual house re-finished photorealistically &mdash; the perspective, shadows and openings held exactly as they were.</p></div>
-      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Stated uncertainty</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">Every estimate carries a range and says which method produced it. A number without its error bars is a guess.</p></div>
-    </div>
-    <!-- Final review, point 4: put the emphasis on what is owned rather than
-         on what is rented. The fact itself is unchanged and still stated — a
-         technical reader establishes it in a minute either way, and a page
-         that volunteered it first is trusted on everything else it says. What
-         changes is which half of the sentence leads. -->
-    <p class="mt-5 text-[12px] leading-6 text-zinc-500 max-w-[72ch]">
-      The vision and image-generation models Facet Pro uses are licensed. The measurement method, the
-      whole-house inference, the pricing engine and the rate catalogue behind it are ours.
-    </p>
-    <!-- The pack lists four questions an investor arrives with: what is
-         proprietary, how does it scale, what is the business model, and why
-         can't somebody else build this. Three are answered by sections. The
-         fourth was answered nowhere, and it is the one that decides a meeting.
-
-         It sits here rather than in a section of its own because the honest
-         answer is not a feature — it is that the models are cheap and the
-         pricing knowledge is not. That lands hardest immediately after a
-         reader has been told exactly what the models are. -->
-    <div class="mt-6 rounded-xl bg-[#FDFCF9] border border-zinc-200 p-5">
-      <h3 class="text-[15px] font-medium">Why this is hard to copy</h3>
-      <p class="mt-2 max-w-[72ch] text-[13px] leading-6 text-zinc-600">
-        The models can be rented by anybody. What cannot be rented is knowing what a job settles at
-        &mdash; not the list price, but the number it actually goes out at once the discounting is
-        done. That came from twenty-four years of selling these in people&rsquo;s houses, and it is what
-        the whole estimate rests on. A competitor with the same models and a published rate card
-        produces confident figures that are wrong, and finds out at survey.
-      </p>
-      <p class="mt-3 max-w-[72ch] text-[13px] leading-6 text-zinc-600">
-        The second half is supply. Installers who will pay for leads have to be signed, and they sign
-        with somebody they already know. Both of ours were.
-      </p>
-      <!-- Final review, point 5: the scaling story. Written as what the system
-           is built to do rather than what it already does, because it does not
-           do it yet — there is no feedback loop wired in, and the calibration
-           set is data/survey-samples.json with seventeen rows and no known
-           wall areas in them. "Every property analysed strengthens…" as a
-           present-tense claim is the kind a technically curious investor asks
-           to see, and there would be nothing to show. Stated as design, it is
-           true today and becomes truer with every completed job. -->
-      <p class="mt-3 max-w-[72ch] text-[13px] leading-6 text-zinc-600">
-        And it compounds. The system is built so that every property analysed and every job completed
-        feeds back into the pricing intelligence, the measurement accuracy and the picture of what
-        people are actually renovating &mdash; so the estimates get sharper as the platform grows,
-        and the gap in front of anybody starting from scratch widens.
-      </p>
-    </div>
-  </section>
+  
 
   <!-- P4: the signature graphic. Plain markup rather than SVG so it reflows on
        a phone and inherits the palette. -->
-  <section class="rounded-2xl bg-zinc-900 text-[#FBF8F3] p-6 md:p-10" aria-label="From photograph to price">
-    <h2 class="serif text-[24px] md:text-[30px] tracking-tight">From photo to price in one pipeline</h2>
-    <ol class="mt-6 flex flex-col md:flex-row md:items-stretch gap-3 md:gap-2">
-      <li class="flex-1 rounded-xl bg-white/5 border border-white/10 p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-white/40">Input</div><div class="mt-1 text-[15px] font-medium">Home photo</div></li>
-      <li class="hidden md:flex items-center text-white/30" aria-hidden="true">&rarr;</li>
-      <li class="flex-1 rounded-xl bg-white/5 border border-white/10 p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-white/40">Step</div><div class="mt-1 text-[15px] font-medium">Component detection</div></li>
-      <li class="hidden md:flex items-center text-white/30" aria-hidden="true">&rarr;</li>
-      <li class="flex-1 rounded-xl bg-white/5 border border-white/10 p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-white/40">Step</div><div class="mt-1 text-[15px] font-medium">Measurement</div></li>
-      <li class="hidden md:flex items-center text-white/30" aria-hidden="true">&rarr;</li>
-      <li class="flex-1 rounded-xl bg-white/5 border border-white/10 p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-white/40">Step</div><div class="mt-1 text-[15px] font-medium">Visualisation</div></li>
-      <li class="hidden md:flex items-center text-white/30" aria-hidden="true">&rarr;</li>
-      <li class="flex-1 rounded-xl bg-white/5 border border-white/10 p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-white/40">Step</div><div class="mt-1 text-[15px] font-medium">Pricing engine</div></li>
-      <li class="hidden md:flex items-center text-white/30" aria-hidden="true">&rarr;</li>
-      <li class="flex-1 rounded-xl bg-white/10 border border-white/20 p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-white/40">Output</div><div class="mt-1 text-[15px] font-medium">Itemised estimate</div></li>
-    </ol>
-  </section>
+  
 
 
 
@@ -597,6 +526,87 @@
       Every photograph here is a job this team has done.
     </p>
   </section>
+  <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="tech-heading">
+    <p class="text-[11px] tracking-[0.25em] uppercase text-zinc-400">Proprietary technology</p>
+    <h2 id="tech-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">What happens to your photograph</h2>
+    <p class="mt-3 max-w-[72ch] text-[14px] leading-7 text-zinc-600">
+      A photograph is not a measurement. Turning one into a price means working out how big the building
+      actually is, and there is only one object of known size in almost every picture of a British home:
+      the front door. It is 1.98&nbsp;m. Everything else follows from it.
+    </p>
+    <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Component detection</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">Every window, door, wall and roof located as a distinct element, with a confidence score attached to each.</p></div>
+      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Scale from the door</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">A UK front door is a known height. The elevation is measured against it &mdash; no reference object, no tape measure, no visit.</p></div>
+      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Whole-house inference</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">One elevation is visible; a quote covers the house. Front measurements scale to the whole property by house type.</p></div>
+      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Pricing engine</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">Areas and counts become itemised costs across six trades, computed on the server so the figure cannot be tampered with.</p></div>
+      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Visualisation</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">Your actual house re-finished photorealistically &mdash; the perspective, shadows and openings held exactly as they were.</p></div>
+      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Stated uncertainty</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">Every estimate carries a range and says which method produced it. A number without its error bars is a guess.</p></div>
+    </div>
+    <!-- Final review, point 4: put the emphasis on what is owned rather than
+         on what is rented. The fact itself is unchanged and still stated — a
+         technical reader establishes it in a minute either way, and a page
+         that volunteered it first is trusted on everything else it says. What
+         changes is which half of the sentence leads. -->
+    <p class="mt-5 text-[12px] leading-6 text-zinc-500 max-w-[72ch]">
+      The vision and image-generation models Facet Pro uses are licensed. The measurement method, the
+      whole-house inference, the pricing engine and the rate catalogue behind it are ours.
+    </p>
+    <!-- The pack lists four questions an investor arrives with: what is
+         proprietary, how does it scale, what is the business model, and why
+         can't somebody else build this. Three are answered by sections. The
+         fourth was answered nowhere, and it is the one that decides a meeting.
+
+         It sits here rather than in a section of its own because the honest
+         answer is not a feature — it is that the models are cheap and the
+         pricing knowledge is not. That lands hardest immediately after a
+         reader has been told exactly what the models are. -->
+    <div class="mt-6 rounded-xl bg-[#FDFCF9] border border-zinc-200 p-5">
+      <h3 class="text-[15px] font-medium">Why this is hard to copy</h3>
+      <p class="mt-2 max-w-[72ch] text-[13px] leading-6 text-zinc-600">
+        The models can be rented by anybody. What cannot be rented is knowing what a job settles at
+        &mdash; not the list price, but the number it actually goes out at once the discounting is
+        done. That came from twenty-four years of selling these in people&rsquo;s houses, and it is what
+        the whole estimate rests on. A competitor with the same models and a published rate card
+        produces confident figures that are wrong, and finds out at survey.
+      </p>
+      <p class="mt-3 max-w-[72ch] text-[13px] leading-6 text-zinc-600">
+        The second half is supply. Installers who will pay for leads have to be signed, and they sign
+        with somebody they already know. Both of ours were.
+      </p>
+      <!-- Final review, point 5: the scaling story. Written as what the system
+           is built to do rather than what it already does, because it does not
+           do it yet — there is no feedback loop wired in, and the calibration
+           set is data/survey-samples.json with seventeen rows and no known
+           wall areas in them. "Every property analysed strengthens…" as a
+           present-tense claim is the kind a technically curious investor asks
+           to see, and there would be nothing to show. Stated as design, it is
+           true today and becomes truer with every completed job. -->
+      <p class="mt-3 max-w-[72ch] text-[13px] leading-6 text-zinc-600">
+        And it compounds. The system is built so that every property analysed and every job completed
+        feeds back into the pricing intelligence, the measurement accuracy and the picture of what
+        people are actually renovating &mdash; so the estimates get sharper as the platform grows,
+        and the gap in front of anybody starting from scratch widens.
+      </p>
+    </div>
+  </section>
+
+  <section class="rounded-2xl bg-zinc-900 text-[#FBF8F3] p-6 md:p-10" aria-label="From photograph to price">
+    <h2 class="serif text-[24px] md:text-[30px] tracking-tight">From photo to price in one pipeline</h2>
+    <ol class="mt-6 flex flex-col md:flex-row md:items-stretch gap-3 md:gap-2">
+      <li class="flex-1 rounded-xl bg-white/5 border border-white/10 p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-white/40">Input</div><div class="mt-1 text-[15px] font-medium">Home photo</div></li>
+      <li class="hidden md:flex items-center text-white/30" aria-hidden="true">&rarr;</li>
+      <li class="flex-1 rounded-xl bg-white/5 border border-white/10 p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-white/40">Step</div><div class="mt-1 text-[15px] font-medium">Component detection</div></li>
+      <li class="hidden md:flex items-center text-white/30" aria-hidden="true">&rarr;</li>
+      <li class="flex-1 rounded-xl bg-white/5 border border-white/10 p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-white/40">Step</div><div class="mt-1 text-[15px] font-medium">Measurement</div></li>
+      <li class="hidden md:flex items-center text-white/30" aria-hidden="true">&rarr;</li>
+      <li class="flex-1 rounded-xl bg-white/5 border border-white/10 p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-white/40">Step</div><div class="mt-1 text-[15px] font-medium">Visualisation</div></li>
+      <li class="hidden md:flex items-center text-white/30" aria-hidden="true">&rarr;</li>
+      <li class="flex-1 rounded-xl bg-white/5 border border-white/10 p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-white/40">Step</div><div class="mt-1 text-[15px] font-medium">Pricing engine</div></li>
+      <li class="hidden md:flex items-center text-white/30" aria-hidden="true">&rarr;</li>
+      <li class="flex-1 rounded-xl bg-white/10 border border-white/20 p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-white/40">Output</div><div class="mt-1 text-[15px] font-medium">Itemised estimate</div></li>
+    </ol>
+  </section>
+
   <div id="mount-wholehouse"></div>
   <!-- Windows and doors were behind a collapsed accordion labelled "Optional",
        subtitled "Doesn't change your estimate" — while all four of the
@@ -1358,8 +1368,17 @@ function applyDesign(d) {
 }
 
 function buildUploadDetect() {
+  /* Four-by-three once it is holding a photograph, and tall enough for its own
+     words before that.
+
+     The box was aspect-[4/3] with overflow-hidden in both states. On a 393px
+     screen that is about 250px of height for an arrow, two lines of
+     instruction and a three-line note about standing back far enough to get
+     the front door in — so the note was cut off mid-sentence. It is the one
+     piece of guidance that decides whether we can measure the house at all,
+     and it was the part being hidden. */
   const dropArea = h('div', {
-    className: 'media-cap aspect-[4/3] rounded-xl border border-dashed border-zinc-300 bg-white grid place-items-center cursor-pointer hover:bg-zinc-50 transition relative overflow-hidden',
+    className: `rounded-xl border border-dashed border-zinc-300 bg-white grid place-items-center cursor-pointer hover:bg-zinc-50 transition relative overflow-hidden ${state.uploadedImg ? 'media-cap aspect-[4/3]' : 'sm:aspect-[4/3] py-6'}`,
     onClick: () => sharedRefs.fileInput?.click(),
   });
 
@@ -1498,9 +1517,9 @@ function buildUploadDetect() {
     if (state.uploadedImg) return null;        // already across the bridge
 
     const codeInput = h('input', {
-      value: '', placeholder: 'Enter a code', 'aria-label': 'Enter a code from another device', style: { minHeight: '44px' },
+      value: '', placeholder: 'Code', 'aria-label': 'Enter a code from another device', style: { minHeight: '44px' },
       maxLength: 8, autocapitalize: 'characters', spellcheck: 'false',
-      className: 'w-32 px-3 py-2 rounded-xl border border-zinc-200 text-sm tracking-widest uppercase outline-none focus:border-zinc-900',
+      className: 'flex-1 min-w-[5.5rem] max-w-[11rem] px-3 py-2 rounded-xl border border-zinc-200 text-sm tracking-widest uppercase outline-none focus:border-zinc-900',
       onKeyDown: (e) => { if (e.key === 'Enter') { e.preventDefault(); redeemResumeCode(e.target.value); } },
     });
 
