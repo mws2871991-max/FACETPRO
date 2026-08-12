@@ -86,7 +86,7 @@ function installerList(recipients) {
    rather than burying it, and tells them how to get their data removed. */
 
 function designPackHtml(lead, price, siteUrl, withdrawToken, recipients) {
-  const site = safeUrl(siteUrl) || 'https://facetpro.co.uk';
+  const site = safeUrl(siteUrl) || 'https://www.facetpro.co.uk';
   const base = site.replace(/\/$/, '');
   /* The notice promises "the link in any email we send you", so this has to
      be a link that does something, not a pointer at the notice. */
@@ -198,7 +198,7 @@ function whatHappensNextText(lead, recipients) {
 // Plain-text alternative. Improves deliverability and is what text-only
 // clients show instead of a wall of stripped markup.
 function designPackText(lead, price, siteUrl, withdrawToken, recipients) {
-  const base = (safeUrl(siteUrl) || 'https://facetpro.co.uk').replace(/\/$/, '');
+  const base = (safeUrl(siteUrl) || 'https://www.facetpro.co.uk').replace(/\/$/, '');
   const withdrawLink = withdrawToken ? `${base}/withdraw?t=${encodeURIComponent(withdrawToken)}` : `${base}/privacy`;
   return [
     `Your home, as you designed it`,
@@ -249,7 +249,7 @@ const designPackSubject = (lead) => `Your Facet Pro design — reference ${lead.
    the one with the picture in it. */
 
 function sharingConfirmationHtml(lead, recipients, siteUrl, withdrawToken) {
-  const site = safeUrl(siteUrl) || 'https://facetpro.co.uk';
+  const site = safeUrl(siteUrl) || 'https://www.facetpro.co.uk';
   const base = site.replace(/\/$/, '');
   const withdrawLink = withdrawToken ? `${base}/withdraw?t=${encodeURIComponent(withdrawToken)}` : null;
 
@@ -290,7 +290,7 @@ function sharingConfirmationHtml(lead, recipients, siteUrl, withdrawToken) {
 }
 
 function sharingConfirmationText(lead, recipients, siteUrl, withdrawToken) {
-  const base = (safeUrl(siteUrl) || 'https://facetpro.co.uk').replace(/\/$/, '');
+  const base = (safeUrl(siteUrl) || 'https://www.facetpro.co.uk').replace(/\/$/, '');
   const named = (recipients || []).filter(r => r && r.name);
   return [
     'Your enquiry is on its way',
@@ -333,7 +333,7 @@ const sharingConfirmationSubject = (lead) => `We've sent your enquiry on — ref
    fact worth keeping — so this carries the withdrawal link like the others. */
 
 function noInstallersHtml(lead, siteUrl, withdrawToken) {
-  const site = safeUrl(siteUrl) || 'https://facetpro.co.uk';
+  const site = safeUrl(siteUrl) || 'https://www.facetpro.co.uk';
   const base = site.replace(/\/$/, '');
   const withdrawLink = withdrawToken ? `${base}/withdraw?t=${encodeURIComponent(withdrawToken)}` : null;
   const where = lead.postcode ? ` covering ${escapeHtml(lead.postcode)}` : ' in your area';
@@ -373,7 +373,7 @@ function noInstallersHtml(lead, siteUrl, withdrawToken) {
 }
 
 function noInstallersText(lead, siteUrl, withdrawToken) {
-  const base = (safeUrl(siteUrl) || 'https://facetpro.co.uk').replace(/\/$/, '');
+  const base = (safeUrl(siteUrl) || 'https://www.facetpro.co.uk').replace(/\/$/, '');
   return [
     'Your design is saved',
     '',

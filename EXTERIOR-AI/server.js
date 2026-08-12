@@ -475,7 +475,16 @@ const LEAD_NOTIFY_EMAIL = process.env.LEAD_NOTIFY_EMAIL || '';
 /* Where someone writes when the automated route fails them. The notice names
    an address, so this must be the same one. */
 const PRIVACY_EMAIL = process.env.PRIVACY_EMAIL || LEAD_NOTIFY_EMAIL || 'privacy@facetpro.co.uk';
-const SITE_URL = process.env.SITE_URL || 'https://facetpro.co.uk';
+/* www, not the apex.
+
+   The apex only redirects: facetpro.co.uk resolves to a Vercel project that
+   307s to www, and it cannot be moved because the apex carries MX records —
+   DNS forbids a CNAME beside them. So every canonical URL, share link and
+   email fallback built on the bare domain pointed at a hostname that bounces.
+   Harmless for a person clicking a link; not harmless for anything a machine
+   reads, and robots.txt already advertised the www sitemap, so the two
+   disagreed. */
+const SITE_URL = process.env.SITE_URL || 'https://www.facetpro.co.uk';
 
 /* The homeowner's copy of their design. Off unless email is configured, and
    refused outright on Resend's test sender, which can only deliver to your own

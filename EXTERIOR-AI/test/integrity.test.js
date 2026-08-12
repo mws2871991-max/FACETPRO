@@ -329,3 +329,51 @@ test('everything needed to boot in production is a real dependency', () => {
     }
   }
 });
+
+test('the catalogue holds percentages two ways, and both are load-bearing', () => {
+  /* A trap that has already caught somebody.
+
+     At the root, vatPct is 0.2 and wastePct is 0.1 — fractions, which
+     computePrice multiplies by directly. Under glazing, vatPct is 20 — a
+     percentage, which glazing.js divides by 100. Both call sites are correct
+     for their own convention and neither is wrong.
+
+     What is wrong is a third file reading the catalogue and guessing. One did:
+     it assumed percentages throughout, turning 20% VAT into 0.2% and a 10%
+     waste allowance into 0.1%, and understated every wall, roof and roofline
+     figure it produced by about a fifth — in the same direction, and for the
+     same reason, as the doors that were once shown 20% over.
+
+     This does not force one convention, because changing either value silently
+     changes every price the engine has ever produced. It pins both, so the
+     next reader finds out here rather than in a number a homeowner acted on.
+     Regularising them is a job for a quiet afternoon, and the test that says
+     so should be updated in the same commit. */
+  const catalogue = require('../catalogue.json');
+
+  assert.ok(catalogue.vatPct > 0 && catalogue.vatPct < 1,
+    `catalogue.vatPct is ${catalogue.vatPct} — the root convention is a FRACTION, multiplied directly by computePrice`);
+  assert.ok(catalogue.wastePct > 0 && catalogue.wastePct < 1,
+    `catalogue.wastePct is ${catalogue.wastePct} — the root convention is a FRACTION`);
+  assert.ok(catalogue.glazing.vatPct > 1,
+    `catalogue.glazing.vatPct is ${catalogue.glazing.vatPct} — the glazing convention is a PERCENTAGE, divided by 100 in glazing.js`);
+
+  /* And that they describe the same tax, so the two conventions cannot drift
+     into two different VAT rates without somebody noticing. */
+  assert.strictEqual(Math.round(catalogue.vatPct * 100), Math.round(catalogue.glazing.vatPct),
+    'the root and glazing VAT rates no longer agree once normalised');
+});
+
+test('links built for machines point at the host that serves, not the one that redirects', () => {
+  /* The apex 307s to www and cannot be moved — it carries MX records, and DNS
+     forbids a CNAME beside them. A canonical URL, a sitemap entry or a share
+     link on a redirecting host is a person's click that works and a crawler's
+     fetch that costs a hop. */
+  const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  const emails = fs.readFileSync(path.join(__dirname, '..', 'emails.js'), 'utf8');
+  const apex = /['"]https:\/\/facetpro\.co\.uk/;
+
+  assert.ok(!apex.test(server), 'server.js falls back to the bare domain, which only redirects');
+  assert.ok(!apex.test(emails), 'emails.js falls back to the bare domain, which only redirects');
+  assert.match(server, /SITE_URL\s*=\s*process\.env\.SITE_URL\s*\|\|\s*['"]https:\/\/www\.facetpro\.co\.uk/);
+});
