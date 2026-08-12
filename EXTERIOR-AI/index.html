@@ -1053,6 +1053,7 @@ async function loadCatalogue() {
     state.roof = findSwatch(state.roof.id);
     U('Colours and prices loaded');
     reachedStage('landing');
+    checkBuild();
   } catch (err) {
     U("We couldn't load the colour range just now — please refresh the page.");
   }
@@ -3245,6 +3246,66 @@ function ensureStatusPill() {
 }
 
 // ---------- actions ----------
+
+/* Is this page older than the server?
+
+   Caching is not the problem — HTML revalidates on every request, so a
+   returning visitor always gets the current page. A tab left open is the
+   problem: somebody opens Facet Pro, wanders off, comes back two hours later,
+   and is still running the JavaScript from before a deploy against a server
+   that has moved on. That is how a page ends up showing a price the server
+   would no longer produce.
+
+   The build is recorded once on load and checked again whenever the tab comes
+   back to the foreground. Not on a timer: a poll every minute is a request per
+   minute per open tab for something that changes once a week, and the moment
+   that matters is the moment somebody looks at it again.
+
+   The prompt is a suggestion, never a forced reload. Somebody halfway through
+   choosing a colour should not have the page pulled out from under them. */
+let buildAtLoad = null;
+
+async function currentBuild() {
+  try {
+    const res = await fetch('/api/version', { cache: 'no-store' });
+    if (!res.ok) return null;
+    return (await res.json()).build || null;
+  } catch (_) { return null; }
+}
+
+function offerRefresh() {
+  if (document.getElementById('stale-build')) return;
+  const bar = h('div', {
+    id: 'stale-build',
+    role: 'status',
+    className: 'fixed bottom-20 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-full bg-zinc-900 text-white shadow-lg text-[13px]',
+  }, [
+    h('span', {}, 'A newer version of Facet Pro is ready.'),
+    h('button', {
+      type: 'button',
+      className: 'underline underline-offset-2 min-h-[44px] px-2',
+      onClick: () => location.reload(),
+    }, 'Refresh'),
+    h('button', {
+      type: 'button',
+      'aria-label': 'Dismiss',
+      className: 'text-white/60 hover:text-white min-h-[44px] px-2',
+      onClick: () => document.getElementById('stale-build')?.remove(),
+    }, '\u00d7'),
+  ]);
+  document.body.appendChild(bar);
+}
+
+async function checkBuild() {
+  const now = await currentBuild();
+  if (!now) return;
+  if (buildAtLoad === null) { buildAtLoad = now; return; }
+  if (now !== buildAtLoad) offerRefresh();
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') checkBuild();
+});
 
 /* Which step of the journey somebody reached.
 

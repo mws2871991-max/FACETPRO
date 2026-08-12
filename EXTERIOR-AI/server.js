@@ -3020,6 +3020,34 @@ const purgeLeadPii = (leadId) => purgeLeadPiiFor(new Set([leadId]));
    same password opens every consenting homeowner's name, email, phone number
    and postcode, so an unthrottled guess-as-fast-as-you-like endpoint against it
    is the whole login throttle undone by the door nobody looked at. */
+/* ── WHICH BUILD IS THIS ──
+
+   Caching is not the problem here; a tab left open is. HTML and CSS are served
+   must-revalidate, so a returning visitor gets the new page on their next load
+   and always has. But somebody who opens Facet Pro, wanders off, and comes back
+   two hours later is still running the JavaScript from before the deploy —
+   against a server that has moved on. That is how a page ends up showing a
+   price the server would no longer produce.
+
+   A hash of what the browser was actually given. The page asks once when it
+   loads and again when it comes back to the foreground; if the answer has
+   changed, the page it is running is older than the server and it says so.
+
+   Computed at startup rather than per request — the files cannot change under
+   a running process, and hashing them on every poll would be work for nothing. */
+const BUILD_ID = (() => {
+  const hash = crypto.createHash('sha256');
+  for (const f of ['index.html', path.join('assets', 'app.css')]) {
+    try { hash.update(fs.readFileSync(path.join(__dirname, f))); } catch (_) { /* absent in some tests */ }
+  }
+  return hash.digest('hex').slice(0, 12);
+})();
+
+app.get('/api/version', perMinute(120, 'Too many requests — please wait a moment.'), (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ build: BUILD_ID });
+});
+
 /* ── THE FUNNEL ──
 
    "We should know where every visitor stops." The plan puts conversion first,
