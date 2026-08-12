@@ -15,6 +15,8 @@ const withdrawal = require('./withdrawal');
 const routing = require('./routing');
 const glazing = require('./glazing');
 const resume = require('./resume');
+const leadscore = require('./leadscore');
+const landing = require('./landing');
 
 const catalogue = JSON.parse(fs.readFileSync(path.join(__dirname, 'catalogue.json'), 'utf8'));
 
@@ -134,7 +136,19 @@ const PUBLIC_FILES = new Set([
 
      It is in the git history if the walkthrough copy is ever wanted back. */
   '/robots.txt',
-  '/sitemap.xml',
+  /* sitemap.xml is NOT listed, and the file is deleted.
+
+     It is generated now — see the route further down, which builds it from
+     landing.allPaths() so the sixteen landing pages cannot drift out of it. The
+     static middleware runs before every route in this file, so leaving the
+     entry here would have meant the route existed, looked correct, was covered
+     by a test that called the function directly, and never served a single
+     request. That is the exact shape of the three bugs in HANDOVER.md: a
+     stated intention nothing enforced.
+
+     Deleted rather than merely unlisted, for the same reason guided-demo.html
+     was: a stale sitemap on disk is a file that starts being served again the
+     moment somebody adds a plausible-looking line back to this set. */
 ]);
 const PUBLIC_DIRS = ['/assets/', '/legal/'];
 
@@ -244,7 +258,12 @@ const CSP_LEGAL = [
 /* Pages that are nothing but text, and so can carry the policy with
    script-src 'none'. /investors is here for the same reason /privacy is: it
    runs no JavaScript, so it should not be permitted any. */
-const isLegalPath = (p) => p === '/privacy' || p === '/terms' || p === '/investors' || p.startsWith('/legal/');
+/* Which paths get the document CSP rather than the app one. The app policy
+   needs 'unsafe-inline' for scripts because the whole front end is inline in
+   index.html; anything that does not run scripts should not be handed that,
+   and the landing pages and share pages do not. */
+const isLegalPath = (p) => p === '/privacy' || p === '/terms' || p === '/investors'
+  || p.startsWith('/legal/') || p.startsWith('/cost/') || /^\/windows-[a-z-]+$/.test(p);
 
 app.use((req, res, next) => {
   res.setHeader('Content-Security-Policy', isLegalPath(req.path) ? CSP_LEGAL : CSP_APP);
@@ -475,15 +494,20 @@ const LEAD_NOTIFY_EMAIL = process.env.LEAD_NOTIFY_EMAIL || '';
 /* Where someone writes when the automated route fails them. The notice names
    an address, so this must be the same one. */
 const PRIVACY_EMAIL = process.env.PRIVACY_EMAIL || LEAD_NOTIFY_EMAIL || 'privacy@facetpro.co.uk';
-/* www, not the apex.
+/* www, not the bare domain, and that matters more than it looks.
 
-   The apex only redirects: facetpro.co.uk resolves to a Vercel project that
-   307s to www, and it cannot be moved because the apex carries MX records —
-   DNS forbids a CNAME beside them. So every canonical URL, share link and
-   email fallback built on the bare domain pointed at a hostname that bounces.
-   Harmless for a person clicking a link; not harmless for anything a machine
-   reads, and robots.txt already advertised the www sitemap, so the two
-   disagreed. */
+   Per HANDOVER.md the live service answers on www.facetpro.co.uk; the apex only
+   resolves to a Vercel project that 307s to www, and it cannot be moved because
+   the apex carries MX records. So every canonical URL, sitemap entry and share
+   link built from the bare domain pointed at a redirect — which robots.txt
+   already contradicted, since it advertises the www sitemap.
+
+   Harmless for a human. Not harmless for sixteen new landing pages whose whole
+   purpose is to be indexed: a canonical tag pointing at a redirect asks a search
+   engine to resolve which URL is authoritative, and it splits whatever
+   authority the pages earn across two hostnames.
+
+   Override with SITE_URL if the domain ever moves. */
 const SITE_URL = process.env.SITE_URL || 'https://www.facetpro.co.uk';
 
 /* The homeowner's copy of their design. Off unless email is configured, and
@@ -748,6 +772,14 @@ async function deliverAndRecord(lead, plan) {
       attempts: r.attempts, status: r.status, error: r.error,
       name: lead.name, email: lead.email, phone: lead.phone, postcode: lead.postcode,
     });
+  }
+  /* One per installer that actually received it, not one per lead. The funnel
+     question this answers is "how many of the leads we qualify does a buyer
+     ever see", and a lead delivered to three companies is three chances at a
+     survey. Counted from the delivery results rather than from `chosen`, so a
+     buyer whose endpoint was down is not counted as having received anything. */
+  for (let i = 0; i < s.delivered; i++) {
+    store.countStage('installer_received').catch(() => { /* a counter never fails a delivery */ });
   }
   if (s.delivered) console.log(`Lead ${lead.id}: delivered to ${s.delivered}/${s.total} recipient(s).`);
 }
@@ -1840,6 +1872,49 @@ function resolveGlazing(body) {
   }
 }
 
+/* ── WHAT THEY TOLD US ABOUT THE PROJECT ──
+
+   The quote steps ask four things a photograph cannot answer: which trades
+   they are actually shopping for, when, what kind of property it is, and
+   whether it is theirs to spend money on. All four go to the installer and
+   three of them move the lead score.
+
+   Validated against fixed lists here rather than trusted from the browser, for
+   the same reason the price is recomputed server-side: this ends up in an
+   email to a buyer and in a score somebody makes spend decisions from, so a
+   client that sends "timing": "<script>" or an invented trade should produce a
+   null, not a stored string.
+
+   `interests` is what they SAY they want, which is not the same as `tradesIn`
+   — that reads what they actually configured. Both are kept, because the gap
+   between them is useful: somebody who ticked "whole exterior" but only
+   coloured the windows is a bigger job than their design shows. */
+const PROJECT_INTERESTS = ['windows', 'doors', 'roof', 'cladding', 'roofline', 'multiple', 'whole-exterior'];
+const PROJECT_TIMINGS = ['asap', '1-3-months', '3-6-months', 'researching'];
+const PROPERTY_TYPES = ['terraced', 'semi', 'detached', 'bungalow', 'flat', 'other'];
+
+function resolveProject(body) {
+  const raw = Array.isArray(body?.projectInterests) ? body.projectInterests : [];
+  const interests = [...new Set(
+    raw.map(v => String(v || '').toLowerCase().trim())
+       .filter(v => PROJECT_INTERESTS.includes(v)),
+  )].slice(0, PROJECT_INTERESTS.length);
+
+  const timing = PROJECT_TIMINGS.includes(String(body?.projectTiming || '')) ? String(body.projectTiming) : null;
+  if (!interests.length && !timing) return null;
+  return { interests, timing };
+}
+
+function resolveProperty(body) {
+  const type = PROPERTY_TYPES.includes(String(body?.propertyType || '')) ? String(body.propertyType) : null;
+  /* Only `true` counts. An unanswered question and a "no" are different facts,
+     and the score treats the absence as unknown rather than as a denial — see
+     leadscore.js. */
+  const homeowner = body?.homeowner === true ? true : (body?.homeowner === false ? false : null);
+  if (!type && homeowner === null) return null;
+  return { type, homeowner };
+}
+
 function resolvePreferences(body) {
   const wd = catalogue.windowsDoors;
   const fs_ = catalogue.fsgc;
@@ -2020,6 +2095,79 @@ const resumeRedeemLimiter = rateLimit({
   windowMs: 60 * 1000, max: 15,
   standardHeaders: true, legacyHeaders: false,
   message: { error: 'Too many tries — please wait a minute.' }
+});
+
+/* ── A DESIGN SOMEBODY WANTS TO SHOW SOMEONE ──
+
+   The strongest advertisement for this product is a homeowner showing a friend
+   what their own house could look like. That is a page, not an image: /r/:id
+   serves the JPEG, and a JPEG pasted into WhatsApp says nothing about where it
+   came from and gives the friend nothing to tap.
+
+   The privacy reasoning, since this publishes a photograph of somebody's home.
+
+   Nothing here is new disclosure. The id is the same unguessable capability
+   token /r/:id already uses — the homeowner has to choose to send it, exactly
+   as they would the image, and anyone holding the link could already fetch the
+   picture. What this adds is the frame around it and a way back to us.
+
+   So: no name, no postcode, no price, no lead id, and no link between this
+   page and the lead record. A recipient learns that a house exists and what it
+   could look like, which is what they were shown anyway.
+
+   noindex, nofollow, noarchive and no referrer, because a house photograph must
+   not become a search result. robots.txt disallows /s/ as well — belt and
+   braces, since robots.txt is a request and the header is an instruction.
+
+   Cache-Control is private: this is somebody's home, not a public asset, and it
+   must not sit in a shared CDN cache. */
+const sharePage = ({ imageUrl, siteUrl }) => `<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="no-referrer">
+<title>See what this house could look like &mdash; Facet Pro</title>
+<meta property="og:title" content="See what my house could look like with Facet Pro">
+<meta property="og:description" content="One photo. See your exterior renovation and what it could cost.">
+<meta property="og:image" content="${emails.escapeHtml(imageUrl)}">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/favicon-32.png">
+<style>
+  :root{color-scheme:light}
+  body{font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#FBF8F3;color:#0F1012;margin:0;padding:24px 16px}
+  main{max-width:620px;margin:0 auto}
+  .card{background:#fff;border:1px solid #e4e4e7;border-radius:20px;overflow:hidden}
+  img{display:block;width:100%;height:auto;background:#E8DED0}
+  .body{padding:22px 20px}
+  h1{font-size:23px;line-height:1.25;margin:0 0 8px;font-weight:600}
+  p{color:#3f3f46;margin:10px 0}
+  .cta{display:block;margin-top:18px;padding:16px 20px;background:#0F1012;color:#fff;text-decoration:none;border-radius:999px;text-align:center;font-weight:600}
+  .muted{color:#6B6E78;font-size:13px}
+  footer{max-width:620px;margin:20px auto 0;color:#6B6E78;font-size:12px;text-align:center}
+</style></head><body><main>
+<div class="card">
+  <img src="${emails.escapeHtml(imageUrl)}" alt="A home exterior visualised by Facet Pro">
+  <div class="body">
+    <h1>See what my house could look like with Facet Pro.</h1>
+    <p>This is one photograph, visualised and costed &mdash; no survey, no showroom, nobody calling round.</p>
+    <a class="cta" href="${emails.escapeHtml(siteUrl)}/">Try it on your house &rarr;</a>
+    <p class="muted">Free to try &middot; One photo &middot; No sales call unless you ask</p>
+  </div>
+</div>
+<footer>Facet Pro &middot; <a href="/privacy" style="color:#6B6E78">Privacy notice</a></footer>
+</main></body></html>`;
+
+app.get('/s/:id', perMinute(120, 'Too many requests — please wait a moment.'), async (req, res) => {
+  /* Checked against the store rather than rendered blind, so a made-up id gets
+     a 404 instead of a branded page with a broken image on it. */
+  const render = await store.getRender(req.params.id);
+  if (!render) return res.status(404).type('text/plain').send('Not found.');
+  res.setHeader('Cache-Control', 'private, max-age=3600');
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
+  res.type('html').send(sharePage({
+    imageUrl: `${SITE_URL.replace(/\/$/, '')}/r/${encodeURIComponent(req.params.id)}`,
+    siteUrl: SITE_URL.replace(/\/$/, ''),
+  }));
 });
 
 app.post('/api/resume', resumeIssueLimiter, async (req, res) => {
@@ -2497,6 +2645,11 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
        method produced it. */
     glazing: resolveGlazing(req.body || {}),
     preferences: resolvePreferences(req.body || {}),
+    /* What the quote steps asked, validated against fixed lists. Null when
+       they saved a design without asking for quotes — the steps are only
+       shown on that path, and an empty object would read as "answered". */
+    project: resolveProject(req.body || {}),
+    property: resolveProperty(req.body || {}),
     detectionCount: Array.isArray(detections) ? detections.length : 0,
     /* Was whatever URL the browser sent. Now an id we issued, checked against
        our own store — the server generated the render and should not be told
@@ -2526,8 +2679,20 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
     withdrawTokenHash,
     status: 'New lead'
   };
+  /* Scored before it is stored, so the score is part of the record rather than
+     something recomputed later against weights that may have moved. The
+     version is in the payload for exactly that reason: a lead scored 74 last
+     month was scored by version 1, and re-scoring it under version 2 would
+     quietly rewrite history an installer was billed against. */
+  lead.leadScore = leadscore.score(lead);
+
   // Stored first, unconditionally — a notification problem must never cost a lead.
   await store.append('leads', lead);
+
+  /* A lead is stored and scored: that is what "qualified" means here, and it
+     is a thing only the server witnesses. Counted before the emails, because
+     a mail provider being down does not un-qualify anybody. */
+  store.countStage('lead_qualified').catch(() => { /* a counter never fails a lead */ });
 
   /* Worked out before the email rather than inside the delivery that follows
      it, so we can name the installers to the homeowner — the notice says "we
@@ -2798,12 +2963,89 @@ app.get('/api/leads', installerLimiter, requireInstaller, logAccess('/api/leads'
     leads = leads.filter(l => mine.has(l.id));
   }
 
+  /* Their own decisions, so the portal can show a project as already accepted
+     or passed rather than offering the buttons again. The shared password sees
+     every decision, because it already sees every lead — and knowing that
+     somebody accepted a job is how a second buyer avoids ringing the same
+     homeowner about it. */
+  const decisions = await responsesFor(req.installer?.scope === 'installer' ? req.installer.id : null);
+
   res.json({
     leads: leads.slice().reverse(),
+    decisions,
     scope: req.installer?.scope || 'all',
     installer: req.installer?.id || null,
   });
 });
+
+/* ── ACCEPTING OR PASSING ON A PROJECT ──
+
+   An installer was being sent a lead and given nowhere to say what they
+   thought of it. That costs three things: they cannot manage their own
+   pipeline, we cannot see which leads are worth what we charge for them, and
+   the routing has no feedback signal — so the fifteenth lead goes to whoever
+   the hash picks regardless of who answered the previous fourteen.
+
+   Only an installer account can respond, and only about a lead the delivery
+   log says they actually received. The shared INSTALLER_PASSWORD cannot: it is
+   scoped 'all' and is not a company, so a decision recorded under it would be
+   attributed to nobody and would then be used to route future leads.
+
+   Append-only. A change of mind is another row, and the latest one wins —
+   nothing is overwritten, because this is the record somebody reaches for when
+   a buyer disputes an invoice. */
+const LEAD_ACTIONS = ['accept', 'pass'];
+
+app.post('/api/installer/lead-response', installerLimiter, requireInstaller, logAccess('/api/installer/lead-response'), async (req, res) => {
+  if (req.installer?.scope !== 'installer' || !req.installer.id) {
+    return res.status(403).json({
+      error: 'Accepting or passing needs your own installer sign-in, not the shared password.',
+      reason: 'account_required',
+    });
+  }
+
+  const leadId = String(req.body?.leadId || '').trim().slice(0, 40);
+  const action = String(req.body?.action || '').trim().toLowerCase();
+  if (!leadId) return res.status(400).json({ error: 'leadId is required.' });
+  if (!LEAD_ACTIONS.includes(action)) return res.status(400).json({ error: 'action must be accept or pass.' });
+
+  /* Did this installer receive this lead? Read from the delivery log, which is
+     the same source /api/leads scopes on — so an installer cannot accept a
+     lead they were never shown, and the two endpoints cannot disagree about
+     what they were shown. */
+  let received = false;
+  for (const d of await store.readAll('deliveries')) {
+    if (d?.leadId !== leadId || !Array.isArray(d.results)) continue;
+    if (d.results.some(r => r?.id === req.installer.id && r?.ok)) { received = true; break; }
+  }
+  if (!received) return res.status(404).json({ error: 'That project was not sent to you.' });
+
+  const record = {
+    ts: new Date().toISOString(),
+    leadId,
+    installerId: req.installer.id,
+    action,
+  };
+  await store.append('leadResponses', record);
+
+  if (action === 'accept') {
+    store.countStage('installer_accepted').catch(() => { /* a counter never fails a decision */ });
+  }
+  console.log(`Lead ${leadId}: ${req.installer.id} ${action === 'accept' ? 'ACCEPTED' : 'passed'}.`);
+
+  res.json({ ok: true, leadId, action, at: record.ts });
+});
+
+/* What each installer has decided, keyed by lead id. Latest row wins. */
+async function responsesFor(installerId) {
+  const out = {};
+  for (const r of await store.readAll('leadResponses')) {
+    if (!r?.leadId) continue;
+    if (installerId && r.installerId !== installerId) continue;
+    out[r.leadId] = { action: r.action, at: r.ts, installerId: r.installerId };
+  }
+  return out;
+}
 
 /* ── WITHDRAWING CONSENT ──
    Article 7(3): as easy to withdraw as it was to give. The notice also
@@ -3072,15 +3314,44 @@ app.get('/api/version', perMinute(120, 'Too many requests — please wait a mome
    consent, a processor agreement and a transfer mechanism.
 
    The stages are an allowlist, so a client cannot invent labels and turn the
-   table into free-text storage. */
+   table into free-text storage.
+
+   ── Why the list grew ──
+
+   It was eight stages, and it collapsed distinct failures into single steps.
+   "design_created" fired on the same tick as the detection returning, so a
+   photograph that arrived and a house that was successfully read were one
+   number; and everything after the form was one step called lead_sent, so
+   there was no way to see the difference between a lead nobody bought and a
+   lead nobody was offered.
+
+   The eight original names are kept exactly as they were. The stored rows are
+   keyed by name, so renaming any of them would silently orphan the history —
+   the new stages are additions, in journey order, and the old counts still
+   line up underneath them.
+
+   Two of these are recorded by the server rather than the browser, because
+   only the server knows: lead_qualified (the lead saved and scored) and
+   installer_received / installer_accepted (what a buyer did with it). */
 const FUNNEL_STAGES = [
-  'landing', 'upload_started', 'upload_completed', 'design_created',
-  'estimate_viewed', 'design_saved', 'quote_requested', 'lead_sent',
+  'landing', 'upload_started', 'upload_completed',
+  'analysis_completed', 'visualisation_started', 'design_created', 'design_changed',
+  'estimate_viewed', 'design_saved',
+  'quote_started', 'quote_requested', 'quote_completed',
+  'lead_qualified', 'lead_sent', 'installer_received', 'installer_accepted',
 ];
+
+/* Four of the stages describe things only the server can witness — a lead
+   stored and scored, a lead delivered, a buyer accepting it. A browser
+   claiming any of them is either confused or inflating the numbers somebody
+   makes spend decisions from, so the public endpoint refuses them. It costs
+   nothing: the server records these itself, by calling store.countStage
+   directly rather than by coming through here. */
+const SERVER_ONLY_STAGES = new Set(['lead_qualified', 'lead_sent', 'installer_received', 'installer_accepted']);
 
 app.post('/api/funnel', perMinute(120, 'Too many requests — please wait a moment.'), async (req, res) => {
   const stage = String(req.body?.stage || '');
-  if (!FUNNEL_STAGES.includes(stage)) return res.status(400).json({ error: 'Unknown stage.' });
+  if (!FUNNEL_STAGES.includes(stage) || SERVER_ONLY_STAGES.has(stage)) return res.status(400).json({ error: 'Unknown stage.' });
   /* Answered before the write. A counter that fails must never cost a visitor
      their journey, and the browser is not waiting for anything useful. */
   res.status(204).end();
@@ -3120,6 +3391,87 @@ app.get('/api/ops', installerLimiter, requireInstallerPassword, (req, res) => {
     leadCapture: LEAD_CAPTURE ? 'on' : 'off',
     siteMode: SITE_MODE,
   });
+});
+
+/* The sitemap is generated, not a file.
+
+   It was a static three-URL document, and adding sixteen landing pages to a
+   hand-maintained XML file is a guarantee that one day there will be a page
+   nobody can find and an entry pointing at a page that no longer exists.
+   landing.allPaths() is the single source, so a page cannot exist unlisted and
+   cannot be listed without existing — guarded by test/landing.test.js.
+
+   The static middleware runs before every route in this file, so this route can
+   only ever be reached because '/sitemap.xml' has been removed from
+   PUBLIC_FILES and the file deleted. See the note there. */
+app.get('/sitemap.xml', (req, res) => {
+  const base = SITE_URL.replace(/\/$/, '');
+  const today = new Date().toISOString().slice(0, 10);
+  const urls = [
+    { loc: '/', priority: '1.0', changefreq: 'weekly' },
+    ...landing.allPaths().map(p => ({ loc: p, priority: '0.8', changefreq: 'monthly' })),
+    { loc: '/privacy', priority: '0.3', changefreq: 'yearly' },
+    { loc: '/terms', priority: '0.3', changefreq: 'yearly' },
+  ];
+  res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.map(u => `  <url>
+    <loc>${base}${u.loc}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>${u.changefreq}</changefreq>
+    <priority>${u.priority}</priority>
+  </url>`).join('\n')}
+</urlset>`);
+});
+
+/* ── LANDING PAGES ──
+
+   Cost guides and area pages, rendered from the catalogue on each request. See
+   landing.js for why nothing here is a static file: every figure comes out of
+   the same pricing engine the visualiser uses, so the pages cannot disagree
+   with the product, and a rate change updates the marketing by itself.
+
+   Rendered per request rather than cached because they are cheap — a few
+   arithmetic calls and a template — and because a stale price is the one thing
+   these pages must never serve. The CDN cache header does the real caching, at
+   an interval short enough that a rate change is live the same day.
+
+   These serve under the stricter CSP: no scripts, so isLegalPath includes them.
+   The one script tag is application/ld+json, which is data, not code, and is
+   not affected by script-src. */
+const landingCacheHeader = (res) => {
+  res.setHeader('Cache-Control', 'public, max-age=600, stale-while-revalidate=3600');
+};
+
+app.get('/cost/:slug', perMinute(120, 'Too many requests — please wait a moment.'), (req, res, next) => {
+  const html = landing.renderCostPage(req.params.slug, {
+    catalogue, siteUrl: SITE_URL.replace(/\/$/, ''), siteMode: SITE_MODE,
+  });
+  /* next() rather than a 404 here, so an unknown slug falls through to the
+     ordinary not-found handler and gets the same response as any other missing
+     path. Two 404 pages is two things to keep consistent. */
+  if (!html) return next();
+  landingCacheHeader(res);
+  res.type('html').send(html);
+});
+
+app.get('/:slug', perMinute(120, 'Too many requests — please wait a moment.'), (req, res, next) => {
+  /* Area pages sit at the root because "/windows-essex" is the URL somebody
+     would link to and the one that reads as a page rather than a directory.
+     The cost of that is this route matching every unknown single-segment path,
+     which is why it is registered after every real route and hands anything it
+     does not recognise straight on. */
+  const html = landing.renderAreaPage(req.params.slug, {
+    catalogue,
+    siteUrl: SITE_URL.replace(/\/$/, ''),
+    siteMode: SITE_MODE,
+    /* The live recipient list, so a page cannot imply coverage the routing
+       could not honour. An area with nobody configured says so. */
+    recipients: LEAD_RECIPIENTS,
+  });
+  if (!html) return next();
+  landingCacheHeader(res);
+  res.type('html').send(html);
 });
 
 app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, 'legal', 'privacy.html')));

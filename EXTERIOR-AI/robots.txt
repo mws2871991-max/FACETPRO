@@ -9,4 +9,11 @@ Disallow: /healthz
 # Sent to people directly; not for search.
 Disallow: /investors
 
+# A homeowner's own photograph, behind an unguessable link they chose to send
+# to somebody. The pages also carry noindex and X-Robots-Tag; this is the belt
+# to that braces, because robots.txt is a request and a header is an
+# instruction.
+Disallow: /s/
+Disallow: /r/
+
 Sitemap: https://www.facetpro.co.uk/sitemap.xml

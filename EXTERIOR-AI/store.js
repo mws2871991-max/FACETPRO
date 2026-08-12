@@ -237,6 +237,23 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS notification_failures (
     id SERIAL PRIMARY KEY, ts TIMESTAMPTZ NOT NULL, lead_id TEXT, kind TEXT, record JSONB
   )`,
+  /* What a buyer did with a lead they were sent.
+
+     Append-only, one row per decision, rather than a status column on the lead
+     — three installers receive the same lead and can disagree about it, so
+     "accepted" is a fact about a pair, not about a lead. It is also the
+     billing conversation: an installer who passes on a lead they were charged
+     for will say so, and this is the record that settles it.
+
+     No personal data: a lead id, an installer id, a decision and a timestamp.
+     Erasure therefore leaves these rows alone by design — after the lead is
+     redacted the row references a reference and nothing more, and deleting it
+     would destroy the delivery and billing history for a lead somebody was
+     charged for. */
+  `CREATE TABLE IF NOT EXISTS lead_responses (
+    id SERIAL PRIMARY KEY, ts TIMESTAMPTZ NOT NULL, lead_id TEXT, installer_id TEXT,
+    action TEXT, record JSONB
+  )`,
   `CREATE TABLE IF NOT EXISTS leads (
     id SERIAL PRIMARY KEY, ts TIMESTAMPTZ NOT NULL, action TEXT, name TEXT, email TEXT,
     phone TEXT, postcode TEXT, message TEXT, source TEXT, status TEXT, design JSONB
@@ -303,6 +320,9 @@ async function ensureSchema() {
     /* The detection cache sweeps by age on every write, which was a sequential
        scan over every photograph measured in the last seven days. */
     ['detection_cache_ts_idx', 'detection_cache (ts)'],
+    /* Read on every installer portal load, once per lead in the list, to say
+       whether this installer has already decided about it. */
+    ['lead_responses_lead_id_idx', 'lead_responses (lead_id)'],
   ];
   for (const [name, target] of indexes) {
     try {
@@ -316,9 +336,9 @@ async function ensureSchema() {
   }
 }
 
-const TABLE_NAMES = { leads: 'leads', deliveries: 'deliveries', notificationFailures: 'notification_failures', accessLog: 'access_log', resumes: 'resumes', withdrawals: 'withdrawals', retentionRuns: 'retention_runs', quotes: 'quotes', waitlist: 'waitlist', feedback: 'feedback', detections: 'detections' };
+const TABLE_NAMES = { leads: 'leads', leadResponses: 'lead_responses', deliveries: 'deliveries', notificationFailures: 'notification_failures', accessLog: 'access_log', resumes: 'resumes', withdrawals: 'withdrawals', retentionRuns: 'retention_runs', quotes: 'quotes', waitlist: 'waitlist', feedback: 'feedback', detections: 'detections' };
 
-const FILE_NAMES = { quotes: 'quotes.jsonl', waitlist: 'waitlist.jsonl', feedback: 'feedback.jsonl', detections: 'detections.jsonl', leads: 'leads.jsonl', deliveries: 'deliveries.jsonl', notificationFailures: 'notification-failures.jsonl', accessLog: 'access-log.jsonl', resumes: 'resumes.jsonl', withdrawals: 'withdrawals.jsonl', retentionRuns: 'retention-runs.jsonl' };
+const FILE_NAMES = { quotes: 'quotes.jsonl', waitlist: 'waitlist.jsonl', feedback: 'feedback.jsonl', detections: 'detections.jsonl', leads: 'leads.jsonl', deliveries: 'deliveries.jsonl', notificationFailures: 'notification-failures.jsonl', accessLog: 'access-log.jsonl', resumes: 'resumes.jsonl', withdrawals: 'withdrawals.jsonl', retentionRuns: 'retention-runs.jsonl', leadResponses: 'lead-responses.jsonl' };
 
 function appendLine(file, obj) {
   fs.appendFileSync(path.join(DATA_DIR, file), JSON.stringify(obj) + '\n');
@@ -342,7 +362,8 @@ const INSERT_SQL = {
   retentionRuns: `INSERT INTO ${SCHEMA_NAME}.retention_runs (ts, record) VALUES ($1,$2)`,
   accessLog: `INSERT INTO ${SCHEMA_NAME}.access_log (ts, endpoint, ip_hash, record) VALUES ($1,$2,$3,$4)`,
   deliveries: `INSERT INTO ${SCHEMA_NAME}.deliveries (ts, lead_id, delivered, failed, record) VALUES ($1,$2,$3,$4,$5)`,
-  notificationFailures: `INSERT INTO ${SCHEMA_NAME}.notification_failures (ts, lead_id, kind, record) VALUES ($1,$2,$3,$4)`
+  notificationFailures: `INSERT INTO ${SCHEMA_NAME}.notification_failures (ts, lead_id, kind, record) VALUES ($1,$2,$3,$4)`,
+  leadResponses: `INSERT INTO ${SCHEMA_NAME}.lead_responses (ts, lead_id, installer_id, action, record) VALUES ($1,$2,$3,$4,$5)`
 };
 
 const INSERT_PARAMS = {
@@ -370,7 +391,8 @@ const INSERT_PARAMS = {
   retentionRuns: o => [o.ts, JSON.stringify(o)],
   accessLog: o => [o.ts, o.endpoint || null, o.ipHash || null, JSON.stringify(o)],
   deliveries: o => [o.ts, o.leadId || null, o.delivered | 0, o.failed | 0, JSON.stringify(o)],
-  notificationFailures: o => [o.ts, o.leadId || null, o.kind || null, JSON.stringify(o)]
+  notificationFailures: o => [o.ts, o.leadId || null, o.kind || null, JSON.stringify(o)],
+  leadResponses: o => [o.ts, o.leadId || null, o.installerId || null, o.action || null, JSON.stringify(o)]
 };
 
 const SELECT_SQL = {
@@ -386,7 +408,8 @@ const SELECT_SQL = {
   retentionRuns: `SELECT record FROM ${SCHEMA_NAME}.retention_runs ORDER BY id ASC`,
   accessLog: `SELECT record FROM ${SCHEMA_NAME}.access_log ORDER BY id ASC`,
   deliveries: `SELECT record FROM ${SCHEMA_NAME}.deliveries ORDER BY id ASC`,
-  notificationFailures: `SELECT record FROM ${SCHEMA_NAME}.notification_failures ORDER BY id ASC`
+  notificationFailures: `SELECT record FROM ${SCHEMA_NAME}.notification_failures ORDER BY id ASC`,
+  leadResponses: `SELECT record FROM ${SCHEMA_NAME}.lead_responses ORDER BY id ASC`
 };
 
 async function append(table, obj) {
@@ -699,7 +722,7 @@ async function getResume(code) {
    locked transaction, and the two readers must not disagree about shape. */
 function shapeRows(table, rows) {
   if (table === 'leads') return rows.map(r => r.design || r);
-  if (table === 'deliveries' || table === 'notificationFailures' || table === 'accessLog' || table === 'retentionRuns' || table === 'withdrawals' || table === 'resumes') return rows.map(r => r.record || r);
+  if (table === 'deliveries' || table === 'notificationFailures' || table === 'accessLog' || table === 'retentionRuns' || table === 'withdrawals' || table === 'resumes' || table === 'leadResponses') return rows.map(r => r.record || r);
   return rows;
 }
 

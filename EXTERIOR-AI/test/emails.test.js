@@ -81,12 +81,11 @@ test('a hostile render URL is dropped rather than embedded', () => {
 test('the site URL is validated, falling back rather than emitting rubbish', () => {
   const html = emails.designPackHtml(LEAD, PRICE, 'javascript:alert(1)');
   assert.ok(!html.includes('javascript:'));
-  /* www, not the apex. The bare domain 307s to www and cannot be moved — it
-     carries MX records, and DNS forbids a CNAME beside them. A person clicking
-     a redirect is fine; a link in an email that a mail client prefetches, or a
-     canonical a crawler reads, should not need the hop. */
-  assert.ok(html.includes('https://www.facetpro.co.uk/privacy'), 'falls back to the host that serves');
-  assert.ok(!/https:\/\/facetpro\.co\.uk/.test(html), 'the bare domain is back in the fallback');
+  /* www, not the apex. The live service answers on www; the bare domain only
+     307s to it, so a fallback link on the apex sent people through a redirect —
+     see the note on SITE_URL in server.js. */
+  assert.ok(html.includes('https://www.facetpro.co.uk/privacy'), 'falls back to the canonical www host');
+  assert.ok(!/https:\/\/facetpro\.co\.uk/.test(html), 'the apex still appears, and it only redirects');
 
   const custom = emails.designPackHtml(LEAD, PRICE, 'https://staging.example.co.uk/');
   assert.ok(custom.includes('https://staging.example.co.uk/privacy'), 'honours a real override');

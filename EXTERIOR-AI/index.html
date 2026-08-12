@@ -327,104 +327,53 @@
     </p>
   </aside>
 
-  <section class="rounded-2xl bg-zinc-900 text-[#FBF8F3] overflow-hidden p-8 md:p-12" aria-labelledby="hero-heading">
-    <!-- P1 from the investor pack: lead with what the platform IS, so a reader
-         ten seconds in can place the company, then carry the customer argument
-         underneath as support rather than as the headline.
+  <section class="rounded-2xl bg-zinc-900 text-[#FBF8F3] overflow-hidden p-6 sm:p-8 md:p-12" aria-labelledby="hero-heading">
+    <div class="grid lg:grid-cols-[1.05fr_1fr] gap-8 lg:gap-12 items-center">
+      <div>
+        <p class="text-[11px] tracking-[0.25em] uppercase text-white/50">Home exterior planning &middot; UK</p>
+        <h1 id="hero-heading" class="mt-4 serif text-[34px] sm:text-[42px] md:text-[52px] leading-[0.98] tracking-[-0.03em]">See what your house could look&nbsp;like &mdash; and what it could cost.</h1>
+        <p class="mt-5 text-[16px] md:text-[18px] leading-7 text-white/75 max-w-[46ch]">Upload one photo of your house. Facet Pro will visualise your exterior renovation and give you an instant estimated price.</p>
 
-         "The same house gets the same number" is promoted to sit directly
-         under the sub — the pack is right that it is the strongest sentence on
-         the page, and it was previously buried mid-paragraph. -->
-    <!-- Final review, point 2: lead with the capability, carry the technology
-         underneath. The previous headline named the category before it named
-         the outcome, which reads as a description of an industry rather than
-         of a thing that does something. -->
-    <p class="text-[11px] tracking-[0.25em] uppercase text-white/50">Home exterior planning · UK</p>
-    <h1 id="hero-heading" class="mt-4 serif text-[36px] md:text-[52px] leading-[0.98] tracking-[-0.03em]">Measure, visualise and price<br class="hidden sm:block"> an entire home&rsquo;s exterior<br class="hidden sm:block"> from one photograph.</h1>
-    <p class="mt-5 text-[15px] md:text-[17px] leading-7 text-white/70 max-w-[62ch]">Upload one photograph of the front of your home. See new windows, doors, cladding or a roof on it, and get a costed estimate &mdash; before anybody commits to a survey or an installer visit.</p>
-    <p class="mt-5 serif text-[22px] md:text-[26px] leading-snug text-white">The same house gets the same number.</p>
-    <p class="mt-3 text-[15px] leading-7 text-white/70 max-w-[62ch]">Two neighbours can buy the same windows and pay wildly different prices, because one of them pushed harder on a weeknight in their own front room. Priced from the photograph, the number does not move on how hard you are willing to push.</p>
-    <ul class="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-white/60">
-      <li>One price, for everyone</li>
-      <li>Nobody visits</li>
-      <li>Nobody calls unless you ask</li>
-      <li>Free, about a minute</li>
-    </ul>
-    <div class="mt-8 flex flex-wrap gap-3">
-      <!-- The id stays: the upload handler is bound to it. -->
-      <button id="hero-upload" type="button" class="cta px-5 py-3 rounded-full text-sm font-medium transition">Try the visualiser</button>
-      <a href="#how-it-works" class="px-5 py-3 rounded-full border border-white/20 text-sm font-medium hover:bg-white/10 transition">See how it works</a>
+        <div class="mt-7 flex flex-col sm:flex-row gap-3">
+          <!-- The id stays: the handler bound to it scrolls to the upload
+               block, which now sits directly underneath rather than five
+               screens down. -->
+          <button id="hero-upload" type="button" class="cta w-full sm:w-auto px-7 py-4 rounded-full text-[15px] font-semibold transition min-h-[52px]">See my house &rarr;</button>
+          <a href="#our-work" class="w-full sm:w-auto px-6 py-4 rounded-full border border-white/20 text-[15px] font-medium hover:bg-white/10 transition text-center min-h-[52px] grid place-items-center">See real homes</a>
+        </div>
+
+        <p class="mt-5 text-[13px] text-white/60">Free to try &nbsp;&bull;&nbsp; One photo &nbsp;&bull;&nbsp; No sales call unless you ask</p>
+
+        <p class="mt-6 pt-6 border-t border-white/10 serif text-[19px] md:text-[21px] leading-snug text-white/90">The same house gets the same number.</p>
+        <p class="mt-2 text-[13px] leading-6 text-white/55 max-w-[52ch]">Two neighbours can buy the same windows and pay wildly different prices, because one of them pushed harder on a weeknight in their own front room. Priced from the photograph, the number does not move on how hard you are willing to push.</p>
+      </div>
+
+      <!-- Show the product on the first screen. Static pair rather than the
+           slider below it: this one has to be understood at a glance while
+           scrolling on a phone, and a control you have to discover is not
+           that. The slider is still there, under "Real homes", for anyone who
+           wants to play. -->
+      <figure class="relative">
+        <div class="grid grid-cols-2 gap-2 sm:gap-3">
+          <div class="relative rounded-xl overflow-hidden bg-white/5">
+            <img src="/assets/work/hero-before.jpg" alt="A house before the work: dated white window frames and roofline" width="800" height="600" loading="eager" decoding="async" class="w-full h-full object-cover aspect-[4/3]">
+            <figcaption class="absolute top-2 left-2 text-[9px] tracking-[0.16em] uppercase px-2 py-1 rounded-full bg-black/70 text-white/90">Before</figcaption>
+          </div>
+          <div class="relative rounded-xl overflow-hidden bg-white/5">
+            <img src="/assets/work/hero-after.jpg" alt="The same house after the work: anthracite frames and new roofline" width="800" height="600" loading="eager" decoding="async" class="w-full h-full object-cover aspect-[4/3]">
+            <figcaption class="absolute top-2 left-2 text-[9px] tracking-[0.16em] uppercase px-2 py-1 rounded-full bg-white text-zinc-900">After</figcaption>
+          </div>
+        </div>
+        <figcaption class="mt-3 text-[11px] leading-5 text-white/50">A real job by the team behind Facet Pro &mdash; photographs, not renders. Your own house appears in the visualiser below.</figcaption>
+      </figure>
     </div>
   </section>
-
-  <!-- P2: restyled to four steps and moved directly under the hero, per the
-       investor pack. The step copy is unchanged in substance — it was already
-       accurate — but the sequence now names the analysis explicitly, because
-       "AI analyses your home" is the step a reader is being asked to believe. -->
-  <section id="how-it-works" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24" aria-labelledby="how-heading">
-    <h2 id="how-heading" class="serif text-[26px] md:text-[32px] tracking-tight">How it works</h2>
-    <p class="mt-2 text-sm text-zinc-600 max-w-[62ch]">Four steps, start to finish, without anybody coming to your house.</p>
-    <ol class="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
-        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">1</span>
-        <h3 class="mt-4 text-[15px] font-medium">Upload a photo</h3>
-        <p class="mt-2 text-[13px] leading-6 text-zinc-600">One picture of the front of your home, taken from the pavement. No measurements, no visit.</p>
-      </li>
-      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
-        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">2</span>
-        <h3 class="mt-4 text-[15px] font-medium">The photo is analysed</h3>
-        <p class="mt-2 text-[13px] leading-6 text-zinc-600">Computer vision finds every window, door, wall and roof, and measures the elevation &mdash; your front door gives it the scale.</p>
-      </li>
-      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
-        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">3</span>
-        <h3 class="mt-4 text-[15px] font-medium">See it on your house</h3>
-        <p class="mt-2 text-[13px] leading-6 text-zinc-600">Frames, front door, walls, roof, roofline, conservatory &mdash; try them and watch the price move with every choice.</p>
-      </li>
-      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
-        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">4</span>
-        <h3 class="mt-4 text-[15px] font-medium">Get an itemised estimate</h3>
-        <p class="mt-2 text-[13px] leading-6 text-zinc-600">A costed, broken-down planning estimate in seconds. Keep it, and installers quote from what you already chose.</p>
-      </li>
-    </ol>
-    <p class="mt-6 text-sm leading-6 text-zinc-600 max-w-[68ch]">That one photo covers <strong>windows and doors</strong>, <strong>walls &mdash; cladding or render</strong>, <strong>fascias, soffits and guttering</strong>, <strong>the roof</strong>, and <strong>a conservatory</strong> if you want one. Five trades. Five companies you would otherwise be booking, waiting in for, and chasing. Priced here together, so you see what the job really costs instead of five figures that never add up to one.</p>
-  </section>
-
-  <!-- P3 from the investor pack.
-
-       The pack asked for the heading "Proprietary technology" and it is used,
-       because everything under it is: the door-reference measurement, the
-       whole-house inference, the pricing engine and the rate catalogue behind
-       it are all ours and are the hard part.
-
-       What is NOT claimed is that the models are. Detection runs on
-       Anthropic's API and image generation on FLUX Kontext Pro via Replicate.
-       Both are available to anybody with an account, so asserting otherwise
-       would be false to a homeowner and the first thing a technical investor
-       disproves — and it is unnecessary, because the models are the commodity
-       layer and the measurement is not. The closing line says which is which,
-       and a reader who checks finds the page was straight with them.
-
-       What IS ours is the part described below: measuring a real building
-       from one consumer photograph against the front door, and turning those
-       measurements into six trades priced together. That is the defensible
-       claim, and it is stronger for being true. -->
-  
-
-  <!-- P4: the signature graphic. Plain markup rather than SVG so it reflows on
-       a phone and inherits the palette. -->
-  
-
 
 
   <!-- Proof before the ask. This sat below the entire journey — the upload,
        the visualiser, the finishes, the estimate and the form — so the only
        evidence that any of this is real came after a stranger had been asked
        to hand over a photograph of their house. -->
-  
-
-  <div id="mount-upload"></div>
-  <div id="mount-visualizer"></div>
-
   <section id="our-work" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24" aria-labelledby="work-heading">
     <div class="flex items-start justify-between gap-3 flex-wrap">
       <div>
@@ -526,6 +475,89 @@
       Every photograph here is a job this team has done.
     </p>
   </section>
+
+  <div id="mount-upload"></div>
+  <div id="mount-visualizer"></div>
+  <div id="mount-wholehouse"></div>
+  <!-- Windows and doors were behind a collapsed accordion labelled "Optional",
+       subtitled "Doesn't change your estimate" — while all four of the
+       before-and-after photographs on this page are window-frame recolours.
+       The proof sold windows; the page hid them. Open by default now, and it
+       carries an id so the nav can point at it. -->
+  <details id="windows-doors" open class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24">
+    <summary class="flex items-center justify-between gap-4">
+      <span>
+        <span class="text-[11px] tracking-widest uppercase text-zinc-400 block">Step 2</span>
+        <span class="serif text-[22px] md:text-[26px] tracking-tight">Windows, doors and roofline</span>
+        <span class="block mt-1 text-[13px] text-zinc-600">Pick a style and a colour and we'll show them on your home. Your installer prices these on survey.</span>
+      </span>
+      <span class="chev text-zinc-400 transition-transform text-lg" aria-hidden="true">⌄</span>
+    </summary>
+    <div id="mount-details" class="mt-6"></div>
+  </details>
+
+  <div id="mount-conservatory"></div>
+  <div id="mount-refine"></div>
+  <!-- The moment between liking a design and giving anybody your details. It
+       renders nothing until there is a design worth keeping — see
+       buildSaveMoment() — because an empty exhortation to save is furniture. -->
+  <div id="mount-savemoment"></div>
+  <div id="mount-lead"></div>
+  <!-- Sharing sits after the form rather than before it: a design shared
+       before it is saved is a design nobody can come back to. -->
+  <div id="mount-share"></div>
+
+  <!-- P2: restyled to four steps and moved directly under the hero, per the
+       investor pack. The step copy is unchanged in substance — it was already
+       accurate — but the sequence now names the analysis explicitly, because
+       "AI analyses your home" is the step a reader is being asked to believe. -->
+  <section id="how-it-works" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24" aria-labelledby="how-heading">
+    <h2 id="how-heading" class="serif text-[26px] md:text-[32px] tracking-tight">How it works</h2>
+    <p class="mt-2 text-sm text-zinc-600 max-w-[62ch]">Four steps, start to finish, without anybody coming to your house.</p>
+    <ol class="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
+        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">1</span>
+        <h3 class="mt-4 text-[15px] font-medium">Upload a photo</h3>
+        <p class="mt-2 text-[13px] leading-6 text-zinc-600">One picture of the front of your home, taken from the pavement. No measurements, no visit.</p>
+      </li>
+      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
+        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">2</span>
+        <h3 class="mt-4 text-[15px] font-medium">The photo is analysed</h3>
+        <p class="mt-2 text-[13px] leading-6 text-zinc-600">Computer vision finds every window, door, wall and roof, and measures the elevation &mdash; your front door gives it the scale.</p>
+      </li>
+      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
+        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">3</span>
+        <h3 class="mt-4 text-[15px] font-medium">See it on your house</h3>
+        <p class="mt-2 text-[13px] leading-6 text-zinc-600">Frames, front door, walls, roof, roofline, conservatory &mdash; try them and watch the price move with every choice.</p>
+      </li>
+      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
+        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">4</span>
+        <h3 class="mt-4 text-[15px] font-medium">Get an itemised estimate</h3>
+        <p class="mt-2 text-[13px] leading-6 text-zinc-600">A costed, broken-down planning estimate in seconds. Keep it, and installers quote from what you already chose.</p>
+      </li>
+    </ol>
+    <p class="mt-6 text-sm leading-6 text-zinc-600 max-w-[68ch]">That one photo covers <strong>windows and doors</strong>, <strong>walls &mdash; cladding or render</strong>, <strong>fascias, soffits and guttering</strong>, <strong>the roof</strong>, and <strong>a conservatory</strong> if you want one. Five trades. Five companies you would otherwise be booking, waiting in for, and chasing. Priced here together, so you see what the job really costs instead of five figures that never add up to one.</p>
+  </section>
+
+  <!-- P3 from the investor pack.
+
+       The pack asked for the heading "Proprietary technology" and it is used,
+       because everything under it is: the door-reference measurement, the
+       whole-house inference, the pricing engine and the rate catalogue behind
+       it are all ours and are the hard part.
+
+       What is NOT claimed is that the models are. Detection runs on
+       Anthropic's API and image generation on FLUX Kontext Pro via Replicate.
+       Both are available to anybody with an account, so asserting otherwise
+       would be false to a homeowner and the first thing a technical investor
+       disproves — and it is unnecessary, because the models are the commodity
+       layer and the measurement is not. The closing line says which is which,
+       and a reader who checks finds the page was straight with them.
+
+       What IS ours is the part described below: measuring a real building
+       from one consumer photograph against the front door, and turning those
+       measurements into six trades priced together. That is the defensible
+       claim, and it is stronger for being true. -->
   <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="tech-heading">
     <p class="text-[11px] tracking-[0.25em] uppercase text-zinc-400">Proprietary technology</p>
     <h2 id="tech-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">What happens to your photograph</h2>
@@ -590,6 +622,8 @@
     </div>
   </section>
 
+  <!-- P4: the signature graphic. Plain markup rather than SVG so it reflows on
+       a phone and inherits the palette. -->
   <section class="rounded-2xl bg-zinc-900 text-[#FBF8F3] p-6 md:p-10" aria-label="From photograph to price">
     <h2 class="serif text-[24px] md:text-[30px] tracking-tight">From photo to price in one pipeline</h2>
     <ol class="mt-6 flex flex-col md:flex-row md:items-stretch gap-3 md:gap-2">
@@ -607,27 +641,7 @@
     </ol>
   </section>
 
-  <div id="mount-wholehouse"></div>
-  <!-- Windows and doors were behind a collapsed accordion labelled "Optional",
-       subtitled "Doesn't change your estimate" — while all four of the
-       before-and-after photographs on this page are window-frame recolours.
-       The proof sold windows; the page hid them. Open by default now, and it
-       carries an id so the nav can point at it. -->
-  <details id="windows-doors" open class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24">
-    <summary class="flex items-center justify-between gap-4">
-      <span>
-        <span class="text-[11px] tracking-widest uppercase text-zinc-400 block">Step 2</span>
-        <span class="serif text-[22px] md:text-[26px] tracking-tight">Windows, doors and roofline</span>
-        <span class="block mt-1 text-[13px] text-zinc-600">Pick a style and a colour and we'll show them on your home. Your installer prices these on survey.</span>
-      </span>
-      <span class="chev text-zinc-400 transition-transform text-lg" aria-hidden="true">⌄</span>
-    </summary>
-    <div id="mount-details" class="mt-6"></div>
-  </details>
 
-  <div id="mount-conservatory"></div>
-  <div id="mount-refine"></div>
-  <div id="mount-lead"></div>
 
   <!-- P5 from the investor pack, rebuilt around what is actually true.
 
@@ -864,6 +878,36 @@
         <a href="/terms" class="hover:text-zinc-900">Terms</a>
       </nav>
     </div>
+    <!-- The cost guides, linked from here rather than left as orphans.
+
+         A page nothing links to is a page a crawler reaches late and treats as
+         peripheral, and these are the pages that answer the question people
+         actually type. They also serve the visitor who is not ready to upload
+         anything yet: a cost guide is the honest halfway house between leaving
+         and handing over a photograph of your house. -->
+    <nav class="mt-6 pt-5 border-t border-zinc-200" aria-label="Cost guides">
+      <p class="text-[11px] tracking-widest uppercase text-zinc-400">What things cost</p>
+      <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 text-[12px] text-zinc-600">
+        <a href="/cost/window-replacement-cost-uk" class="hover:text-zinc-900">Window replacement cost</a>
+        <a href="/cost/new-windows-cost-uk" class="hover:text-zinc-900">New windows cost</a>
+        <a href="/cost/anthracite-windows-cost" class="hover:text-zinc-900">Anthracite windows</a>
+        <a href="/cost/upvc-window-prices" class="hover:text-zinc-900">uPVC window prices</a>
+        <a href="/cost/10-window-replacement-cost" class="hover:text-zinc-900">10 windows</a>
+        <a href="/cost/front-door-replacement-cost" class="hover:text-zinc-900">Front door cost</a>
+        <a href="/cost/fascia-soffit-replacement-cost" class="hover:text-zinc-900">Fascias &amp; soffits</a>
+        <a href="/cost/house-rendering-cost" class="hover:text-zinc-900">Rendering cost</a>
+        <a href="/cost/new-roof-cost" class="hover:text-zinc-900">New roof cost</a>
+        <a href="/cost/house-exterior-renovation-cost" class="hover:text-zinc-900">Whole exterior</a>
+      </div>
+      <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[12px] text-zinc-600">
+        <a href="/windows-grays" class="hover:text-zinc-900">Windows Grays</a>
+        <a href="/windows-essex" class="hover:text-zinc-900">Windows Essex</a>
+        <a href="/windows-romford" class="hover:text-zinc-900">Windows Romford</a>
+        <a href="/windows-basildon" class="hover:text-zinc-900">Windows Basildon</a>
+        <a href="/windows-kent" class="hover:text-zinc-900">Windows Kent</a>
+        <a href="/windows-surrey" class="hover:text-zinc-900">Windows Surrey</a>
+      </div>
+    </nav>
     <p id="beta-footer" hidden class="mt-5 text-[11px] leading-5 text-amber-900 bg-amber-50 border border-amber-200 rounded-xl p-3 max-w-[80ch]">
       <strong>Beta.</strong> We're still calibrating how we measure a house from a photo against
       surveyed properties. Figures may change, and an installer confirms everything on site.
@@ -921,6 +965,23 @@ const state = {
   detections: [],
   stage: "landing", // landing | detecting | visualizer
   detectionStatus: "idle", // idle | detecting | success | error
+  /* How far through the analysis narration we are. It is a narration, not a
+     progress bar: the server does one call and returns everything at once, so
+     a bar would be inventing a percentage. What this does instead is name the
+     things we are looking for, one at a time, and then mark each as found or
+     not found against what actually came back. Nothing here is ever shown as
+     found unless the detection said so. */
+  analysisTick: 0,
+  /* The design the homeowner has saved, if they have. Sharing and the
+     reference number both come from this rather than from the form. */
+  savedLead: null,
+  shareCopied: false,
+  /* The quote request, asked in steps. Held here rather than in the DOM so a
+     re-render (a swatch tap, a price coming back) cannot lose a half-finished
+     answer. `intent` records which button brought them here, because "save my
+     design" and "get me quotes" are different asks and the last step should
+     not pretend otherwise. */
+  quote: { step: 0, intent: null, project: [], timing: null, propertyType: null, homeowner: false },
   cladding: findSwatch("alabaster"),
   trim: findSwatch("ink-trim"),
   roof: findSwatch("slate-roof"),
@@ -1114,6 +1175,10 @@ async function loadLeads(token) {
       return false;
     }
     state.leads = data.leads || [];
+    /* Their own accept/pass decisions, so a project already dealt with does not
+       offer the buttons again. Server-side is the source of truth; the card
+       updates optimistically after a click and this replaces it on reload. */
+    state.decisions = data.decisions || {};
     state.installerScope = data.scope || null;
     state.installerAuthed = true;
     state.leadsLoaded = true;
@@ -1281,7 +1346,9 @@ const MOUNTS = [
   ['mount-conservatory', buildConservatory],
   ['mount-refine',     buildRefineEstimate],
   ['mount-totalbar',   buildTotalBar],
+  ['mount-savemoment', buildSaveMoment],
   ['mount-lead',       buildSaveFraming],
+  ['mount-share',      buildShare],
   ['mount-installer',  buildInstaller],
 ];
 
@@ -1368,15 +1435,6 @@ function applyDesign(d) {
 }
 
 function buildUploadDetect() {
-  /* Four-by-three once it is holding a photograph, and tall enough for its own
-     words before that.
-
-     The box was aspect-[4/3] with overflow-hidden in both states. On a 393px
-     screen that is about 250px of height for an arrow, two lines of
-     instruction and a three-line note about standing back far enough to get
-     the front door in — so the note was cut off mid-sentence. It is the one
-     piece of guidance that decides whether we can measure the house at all,
-     and it was the part being hidden. */
   const dropArea = h('div', {
     className: `rounded-xl border border-dashed border-zinc-300 bg-white grid place-items-center cursor-pointer hover:bg-zinc-50 transition relative overflow-hidden ${state.uploadedImg ? 'media-cap aspect-[4/3]' : 'sm:aspect-[4/3] py-6'}`,
     onClick: () => sharedRefs.fileInput?.click(),
@@ -1498,6 +1556,80 @@ function buildUploadDetect() {
       ])
     : null;
 
+  /* ── ANALYSING YOUR HOUSE ──
+
+     The detection call takes several seconds and used to show one amber pill
+     reading "Looking at your home…". Several seconds of nothing, on the one
+     screen where the product either becomes real to somebody or does not.
+
+     What this does is name the things we look for, in order, while we wait —
+     and then say which were actually found. Two rules it keeps:
+
+     - it never claims to have found anything. A row goes from "looking" to
+       "found" or to "not in this photo" only once the server has answered,
+       from `state.detections`. A narration that invents results is the same
+       failure as a progress bar that invents a percentage, and this codebase
+       has already paid for one stated intention that nothing enforced.
+     - it degrades to a plain list. If the timer never fires — a background
+       tab, reduced motion, an old phone — every row simply reads "looking",
+       and the result still lands when detection returns.
+
+     `type` values come from /api/detect; `matches` maps a homeowner-facing
+     category onto them, so a model that starts saying "gutter" instead of
+     "guttering" widens a regex rather than breaking the panel. */
+  const ANALYSIS_STEPS = [
+    { label: 'Windows',                    matches: /window/i },
+    { label: 'Doors',                      matches: /door/i },
+    { label: 'Roof',                       matches: /roof|tile|slate/i },
+    { label: 'Walls',                      matches: /wall|brick|render|cladding|elevation/i },
+    { label: 'Fascias, soffits, guttering', matches: /fascia|soffit|gutter|roofline|barge/i },
+  ];
+
+  function analysisPanel() {
+    const detecting = state.detectionStatus === 'detecting';
+    const answered = state.detectionStatus === 'success' || state.detectionStatus === 'error';
+    if (!detecting && !answered) return null;
+    if (answered && !state.detections.length) return null;
+
+    const found = (step) => state.detections.some(d =>
+      d.type !== 'analysis' && (step.matches.test(String(d.type || '')) || step.matches.test(String(d.label || ''))));
+
+    const rows = ANALYSIS_STEPS.map((step, i) => {
+      // Reached by the narration yet? Before the answer arrives this is the
+      // only thing that moves; after it, every row is resolved.
+      const reached = answered || state.analysisTick > i;
+      const hit = answered && found(step);
+      const mark = !answered
+        ? (reached ? '·' : '')
+        : (hit ? '✓' : '—');
+      return h('div', {
+        className: `flex items-center justify-between rounded-xl border px-3 py-2.5 transition ${
+          answered
+            ? (hit ? 'bg-emerald-500/10 border-emerald-400/30' : 'bg-white/5 border-white/10')
+            : (reached ? 'bg-white/10 border-white/20' : 'bg-white/5 border-white/10 opacity-50')}`,
+      }, [
+        h('div', { className: 'flex items-center gap-2.5' }, [
+          h('span', {
+            className: `w-4 h-4 rounded-full grid place-items-center text-[9px] ${
+              answered && hit ? 'bg-emerald-400 text-black' : 'bg-white/15 text-white/70'}`,
+            'aria-hidden': 'true',
+          }, mark),
+          h('span', { className: 'text-xs' }, step.label),
+        ]),
+        h('span', { className: 'text-[10px] text-white/55' },
+          !answered ? (reached ? 'looking…' : '') : (hit ? 'found' : 'not in this photo')),
+      ]);
+    });
+
+    return h('div', { className: 'rounded-xl bg-white/5 border border-white/10 p-3' }, [
+      h('p', {
+        className: 'text-[11px] tracking-widest uppercase text-white/50 mb-2',
+        role: 'status', 'aria-live': 'polite',
+      }, detecting ? 'Analysing your house…' : 'Your house, as we read it'),
+      h('div', { className: 'grid gap-1.5' }, rows),
+    ]);
+  }
+
   const detectionBadgeByStatus = {
     idle:      { className: 'bg-white/10 text-white',   text: 'Waiting for your photo' },
     detecting: { className: 'bg-amber-400 text-black',  text: 'Looking at your home…' },
@@ -1591,8 +1723,11 @@ function buildUploadDetect() {
           h('div', { className: 'text-[11px] tracking-widest uppercase text-white/50' }, 'What we found'),
           h('div', { className: `text-[10px] px-2 py-1 rounded-full font-medium ${detectionBadge.className}` }, detectionBadge.text),
         ]),
+        analysisPanel(),
         h('div', { className: 'grid gap-2' }, state.detections.length === 0
-          ? h('div', { className: 'rounded-xl bg-white/5 border border-white/10 p-4 text-xs leading-5 text-white/60' }, 'Nothing yet. Add a photo and we’ll pick out the windows, doors, roof and cladding on your house.')
+          ? (state.detectionStatus === 'detecting'
+              ? null   // the narration above is doing this job
+              : h('div', { className: 'rounded-xl bg-white/5 border border-white/10 p-4 text-xs leading-5 text-white/60' }, 'Nothing yet. Add a photo and we’ll pick out the windows, doors, roof and cladding on your house.'))
           : state.detections.filter(d => d.type !== 'analysis').map(d => h('div', { className: 'flex items-center justify-between rounded-xl bg-white/5 border border-white/10 px-3 py-2.5' }, [
               h('div', { className: 'flex items-center gap-2' }, [
                 h('div', { className: 'w-1.5 h-1.5 rounded-full bg-emerald-400' }),
@@ -1793,6 +1928,11 @@ function buildVisualizer() {
             if (group === 'Trim') state.trim = sw;
             if (group === 'Roof') state.roof = sw;
             state.renderUrl = null; state.renderId = null; // choice changed — the old render no longer matches
+            /* Once per visit, not once per tap. The question this answers is
+               "what share of visitors actually design something", and a
+               counter that fires on every swatch would answer "how many taps
+               did our keenest visitor make" instead. reachedStage de-dupes. */
+            reachedStage('design_changed');
             U(`${sw.name} selected — updating your estimate`);
             await refreshPrice();
             render();
@@ -2175,6 +2315,7 @@ function buildDetailOptions() {
 
   const setPref = (key, id) => {
     state.prefs[key] = state.prefs[key] === id ? null : id;
+    reachedStage('design_changed');
     renderDetailsOnly();
     // Only the three that change the glazing price; roofline is a preference.
     if (['windowStyleId', 'doorStyleId', 'windowDoorColourId'].includes(key)) refreshGlazing();
@@ -3022,6 +3163,152 @@ function consentBox(key, label, { required = false } = {}) {
   ]);
 }
 
+/* ── THE MOMENT BETWEEN LIKING IT AND ASKING FOR IT ──
+
+   The journey used to run straight from the estimate into a form asking for a
+   name, an email, a postcode and a phone number. That is a stranger's whole
+   contact record demanded in one screen, immediately after the most engaging
+   thing on the site, with no acknowledgement that anything good just happened.
+
+   This is the acknowledgement, and it does one more job: it splits the two
+   asks. Saving a design and asking three companies to ring you are different
+   decisions, and a single button that quietly meant both is the thing this
+   codebase already refuses to do at the consent layer. So there are two
+   buttons, and the one they press is recorded as their intent — the form
+   further down reads it and asks accordingly.
+
+   It renders nothing until there is a design worth keeping. An exhortation to
+   save something that does not exist is furniture, and it would sit between
+   the visualiser and the estimate for every visitor who never uploads. */
+function buildSaveMoment() {
+  if (!state.leadCapture) return h('div', { id: 'save-moment' });
+
+  const glaz = state.glazing;
+  const price = state.price;
+  // Something priced, and their own house on screen. Either alone is not a
+  // design: a price with no photograph is the house-type prior, and a
+  // photograph with no price is half a journey.
+  const hasDesign = !!(state.uploadedImg && (price?.total || glaz?.price));
+  if (!hasDesign) return h('div', { id: 'save-moment' });
+
+  /* Both figures, presented as they are presented everywhere else — two
+     numbers that are not addable, because the cladding total is a single
+     figure and the glazing is a range. The estimate panel owns the
+     itemisation; this only restates the headline. */
+  const rows = [];
+  if (price?.total) rows.push(['Walls, roof & trim', fmtMoney(price.total)]);
+  if (glaz?.price) rows.push(['Windows & doors', `${fmtMoney(glaz.range.low)}–${fmtMoney(glaz.range.high)}`]);
+
+  const go = (intent) => {
+    state.quote.intent = intent;
+    /* Step 1 for quotes, and straight to the contact step for a plain save.
+       Somebody who only wants their design kept should not be asked when they
+       are hoping to start work — we would be collecting an answer we have no
+       use for, which is the whole of data minimisation in one sentence. */
+    state.quote.step = intent === 'quotes' ? 1 : 4;
+    if (intent === 'quotes') reachedStage('quote_started');
+    render();
+    /* After the render, so the section we are scrolling to is the one the new
+       state produced rather than the one it replaced. */
+    requestAnimationFrame(() => document.getElementById('save-design')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  };
+
+  return h('section', { id: 'save-moment', className: 'rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24' }, [
+    h('div', { className: 'grid md:grid-cols-[1.1fr_0.9fr] gap-6 items-center' }, [
+      h('div', {}, [
+        h('p', { className: 'text-[11px] tracking-widest uppercase text-zinc-400' }, 'Your design'),
+        h('h2', { className: 'mt-1 serif text-[26px] md:text-[32px] tracking-tight' }, 'Like your new design?'),
+        h('p', { className: 'mt-3 text-sm leading-6 text-zinc-600 max-w-[52ch]' },
+          'Save it and we’ll keep your project details — your before-and-after, everything you chose and your itemised estimate. Quotes are a separate step, and only if you want them.'),
+        h('div', { className: 'mt-6 flex flex-col sm:flex-row gap-3' }, [
+          h('button', {
+            type: 'button',
+            className: 'cta w-full sm:w-auto px-6 py-3.5 rounded-full text-[15px] font-semibold min-h-[52px]',
+            onClick: () => go('save'),
+          }, 'Save my design'),
+          h('button', {
+            type: 'button',
+            className: 'w-full sm:w-auto px-6 py-3.5 rounded-full border border-zinc-300 text-[15px] font-medium hover:border-zinc-900 transition min-h-[52px]',
+            onClick: () => go('quotes'),
+          }, 'Get local quotes'),
+        ]),
+        h('p', { className: 'mt-3 text-[12px] text-zinc-500' }, 'No account needed. Nobody calls unless you ask them to.'),
+      ]),
+      h('div', { className: 'rounded-2xl bg-[#111111] text-white p-5' }, [
+        h('p', { className: 'text-[11px] tracking-widest uppercase text-white/50' }, 'Your estimated project'),
+        h('div', { className: 'mt-3 grid gap-2' }, rows.map(([label, value]) => h('div', { className: 'flex items-baseline justify-between gap-3' }, [
+          h('span', { className: 'text-[12px] text-white/60' }, label),
+          h('span', { className: 'measured text-[17px]' }, value),
+        ]))),
+        h('p', { className: 'mt-4 pt-3 border-t border-white/10 text-[11px] leading-5 text-white/50' },
+          'Estimated project cost based on your current selections, inc VAT. An estimate for planning, not a quotation — your installer confirms it on survey.'),
+      ]),
+    ]),
+  ]);
+}
+
+/* ── SHARING A DESIGN ──
+
+   A homeowner showing a friend what their house could look like is the best
+   advertisement this product has, and the friend arriving is a visitor who
+   already believes it works.
+
+   Only offered once there is a render on the server, because that is the only
+   thing worth sharing — a swatch preview of a generic house shape is not
+   somebody's home, and a link to it would embarrass the person who sent it.
+
+   The link is the /s/:id share page rather than the raw JPEG: an image pasted
+   into WhatsApp says nothing about where it came from and gives the recipient
+   nothing to tap. Nothing personal is in that URL or on that page — no name,
+   no postcode, no price, no lead reference. See /s/:id in server.js. */
+function buildShare() {
+  if (!state.renderId || !state.renderUrl) return h('div', { id: 'share-design' });
+
+  const shareUrl = `${location.origin}/s/${encodeURIComponent(state.renderId)}`;
+  const message = 'See what my house could look like with Facet Pro.';
+
+  const btn = (label, onClick, primary) => h('button', {
+    type: 'button',
+    className: `flex-1 min-w-[140px] px-4 rounded-full text-[13px] font-medium min-h-[48px] transition ${
+      primary ? 'cta' : 'border border-zinc-300 hover:border-zinc-900 bg-white'}`,
+    onClick,
+  }, label);
+
+  const open = (url) => window.open(url, '_blank', 'noopener,noreferrer');
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      state.shareCopied = true;
+      render();
+      setTimeout(() => { state.shareCopied = false; render(); }, 2500);
+    } catch (_) {
+      /* Clipboard access is refused on plenty of ordinary configurations, and
+         a dead button with no explanation is worse than the URL on screen. */
+      U('Copy this link: ' + shareUrl);
+    }
+  };
+
+  return h('section', { id: 'share-design', className: 'rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24' }, [
+    h('p', { className: 'text-[11px] tracking-widest uppercase text-zinc-400' }, 'Show someone'),
+    h('h2', { className: 'mt-1 serif text-[26px] md:text-[32px] tracking-tight' }, 'Love your new house?'),
+    h('p', { className: 'mt-3 text-sm leading-6 text-zinc-600 max-w-[58ch]' },
+      'Share your design. Whoever you send it to sees the visualisation and can try it on their own house — nothing about you goes with it.'),
+    h('div', { className: 'mt-5 flex flex-wrap gap-2' }, [
+      btn('WhatsApp', () => open(`https://wa.me/?text=${encodeURIComponent(message + ' ' + shareUrl)}`), true),
+      btn('Facebook', () => open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`)),
+      btn(state.shareCopied ? '✓ Link copied' : 'Copy link', copy),
+      h('a', {
+        href: state.renderUrl,
+        download: 'my-facet-pro-design.jpg',
+        className: 'flex-1 min-w-[140px] px-4 rounded-full text-[13px] font-medium min-h-[48px] border border-zinc-300 hover:border-zinc-900 bg-white grid place-items-center',
+      }, 'Download image'),
+    ]),
+    h('p', { className: 'mt-3 text-[11px] leading-5 text-zinc-500 max-w-[62ch]' },
+      'The link shows your visualisation and nothing else — no name, no address, no price. It works for anyone you send it to, so only share it with people you mean to.'),
+  ]);
+}
+
 function buildSaveFraming() {
   /* A label that stays, an autocomplete the browser understands, and somewhere
      for an error to appear next to the thing that caused it.
@@ -3090,9 +3377,214 @@ function buildSaveFraming() {
     ]);
   }
 
+  /* ── ASKING IN STEPS ──
+
+     One screen asking for a name, an email, a postcode, a phone number, three
+     consents and nothing else is a wall. It is also the wrong order: it asks
+     for the contact details first and the project last, so the most personal
+     thing is demanded before the visitor has answered a single question they
+     find easy.
+
+     Four short steps instead, and only on the quotes path. Somebody who just
+     wants their design kept goes straight to the contact step — asking them
+     when they hope to start work would be collecting an answer we have no use
+     for.
+
+     Three rules this keeps.
+
+     Nothing here is required. Every step has a "skip" that carries on without
+     an answer, because a lead with no timescale is still a lead and a
+     compulsory question is just a wall in instalments. The server treats each
+     answer as optional and the score treats silence as unknown rather than as
+     a bad answer.
+
+     The answers live in `state.quote`, not in the DOM. A swatch tap or a price
+     coming back re-renders the page, and a half-finished wizard held in inputs
+     would be wiped by it.
+
+     Nothing personal is collected in steps 1 to 3. Trades, a timescale, a
+     property type and whether they own it — none of it identifies anybody, and
+     the contact details are not asked for until the last step, where the
+     consents are. So a visitor who leaves at step 2 has told us nothing about
+     themselves, and there is nothing to delete. */
+  const QUOTE_TOTAL_STEPS = 4;
+
+  const stepDots = (current) => h('div', { className: 'flex items-center gap-1.5', 'aria-hidden': 'true' },
+    Array.from({ length: QUOTE_TOTAL_STEPS }, (_, i) => h('span', {
+      className: `h-1 rounded-full transition-all ${i + 1 <= current ? 'w-7 bg-white' : 'w-4 bg-white/25'}`,
+    })));
+
+  /* A tappable card, sized for a thumb. 52px minimum, full width on a phone —
+     most of this traffic is on a phone, mid-scroll, one-handed. */
+  const choice = (label, selected, onClick, sub) => h('button', {
+    type: 'button',
+    className: `text-left px-4 py-3.5 rounded-xl border transition min-h-[52px] ${
+      selected ? 'border-white bg-white text-zinc-900' : 'border-white/20 bg-white/5 text-white hover:border-white/50'}`,
+    'aria-pressed': selected ? 'true' : 'false',
+    onClick,
+  }, [
+    h('span', { className: 'text-[14px] font-medium block' }, label),
+    sub ? h('span', { className: `text-[11px] block mt-0.5 ${selected ? 'text-zinc-500' : 'text-white/50'}` }, sub) : null,
+  ]);
+
+  const goStep = (n) => { state.quote.step = n; render(); requestAnimationFrame(() => document.getElementById('save-design')?.scrollIntoView({ behavior: 'smooth', block: 'start' })); };
+
+  function quoteStep(step) {
+    const q = state.quote;
+
+    const shell = (eyebrow, heading, body, { onNext, nextLabel, skip } = {}) =>
+      h('section', { id: 'save-design', className: 'rounded-2xl bg-[#111111] text-white p-6 md:p-8 scroll-mt-24' }, [
+        h('div', { className: 'flex items-center justify-between gap-4 flex-wrap' }, [
+          h('p', { className: 'text-[11px] tracking-widest uppercase text-white/55' }, eyebrow),
+          stepDots(step),
+        ]),
+        h('h2', { className: 'mt-2 serif text-[24px] md:text-[30px] tracking-tight' }, heading),
+        body,
+        h('div', { className: 'mt-6 flex items-center gap-3 flex-wrap' }, [
+          h('button', {
+            type: 'button',
+            className: 'cta px-6 py-3.5 rounded-full text-[15px] font-semibold min-h-[52px]',
+            onClick: onNext,
+          }, nextLabel || 'Continue →'),
+          skip ? h('button', {
+            type: 'button',
+            className: 'px-4 py-3 rounded-full text-[13px] text-white/60 hover:text-white transition min-h-[48px]',
+            onClick: skip,
+          }, 'Skip this') : null,
+          step > 1 ? h('button', {
+            type: 'button',
+            className: 'px-4 py-3 rounded-full text-[13px] text-white/50 hover:text-white transition min-h-[48px]',
+            onClick: () => goStep(step - 1),
+          }, '← Back') : null,
+        ]),
+      ]);
+
+    if (step === 1) {
+      /* Multi-select: the whole point of this product is that five trades get
+         priced together, so forcing one answer would contradict it. */
+      const items = [
+        ['windows', 'Windows'], ['doors', 'Doors'], ['roof', 'Roof'],
+        ['cladding', 'Cladding or render'], ['roofline', 'Fascias, soffits, guttering'],
+        ['multiple', 'Several of these'], ['whole-exterior', 'The whole exterior'],
+      ];
+      const toggle = (id) => {
+        const at = q.project.indexOf(id);
+        if (at >= 0) q.project.splice(at, 1); else q.project.push(id);
+        render();
+      };
+      return shell('Step 1 of 4 · Project', 'What are you interested in?', h('div', {}, [
+        h('p', { className: 'mt-3 text-[13px] leading-6 text-white/60 max-w-[54ch]' },
+          'Pick as many as you like. This is what we tell the installer you are shopping for, alongside the design you have made.'),
+        h('div', { className: 'mt-5 grid sm:grid-cols-2 gap-2' }, items.map(([id, label]) =>
+          choice(label, q.project.includes(id), () => toggle(id)))),
+      ]), { onNext: () => goStep(2), skip: () => { q.project = []; goStep(2); } });
+    }
+
+    if (step === 2) {
+      const items = [
+        ['asap', 'As soon as possible', 'Ready to book work in'],
+        ['1-3-months', 'Within 1–3 months', 'Getting quotes now'],
+        ['3-6-months', 'Within 3–6 months', 'Planning ahead'],
+        ['researching', 'Just researching', 'No date in mind yet'],
+      ];
+      return shell('Step 2 of 4 · Timing', 'When are you looking to do the work?', h('div', {}, [
+        h('p', { className: 'mt-3 text-[13px] leading-6 text-white/60 max-w-[54ch]' },
+          'Honest answers help here. An installer who knows you are researching will send you a price rather than chase you for an appointment.'),
+        h('div', { className: 'mt-5 grid sm:grid-cols-2 gap-2' }, items.map(([id, label, sub]) =>
+          choice(label, q.timing === id, () => { q.timing = id; goStep(3); }, sub))),
+      ]), { onNext: () => goStep(3), skip: () => { q.timing = null; goStep(3); } });
+    }
+
+    /* Step 3. The postcode is here rather than with the contact details,
+       because it is about the property and because the coverage check needs it
+       before anybody is asked to hand over a phone number — somebody in an
+       area we cannot serve should find that out now, not afterwards. */
+    const types = [
+      ['terraced', 'Terraced'], ['semi', 'Semi-detached'], ['detached', 'Detached'],
+      ['bungalow', 'Bungalow'], ['flat', 'Flat or maisonette'], ['other', 'Something else'],
+    ];
+    return shell('Step 3 of 4 · Property', 'A little about the property', h('div', {}, [
+      h('div', { className: 'mt-5 rounded-2xl bg-white text-zinc-900 p-5' }, [
+        h('label', { for: 'quote-postcode', className: 'block text-[12px] font-medium text-zinc-700 mb-1' }, 'Postcode'),
+        h('input', {
+          type: 'text', id: 'quote-postcode', name: 'postcode', value: state.contact.postcode,
+          autocomplete: 'postal-code', autocapitalize: 'characters',
+          placeholder: 'e.g. RM17 6SL',
+          className: 'w-full px-3 py-3 rounded-xl border border-zinc-200 text-sm outline-none focus:border-zinc-900 min-h-[48px]',
+          onInput: (e) => { state.contact.postcode = e.target.value; },
+        }),
+        h('p', { className: 'mt-1.5 text-[11px] leading-5 text-zinc-500' },
+          'Used to find installers who cover your area. Nothing is sent to anybody until the last step.'),
+      ]),
+      h('p', { className: 'mt-5 text-[12px] tracking-widest uppercase text-white/45' }, 'Property type'),
+      h('div', { className: 'mt-2 grid sm:grid-cols-3 gap-2' }, types.map(([id, label]) =>
+        choice(label, q.propertyType === id, () => { q.propertyType = id; render(); }))),
+      /* Not a tick-to-continue. An installer needs to know they are quoting
+         somebody who can say yes, and a homeowner who is not the owner is
+         still welcome — they simply score differently, and the honest answer
+         costs them nothing here. */
+      h('label', {
+        className: `mt-4 flex items-start gap-3 px-4 py-3.5 rounded-xl border cursor-pointer transition ${
+          q.homeowner ? 'border-white bg-white/10' : 'border-white/20 bg-white/5 hover:border-white/40'}`,
+      }, [
+        h('input', {
+          type: 'checkbox', checked: q.homeowner, className: 'mt-0.5 w-4 h-4 accent-white',
+          onChange: (e) => { q.homeowner = e.target.checked; render(); },
+        }),
+        h('span', { className: 'text-[13px] leading-6 text-white/85' },
+          'I own this property, or I’m responsible for deciding on work to it.'),
+      ]),
+    ]), { onNext: () => goStep(4), nextLabel: 'Continue → last step', skip: () => goStep(4) });
+  }
+
+  if (state.quote.step >= 1 && state.quote.step <= 3) return quoteStep(state.quote.step);
+
+  /* ── SAVED ──
+     Confirmation, and the last honest thing to say. What it does NOT do is
+     invent a promise about response times: we have two contracted buyers and no
+     data on how quickly either rings anybody, so "usually within 24 hours" would
+     be a number somebody made up in a design review. */
+  if (state.savedLead) {
+    const lead = state.savedLead;
+    const asked = lead.consent?.installerQuotes === true;
+    return h('section', { id: 'save-design', className: 'rounded-2xl bg-[#111111] text-white p-6 md:p-8 scroll-mt-24' }, [
+      h('div', { className: 'flex items-center gap-3' }, [
+        h('span', { className: 'w-8 h-8 rounded-full bg-emerald-500 text-black grid place-items-center text-sm font-bold', 'aria-hidden': 'true' }, '✓'),
+        h('p', { className: 'text-[11px] tracking-widest uppercase text-white/55' }, asked ? 'Quotes requested' : 'Design saved'),
+      ]),
+      h('h2', { className: 'mt-3 serif text-[26px] md:text-[32px] tracking-tight' },
+        asked ? 'Your design is on its way to installers' : 'Your design is saved'),
+      h('p', { className: 'mt-3 text-sm leading-6 text-white/70 max-w-[58ch]' },
+        asked
+          ? 'They get your design, your measurements and everything you chose — so the first conversation is about your project rather than about what you might want.'
+          : 'Everything you chose is kept with your estimate. If you decide you would like quotes later, you can ask us then.'),
+      h('div', { className: 'mt-5 rounded-2xl bg-white/5 border border-white/10 p-4' }, [
+        h('p', { className: 'text-[11px] tracking-widest uppercase text-white/45' }, 'Your reference'),
+        h('p', { className: 'mt-1 measured text-[20px]' }, lead.id),
+        h('p', { className: 'mt-2 text-[11px] leading-5 text-white/55' }, [
+          'Keep this. You can change your mind about any of it at any time — see the ',
+          h('a', { href: '/privacy', target: '_blank', rel: 'noopener', className: 'underline' }, 'Privacy Notice'),
+          ' for how.',
+        ]),
+      ]),
+      h('button', {
+        type: 'button',
+        className: 'mt-5 px-5 py-3 rounded-full border border-white/25 text-[13px] hover:bg-white/10 transition min-h-[48px]',
+        onClick: () => { state.savedLead = null; state.quote.step = 0; render(); },
+      }, 'Save another design'),
+    ]);
+  }
+
+  const askingForQuotes = state.quote.intent === 'quotes';
+
   return h('section', { id: 'save-design', className: 'rounded-2xl bg-[#111111] text-white p-6 md:p-8 scroll-mt-24' }, [
-    h('p', { className: 'text-[11px] tracking-widest uppercase text-white/55' }, 'Step 4'),
-    h('h2', { className: 'mt-1 serif text-[26px] md:text-[32px] tracking-tight' }, 'Ready for real numbers?'),
+    h('div', { className: 'flex items-center justify-between gap-4 flex-wrap' }, [
+      h('p', { className: 'text-[11px] tracking-widest uppercase text-white/55' },
+        askingForQuotes ? 'Step 4 of 4 · Contact' : 'Save your design'),
+      askingForQuotes ? stepDots(4) : null,
+    ]),
+    h('h2', { className: 'mt-2 serif text-[26px] md:text-[32px] tracking-tight' },
+      askingForQuotes ? 'Where should we send your quotes?' : 'Ready for real numbers?'),
     h('p', { className: 'mt-3 text-sm leading-6 text-white/60 max-w-[60ch]' }, state.designPackEmail
       ? 'We’ll email you your before-and-after and your itemised estimate to keep. If you’d like quotes, installers work from the design you’ve already made — so nobody arrives with a folder, nobody prices something you didn’t ask for, and nobody needs your evening. No obligation, and you can walk away at any point.'
       : 'We’ll keep your before-and-after and your itemised estimate together. If you’d like quotes, installers work from the design you’ve already made — so nobody arrives with a folder, and nobody needs your evening. No obligation, and you can walk away at any point.'),
@@ -3215,6 +3707,199 @@ function buildInstaller() {
     ]);
   }
 
+    /* ── A PROJECT, NOT A LEAD ──
+
+       This was one line of grey text: a name, a postcode, two swatch names, a
+       price and a status. An installer reading it learned almost nothing about
+       what they were being sold, and could not act on it at all.
+
+       What a buyer needs to decide in five seconds is what work it is, how big,
+       where, when, and whether the homeowner is serious — and then to say yes or
+       no. That is what this shows, in that order, with the homeowner's own
+       design next to it. Nobody else in this market can put the second thing on
+       the screen, which is the whole competitive argument.
+
+       Two things it deliberately does not do. It does not restate the score's
+       arithmetic — the reasons are on the record and belong in a detail view,
+       not in a list of twenty. And it does not show a response-time promise or a
+       conversion likelihood, because we have neither. */
+    const propertyLabel = (lead) => {
+      const t = lead.property?.type;
+      const names = { terraced: 'Terraced', semi: 'Semi-detached', detached: 'Detached', bungalow: 'Bungalow', flat: 'Flat or maisonette', other: 'Property' };
+      return names[t] || 'Property type not given';
+    };
+
+    const timingLabel = (lead) => {
+      const names = { asap: 'As soon as possible', '1-3-months': '1–3 months', '3-6-months': '3–6 months', researching: 'Researching' };
+      return names[lead.project?.timing] || 'Timescale not given';
+    };
+
+    /* What the homeowner is asking for, said in the trade's own terms.
+
+       Read from what they configured, and from the counted or measured
+       quantities behind the estimate — so "11 windows, front door, fascias"
+       rather than "windows, doors, roofline". A quantity is only stated when we
+       actually have one. */
+    const requirementsOf = (lead) => {
+      const out = [];
+      const n = lead.glazing?.windowCount;
+      if (Number.isFinite(n) && n > 0) out.push(`${n} window${n === 1 ? '' : 's'}`);
+      else if (lead.preferences?.windows?.style) out.push('Windows');
+      if (lead.preferences?.windows?.door) out.push(`${lead.preferences.windows.door.name || 'Front door'}`);
+      if (lead.selections?.cladding) out.push(`Walls: ${lead.selections.cladding}`);
+      if (lead.selections?.roof) out.push(`Roof: ${lead.selections.roof}`);
+      const roofline = lead.preferences?.roofline;
+      if (roofline && Object.values(roofline).some(Boolean)) out.push('Fascias, soffits, guttering');
+      if (lead.conservatory?.style?.name) out.push(`Conservatory: ${lead.conservatory.style.name}`);
+      return out;
+    };
+
+    /* The estimate as a range, which is what it is. The cladding total and the
+       glazing range are not addable at their extremes, so the low end sums the
+       lows and the high end sums the highs rather than presenting a single
+       figure with a precision neither has. */
+    const estimateOf = (lead) => {
+      const walls = Number(lead.price) || 0;
+      const low = Number(lead.glazing?.range?.low) || 0;
+      const high = Number(lead.glazing?.range?.high) || 0;
+      if (!walls && !low) return null;
+      return { low: walls + low, high: walls + (high || low) };
+    };
+
+    const bandStyle = {
+      hot:  'bg-emerald-500 text-black',
+      warm: 'bg-amber-400 text-black',
+      cool: 'bg-white/15 text-white',
+      cold: 'bg-white/10 text-white/70',
+    };
+
+    const respond = async (leadId, action) => {
+      try {
+        const res = await fetch('/api/installer/lead-response', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.installerToken}` },
+          body: JSON.stringify({ leadId, action }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { U(data.error || 'Could not record that.'); return; }
+        /* Recorded locally so the card updates immediately, and the server is
+           the source of truth on the next load. */
+        state.decisions = { ...(state.decisions || {}), [leadId]: { action, at: data.at } };
+        renderInstallerOnly();
+        U(action === 'accept' ? `Accepted ${leadId} — the homeowner's details are yours to work` : `Passed on ${leadId}`);
+      } catch (_) {
+        U('Could not reach the server.');
+      }
+    };
+
+    const projectCard = (lead) => {
+      const est = estimateOf(lead);
+      const reqs = requirementsOf(lead);
+      const score = lead.leadScore;
+      const decision = (state.decisions || {})[lead.id];
+
+      return h('div', { className: 'rounded-xl bg-white/5 border border-white/10 p-4' }, [
+        h('div', { className: 'flex items-start justify-between gap-3 flex-wrap' }, [
+          h('div', {}, [
+            h('p', { className: 'text-[10px] tracking-widest uppercase text-white/45' }, 'New Facet Pro project'),
+            h('p', { className: 'mt-1 text-[15px] font-medium' }, propertyLabel(lead)),
+            h('p', { className: 'mt-0.5 text-[12px] text-white/60' }, [
+              /* The outward code only. A full postcode plus a photograph of the
+                 house identifies the address precisely, and an installer
+                 deciding whether to accept does not need it — they get the rest
+                 with the lead they accepted. */
+              `Postcode: ${(lead.postcode || '').split(' ')[0] || '—'}`,
+              lead.property?.homeowner === true ? ' · homeowner confirmed' : '',
+            ].join('')),
+          ]),
+          score ? h('div', { className: 'text-right' }, [
+            h('span', { className: `inline-block text-[11px] px-2.5 py-1 rounded-full font-semibold ${bandStyle[score.band] || bandStyle.cool}` },
+              `${score.score} / 100`),
+            h('p', { className: 'mt-1 text-[9px] tracking-widest uppercase text-white/40' }, `${score.band} lead`),
+          ]) : null,
+        ]),
+
+        h('div', { className: 'mt-3 grid sm:grid-cols-[1fr_auto] gap-3 items-start' }, [
+          h('div', {}, [
+            reqs.length ? h('div', {}, [
+              h('p', { className: 'text-[10px] tracking-widest uppercase text-white/45' }, 'Customer requirements'),
+              h('ul', { className: 'mt-1.5 grid gap-1' }, reqs.map(r =>
+                h('li', { className: 'text-[12px] text-white/80 flex items-start gap-2' }, [
+                  h('span', { className: 'text-white/35', 'aria-hidden': 'true' }, '·'),
+                  r,
+                ]))),
+            ]) : null,
+            h('div', { className: 'mt-3 flex flex-wrap gap-x-6 gap-y-2' }, [
+              est ? h('div', {}, [
+                h('p', { className: 'text-[10px] tracking-widest uppercase text-white/45' }, 'Estimated project'),
+                h('p', { className: 'mt-0.5 measured text-[16px]' }, `${fmtMoney(est.low)}–${fmtMoney(est.high)}`),
+              ]) : null,
+              h('div', {}, [
+                h('p', { className: 'text-[10px] tracking-widest uppercase text-white/45' }, 'Timescale'),
+                h('p', { className: 'mt-0.5 text-[13px]' }, timingLabel(lead)),
+              ]),
+            ]),
+            /* Which method produced the area, because it changes how much
+               weight an installer should put on the figure — and the page says
+               so to the homeowner too. */
+            h('p', { className: 'mt-3 text-[10px] leading-4 text-white/40 max-w-[52ch]' },
+              `Estimate from ${lead.measurementSource === 'measured' ? 'the measured elevation' : 'a typical home of this type'} — an estimate for planning, not a quotation. Reference ${lead.id}.`),
+          ]),
+          /* The homeowner's own design. This is the thing a generic lead cannot
+             carry, and it is why the first phone call is different. */
+          lead.renderUrl
+            ? h('a', { href: safeRenderUrl(lead.renderUrl), target: '_blank', rel: 'noopener noreferrer', className: 'block w-full sm:w-40 shrink-0' }, [
+                h('img', {
+                  src: safeRenderUrl(lead.renderUrl),
+                  alt: `The design ${lead.name} created for their home`,
+                  className: 'w-full rounded-lg border border-white/15 object-cover aspect-[4/3]',
+                }),
+                h('span', { className: 'mt-1 block text-[10px] text-white/45 text-center' }, 'Their design — tap to open'),
+              ])
+            : null,
+        ]),
+
+        /* Contact details last, and only on a project already accepted or
+           already delivered. They are the reason this area is behind a
+           password; putting them above the decision buttons invites somebody to
+           ring first and decide afterwards. */
+        h('div', { className: 'mt-3 pt-3 border-t border-white/10' },
+          decision?.action === 'accept'
+            ? [
+                h('p', { className: 'text-[10px] tracking-widest uppercase text-emerald-400' }, '✓ Accepted'),
+                h('p', { className: 'mt-1 text-[13px]' }, `${lead.name} · ${lead.postcode || '—'}`),
+                h('p', { className: 'text-[12px] text-white/70' }, [
+                  h('a', { href: `mailto:${lead.email}`, className: 'underline' }, lead.email),
+                  lead.phone ? ' · ' : '',
+                  lead.phone ? h('a', { href: `tel:${lead.phone}`, className: 'underline' }, lead.phone) : null,
+                ]),
+              ]
+            : decision?.action === 'pass'
+              ? [h('p', { className: 'text-[11px] text-white/45' }, 'You passed on this project. It stays here for your records.')]
+              : [
+                  h('div', { className: 'flex flex-wrap gap-2' }, [
+                    h('button', {
+                      type: 'button',
+                      className: 'flex-1 min-w-[130px] px-4 rounded-full bg-white text-zinc-900 text-[13px] font-semibold min-h-[46px]',
+                      onClick: () => respond(lead.id, 'accept'),
+                    }, 'Accept lead'),
+                    h('button', {
+                      type: 'button',
+                      className: 'flex-1 min-w-[130px] px-4 rounded-full border border-white/25 text-[13px] hover:bg-white/10 transition min-h-[46px]',
+                      onClick: () => respond(lead.id, 'pass'),
+                    }, 'Pass'),
+                  ]),
+                  /* Said plainly, because the shared password cannot record a
+                     decision and a button that silently does nothing is worse
+                     than no button. */
+                  state.installerScope !== 'installer'
+                    ? h('p', { className: 'mt-2 text-[10px] leading-4 text-white/40' },
+                        'Accepting needs your own installer sign-in rather than the shared password, so the decision is recorded against a company.')
+                    : null,
+                ]),
+      ]);
+    };
+
   return h('div', { id: 'installer', className: 'rounded-2xl bg-zinc-900 text-white p-4' }, [
     h('div', { className: 'flex items-center justify-between gap-3 flex-wrap' }, [
       h('h3', { className: 'text-[11px] tracking-widest uppercase text-white/50' }, 'Homeowner designs'),
@@ -3232,20 +3917,10 @@ function buildInstaller() {
         }, 'Sign out'),
       ]),
     ]),
-    h('div', { className: 'mt-4 grid gap-2 max-h-[420px] overflow-auto pr-1' },
+    h('div', { className: 'mt-4 grid gap-3 max-h-[70vh] overflow-auto pr-1' },
       state.leads.length === 0
         ? [h('div', { className: 'text-xs text-white/50 p-3' }, state.leadsLoaded ? 'No designs saved yet.' : 'Loading…')]
-        : state.leads.map(lead =>
-          h('div', { className: 'rounded-xl bg-white/5 border border-white/10 p-3 flex items-center justify-between gap-3' }, [
-            h('div', {}, [
-              h('div', { className: 'flex items-center gap-2' }, [
-                h('span', { className: 'text-xs font-medium' }, lead.name),
-                h('span', { className: 'text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 border border-white/10' }, lead.id),
-              ]),
-              h('div', { className: 'mt-1 text-[11px] text-white/60' }, `${lead.postcode || '—'} • ${lead.selections?.cladding || ''} + ${lead.selections?.roof || ''} • ${fmtMoney(lead.price)} • ${lead.status}`),
-            ]),
-          ])
-        )
+        : state.leads.map(projectCard)
     ),
   ]);
 }
@@ -3352,8 +4027,31 @@ function reachedStage(stage) {
   } catch (_) { /* never in the way */ }
 }
 
+/* Advances the narration in analysisPanel() while the detection call is out.
+
+   Cleared in every exit path from handleUpload, including the failures — a
+   timer still ticking against a finished request would keep re-rendering the
+   page for as long as the tab stays open. */
+let analysisTimer = null;
+function startAnalysisNarration() {
+  stopAnalysisNarration();
+  state.analysisTick = 0;
+  analysisTimer = setInterval(() => {
+    /* Stops at the last row rather than wrapping. If detection is slower than
+       the narration, the honest thing on screen is the last category still
+       reading "looking…", not a loop implying more work than is happening. */
+    if (state.analysisTick >= 5 || state.detectionStatus !== 'detecting') return stopAnalysisNarration();
+    state.analysisTick += 1;
+    render();
+  }, 850);
+}
+function stopAnalysisNarration() {
+  if (analysisTimer) { clearInterval(analysisTimer); analysisTimer = null; }
+}
+
 async function handleUpload(file) {
   reachedStage('upload_started');
+  startAnalysisNarration();
   const url = URL.createObjectURL(file);
   state.uploadedImg = url;
   state.stage = 'detecting';
@@ -3389,8 +4087,17 @@ async function handleUpload(file) {
     state.detectUnavailable = false;
 
     state.detections = data.detections || [];
+    stopAnalysisNarration();
     reachedStage('upload_completed');
-    if (state.detections.length) reachedStage('design_created');
+    /* Three separate facts, and they used to be two. "The photo arrived",
+       "the house was read" and "they are now looking at the visualiser" fail
+       for different reasons — a 502 from the model, a photograph with nothing
+       in it, a tab closed on the way — and a funnel that cannot tell them
+       apart cannot tell you which one to fix. */
+    if (state.detections.length) {
+      reachedStage('analysis_completed');
+      reachedStage('design_created');
+    }
     state.detectionId = data.detectionId || null;
     state.canMeasure = !!data.canMeasure;
     state.scaleReference = !!data.scaleReference;
@@ -3398,9 +4105,11 @@ async function handleUpload(file) {
     state.useMeasurement = false;
     state.stage = 'visualizer';
     state.detectionStatus = 'success';
+    reachedStage('visualisation_started');
     const found = state.detections.filter(d => d.type !== 'analysis').length;
-    U(`Found ${found} ${found === 1 ? 'part' : 'parts'} of your home — now pick your colours`);
+    U(`Found ${found} ${found === 1 ? 'part' : 'parts'} of your home — now let\u2019s redesign it`);
   } catch (err) {
+    stopAnalysisNarration();
     state.stage = 'visualizer';
     state.detectionStatus = 'error';
     U(err.plain ? err.message : `We couldn’t read that photo: ${err.message}`);
@@ -3486,6 +4195,15 @@ async function sendDesignPack() {
         // Just the ids — the server looks up every product from its own
         // catalogue, so nothing here can carry an invented price.
         conservatoryStyleId: state.conservatoryId,
+        /* What the quote steps asked. Sent as answers, not as a score — the
+           server validates each against a fixed list and scores the lead
+           itself, so nothing here can inflate what an installer is charged
+           for. Undefined when they skipped a step, which the server reads as
+           "not answered" rather than as an answer. */
+        projectInterests: state.quote.project.length ? state.quote.project : undefined,
+        projectTiming: state.quote.timing || undefined,
+        propertyType: state.quote.propertyType || undefined,
+        homeowner: state.quote.homeowner === true ? true : undefined,
         ...state.prefs,
         detections: state.detections,
         // The id we were issued, not a URL — the server looks it up itself.
@@ -3503,8 +4221,18 @@ async function sendDesignPack() {
     if (!res.ok) throw new Error(data.error || 'Lead submission failed');
     // Only surface it in the installer list if this tab is actually signed in.
     if (state.installerAuthed) state.leads = [data.lead, ...state.leads];
+    /* The design they saved, so the page can confirm it and offer sharing
+       rather than leaving them looking at the form they just submitted. */
+    state.savedLead = data.lead;
+    state.quote.step = 0;
     reachedStage('design_saved');
-    if (state.consent.installerQuotes) reachedStage('quote_requested');
+    if (state.consent.installerQuotes) {
+      reachedStage('quote_requested');
+      /* Distinct from quote_requested on purpose. "Started the steps" and
+         "finished them and asked" are the two ends of the drop-off this whole
+         flow exists to reduce, and one counter cannot measure both. */
+      reachedStage('quote_completed');
+    }
     /* Report what actually happened, not what we hoped would happen.
 
        This read `designPack?.sent` for as long as it has existed, and no lead
