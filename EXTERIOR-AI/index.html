@@ -1052,6 +1052,7 @@ async function loadCatalogue() {
     state.trim = findSwatch(state.trim.id);
     state.roof = findSwatch(state.roof.id);
     U('Colours and prices loaded');
+    reachedStage('landing');
   } catch (err) {
     U("We couldn't load the colour range just now — please refresh the page.");
   }
@@ -2068,6 +2069,7 @@ async function refreshGlazing() {
     const data = await res.json();
     if (ticket !== glazingRequest) return;        // a later choice already won
     state.glazing = res.ok ? data : null;
+    if (state.glazing?.price) reachedStage('estimate_viewed');
   } catch (_) {
     if (ticket === glazingRequest) state.glazing = null;
   } finally {
@@ -3244,7 +3246,32 @@ function ensureStatusPill() {
 
 // ---------- actions ----------
 
+/* Which step of the journey somebody reached.
+
+   Fire-and-forget, once per stage per page load, and never in the way of
+   anything. It sends a stage name and nothing else — no id, no path, no
+   referrer — because the question is "what share of visitors upload", not
+   "did this person upload". See /api/funnel in server.js.
+
+   keepalive, so the last event of a visit still arrives when the tab is
+   closing. A failure is swallowed: a counter is never worth an error in front
+   of somebody trying to price their windows. */
+const stagesSeen = new Set();
+function reachedStage(stage) {
+  if (stagesSeen.has(stage)) return;
+  stagesSeen.add(stage);
+  try {
+    fetch('/api/funnel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stage }),
+      keepalive: true,
+    }).catch(() => {});
+  } catch (_) { /* never in the way */ }
+}
+
 async function handleUpload(file) {
+  reachedStage('upload_started');
   const url = URL.createObjectURL(file);
   state.uploadedImg = url;
   state.stage = 'detecting';
@@ -3280,6 +3307,8 @@ async function handleUpload(file) {
     state.detectUnavailable = false;
 
     state.detections = data.detections || [];
+    reachedStage('upload_completed');
+    if (state.detections.length) reachedStage('design_created');
     state.detectionId = data.detectionId || null;
     state.canMeasure = !!data.canMeasure;
     state.scaleReference = !!data.scaleReference;
@@ -3392,6 +3421,8 @@ async function sendDesignPack() {
     if (!res.ok) throw new Error(data.error || 'Lead submission failed');
     // Only surface it in the installer list if this tab is actually signed in.
     if (state.installerAuthed) state.leads = [data.lead, ...state.leads];
+    reachedStage('design_saved');
+    if (state.consent.installerQuotes) reachedStage('quote_requested');
     /* Report what actually happened, not what we hoped would happen.
 
        This read `designPack?.sent` for as long as it has existed, and no lead

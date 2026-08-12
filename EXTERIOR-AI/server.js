@@ -2535,6 +2535,10 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
   lead.notification = notification;
   lead.homeownerEmail = homeownerEmail;
 
+  /* Recorded here rather than in the page, because whether a lead actually
+     reached an installer is something only the server knows. */
+  store.countStage('lead_sent').catch(() => { /* a counter never fails a lead */ });
+
   if (notification.attempted && !notification.sent) recordNotificationFailure(lead, notification, 'lead-notification');
   if (homeownerEmail.attempted && !homeownerEmail.sent) recordNotificationFailure(lead, homeownerEmail, homeownerEmail.kind || 'homeowner-email');
 
@@ -3016,6 +3020,60 @@ const purgeLeadPii = (leadId) => purgeLeadPiiFor(new Set([leadId]));
    same password opens every consenting homeowner's name, email, phone number
    and postcode, so an unthrottled guess-as-fast-as-you-like endpoint against it
    is the whole login throttle undone by the door nobody looked at. */
+/* ── THE FUNNEL ──
+
+   "We should know where every visitor stops." The plan puts conversion first,
+   and conversion cannot be improved without knowing which step loses people.
+
+   What this is NOT: analytics in the ordinary sense. There is no cookie, no
+   visitor id, no IP, no user agent, no referrer and no path — a request says
+   only which stage was reached, and the server adds one to a counter for that
+   stage today. Two people who upload look exactly like one person uploading
+   twice, and nothing here can tell them apart. That is deliberate: it makes
+   the thing answer "what share of visitors upload" while being unable to
+   answer "did THIS person upload", which is the only question that would need
+   consent, a processor agreement and a transfer mechanism.
+
+   The stages are an allowlist, so a client cannot invent labels and turn the
+   table into free-text storage. */
+const FUNNEL_STAGES = [
+  'landing', 'upload_started', 'upload_completed', 'design_created',
+  'estimate_viewed', 'design_saved', 'quote_requested', 'lead_sent',
+];
+
+app.post('/api/funnel', perMinute(120, 'Too many requests — please wait a moment.'), async (req, res) => {
+  const stage = String(req.body?.stage || '');
+  if (!FUNNEL_STAGES.includes(stage)) return res.status(400).json({ error: 'Unknown stage.' });
+  /* Answered before the write. A counter that fails must never cost a visitor
+     their journey, and the browser is not waiting for anything useful. */
+  res.status(204).end();
+  try { await store.countStage(stage); }
+  catch (err) { obs.record('funnel', 'could not record a stage', { stage, reason: err.message }); }
+});
+
+/* The table from the plan: each stage, and what share of the previous one it
+   kept. Behind the installer password, like everything else that describes the
+   business rather than the product. */
+app.get('/api/funnel', installerLimiter, requireInstallerPassword, async (req, res) => {
+  const days = Math.min(365, Math.max(1, Number(req.query.days) || 30));
+  let counts = {};
+  try { counts = await store.readFunnel(days); }
+  catch (err) { return res.status(500).json({ error: 'Could not read the funnel.' }); }
+
+  let previous = null;
+  const funnel = FUNNEL_STAGES.map(stage => {
+    const n = counts[stage] || 0;
+    /* Conversion is against the step before, not against the top, because the
+       question is always "where do we lose them". */
+    const ofPrevious = previous === null ? null : (previous > 0 ? Math.round((n / previous) * 1000) / 10 : 0);
+    previous = n;
+    return { stage, count: n, ofPreviousPct: ofPrevious };
+  });
+
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ days, funnel, note: 'Counts are per stage, not per person — see the funnel table in store.js.' });
+});
+
 app.get('/api/ops', installerLimiter, requireInstallerPassword, (req, res) => {
   const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 50));
   res.json({

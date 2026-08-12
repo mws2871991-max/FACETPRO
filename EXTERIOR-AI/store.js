@@ -187,6 +187,28 @@ const SCHEMA = [
      Rows expire (see DETECTION_CACHE_DAYS in server.js) and the sweep runs on
      write, so the table cannot quietly become a permanent record of every
      house ever photographed. */
+  /* How many people reached each step, and nothing else.
+
+     The conversion plan asks to know where every visitor stops — landing,
+     upload, design, estimate, quote — because Priority 1 is conversion and
+     conversion cannot be improved blind. It does not require knowing WHO
+     stopped, and this deliberately cannot answer that.
+
+     A row is a day, a stage, and a number. No session id, no visitor id, no
+     IP, no user agent, no path, no referrer. Two people who both upload are
+     indistinguishable from one person who uploaded twice, which is the cost of
+     building it this way and is worth paying: there is no personal data here,
+     so no consent to obtain, no third-party processor, no international
+     transfer, and nothing that can leak.
+
+     It answers the questions the plan actually asks — what share of visitors
+     upload, what share of uploads reach an estimate — and refuses the ones it
+     should not be able to. */
+  `CREATE TABLE IF NOT EXISTS funnel (
+    day DATE NOT NULL, stage TEXT NOT NULL, hits INT NOT NULL DEFAULT 0,
+    PRIMARY KEY (day, stage)
+  )`,
+
   `CREATE TABLE IF NOT EXISTS detection_cache (
     image_hash TEXT PRIMARY KEY, ts TIMESTAMPTZ NOT NULL, aspect_ratio DOUBLE PRECISION, detections JSONB NOT NULL
   )`,
@@ -517,6 +539,49 @@ async function writeAll(table, rows) {
    URLs are public and expire within the hour. */
 const RENDER_DIR = path.join(DATA_DIR, 'renders');
 
+/* ── THE FUNNEL ──
+   Counters only. See the funnel table above for why it cannot identify anyone. */
+
+const FUNNEL_FILE = 'funnel.json';
+const funnelDay = () => new Date().toISOString().slice(0, 10);
+
+async function countStage(stage) {
+  const day = funnelDay();
+  if (pool) {
+    await pool.query(
+      `INSERT INTO ${SCHEMA_NAME}.funnel (day, stage, hits) VALUES ($1,$2,1)
+       ON CONFLICT (day, stage) DO UPDATE SET hits = ${SCHEMA_NAME}.funnel.hits + 1`,
+      [day, stage]);
+    return;
+  }
+  let all = {};
+  try { all = JSON.parse(fs.readFileSync(path.join(DATA_DIR, FUNNEL_FILE), 'utf8')); } catch (_) { /* first write */ }
+  all[day] = all[day] || {};
+  all[day][stage] = (all[day][stage] || 0) + 1;
+  const tmp = path.join(DATA_DIR, FUNNEL_FILE + '.tmp');
+  fs.writeFileSync(tmp, JSON.stringify(all));
+  fs.renameSync(tmp, path.join(DATA_DIR, FUNNEL_FILE));
+}
+
+/* Totals per stage over a window of days. */
+async function readFunnel(days = 30) {
+  const since = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+  if (pool) {
+    const { rows } = await pool.query(
+      `SELECT stage, SUM(hits)::int AS hits FROM ${SCHEMA_NAME}.funnel WHERE day >= $1 GROUP BY stage`, [since]);
+    return Object.fromEntries(rows.map(r => [r.stage, r.hits]));
+  }
+  try {
+    const all = JSON.parse(fs.readFileSync(path.join(DATA_DIR, FUNNEL_FILE), 'utf8'));
+    const out = {};
+    for (const [day, stages] of Object.entries(all)) {
+      if (day < since) continue;
+      for (const [stage, n] of Object.entries(stages)) out[stage] = (out[stage] || 0) + n;
+    }
+    return out;
+  } catch (_) { return {}; }
+}
+
 /* ── DETECTIONS, KEYED BY THE PHOTOGRAPH ──
    See the detection_cache table for why this exists and what it deliberately
    does not hold. The JSONL path keeps one file, which is all a development
@@ -655,6 +720,7 @@ async function end() {
 module.exports = {
   ensureSchema, append, readAll, replaceAll, mutate, end, getResume, DATA_DIR, putRender, getRender, deleteRenders, hasDb: !!pool,
   getDetectionCache, putDetectionCache,
+  countStage, readFunnel,
   // Exported for tests: scraping these out of the source with a regex broke
   // the moment another table was added after leads.
   _internals: { INSERT_PARAMS, INSERT_SQL, SELECT_SQL, FILE_NAMES, checkServerIdentity },

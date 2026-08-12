@@ -99,6 +99,20 @@ way to get this deployment wrong.
 | `DETECT_RATE_LIMIT` | no | Detection requests per minute per IP. Default 10, which is right for a homeowner. Exists so the test suite can send one photograph fifteen times on purpose; leave it unset in production. |
 | `INSTALLER_RATE_LIMIT` | no | Installer sign-in attempts per 15 minutes per IP. Default 20. Exists for the test suite; leave it unset in production. |
 
+### The funnel
+
+`GET /api/funnel` (installer password, `?days=30`) returns each stage of the
+journey and what share of the previous step it kept — the table the conversion
+plan asks for. `POST /api/funnel` records a stage and is what the page calls.
+
+It counts stages, not people. A row is a day, a stage and a number: no session,
+no visitor id, no IP, no user agent, no referrer. Two visitors who upload look
+identical to one visitor uploading twice. That is deliberate — it answers "what
+share of visitors upload" without being able to answer "did this person upload",
+which is the question that would need consent, a processor agreement and a
+transfer mechanism. Do not add a column that would change that.
+
+
 > **Do not edit an image or a font in place.** Everything matching
 > `.woff2 .jpg .jpeg .png .gif .webp .avif .svg .ico` is served
 > `Cache-Control: public, max-age=31536000, immutable`, so a returning visitor

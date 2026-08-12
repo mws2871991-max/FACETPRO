@@ -1,0 +1,133 @@
+/* Where visitors stop, without knowing who they are.
+
+   The conversion plan asks to know where every visitor drops out, because it
+   puts conversion first and conversion cannot be improved blind. It does not
+   ask to know WHO dropped out, and this is built so it cannot answer that
+   even if somebody later wants it to.
+
+   A row is a day, a stage and a number. No session, no visitor id, no IP, no
+   user agent, no referrer, no path. Two people who upload are indistinguishable
+   from one person uploading twice. That is the cost, and it buys: no personal
+   data, so no consent to obtain, no processor agreement, no international
+   transfer, and nothing that can leak.
+
+   The tests below are mostly about keeping it that way. The counting itself is
+   simple; the discipline is the point. */
+
+'use strict';
+
+require('./helpers/data-dir');   // never write to the real data/ — see the file
+
+const { test, before } = require('node:test');
+const assert = require('node:assert');
+const fs = require('fs');
+const path = require('path');
+
+const PORT = 3128;
+const BASE = `http://127.0.0.1:${PORT}`;
+const PASSWORD = 'funnel-test-password';
+
+process.env.PORT = String(PORT);
+process.env.INSTALLER_PASSWORD = PASSWORD;
+process.env.INSTALLER_RATE_LIMIT = '500';
+
+const store = require('../store');
+require('../server');
+before(async () => { await require('./helpers/server-ready')(BASE); });
+
+const send = (stage) => fetch(`${BASE}/api/funnel`, {
+  method: 'POST', headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ stage }),
+});
+const read = (headers = { Authorization: `Bearer ${PASSWORD}` }) =>
+  fetch(`${BASE}/api/funnel`, { headers });
+
+test('a stage is counted, and the funnel reports it', async () => {
+  const before = (await (await read()).json()).funnel.find(f => f.stage === 'landing').count;
+  assert.strictEqual((await send('landing')).status, 204);
+  assert.strictEqual((await send('landing')).status, 204);
+  const after = (await (await read()).json()).funnel.find(f => f.stage === 'landing').count;
+  assert.strictEqual(after, before + 2, 'the counter did not move');
+});
+
+test('conversion is measured against the step before, not the top', async () => {
+  /* "Where do we lose them" is always a question about the previous step. */
+  const body = await (await read()).json();
+  const stages = body.funnel.map(f => f.stage);
+  assert.deepStrictEqual(stages, [
+    'landing', 'upload_started', 'upload_completed', 'design_created',
+    'estimate_viewed', 'design_saved', 'quote_requested', 'lead_sent',
+  ], 'the funnel order no longer matches the journey');
+  assert.strictEqual(body.funnel[0].ofPreviousPct, null, 'the first stage has nothing to convert from');
+});
+
+test('a stage nobody defined is refused', async () => {
+  /* Without an allowlist a client could write arbitrary text into the table,
+     which turns a counter into free-text storage nobody is watching. */
+  for (const bad of ['<script>alert(1)</script>', 'landing; DROP TABLE funnel', '', 'LANDING', 'x'.repeat(500)]) {
+    const res = await send(bad);
+    assert.strictEqual(res.status, 400, `accepted ${JSON.stringify(bad.slice(0, 30))}`);
+  }
+});
+
+test('the funnel is not public', async () => {
+  assert.strictEqual((await read({})).status, 401);
+  assert.strictEqual((await read({ Authorization: 'Bearer wrong' })).status, 401);
+});
+
+test('recording a stage never blocks the visitor', async () => {
+  /* 204 and nothing else: the browser has no reason to wait, and a counter
+     must never be in the way of somebody pricing their windows. */
+  const res = await send('estimate_viewed');
+  assert.strictEqual(res.status, 204);
+  assert.strictEqual(await res.text(), '');
+});
+
+test('nothing stored can identify a visitor', async () => {
+  /* The schema is the guarantee. If a column that could join a row to a person
+     is ever added, this fails — before anybody has to notice it in a review. */
+  const src = fs.readFileSync(path.join(__dirname, '..', 'store.js'), 'utf8');
+  const ddl = src.slice(src.indexOf('CREATE TABLE IF NOT EXISTS funnel'));
+  const columns = ddl.slice(0, ddl.indexOf(')')).toLowerCase();
+
+  for (const forbidden of ['session', 'visitor', 'ip', 'user_agent', 'referrer', 'path', 'lead', 'email', 'postcode', 'id ']) {
+    assert.ok(!columns.includes(forbidden),
+      `the funnel table has a "${forbidden}" column — it must not be joinable to a person`);
+  }
+  assert.match(columns, /day/);
+  assert.match(columns, /stage/);
+  assert.match(columns, /hits/);
+});
+
+test('the endpoint accepts a stage and nothing else', async () => {
+  /* Anything extra a client sends must be ignored rather than stored. */
+  const res = await fetch(`${BASE}/api/funnel`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ stage: 'landing', email: 'someone@example.com', ip: '1.2.3.4', note: 'hello' }),
+  });
+  assert.strictEqual(res.status, 204);
+
+  const dir = process.env.FACETPRO_DATA_DIR;
+  const file = path.join(dir, 'funnel.json');
+  if (fs.existsSync(file)) {
+    const raw = fs.readFileSync(file, 'utf8');
+    for (const leak of ['someone@example.com', '1.2.3.4', 'hello']) {
+      assert.ok(!raw.includes(leak), `the funnel store kept "${leak}"`);
+    }
+  }
+});
+
+test('the window is bounded, so one caller cannot ask for everything', async () => {
+  const res = await fetch(`${BASE}/api/funnel?days=99999`, { headers: { Authorization: `Bearer ${PASSWORD}` } });
+  const body = await res.json();
+  assert.ok(body.days <= 365, `days was ${body.days}`);
+});
+
+test('the store rolls a day up rather than keeping a row per visit', async () => {
+  /* Counters, not events. A table of events is a table that grows with every
+     visitor and eventually describes their behaviour individually. */
+  await store.countStage('landing');
+  await store.countStage('landing');
+  const totals = await store.readFunnel(30);
+  assert.ok(typeof totals.landing === 'number', 'readFunnel should return counts, not rows');
+});
