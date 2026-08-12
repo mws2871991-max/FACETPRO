@@ -55,10 +55,39 @@ test('conversion is measured against the step before, not the top', async () => 
   const body = await (await read()).json();
   const stages = body.funnel.map(f => f.stage);
   assert.deepStrictEqual(stages, [
-    'landing', 'upload_started', 'upload_completed', 'design_created',
-    'estimate_viewed', 'design_saved', 'quote_requested', 'lead_sent',
+    'landing', 'upload_started', 'upload_completed',
+    'analysis_completed', 'visualisation_started', 'design_created', 'design_changed',
+    'estimate_viewed', 'design_saved',
+    'quote_started', 'quote_requested', 'quote_completed',
+    'lead_qualified', 'lead_sent', 'installer_received', 'installer_accepted',
   ], 'the funnel order no longer matches the journey');
   assert.strictEqual(body.funnel[0].ofPreviousPct, null, 'the first stage has nothing to convert from');
+});
+
+test('the original eight stages keep their names and their order', () => {
+  /* Rows are keyed by stage name, so renaming one does not migrate its
+     history — it orphans it, silently, and the funnel simply shows a step that
+     started last Tuesday. New stages may be inserted between these; none of
+     these eight may be renamed, reordered or dropped. */
+  const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  const m = server.match(/const FUNNEL_STAGES = \[([\s\S]*?)\];/);
+  assert.ok(m, 'FUNNEL_STAGES has moved or been renamed');
+  const stages = [...m[1].matchAll(/'([a-z_]+)'/g)].map(x => x[1]);
+  const original = ['landing', 'upload_started', 'upload_completed', 'design_created',
+    'estimate_viewed', 'design_saved', 'quote_requested', 'lead_sent'];
+  assert.deepStrictEqual(stages.filter(s => original.includes(s)), original,
+    'one of the original stages has been renamed, dropped or moved — its stored rows would be orphaned');
+});
+
+test('a browser cannot claim a stage only the server can witness', async () => {
+  /* These four are counted server-side: a lead stored and scored, a lead
+     delivered, a buyer accepting. A page that could post them could inflate
+     the numbers somebody makes spend decisions from, and nothing downstream
+     would know. */
+  for (const stage of ['lead_qualified', 'lead_sent', 'installer_received', 'installer_accepted']) {
+    const res = await send(stage);
+    assert.strictEqual(res.status, 400, `the public endpoint accepted ${stage}`);
+  }
 });
 
 test('a stage nobody defined is refused', async () => {
