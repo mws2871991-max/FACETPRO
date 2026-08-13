@@ -30,6 +30,7 @@ const DAY = 86400000;
 
 const PERIODS = {
   designOnlyDays: 183,        // ~6 months, never shared with anyone
+  orphanRenderDays: 183,      // shared/standalone renders: same 6-month visualisation window
   sharedEnquiryDays: 730,     // 24 months from last contact
   consentRecordDays: 2191,    // 6 years
   accessLogDays: 365,         // 12 months
