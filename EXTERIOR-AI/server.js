@@ -64,10 +64,21 @@ function checkGlazingRates() {
    Warned rather than refused: the claim may well be perfectly true and only
    undocumented, and taking the site down over a missing markdown file would be
    the wrong trade. But it says so on every boot until somebody settles it. */
+/* The trigger is a set of phrasings, not one string. It was a single literal
+   match on "Photographs, not renders", which meant any rewording of the badge
+   silenced the warning without answering it — and the badge got reworded the
+   day one pair became a visualisation, while three pairs still claimed to be
+   photographed jobs. A guard that a copy edit can switch off is not a guard. */
+const PHOTOGRAPHY_CLAIMS = [
+  /Photographs, not renders/i,
+  /photographed job/i,
+  /photographed from the same spot/i,
+];
+
 function checkGalleryProvenance() {
   let page = '';
   try { page = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8'); } catch (_) { return; }
-  if (!/Photographs, not renders/i.test(page)) return;
+  if (!PHOTOGRAPHY_CLAIMS.some((re) => re.test(page))) return;
 
   let provenance = '';
   try { provenance = fs.readFileSync(path.join(__dirname, 'assets', 'work', 'PROVENANCE.md'), 'utf8'); }
@@ -77,7 +88,7 @@ function checkGalleryProvenance() {
   if (!provenance) {
     console.warn('The homepage claims the gallery is "Photographs, not renders" and assets/work/PROVENANCE.md does not exist. That claim is unsubstantiated.');
   } else if (unknowns) {
-    console.warn(`Gallery provenance is INCOMPLETE — ${unknowns} UNKNOWN entries in assets/work/PROVENANCE.md, while the homepage claims "Real homes. Real work. Photographs, not renders." Substantiate it or change the wording.`);
+    console.warn(`Gallery provenance is INCOMPLETE — ${unknowns} UNKNOWN entries in assets/work/PROVENANCE.md, while the homepage still claims the gallery is photographed work. Substantiate it or change the wording.`);
   }
 }
 
