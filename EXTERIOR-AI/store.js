@@ -315,6 +315,11 @@ async function ensureSchema() {
     ['notification_failures_lead_id_idx', 'notification_failures (lead_id)'],
     ['withdrawals_lead_id_idx', 'withdrawals (lead_id)'],
     ['renders_lead_id_idx', 'renders (lead_id)'],
+    /* Orphan sweeps select renders by age, and lead_id is null on all of them,
+       so that index cannot serve this. Without one it is a sequential scan over
+       the table holding every image blob — the largest by bytes, and the one
+       that grows on every visualisation whether a lead follows or not. */
+    ['renders_ts_idx', 'renders (ts)'],
     ['access_log_ts_idx', 'access_log (ts)'],
     ['leads_ts_idx', 'leads (ts)'],
     /* The detection cache sweeps by age on every write, which was a sequential

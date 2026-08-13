@@ -40,14 +40,35 @@ const ago = (days) => new Date(Date.now() - days * DAY).toISOString();
 
 const bytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 1, 2, 3, 4, 5, 6, 7, 8]);
 
-/* putRender always stamps ts = now; back-date it on disk afterwards so the
-   fixture can claim to be older than orphanRenderDays. Postgres-backed runs
-   are covered separately in test/postgres.test.js, which has a real ts column
-   to insert against directly — this file exercises the JSONL fallback, which
-   is what `npm test` runs by default. */
+/* putRender always stamps ts = now; back-date it afterwards so the fixture can
+   claim to be older than orphanRenderDays.
+
+   Both backends, deliberately. An earlier version of this helper returned early
+   when store.hasDb, on the assumption that Postgres was covered elsewhere. It
+   was not, and the omission was worse than a gap: with no back-dating the
+   render stayed fresh, so the two "must survive" tests passed for the wrong
+   reason and only the purge test failed. Postgres is the sole backend
+   production ever uses — refuseToStartIfStorageContradictsTheNotice requires
+   DATABASE_URL on any deployment — so the SQL branch of staleRenderIds is the
+   one that has to be proven, not the fallback. */
 async function putRenderAged(id, days) {
   await store.putRender(id, bytes, { mime: 'image/png' });
-  if (store.hasDb) return; // Postgres path — not covered by this file
+
+  if (store.hasDb) {
+    const { Client } = require('pg');
+    const c = new Client({ connectionString: process.env.DATABASE_URL });
+    await c.connect();
+    try {
+      const schema = (process.env.DB_SCHEMA || 'facetpro_visualiser').replace(/[^a-zA-Z0-9_]/g, '');
+      const { rowCount } = await c.query(
+        `UPDATE ${schema}.renders SET ts = $1 WHERE id = $2`, [ago(days), id]);
+      assert.strictEqual(rowCount, 1, `fixture did not back-date render ${id}`);
+    } finally {
+      await c.end();
+    }
+    return;
+  }
+
   const metaPath = path.join(store.DATA_DIR, 'renders', id + '.json');
   const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
   meta.ts = ago(days);
