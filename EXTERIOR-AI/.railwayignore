@@ -1,0 +1,33 @@
+# What `railway up` must never upload.
+#
+# `railway up` tarballs this directory and sends it to the builder. Whether it
+# honours .gitignore is not something to find out by testing it against
+# production, so the personal-data paths are repeated here explicitly. The
+# service reads none of these at runtime — production storage is Postgres, and
+# refuseToStartIfStorageContradictsTheNotice enforces that — so excluding them
+# costs nothing and keeps homeowner records out of a built image.
+#
+# Keep in step with .gitignore. Anything protected there belongs here too.
+
+# Captured homeowner leads and detection logs.
+data/*.jsonl
+data/usage.json
+
+# Real surveyed properties — contains addresses.
+data/survey-samples.json
+
+# Lead delivery records — billing evidence, and homeowner details.
+data/deliveries.jsonl
+data/delivery-failures.jsonl
+
+# Stored renders — photorealistic images of identified homes.
+data/renders/
+
+# Database dumps. Every row, including homeowners.
+backup-*.json
+*.backup.json
+
+# Local environment and build noise.
+.env
+.env.local
+node_modules/
