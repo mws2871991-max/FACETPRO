@@ -28,6 +28,17 @@ put them there.
 | `tilehung-before.jpg` | UNKNOWN | | | | | UNKNOWN |
 | `tilehung-after.jpg` | UNKNOWN | | | | | UNKNOWN |
 
+## Derived files
+
+`hero-before-sm.jpg` and `hero-after-sm.jpg` are not separate photographs and
+need no separate answers. They are the hero pair resized to 600×450 and centre
+-cropped to the 4:3 box the page already displayed them in — the same crop the
+browser was performing at render time with `object-fit: cover`, done once in
+advance instead of on every visit. Nothing was retouched, recoloured or
+composited. Whatever the rows above turn out to say about `hero-before.jpg` and
+`hero-after.jpg` applies unchanged to these two, and if the originals cannot be
+substantiated these come down with them.
+
 ## The three answers that matter
 
 **Are they real jobs?** If any pair is stock photography, an AI render, or a
