@@ -315,6 +315,11 @@ async function ensureSchema() {
     ['notification_failures_lead_id_idx', 'notification_failures (lead_id)'],
     ['withdrawals_lead_id_idx', 'withdrawals (lead_id)'],
     ['renders_lead_id_idx', 'renders (lead_id)'],
+    /* Orphan sweeps select renders by age, and lead_id is null on all of them,
+       so that index cannot serve this. Without one it is a sequential scan over
+       the table holding every image blob — the largest by bytes, and the one
+       that grows on every visualisation whether a lead follows or not. */
+    ['renders_ts_idx', 'renders (ts)'],
     ['access_log_ts_idx', 'access_log (ts)'],
     ['leads_ts_idx', 'leads (ts)'],
     /* The detection cache sweeps by age on every write, which was a sequential
@@ -679,6 +684,21 @@ async function getRender(id) {
   } catch (_) { return null; }
 }
 
+async function staleRenderIds(beforeIso) {
+  if (pool) {
+    const { rows } = await pool.query(
+      `SELECT id FROM ${SCHEMA_NAME}.renders WHERE ts < $1`, [beforeIso]);
+    return rows.map(r => r.id);
+  }
+  try {
+    return fs.readdirSync(RENDER_DIR)
+      .filter(f => f.endsWith('.json'))
+      .map(f => { try { return JSON.parse(fs.readFileSync(path.join(RENDER_DIR, f), 'utf8')); } catch (_) { return null; } })
+      .filter(m => m && m.ts && m.ts < beforeIso)
+      .map(m => m.id);
+  } catch (_) { return []; }
+}
+
 async function deleteRenders(ids) {
   if (!ids.length) return 0;
   if (pool) {
@@ -741,7 +761,7 @@ async function end() {
 }
 
 module.exports = {
-  ensureSchema, append, readAll, replaceAll, mutate, end, getResume, DATA_DIR, putRender, getRender, deleteRenders, hasDb: !!pool,
+  ensureSchema, append, readAll, replaceAll, mutate, end, getResume, DATA_DIR, putRender, getRender, deleteRenders, staleRenderIds, hasDb: !!pool,
   getDetectionCache, putDetectionCache,
   countStage, readFunnel,
   // Exported for tests: scraping these out of the source with a regex broke

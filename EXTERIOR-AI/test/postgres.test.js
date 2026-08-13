@@ -198,6 +198,7 @@ test('the indexes the deadline-bound paths depend on exist', opts, async () => {
     'notification_failures_lead_id_idx',
     'withdrawals_lead_id_idx',
     'renders_lead_id_idx',
+    'renders_ts_idx',
     'access_log_ts_idx',
     'leads_ts_idx',
   ]) {

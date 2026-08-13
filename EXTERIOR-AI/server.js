@@ -2746,8 +2746,26 @@ async function runRetention({ dryRun = false } = {}) {
   try { accessLog = await store.readAll('accessLog'); } catch (_) { /* none yet */ }
 
   const p = retention.plan(leads, accessLog);
-  if (!p.redact.length && !p.delete.length && !p.accessLogExpired) {
-    return { kept: p.keep, redacted: 0, deleted: 0, accessLogRemoved: 0, dryRun };
+
+  /* Orphan renders: images past their period that no surviving lead points at.
+     Renders are stored with lead_id null, so "orphan" is decided by cross-
+     referencing leads' renderUrl, NOT the column — anything a live lead still
+     references is kept. Computed here, before the early return below, so the
+     sweep still happens on a day when no lead itself is due. */
+  const orphanCutoff = new Date(Date.now() - retention.PERIODS.orphanRenderDays * retention.DAY).toISOString();
+  let orphanRenderIds = [];
+  try {
+    const staleIds = await store.staleRenderIds(orphanCutoff);
+    if (staleIds.length) {
+      const referenced = new Set(leads
+        .map(l => (l.renderUrl || '').match(/^\/r\/([A-Za-z0-9_-]+)$/)?.[1])
+        .filter(Boolean));
+      orphanRenderIds = staleIds.filter(id => !referenced.has(id));
+    }
+  } catch (_) { /* no render store yet, or none stale */ }
+
+  if (!p.redact.length && !p.delete.length && !p.accessLogExpired && !orphanRenderIds.length) {
+    return { kept: p.keep, redacted: 0, deleted: 0, accessLogRemoved: 0, rendersRemoved: 0, dryRun };
   }
 
   const summary = {
@@ -2779,6 +2797,11 @@ async function runRetention({ dryRun = false } = {}) {
     if (goneRenderIds.length) {
       const removed = await store.deleteRenders(goneRenderIds);
       summary.rendersRemoved = removed;
+    }
+
+    /* The orphan renders identified above — deleted only on a real run. */
+    if (orphanRenderIds.length) {
+      summary.rendersRemoved += await store.deleteRenders(orphanRenderIds);
     }
 
     /* The copies, which retention had been leaving behind.
