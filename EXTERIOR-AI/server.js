@@ -1370,10 +1370,25 @@ app.get('/api/catalogue', (req, res) => {
    a tampered request up as a real one. */
 const { MANUAL_AREA_MIN_M2, MANUAL_AREA_MAX_M2, TRIM_LENGTH_MIN_M, TRIM_LENGTH_MAX_M } = require('./limits');
 
+/* Not every visitor wants the whole outside of their house.
+
+   These three lookups used to end `|| catalogue.cladding[0]`, which made
+   absence indistinguishable from "the first one in the catalogue". Somebody who
+   wanted their walls rendered was quoted £27,372, of which £6,175 was render
+   and £10,711 was a roof they had not asked for and could not decline. The
+   defaults were silent and they always answered upward.
+
+   So absence gets a name. `'none'` means *not this trade*; an omitted field
+   still takes the catalogue default, because a client that never knew about
+   opting out should behave exactly as it did. Opting out is a thing you say,
+   not a thing that happens to you. */
+const NONE = 'none';
+const pick = (list, id) => (id === NONE ? null : (list.find(x => x.id === id) || list[0]));
+
 function computePrice({ claddingId, trimId, roofId, footprintM2, trimLengthM }) {
-  const cladding = catalogue.cladding.find(c => c.id === claddingId) || catalogue.cladding[0];
-  const trim = catalogue.trim.find(t => t.id === trimId) || catalogue.trim[0];
-  const roof = catalogue.roof.find(r => r.id === roofId) || catalogue.roof[0];
+  const cladding = pick(catalogue.cladding, claddingId);
+  const trim = pick(catalogue.trim, trimId);
+  const roof = pick(catalogue.roof, roofId);
   const area = Number(footprintM2);
   const claddingArea = Number.isFinite(area) && area >= MANUAL_AREA_MIN_M2 && area <= MANUAL_AREA_MAX_M2
     ? area : catalogue.defaultFootprintM2;
@@ -1388,17 +1403,22 @@ function computePrice({ claddingId, trimId, roofId, footprintM2, trimLengthM }) 
   // Trim colour is cosmetic — fascia/soffit/guttering cost is the same real rate
   // regardless of which colour is picked, matching how the real business prices it.
   const tr = catalogue.trimRates;
-  const claddingMaterial = cladding.pricePerM2 * claddingArea;
-  const roofMaterial = roof.pricePerM2 * roofArea;
-  const trimMaterial = (tr.fasciaPerM + tr.soffitPerM + tr.gutteringPerM) * trimLength;
+  const claddingMaterial = cladding ? cladding.pricePerM2 * claddingArea : 0;
+  const roofMaterial = roof ? roof.pricePerM2 * roofArea : 0;
+  const trimMaterial = trim ? (tr.fasciaPerM + tr.soffitPerM + tr.gutteringPerM) * trimLength : 0;
   const materialsSubtotal = claddingMaterial + roofMaterial + trimMaterial;
 
-  const claddingLabour = catalogue.labour.claddingPerM2 * claddingArea;
-  const roofLabour = catalogue.labour.roofPerM2 * roofArea;
-  const trimLabour = (tr.fasciaLabourPerM + tr.soffitLabourPerM + tr.gutteringLabourPerM) * trimLength;
+  const claddingLabour = cladding ? catalogue.labour.claddingPerM2 * claddingArea : 0;
+  const roofLabour = roof ? catalogue.labour.roofPerM2 * roofArea : 0;
+  const trimLabour = trim ? (tr.fasciaLabourPerM + tr.soffitLabourPerM + tr.gutteringLabourPerM) * trimLength : 0;
   const labourSubtotal = claddingLabour + roofLabour + trimLabour;
 
-  const scaffolding = catalogue.scaffoldingCost;
+  /* Scaffolding follows the work, not the roof. Rendering the walls of a
+     two-storey house needs a scaffold just as much as re-roofing it does,
+     which is why the walls-only calculator has always charged it. It goes
+     only when there is no external work left to reach. */
+  const anyWork = Boolean(cladding || roof || trim);
+  const scaffolding = anyWork ? catalogue.scaffoldingCost : 0;
   const waste = materialsSubtotal * catalogue.wastePct;
   const subtotal = materialsSubtotal + labourSubtotal + scaffolding + waste;
   const vat = subtotal * catalogue.vatPct;
@@ -1414,10 +1434,15 @@ function computePrice({ claddingId, trimId, roofId, footprintM2, trimLengthM }) 
     total: Math.round(total),
     footprintM2: claddingArea,
     trimLengthM: trimLength,
+    /* Excluded trades are absent rather than named, so nothing downstream —
+       the lead, the installer portal, the homeowner's email — can print a
+       finish for work that was never chosen. `priced` says plainly what this
+       figure covers, because a total is only meaningful alongside its scope. */
+    priced: [cladding && 'cladding', roof && 'roof', trim && 'trim'].filter(Boolean),
     selections: {
-      cladding: `${cladding.name} (${cladding.materialLabel})`,
-      trim: `${trim.name} (Fascia/Soffit/Guttering)`,
-      roof: `${roof.name} (${roof.materialLabel})`
+      ...(cladding ? { cladding: `${cladding.name} (${cladding.materialLabel})` } : {}),
+      ...(trim ? { trim: `${trim.name} (Fascia/Soffit/Guttering)` } : {}),
+      ...(roof ? { roof: `${roof.name} (${roof.materialLabel})` } : {}),
     }
   };
 }
@@ -2630,6 +2655,19 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
   const footprint = resolveFootprint({ footprintM2, detectionId });
   const price = computePrice({ claddingId, trimId, roofId, footprintM2: footprint.m2, trimLengthM });
 
+  /* A lead can be real and carry no priced work.
+
+     Somebody who only wants a conservatory chooses no cladding, no roof and no
+     trim — and this used to send the installer a headline price of £27,372,
+     because computePrice defaulted all three. The installer pays £100, rings
+     expecting a whole-house exterior refit, and finds a conservatory enquiry.
+     That is the product misdescribing what it sells to the person buying it.
+
+     So an empty `priced` means no wall price at all rather than a wrong one.
+     The enquiry still stands on the conservatory interest and the glazing
+     estimate, either of which may be the whole of what they want. */
+  const hasPricedWork = price.priced.length > 0;
+
   /* The raw token goes into their email and nowhere else; we keep the hash.
      Otherwise the withdrawal link would be readable by anything that can read
      a lead, including the installer portal. */
@@ -2639,9 +2677,9 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
     ts: new Date().toISOString(),
     id: newLeadId(),
     name, email, phone: phone || '', postcode: postcode || '',
-    selections: price.selections,
-    price: price.total,
-    priceBreakdown: price,
+    selections: hasPricedWork ? price.selections : {},
+    price: hasPricedWork ? price.total : null,
+    priceBreakdown: hasPricedWork ? price : null,
     // Server's own view of where the area came from — the client-sent
     // measurementSource is kept only as a record of what the UI believed.
     measurementSource: footprint.source,

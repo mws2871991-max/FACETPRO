@@ -476,6 +476,16 @@ function priceGlazing({ windows, totalCount, selections, rates, houseType , open
   // is exported, and dividing by zero here turns every money field into NaN
   // quietly rather than loudly.
   if (!windows.length) throw new Error('priceGlazing needs at least one window.');
+
+  /* Somebody who wants a front door and nothing else.
+
+     Choosing a door used to price every window in the house as well, because a
+     missing window style fell through to a multiplier of 1 rather than meaning
+     anything. A composite door — £1,667 of work — came back as £7,451–£13,837,
+     most of it eight windows nobody had mentioned. `'none'` is how a caller
+     says the windows are staying. */
+  const windowsIncluded = selections.windowStyleId !== 'none';
+
   const styleMult = rates.styleMultipliers?.[selections.windowStyleId] ?? 1;
   const isBay = selections.windowStyleId === 'bay';
   const colourMult = selections.windowDoorColourId && selections.windowDoorColourId !== 'white'
@@ -492,13 +502,15 @@ function priceGlazing({ windows, totalCount, selections, rates, houseType , open
   let upperStoreyCount = 0;
   const byBand = {};
 
-  for (const w of windows) {
-    const band = rates.windowBands.find(b => b.id === w.bandId);
-    if (!band) throw new Error(`No rate for window band "${w.bandId}" in catalogue.glazing.`);
-    const unit = band.supplyFit * styleMult * colourMult * (isBay ? (rates.bayUplift ?? 1) : 1);
-    supplyFit += unit * scale;
-    if (w.upperStorey) upperStoreyCount += scale;
-    byBand[w.bandId] = (byBand[w.bandId] || 0) + scale;
+  if (windowsIncluded) {
+    for (const w of windows) {
+      const band = rates.windowBands.find(b => b.id === w.bandId);
+      if (!band) throw new Error(`No rate for window band "${w.bandId}" in catalogue.glazing.`);
+      const unit = band.supplyFit * styleMult * colourMult * (isBay ? (rates.bayUplift ?? 1) : 1);
+      supplyFit += unit * scale;
+      if (w.upperStorey) upperStoreyCount += scale;
+      byBand[w.bandId] = (byBand[w.bandId] || 0) + scale;
+    }
   }
 
   /* Largest remainder, because rounding each band on its own does not add up.
@@ -533,13 +545,19 @@ function priceGlazing({ windows, totalCount, selections, rates, houseType , open
   const access = upperStoreyCount >= 1 ? (rates.accessCost ?? 0) : 0;
 
   /* No waste allowance. Glazing is made to measure: there are no offcuts.
-     Disposal of the old frames is a separate, per-unit line. */
-  const disposal = (rates.disposalPerUnit ?? 0) * (Math.round(totalCount) + doorSelections.length);
+     Disposal of the old frames is a separate, per-unit line — and only for
+     frames actually coming out. A door-only job disposes of one door, not of
+     one door and every window in the house. */
+  const disposalUnits = (windowsIncluded ? Math.round(totalCount) : 0) + doorSelections.length;
+  const disposal = (rates.disposalPerUnit ?? 0) * disposalUnits;
 
   /* Opening lights, if the homeowner told us. Scaled to the whole-house count
      the same way supplyFit is, because the answer describes their windows
-     rather than the four visible in the photograph. */
-  const openers = openerAdjustment(rates, [{ count: Math.round(totalCount) }], openerCount);
+     rather than the four visible in the photograph. Nothing to adjust when the
+     windows are staying put. */
+  const openers = windowsIncluded
+    ? openerAdjustment(rates, [{ count: Math.round(totalCount) }], openerCount)
+    : 0;
 
   let net = supplyFit + doors + access + disposal + openers;
 
@@ -565,6 +583,10 @@ function priceGlazing({ windows, totalCount, selections, rates, houseType , open
     minimumApplied,
     upperStoreyCount: Math.round(upperStoreyCount),
     byBand: Object.fromEntries(Object.entries(byBand).map(([k, v]) => [k, Math.round(v)])),
+    /* So callers can say what the figure covers. The total bar reads
+       "8 windows · 1 door" off the window count, which would be a lie on a
+       door-only job — the count is still known, it is just not being priced. */
+    windowsIncluded,
   };
 }
 
