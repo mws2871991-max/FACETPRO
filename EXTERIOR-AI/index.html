@@ -460,6 +460,7 @@
     </p>
   </section>
 
+  <div id="mount-triage"></div>
   <div id="mount-upload"></div>
   <div id="mount-visualizer"></div>
   <div id="mount-wholehouse"></div>
@@ -952,6 +953,36 @@ function findSwatch(id) {
   return SWATCHES.find(s => s.id === id) || SWATCHES[0];
 }
 
+/* The five priced trades, and what each one leaves alone.
+
+   Named once. Two lists that have to agree are two lists that will not, and
+   this one has to agree with landing.js's journeyForSlug and with the ids the
+   pricing engine accepts. */
+const JOURNEYS = {
+  windows:  { keeps: 'windows',  swatches: ['cladding', 'trim', 'roof'], prefs: { doorStyleId: 'none' } },
+  doors:    { keeps: 'doors',    swatches: ['cladding', 'trim', 'roof'], prefs: { windowStyleId: 'none' } },
+  cladding: { keeps: 'cladding', swatches: ['trim', 'roof'],             prefs: { windowStyleId: 'none', doorStyleId: 'none' } },
+  roofline: { keeps: 'trim',     swatches: ['cladding', 'roof'],         prefs: { windowStyleId: 'none', doorStyleId: 'none' } },
+  roof:     { keeps: 'roof',     swatches: ['cladding', 'trim'],         prefs: { windowStyleId: 'none', doorStyleId: 'none' } },
+};
+
+/* An unknown value is not an error worth showing anybody — it is a stale link
+   or somebody typing in the address bar, and the right answer is the ordinary
+   page. */
+function readJourney() {
+  try {
+    const j = new URLSearchParams(location.search).get('journey');
+    return j && Object.prototype.hasOwnProperty.call(JOURNEYS, j) ? j : null;
+  } catch (_) { return null; }
+}
+
+/* Whether this journey starts with a given swatch group left alone. No
+   journey means no exclusions — the ordinary page, everything shown. */
+function journeyExcludes(group) {
+  const j = JOURNEYS[readJourney()];
+  return Boolean(j && j.swatches.includes(group));
+}
+
 // The exact wording the homeowner agrees to. Sent with the lead and stored, so
 // there's a record of what was consented to and when — bump CONSENT_VERSION
 // whenever CONSENT_WORDING changes, and keep the on-screen label identical.
@@ -989,9 +1020,23 @@ const state = {
      design" and "get me quotes" are different asks and the last step should
      not pretend otherwise. */
   quote: { step: 0, intent: null, project: [], timing: null, propertyType: null, homeowner: false },
-  cladding: findSwatch("alabaster"),
-  trim: findSwatch("ink-trim"),
-  roof: findSwatch("slate-roof"),
+  /* Which trade brought them here, from ?journey= on a /cost/ page's CTA.
+
+     Sixteen landing pages already targeted sixteen search intents and then
+     dropped every one of them at the door: somebody arriving from "front door
+     replacement cost" met the same page as somebody who typed the brand name,
+     and the first figure they saw priced the whole outside of their house.
+
+     It is deliberately NOT a claim about what they want — it records where
+     they came from, and somebody who lands on the doors page is perfectly
+     entitled to design a whole exterior. So it pre-declines the other trades
+     rather than hiding them, and every one of those decisions is a chip they
+     can undo. `journeySource` keeps that distinction on the lead, so routing
+     can never mistake a click for a decision. */
+  journey: readJourney(),
+  cladding: findSwatch(journeyExcludes('cladding') ? 'none' : 'alabaster'),
+  trim: findSwatch(journeyExcludes('trim') ? 'none' : 'ink-trim'),
+  roof: findSwatch(journeyExcludes('roof') ? 'none' : 'slate-roof'),
   afterPct: 65,
   leads: [],
   leadsLoaded: false,
@@ -1043,7 +1088,10 @@ const state = {
   glazingLoading: false,
   windowCount: null,        // the homeowner's own count, which beats ours
   prefs: { windowStyleId: null, doorStyleId: null, windowDoorColourId: null,
-           fasciaId: null, soffitId: null, gutteringId: null, rooflineCladdingId: null },
+           fasciaId: null, soffitId: null, gutteringId: null, rooflineCladdingId: null,
+           /* A journey pre-declines the glazing it did not come for. Both are
+              still chips the visitor can undo — see JOURNEYS. */
+           ...(JOURNEYS[readJourney()]?.prefs || {}) },
   /* The password is never persisted. What survives a reload is a token the
      server signed, good for four hours and for one installer — so a future
      DOM mistake leaks something that expires, rather than the credential for
@@ -1346,6 +1394,7 @@ function fmtMoney(n) { return "£" + Math.round(n || 0).toLocaleString(); }
 let sharedRefs = {};
 
 const MOUNTS = [
+  ['mount-triage',     buildTriage],
   ['mount-upload',     buildUploadDetect],
   ['mount-visualizer', buildVisualizer],
   ['mount-wholehouse', buildWholeHouse],
@@ -1439,6 +1488,78 @@ function applyDesign(d) {
   if (d.windowCount > 0) state.windowCount = d.windowCount;
   refreshPrice();
   refreshGlazing();
+}
+
+/* "What are you looking for today?"
+
+   The other half of the same mechanism as ?journey=. Somebody arriving from a
+   /cost/ page has already told us what they want by what they searched for;
+   somebody arriving direct, from the brand name or an ad, has told us nothing,
+   and the page answered by pricing the whole outside of their house.
+
+   One `journey` value, set two ways, read in one place. This is the click.
+
+   It is a question, not a filter: every answer pre-declines the other trades
+   and every one of those is a chip they can undo two sections down. Nobody is
+   locked out of anything by answering. */
+async function applyJourney(id) {
+  const j = JOURNEYS[id] || null;
+  state.journey = j ? id : null;
+
+  state.cladding = findSwatch(j && j.swatches.includes('cladding') ? 'none' : 'alabaster');
+  state.trim = findSwatch(j && j.swatches.includes('trim') ? 'none' : 'ink-trim');
+  state.roof = findSwatch(j && j.swatches.includes('roof') ? 'none' : 'slate-roof');
+
+  state.prefs.windowStyleId = j?.prefs?.windowStyleId ?? null;
+  state.prefs.doorStyleId = j?.prefs?.doorStyleId ?? null;
+
+  /* A render no longer matches what is selected. */
+  state.renderUrl = null; state.renderId = null;
+
+  reachedStage('design_changed');
+  await refreshPrice();
+  refreshGlazing();
+  render();
+}
+
+const TRIAGE = [
+  { id: 'windows',  label: 'Windows' },
+  { id: 'doors',    label: 'A front door' },
+  { id: 'cladding', label: 'Walls — render or cladding' },
+  { id: 'roofline', label: 'Fascias, soffits & guttering' },
+  { id: 'roof',     label: 'A roof' },
+  /* Not a journey in the pricing sense — a conservatory is a guide band, not
+     priced from the photograph — so this answer takes them to the section that
+     can actually help rather than to an uploader that cannot. */
+  { id: 'conservatory', label: 'A conservatory', href: '#conservatory' },
+  { id: null,       label: 'Everything / not sure yet' },
+];
+
+function buildTriage() {
+  if (state.stage !== 'landing') return h('div', { id: 'mount-triage' });
+
+  return h('div', { id: 'mount-triage', className: 'max-w-6xl mx-auto px-6 mt-10' }, [
+    h('section', { className: 'rounded-2xl border border-zinc-200 bg-white p-6 md:p-7' }, [
+      h('h2', { className: 'serif text-[20px] md:text-[24px] tracking-tight' }, 'What are you looking for today?'),
+      h('p', { className: 'mt-1 text-[13px] leading-6 text-zinc-600 max-w-[62ch]' },
+        'So the first price you see is for the work you actually want. You can change any of it afterwards, and add the rest whenever you like.'),
+      h('div', { className: 'mt-4 flex flex-wrap gap-2' }, TRIAGE.map(t => {
+        const active = state.journey === t.id && !(t.id === null && state.journey !== null);
+        return h('button', {
+          type: 'button',
+          'aria-pressed': active ? 'true' : 'false',
+          className: `px-4 py-2.5 rounded-full border text-[13px] transition min-h-[44px] ${active
+            ? 'bg-zinc-900 text-white border-zinc-900'
+            : 'bg-white border-zinc-200 hover:border-zinc-900'}`,
+          onClick: async () => {
+            if (t.href) { document.querySelector(t.href)?.scrollIntoView({ behavior: 'smooth' }); return; }
+            await applyJourney(t.id);
+            document.getElementById('your-photo')?.scrollIntoView({ behavior: 'smooth' });
+          },
+        }, t.label);
+      })),
+    ]),
+  ]);
 }
 
 function buildUploadDetect() {
@@ -2230,7 +2351,13 @@ function renderDetailsOnly() {
    than an error message next to somebody's house. */
 let glazingRequest = 0;
 async function refreshGlazing() {
-  if (!state.prefs.windowStyleId && !state.prefs.doorStyleId) { state.glazing = null; renderDetailsOnly(); return; }
+  /* Nothing chosen, or everything actively declined, are the same thing as far
+     as a price is concerned. Without the second half, declining both windows
+     and door still called the endpoint and rendered a £0–£0 range, which is
+     not a price, it is a visitor being shown their own refusal. */
+  const wantsWindows = state.prefs.windowStyleId && state.prefs.windowStyleId !== 'none';
+  const wantsDoor = state.prefs.doorStyleId && state.prefs.doorStyleId !== 'none';
+  if (!wantsWindows && !wantsDoor) { state.glazing = null; renderDetailsOnly(); return; }
   const ticket = ++glazingRequest;
   state.glazingLoading = true;
   renderDetailsOnly();
@@ -2401,9 +2528,32 @@ function buildDetailOptions() {
     ]);
   };
 
+  /* The same "leave it as it is" the wall, roofline and roof groups get.
+
+     Those three got the opt-out when the engine learned to price one trade at
+     a time; windows and doors did not, so a visitor who wanted a front door
+     could not decline the windows even though glazing.js already understood
+     'none'. The backend could do it and nothing on the page could ask. */
+  const leaveAsItIs = (key, what) => {
+    const active = state.prefs[key] === 'none';
+    return h('button', {
+      type: 'button',
+      'aria-pressed': active ? 'true' : 'false',
+      className: `text-left p-3 rounded-xl border border-dashed transition ${active ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-300 hover:border-zinc-500'}`,
+      onClick: () => setPref(key, active ? null : 'none'),
+    }, [
+      h('div', { className: 'text-xs font-medium' }, 'Leave as it is'),
+      h('div', { className: `mt-1 text-[11px] leading-4 ${active ? 'text-white/60' : 'text-zinc-500'}` },
+        `Keep my ${what} — don't price them`),
+    ]);
+  };
+
   const group = (title, list, key, opts) => h('div', {}, [
     h('h4', { className: 'text-[10px] tracking-widest uppercase text-zinc-500' }, title),
-    h('div', { className: 'mt-2 grid sm:grid-cols-2 gap-2' }, list.map(i => optionCard(i, key, opts))),
+    h('div', { className: 'mt-2 grid sm:grid-cols-2 gap-2' }, [
+      ...list.map(i => optionCard(i, key, opts)),
+      ...(opts?.optOut ? [leaveAsItIs(key, opts.optOut)] : []),
+    ]),
   ]);
 
   const colourRow = (list, key) => h('div', {}, [
@@ -2624,8 +2774,8 @@ function buildDetailOptions() {
       h('p', { className: 'mt-1 text-[12px] leading-5 text-zinc-600 max-w-[68ch]' },
         'Pick a style and a colour and we’ll show them on your home and work out a guide price.'),
       h('div', { className: 'mt-4 grid gap-5' }, [
-        group('Window style', wd.windowStyles, 'windowStyleId'),
-        group('Door style', wd.doorStyles, 'doorStyleId'),
+        group('Window style', wd.windowStyles, 'windowStyleId', { optOut: 'windows' }),
+        group('Door style', wd.doorStyles, 'doorStyleId', { optOut: 'front door' }),
         colourRow(wd.colours, 'windowDoorColourId'),
       ]),
       glazingPanel(),
@@ -4236,6 +4386,12 @@ async function sendDesignPack() {
         // Just the ids — the server looks up every product from its own
         // catalogue, so nothing here can carry an invented price.
         conservatoryStyleId: state.conservatoryId,
+        /* Which landing page sent them, if any. Recorded as where they came
+           from, never as what they decided: somebody can arrive on the doors
+           page and design a whole exterior, and routing must not weight a lead
+           toward door fitters on the strength of a click. What they actually
+           chose is in the selections above, which is the thing to route on. */
+        journeySource: state.journey,
         /* What the quote steps asked. Sent as answers, not as a score — the
            server validates each against a fixed list and scores the lead
            itself, so nothing here can inflate what an installer is charged

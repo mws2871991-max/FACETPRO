@@ -142,6 +142,23 @@ test('asking for windows still prices windows', () => {
   assert.ok(r.price.access > 0, 'upstairs windows still need access');
 });
 
+test('declining the front door is not a catalogue lookup for a door called none', () => {
+  /* doorSelections was [doorStyleId].filter(Boolean), so 'none' passed straight
+     through to rates.doors.find(...) and threw. The endpoint would have 500'd
+     the moment the UI could offer the option. */
+  const r = glaze({ windowStyleId: 'casement', doorStyleId: 'none' });
+  assert.strictEqual(r.price.doors, 0);
+  assert.ok(r.price.supplyFit > 0, 'the windows they did ask for still price');
+});
+
+test('declining everything is £0, not the minimum job charge', () => {
+  /* Every line is zero, and a £950 floor applied to that quotes somebody for
+     declining. The minimum exists for small jobs, not for no job. */
+  const r = glaze({ windowStyleId: 'none', doorStyleId: 'none' });
+  assert.strictEqual(r.price.total, 0);
+  assert.strictEqual(r.price.minimumApplied, false);
+});
+
 /* ── the conservatory ─────────────────────────────────────────────────── */
 
 test('a conservatory enquiry is not dressed as a whole-house refit', async () => {
@@ -217,6 +234,28 @@ test('the homeowner design pack survives both shapes', () => {
     assert.ok(html.length > 200, 'a design pack should still be a design pack');
     assert.ok(!/undefined/.test(html), `undefined leaked into the design pack for ${price ? 'walls-only' : 'no priced work'}`);
   }
+});
+
+test('a lead records where it came from, and refuses an invented source', async () => {
+  const save = (journeySource) => fetch(`${BASE}/api/lead`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      name: 'Jane Smith', email: 'jane@example.com', phone: '07700900000', postcode: 'SW11 4NP',
+      claddingId: 'alabaster', journeySource, consent: { terms: true },
+    }),
+  });
+
+  assert.strictEqual((await save('doors')).status, 200);
+  let all = await store.readAll('leads');
+  assert.strictEqual(all[all.length - 1].journeySource, 'doors');
+
+  /* An allowlist, not a passthrough: this reaches the installer portal and
+     eventually routing, so a client must not be able to write arbitrary text
+     into it. */
+  assert.strictEqual((await save('<script>alert(1)</script>')).status, 200);
+  all = await store.readAll('leads');
+  assert.strictEqual(all[all.length - 1].journeySource, null);
 });
 
 test('a conservatory carries its value into the lead score', () => {

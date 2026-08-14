@@ -421,6 +421,41 @@ const COST_PAGES = [
     },
   },
   {
+    slug: 'conservatory-cost-uk',
+    title: 'Conservatory cost UK (2026 guide prices)',
+    h1: 'What does a conservatory cost in the UK?',
+    intent: 'conservatory cost UK',
+    description: 'What a conservatory costs in the UK by style — Edwardian, Victorian, lean-to, gable, orangery and garden room — with what drives the price.',
+    build: (c) => {
+      const styles = (c.conservatories && c.conservatories.styles) || [];
+      const cheapest = styles.reduce((a, b) => (a && a.priceMin <= b.priceMin ? a : b), null);
+      const dearest = styles.reduce((a, b) => (a && a.priceMax >= b.priceMax ? a : b), null);
+      return {
+        /* Every other page on this site answers with a figure this engine
+           computed. This one cannot, and says so in the first sentence rather
+           than in a footnote — a conservatory's price turns on size, glazing,
+           groundworks and access, none of which a photograph of the front of a
+           house can tell anybody. Guide bands are what we honestly have. */
+        answer: `Between ${money(cheapest.priceMin)} and ${money(dearest.priceMax)} depending on style and size — a ${cheapest.name.toLowerCase()} is the cheapest way in, an ${dearest.name.toLowerCase()} the most expensive. These are guide ranges, not quotations: unlike the window, door, wall and roof figures on this site, they are not computed from a supplier rate card.`,
+        sections: [
+          { heading: 'By style', table: {
+            head: ['Style', 'Best for', 'Guide range'],
+            rows: styles.map(st => [st.name, st.bestFor, `${money(st.priceMin)} – ${money(st.priceMax)}`]),
+          } },
+          { heading: 'What moves the price', paras: [
+            'Size and glazing do most of it. A larger footprint costs more in every direction at once — more frame, more glass, more base — and the roof specification matters as much as the floor area: a lightweight tiled roof is a different job from polycarbonate.',
+            'Groundworks are the line people do not budget for. A level garden with easy access is a different price from one that needs a retaining wall, drainage moved, or materials carried through the house.',
+            'And a conservatory is rarely the only work. If the windows or roofline are due anyway, doing them together saves paying twice for the same scaffold — which is why the visualiser prices those five trades from one photograph, even though it cannot price the conservatory itself.',
+          ] },
+          { heading: 'Why we will not pretend to price this from a photograph', paras: [
+            'Every other cost on this site is computed from the same rate card the estimate uses, and changes when that changes. This page cannot work that way, because nothing in a photograph of the front of a house tells you the size of a conservatory that does not exist yet.',
+            'So these are broad ranges for comparing styles, and the honest next step is a conversation rather than a number. Tell us which style appeals when you save your design and it travels with your enquiry.',
+          ] },
+        ],
+      };
+    },
+  },
+  {
     slug: 'house-exterior-renovation-cost',
     title: 'House exterior renovation cost UK — the whole outside',
     h1: 'What does renovating a house exterior cost?',
@@ -484,14 +519,44 @@ ${s.table ? table(s.table) : ''}
 ${(s.paras || []).map(p => `<p>${escapeHtml(p)}</p>`).join('\n')}
 </section>`;
 
+/* Which trade a page is about, so the visualiser can open on the thing the
+   visitor searched for instead of on everything at once.
+
+   Derived from the slug rather than stored per page, because the slug IS the
+   search intent — that is what it was chosen for — and two lists that have to
+   agree are two lists that will not.
+
+   'exterior' is deliberately absent: a whole-exterior page wants the default
+   page, everything shown, nothing pre-declined. Absence is the answer, not a
+   value. */
+function journeyForSlug(slug) {
+  if (/^windows-/.test(slug) || /window/.test(slug)) return 'windows';
+  if (/door/.test(slug)) return 'doors';
+  if (/fascia|soffit|guttering|roofline/.test(slug)) return 'roofline';
+  if (/rendering|render|cladding/.test(slug)) return 'cladding';
+  if (/roof/.test(slug)) return 'roof';
+  return null;
+}
+
 /* The CTA, verbatim from the brief and identical on every page: the point of
-   all of this is one action. */
-const cta = (siteUrl) => `<div class="cta-block">
+   all of this is one action.
+
+   It now carries the journey. Sixteen pages already targeted sixteen search
+   intents and then dropped every one of them at the door — somebody arriving
+   from "front door replacement cost" met the same generic uploader telling
+   them to stand back and get the whole front of the house in. The pages
+   existed; the thread between them and the engine did not. */
+const ctaHref = (siteUrl, slug) => {
+  const journey = slug ? journeyForSlug(slug) : null;
+  return `${siteUrl}/${journey ? `?journey=${journey}` : ''}#your-photo`;
+};
+
+const cta = (siteUrl, slug) => `<div class="cta-block">
   <h2>See it on your own house</h2>
   <p>Every figure above is a typical house. Yours is not typical — nobody's is.
      Upload one photograph and we will find your windows, doors, roof and walls,
      estimate your wall area, and price your own elevation.</p>
-  <p><a class="cta" href="${escapeHtml(siteUrl)}/#your-photo">Upload a photo of your house</a></p>
+  <p><a class="cta" href="${escapeHtml(ctaHref(siteUrl, slug))}">Upload a photo of your house</a></p>
   <p class="muted">Free to try &middot; One photo &middot; No sales call unless you ask</p>
 </div>`;
 
@@ -503,7 +568,7 @@ const CAVEAT = 'These are estimates for planning, from real supplier and labour 
 
 const BETA_NOTICE = 'Facet Pro is in beta. Our measurement of wall area from a photograph is still being calibrated against surveyed properties, so treat wall and roof figures as indicative and window figures as a guide.';
 
-function page({ title, description, h1, canonical, body, siteUrl, siteMode, related, faq }) {
+function page({ title, description, h1, canonical, body, siteUrl, siteMode, related, faq, slug }) {
   const beta = siteMode === 'beta';
   return `<!doctype html><html lang="en-GB"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -520,13 +585,13 @@ ${faq ? `<script type="application/ld+json">${JSON.stringify(faq)}</script>` : '
 </head><body>
 <header class="site"><div class="wrap">
   <a class="logo" href="${escapeHtml(siteUrl)}/">Facet Pro</a>
-  <a href="${escapeHtml(siteUrl)}/#your-photo">See my house &rarr;</a>
+  <a href="${escapeHtml(ctaHref(siteUrl, slug))}">See my house &rarr;</a>
 </div></header>
 <main class="wrap">
 <h1>${escapeHtml(h1)}</h1>
 ${beta ? `<p class="notice">${escapeHtml(BETA_NOTICE)}</p>` : ''}
 ${body}
-${cta(siteUrl)}
+${cta(siteUrl, slug)}
 <p class="caveat">${escapeHtml(CAVEAT)}</p>
 ${related ? `<nav class="related"><h2>Related costs</h2><ul>${related.map(r =>
   `<li><a href="${escapeHtml(r.href)}">${escapeHtml(r.label)}</a></li>`).join('')}</ul></nav>` : ''}
@@ -564,6 +629,7 @@ function renderCostPage(slug, { catalogue, siteUrl, siteMode }) {
   const body = `<div class="answer"><strong>The short answer</strong><span>${escapeHtml(built.answer)}</span></div>
 ${built.sections.map(section).join('\n')}`;
   return page({
+    slug,
     title: def.title,
     description: def.description,
     h1: def.h1,
@@ -618,6 +684,7 @@ ${coverage}
 </section>`;
 
   return page({
+    slug,
     title: `Window and door costs in ${where} — Facet Pro`,
     description: `What new windows and doors cost in ${where}, from real fitted rates — and how to see them on your own house before anybody visits.`,
     h1: `New windows and doors in ${where}`,

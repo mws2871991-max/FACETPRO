@@ -1980,6 +1980,8 @@ function resolvePreferences(body) {
   };
 }
 
+const JOURNEY_SOURCES = ['windows', 'doors', 'cladding', 'roofline', 'roof'];
+
 function resolveConservatory(styleId) {
   const styles = catalogue.conservatories?.styles;
   if (!styles || !styleId) return null;
@@ -2597,7 +2599,7 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
     });
   }
 
-  const { claddingId, trimId, roofId, footprintM2, trimLengthM, measurementSource, detections, renderId, notes, consent, detectionId, conservatoryStyleId } = req.body || {};
+  const { claddingId, trimId, roofId, footprintM2, trimLengthM, measurementSource, detections, renderId, notes, consent, detectionId, conservatoryStyleId, journeySource } = req.body || {};
 
   /* Trimmed and capped at the boundary, once, before any of it is stored,
      interpolated into an email or POSTed to an installer.
@@ -2688,6 +2690,11 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
     // Present only if they showed interest in one — useful for the installer,
     // and priced from our catalogue rather than whatever the client sent.
     conservatory: resolveConservatory(conservatoryStyleId),
+    /* Which landing page sent them, validated against the same list the page
+       reads. Deliberately named for what it is: where they came from, not what
+       they want. Somebody can arrive from the doors page and design a whole
+       exterior, so routing weights on the selections above, never on this. */
+    journeySource: JOURNEY_SOURCES.includes(journeySource) ? journeySource : null,
     /* The window and door estimate, recomputed here rather than taken from
        the request — the same rule as the wall area. It is what the homeowner
        was shown, so the installer should see the same figure and know which
