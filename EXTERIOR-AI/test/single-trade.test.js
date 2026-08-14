@@ -24,8 +24,6 @@ require('./helpers/data-dir');
 
 const { test, before } = require('node:test');
 const assert = require('node:assert');
-const fs = require('fs');
-const path = require('path');
 
 process.env.LEAD_CAPTURE = 'on';   // this file saves a lead
 
@@ -163,14 +161,18 @@ test('a conservatory enquiry is not dressed as a whole-house refit', async () =>
   const body = await res.clone().text();
   assert.strictEqual(res.status, 200, `lead should save — got ${res.status}: ${body.slice(0, 300)}`);
 
-  const leads = JSON.parse(fs.readFileSync(path.join(store.DATA_DIR, 'leads.jsonl'), 'utf8')
-    .trim().split('\n').pop());
+  /* Read through the store, not off the disk. leads.jsonl only exists on the
+     JSONL fallback; production runs Postgres, where reading a file finds
+     nothing and the test fails for a reason that has nothing to do with what
+     it is checking. */
+  const all = await store.readAll('leads');
+  const lead = all[all.length - 1];
 
-  assert.strictEqual(leads.price, null, 'no priced work means no price, not a wrong one');
-  assert.strictEqual(leads.priceBreakdown, null);
-  assert.deepStrictEqual(leads.selections, {}, 'no finishes to name');
-  assert.ok(leads.conservatory, 'the thing they actually asked about survives');
-  assert.strictEqual(leads.conservatory.indicative, true);
+  assert.strictEqual(lead.price, null, 'no priced work means no price, not a wrong one');
+  assert.strictEqual(lead.priceBreakdown, null);
+  assert.deepStrictEqual(lead.selections, {}, 'no finishes to name');
+  assert.ok(lead.conservatory, 'the thing they actually asked about survives');
+  assert.strictEqual(lead.conservatory.indicative, true);
 });
 
 test('a conservatory carries its value into the lead score', () => {
