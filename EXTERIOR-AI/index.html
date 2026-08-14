@@ -952,6 +952,36 @@ function findSwatch(id) {
   return SWATCHES.find(s => s.id === id) || SWATCHES[0];
 }
 
+/* The five priced trades, and what each one leaves alone.
+
+   Named once. Two lists that have to agree are two lists that will not, and
+   this one has to agree with landing.js's journeyForSlug and with the ids the
+   pricing engine accepts. */
+const JOURNEYS = {
+  windows:  { keeps: 'windows',  swatches: ['cladding', 'trim', 'roof'], prefs: { doorStyleId: 'none' } },
+  doors:    { keeps: 'doors',    swatches: ['cladding', 'trim', 'roof'], prefs: { windowStyleId: 'none' } },
+  cladding: { keeps: 'cladding', swatches: ['trim', 'roof'],             prefs: { windowStyleId: 'none', doorStyleId: 'none' } },
+  roofline: { keeps: 'trim',     swatches: ['cladding', 'roof'],         prefs: { windowStyleId: 'none', doorStyleId: 'none' } },
+  roof:     { keeps: 'roof',     swatches: ['cladding', 'trim'],         prefs: { windowStyleId: 'none', doorStyleId: 'none' } },
+};
+
+/* An unknown value is not an error worth showing anybody — it is a stale link
+   or somebody typing in the address bar, and the right answer is the ordinary
+   page. */
+function readJourney() {
+  try {
+    const j = new URLSearchParams(location.search).get('journey');
+    return j && Object.prototype.hasOwnProperty.call(JOURNEYS, j) ? j : null;
+  } catch (_) { return null; }
+}
+
+/* Whether this journey starts with a given swatch group left alone. No
+   journey means no exclusions — the ordinary page, everything shown. */
+function journeyExcludes(group) {
+  const j = JOURNEYS[readJourney()];
+  return Boolean(j && j.swatches.includes(group));
+}
+
 // The exact wording the homeowner agrees to. Sent with the lead and stored, so
 // there's a record of what was consented to and when — bump CONSENT_VERSION
 // whenever CONSENT_WORDING changes, and keep the on-screen label identical.
@@ -989,9 +1019,23 @@ const state = {
      design" and "get me quotes" are different asks and the last step should
      not pretend otherwise. */
   quote: { step: 0, intent: null, project: [], timing: null, propertyType: null, homeowner: false },
-  cladding: findSwatch("alabaster"),
-  trim: findSwatch("ink-trim"),
-  roof: findSwatch("slate-roof"),
+  /* Which trade brought them here, from ?journey= on a /cost/ page's CTA.
+
+     Sixteen landing pages already targeted sixteen search intents and then
+     dropped every one of them at the door: somebody arriving from "front door
+     replacement cost" met the same page as somebody who typed the brand name,
+     and the first figure they saw priced the whole outside of their house.
+
+     It is deliberately NOT a claim about what they want — it records where
+     they came from, and somebody who lands on the doors page is perfectly
+     entitled to design a whole exterior. So it pre-declines the other trades
+     rather than hiding them, and every one of those decisions is a chip they
+     can undo. `journeySource` keeps that distinction on the lead, so routing
+     can never mistake a click for a decision. */
+  journey: readJourney(),
+  cladding: findSwatch(journeyExcludes('cladding') ? 'none' : 'alabaster'),
+  trim: findSwatch(journeyExcludes('trim') ? 'none' : 'ink-trim'),
+  roof: findSwatch(journeyExcludes('roof') ? 'none' : 'slate-roof'),
   afterPct: 65,
   leads: [],
   leadsLoaded: false,
@@ -1043,7 +1087,10 @@ const state = {
   glazingLoading: false,
   windowCount: null,        // the homeowner's own count, which beats ours
   prefs: { windowStyleId: null, doorStyleId: null, windowDoorColourId: null,
-           fasciaId: null, soffitId: null, gutteringId: null, rooflineCladdingId: null },
+           fasciaId: null, soffitId: null, gutteringId: null, rooflineCladdingId: null,
+           /* A journey pre-declines the glazing it did not come for. Both are
+              still chips the visitor can undo — see JOURNEYS. */
+           ...(JOURNEYS[readJourney()]?.prefs || {}) },
   /* The password is never persisted. What survives a reload is a token the
      server signed, good for four hours and for one installer — so a future
      DOM mistake leaks something that expires, rather than the credential for
@@ -4265,6 +4312,12 @@ async function sendDesignPack() {
         // Just the ids — the server looks up every product from its own
         // catalogue, so nothing here can carry an invented price.
         conservatoryStyleId: state.conservatoryId,
+        /* Which landing page sent them, if any. Recorded as where they came
+           from, never as what they decided: somebody can arrive on the doors
+           page and design a whole exterior, and routing must not weight a lead
+           toward door fitters on the strength of a click. What they actually
+           chose is in the selections above, which is the thing to route on. */
+        journeySource: state.journey,
         /* What the quote steps asked. Sent as answers, not as a score — the
            server validates each against a fixed list and scores the lead
            itself, so nothing here can inflate what an installer is charged

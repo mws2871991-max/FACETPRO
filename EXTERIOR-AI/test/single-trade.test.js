@@ -236,6 +236,28 @@ test('the homeowner design pack survives both shapes', () => {
   }
 });
 
+test('a lead records where it came from, and refuses an invented source', async () => {
+  const save = (journeySource) => fetch(`${BASE}/api/lead`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      name: 'Jane Smith', email: 'jane@example.com', phone: '07700900000', postcode: 'SW11 4NP',
+      claddingId: 'alabaster', journeySource, consent: { terms: true },
+    }),
+  });
+
+  assert.strictEqual((await save('doors')).status, 200);
+  let all = await store.readAll('leads');
+  assert.strictEqual(all[all.length - 1].journeySource, 'doors');
+
+  /* An allowlist, not a passthrough: this reaches the installer portal and
+     eventually routing, so a client must not be able to write arbitrary text
+     into it. */
+  assert.strictEqual((await save('<script>alert(1)</script>')).status, 200);
+  all = await store.readAll('leads');
+  assert.strictEqual(all[all.length - 1].journeySource, null);
+});
+
 test('a conservatory carries its value into the lead score', () => {
   /* projectValueOf read lead.conservatory.price, which has never existed —
      the guide band is priceMin/priceMax. Every conservatory enquiry scored

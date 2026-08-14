@@ -149,8 +149,39 @@ test('every page drives to the visualiser with the same call to action', () => {
   for (const { slug, html } of allPages()) {
     assert.ok(html.includes('Upload a photo of your house'),
       `${slug} is missing the primary CTA`);
-    assert.ok(html.includes('/#your-photo'), `${slug} does not link into the upload step`);
+    /* The link may now carry ?journey=, so match the destination rather than
+       one literal spelling of it. Still asserts what it always did: every page
+       lands on the site root at the upload step. */
+    assert.match(html, /href="[^"]*\/(\?journey=[a-z]+)?#your-photo"/,
+      `${slug} does not link into the upload step`);
   }
+});
+
+test('a page about one trade carries that trade to the visualiser', () => {
+  /* The whole point of sixteen intent-targeted pages is lost if all sixteen
+     arrive at the same undifferentiated uploader. Somebody who searched "front
+     door replacement cost" should not have the first figure they see price the
+     whole outside of their house. */
+  const expected = {
+    'front-door-replacement-cost': 'doors',
+    'house-rendering-cost': 'cladding',
+    'new-roof-cost': 'roof',
+    'fascia-soffit-replacement-cost': 'roofline',
+    'window-replacement-cost-uk': 'windows',
+  };
+  for (const [slug, journey] of Object.entries(expected)) {
+    const html = landing.renderCostPage(slug, OPTS);
+    assert.match(html, new RegExp(`\\?journey=${journey}#your-photo`),
+      `${slug} should carry journey=${journey}`);
+  }
+});
+
+test('the whole-exterior page carries no journey, because it is the default', () => {
+  /* Absence is the answer here, not a sixth value. An exterior visitor wants
+     the ordinary page: everything shown, nothing pre-declined. */
+  const html = landing.renderCostPage('house-exterior-renovation-cost', OPTS);
+  assert.ok(!/\?journey=/.test(html), 'the whole-exterior page should not pre-declare a trade');
+  assert.match(html, /href="[^"]*\/#your-photo"/);
 });
 
 test('the beta notice appears when the site says beta, and not when it does not', () => {
