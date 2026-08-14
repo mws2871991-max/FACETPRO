@@ -421,6 +421,41 @@ const COST_PAGES = [
     },
   },
   {
+    slug: 'conservatory-cost-uk',
+    title: 'Conservatory cost UK (2026 guide prices)',
+    h1: 'What does a conservatory cost in the UK?',
+    intent: 'conservatory cost UK',
+    description: 'What a conservatory costs in the UK by style — Edwardian, Victorian, lean-to, gable, orangery and garden room — with what drives the price.',
+    build: (c) => {
+      const styles = (c.conservatories && c.conservatories.styles) || [];
+      const cheapest = styles.reduce((a, b) => (a && a.priceMin <= b.priceMin ? a : b), null);
+      const dearest = styles.reduce((a, b) => (a && a.priceMax >= b.priceMax ? a : b), null);
+      return {
+        /* Every other page on this site answers with a figure this engine
+           computed. This one cannot, and says so in the first sentence rather
+           than in a footnote — a conservatory's price turns on size, glazing,
+           groundworks and access, none of which a photograph of the front of a
+           house can tell anybody. Guide bands are what we honestly have. */
+        answer: `Between ${money(cheapest.priceMin)} and ${money(dearest.priceMax)} depending on style and size — a ${cheapest.name.toLowerCase()} is the cheapest way in, an ${dearest.name.toLowerCase()} the most expensive. These are guide ranges, not quotations: unlike the window, door, wall and roof figures on this site, they are not computed from a supplier rate card.`,
+        sections: [
+          { heading: 'By style', table: {
+            head: ['Style', 'Best for', 'Guide range'],
+            rows: styles.map(st => [st.name, st.bestFor, `${money(st.priceMin)} – ${money(st.priceMax)}`]),
+          } },
+          { heading: 'What moves the price', paras: [
+            'Size and glazing do most of it. A larger footprint costs more in every direction at once — more frame, more glass, more base — and the roof specification matters as much as the floor area: a lightweight tiled roof is a different job from polycarbonate.',
+            'Groundworks are the line people do not budget for. A level garden with easy access is a different price from one that needs a retaining wall, drainage moved, or materials carried through the house.',
+            'And a conservatory is rarely the only work. If the windows or roofline are due anyway, doing them together saves paying twice for the same scaffold — which is why the visualiser prices those five trades from one photograph, even though it cannot price the conservatory itself.',
+          ] },
+          { heading: 'Why we will not pretend to price this from a photograph', paras: [
+            'Every other cost on this site is computed from the same rate card the estimate uses, and changes when that changes. This page cannot work that way, because nothing in a photograph of the front of a house tells you the size of a conservatory that does not exist yet.',
+            'So these are broad ranges for comparing styles, and the honest next step is a conversation rather than a number. Tell us which style appeals when you save your design and it travels with your enquiry.',
+          ] },
+        ],
+      };
+    },
+  },
+  {
     slug: 'house-exterior-renovation-cost',
     title: 'House exterior renovation cost UK — the whole outside',
     h1: 'What does renovating a house exterior cost?',
