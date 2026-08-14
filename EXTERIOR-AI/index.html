@@ -2230,7 +2230,13 @@ function renderDetailsOnly() {
    than an error message next to somebody's house. */
 let glazingRequest = 0;
 async function refreshGlazing() {
-  if (!state.prefs.windowStyleId && !state.prefs.doorStyleId) { state.glazing = null; renderDetailsOnly(); return; }
+  /* Nothing chosen, or everything actively declined, are the same thing as far
+     as a price is concerned. Without the second half, declining both windows
+     and door still called the endpoint and rendered a £0–£0 range, which is
+     not a price, it is a visitor being shown their own refusal. */
+  const wantsWindows = state.prefs.windowStyleId && state.prefs.windowStyleId !== 'none';
+  const wantsDoor = state.prefs.doorStyleId && state.prefs.doorStyleId !== 'none';
+  if (!wantsWindows && !wantsDoor) { state.glazing = null; renderDetailsOnly(); return; }
   const ticket = ++glazingRequest;
   state.glazingLoading = true;
   renderDetailsOnly();
@@ -2401,9 +2407,32 @@ function buildDetailOptions() {
     ]);
   };
 
+  /* The same "leave it as it is" the wall, roofline and roof groups get.
+
+     Those three got the opt-out when the engine learned to price one trade at
+     a time; windows and doors did not, so a visitor who wanted a front door
+     could not decline the windows even though glazing.js already understood
+     'none'. The backend could do it and nothing on the page could ask. */
+  const leaveAsItIs = (key, what) => {
+    const active = state.prefs[key] === 'none';
+    return h('button', {
+      type: 'button',
+      'aria-pressed': active ? 'true' : 'false',
+      className: `text-left p-3 rounded-xl border border-dashed transition ${active ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-300 hover:border-zinc-500'}`,
+      onClick: () => setPref(key, active ? null : 'none'),
+    }, [
+      h('div', { className: 'text-xs font-medium' }, 'Leave as it is'),
+      h('div', { className: `mt-1 text-[11px] leading-4 ${active ? 'text-white/60' : 'text-zinc-500'}` },
+        `Keep my ${what} — don't price them`),
+    ]);
+  };
+
   const group = (title, list, key, opts) => h('div', {}, [
     h('h4', { className: 'text-[10px] tracking-widest uppercase text-zinc-500' }, title),
-    h('div', { className: 'mt-2 grid sm:grid-cols-2 gap-2' }, list.map(i => optionCard(i, key, opts))),
+    h('div', { className: 'mt-2 grid sm:grid-cols-2 gap-2' }, [
+      ...list.map(i => optionCard(i, key, opts)),
+      ...(opts?.optOut ? [leaveAsItIs(key, opts.optOut)] : []),
+    ]),
   ]);
 
   const colourRow = (list, key) => h('div', {}, [
@@ -2624,8 +2653,8 @@ function buildDetailOptions() {
       h('p', { className: 'mt-1 text-[12px] leading-5 text-zinc-600 max-w-[68ch]' },
         'Pick a style and a colour and we’ll show them on your home and work out a guide price.'),
       h('div', { className: 'mt-4 grid gap-5' }, [
-        group('Window style', wd.windowStyles, 'windowStyleId'),
-        group('Door style', wd.doorStyles, 'doorStyleId'),
+        group('Window style', wd.windowStyles, 'windowStyleId', { optOut: 'windows' }),
+        group('Door style', wd.doorStyles, 'doorStyleId', { optOut: 'front door' }),
         colourRow(wd.colours, 'windowDoorColourId'),
       ]),
       glazingPanel(),

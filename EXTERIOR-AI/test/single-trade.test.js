@@ -142,6 +142,23 @@ test('asking for windows still prices windows', () => {
   assert.ok(r.price.access > 0, 'upstairs windows still need access');
 });
 
+test('declining the front door is not a catalogue lookup for a door called none', () => {
+  /* doorSelections was [doorStyleId].filter(Boolean), so 'none' passed straight
+     through to rates.doors.find(...) and threw. The endpoint would have 500'd
+     the moment the UI could offer the option. */
+  const r = glaze({ windowStyleId: 'casement', doorStyleId: 'none' });
+  assert.strictEqual(r.price.doors, 0);
+  assert.ok(r.price.supplyFit > 0, 'the windows they did ask for still price');
+});
+
+test('declining everything is £0, not the minimum job charge', () => {
+  /* Every line is zero, and a £950 floor applied to that quotes somebody for
+     declining. The minimum exists for small jobs, not for no job. */
+  const r = glaze({ windowStyleId: 'none', doorStyleId: 'none' });
+  assert.strictEqual(r.price.total, 0);
+  assert.strictEqual(r.price.minimumApplied, false);
+});
+
 /* ── the conservatory ─────────────────────────────────────────────────── */
 
 test('a conservatory enquiry is not dressed as a whole-house refit', async () => {

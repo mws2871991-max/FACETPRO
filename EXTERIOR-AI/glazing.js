@@ -532,7 +532,11 @@ function priceGlazing({ windows, totalCount, selections, rates, houseType , open
   // Doors are priced per leaf from the catalogue, not per m² — the reason
   // they were never in the cladding engine in the first place.
   let doors = 0;
-  const doorSelections = [selections.doorStyleId].filter(Boolean);
+  /* `'none'` on the door side means the same as it does everywhere else: not
+     this trade. Without the filter it reached the catalogue lookup and threw
+     `No rate for door "none"`, so the moment the UI could offer the option the
+     endpoint would have 500'd on it. */
+  const doorSelections = [selections.doorStyleId].filter(id => id && id !== 'none');
   for (const id of doorSelections) {
     const d = rates.doors?.find(x => x.id === id);
     if (!d) throw new Error(`No rate for door "${id}" in catalogue.glazing.`);
@@ -561,10 +565,15 @@ function priceGlazing({ windows, totalCount, selections, rates, houseType , open
 
   let net = supplyFit + doors + access + disposal + openers;
 
+  /* Nothing chosen is not a job, and the minimum job charge must not invent
+     one. With the windows left alone and no door, every line above is zero —
+     and applying a £950 floor to that would quote somebody for declining. */
+  const nothingChosen = !windowsIncluded && doorSelections.length === 0;
+
   // A minimum job charge, because two windows do not cost two-elevenths of
   // eleven windows — the van, the survey and the day are the same.
   const minimum = rates.minJobCharge ?? 0;
-  const minimumApplied = net < minimum;
+  const minimumApplied = !nothingChosen && net < minimum;
   if (minimumApplied) net = minimum;
 
   /* Replacement windows and doors in an existing dwelling are standard-rated.
