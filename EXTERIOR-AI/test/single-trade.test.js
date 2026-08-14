@@ -34,6 +34,7 @@ process.env.PORT = String(PORT);
 const glazing = require('../glazing');
 const catalogue = require('../catalogue.json');
 const leadscore = require('../leadscore');
+const emails = require('../emails');
 const store = require('../store');
 require('../server');   // PORT must be set before this line
 
@@ -173,6 +174,49 @@ test('a conservatory enquiry is not dressed as a whole-house refit', async () =>
   assert.deepStrictEqual(lead.selections, {}, 'no finishes to name');
   assert.ok(lead.conservatory, 'the thing they actually asked about survives');
   assert.strictEqual(lead.conservatory.indicative, true);
+});
+
+/* ── the emails ───────────────────────────────────────────────────────── */
+
+/* These templates read price.selections.cladding/trim/roof straight through.
+   Making a trade optional broke both without a single test noticing: a
+   walls-only lead printed "Alabaster (Render) / undefined / undefined", and a
+   conservatory-only lead threw outright on a null price. Neither could fire
+   while RESEND_API_KEY was unset — which is exactly why it had to be found
+   before it was set, since configuring email is the next job. */
+const emailFixtures = {
+  lead: {
+    id: 'LD-EMAILTEST', name: 'Jane Smith', email: 'jane@example.com',
+    phone: '07700900000', postcode: 'SW11 4NP', measurementSource: 'default_footprint',
+    conservatory: { id: 'orangery', name: 'Orangery', priceMin: 25000, priceMax: 45000, indicative: true },
+  },
+  wallsOnly: {
+    total: 8940, footprintM2: 95, priced: ['cladding'],
+    cladding: 6175, roof: 0, trim: 0, scaffolding: 800, waste: 400, vat: 1490,
+    selections: { cladding: 'Alabaster (Render)' },
+  },
+};
+
+test('the installer email names only the work that was chosen', () => {
+  const html = emails.leadNotificationHtml(emailFixtures.lead, emailFixtures.wallsOnly);
+  assert.ok(!/undefined/.test(html), 'no undefined anywhere in an installer email');
+  assert.match(html, /Alabaster \(Render\)/);
+  assert.ok(!/Slate Roof/.test(html));
+});
+
+test('an email survives a lead with no priced work at all', () => {
+  const html = emails.leadNotificationHtml(emailFixtures.lead, null);
+  assert.ok(!/undefined/.test(html));
+  assert.match(html, /No wall, roof or roofline work chosen/);
+  assert.match(html, /Orangery/, 'the conservatory is what this lead is about');
+});
+
+test('the homeowner design pack survives both shapes', () => {
+  for (const price of [emailFixtures.wallsOnly, null]) {
+    const html = emails.designPackHtml(emailFixtures.lead, price, 'https://example.com', 'tok', []);
+    assert.ok(html.length > 200, 'a design pack should still be a design pack');
+    assert.ok(!/undefined/.test(html), `undefined leaked into the design pack for ${price ? 'walls-only' : 'no priced work'}`);
+  }
 });
 
 test('a conservatory carries its value into the lead score', () => {
