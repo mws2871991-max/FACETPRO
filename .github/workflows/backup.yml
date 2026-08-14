@@ -1,0 +1,98 @@
+# The restore test the privacy notice promises, on a schedule.
+#
+# legal/privacy.html says, of enquiries:
+#
+#     "Enquiries are backed up, and we test that we can restore them."
+#
+# scripts/backup-and-verify.js does exactly that — exports every table in the
+# facetpro_visualiser schema, restores it into a scratch schema, and compares
+# row for row and by checksum, so a restore that produces the right number of
+# wrong rows fails. It has existed for a while and nothing has ever run it.
+# A promise in a privacy notice with nothing scheduled behind it is the same
+# shape as the gallery's "photographs, not renders": true only by luck.
+#
+# ONE SETUP STEP, in a browser:
+#
+#   1. railway.app -> project facetpro-backend -> the Postgres service ->
+#      Variables -> copy DATABASE_PUBLIC_URL (the public one; the internal
+#      host is not reachable from a GitHub runner).
+#   2. github.com/mws2871991-max/FACETPRO -> Settings -> Secrets and variables
+#      -> Actions -> New repository secret
+#      Name:  DATABASE_PUBLIC_URL
+#      Value: the connection string
+#
+# Until that secret exists this workflow says so and stops. It does not fail
+# the build, for the same reason deploy.yml does not: a red cross every night
+# teaches people to ignore red crosses.
+#
+# WHAT THIS DELIBERATELY DOES NOT DO: keep the dump.
+#
+# The export contains every homeowner's name, email, phone and postcode. The
+# script's own header notes that a snapshot living on the same platform as the
+# thing it protects is one outage away from being no backup at all — which
+# argues for keeping a copy off Railway. But uploading it as a GitHub artifact
+# would put that personal data somewhere new, readable by anyone with repo
+# access, under a retention nobody has decided. That is a choice for whoever
+# owns the privacy notice, not a default to slip into a workflow file. So this
+# proves the data can be got out whole and put back whole, and deletes it.
+
+name: backup
+
+on:
+  schedule:
+    - cron: '17 3 * * *'   # 03:17 UTC daily — off the hour, when nothing else runs
+  workflow_dispatch:
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  restore-test:
+    name: Export and verify a restore
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: EXTERIOR-AI
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: EXTERIOR-AI/package-lock.json
+      - run: npm ci
+
+      - name: Check the connection string is present
+        id: secret
+        env:
+          DSN: ${{ secrets.DATABASE_PUBLIC_URL }}
+        run: |
+          if [ -z "$DSN" ]; then
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=No backup taken::DATABASE_PUBLIC_URL is not set, so no restore test ran. See the setup note at the top of .github/workflows/backup.yml. The privacy notice says enquiries are backed up and that we test we can restore them; until this secret exists, the second half of that sentence is untested."
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Export, restore into a scratch schema, compare row for row
+        if: steps.secret.outputs.present == 'true'
+        env:
+          DSN: ${{ secrets.DATABASE_PUBLIC_URL }}
+        run: |
+          # The script reads its connection string from a JSON file rather than
+          # the environment, so write one, use it, and remove it in the same step.
+          umask 077
+          printf '{"DATABASE_PUBLIC_URL":%s}\n' "$(printf '%s' "$DSN" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')" > vars.json
+          trap 'rm -f vars.json backup-*.json' EXIT
+          node scripts/backup-and-verify.js vars.json "backup-$(date -u +%Y%m%dT%H%M%SZ).json" "${GITHUB_RUN_ID}"
+
+      - name: Confirm nothing was left behind
+        if: always()
+        run: |
+          # Belt and braces: the trap above should have removed both, and a
+          # dump of every homeowner sitting in a runner workspace is not a
+          # thing to leave to one mechanism.
+          rm -f vars.json backup-*.json
+          ls vars.json backup-*.json 2>/dev/null && { echo "::error::personal data left on the runner"; exit 1; } || echo "clean"
