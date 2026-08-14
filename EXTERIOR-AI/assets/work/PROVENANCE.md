@@ -1,6 +1,6 @@
 # Gallery provenance — NOT YET COMPLETED
 
-The homepage says, of these eight photographs:
+The homepage says, of these six photographs:
 
 > **Real homes. Real work. No showroom.**
 > Photographs, not renders.
@@ -21,8 +21,6 @@ put them there.
 |---|---|---|---|---|---|---|
 | `hero-before.jpg` | UNKNOWN | | | | | UNKNOWN |
 | `hero-after.jpg` | UNKNOWN | | | | | UNKNOWN |
-| `terrace-before.jpg` | UNKNOWN | | | | | UNKNOWN |
-| `terrace-after.jpg` | UNKNOWN | | | | | UNKNOWN |
 | `newbuild-before.jpg` | UNKNOWN | | | | | UNKNOWN |
 | `newbuild-after.jpg` | UNKNOWN | | | | | UNKNOWN |
 | `tilehung-before.jpg` | UNKNOWN | | | | | UNKNOWN |
@@ -31,9 +29,10 @@ put them there.
 ## Rejected: the generated Victorian terrace pair
 
 `terrace-vis-before.jpg` and `terrace-vis-after.jpg` were split out of a wide
-composite and put into the gallery, then taken straight back out. They are
-deliberately **not committed** — a rejected asset sitting in the tree is an
-invitation to wire it back in. This note is the record instead.
+composite and put into the gallery, then taken straight back out and deleted.
+They were never committed — a rejected asset sitting in the tree is an
+invitation to wire it back in. This note is the record instead. The source
+composite is `victorian_terrace_before_after.webp`, outside the repository.
 
 They are not the same house. The "after" has a Victorian street lamp standing
 at the kerb that does not exist in the "before"; the neighbouring property's
@@ -70,26 +69,30 @@ landscaping are on the roadmap and are not priced, so the caption says so
 rather than letting the picture imply an estimate covers it. This was a
 deliberate decision to keep the landscaping in the image.
 
-## An address was legible and has been cropped out
+## The Victorian terrace pair has been removed entirely
 
 `terrace-before.jpg` carried a house-number plaque on the neighbouring wall,
-lower right, reading **118, Dysons R…** — legible at full resolution, which the
+lower right, reading **118, Dysons R…** — legible at the full resolution the
 site serves publicly. That made the property addressable rather than merely
 recognisable, which is a different and worse thing to publish without the
 homeowner's permission.
 
-The right-hand edge has been cropped away: 900×1200 → 816×1088, keeping the
-source at 3:4 so the gallery box is unchanged. Nothing was retouched, blurred
-or painted over — the plaque is simply outside the frame now, along with the
-neighbour's wall. The uncropped original remains in git history if permission
-is later obtained and the wider framing is wanted back.
+It was first cropped, 900×1200 → 816×1088, to put the plaque out of frame. Then
+both files were deleted and the card taken off the page, which settles it
+properly: an unanswered permission question on an identifiable, addressable
+house is not something to leave live while the question waits. Cropping removed
+the address; it did not establish who said yes. Removal does not need anyone to.
+
+Both files remain in git history if permission is later obtained.
 
 The other three pairs were checked for the same thing at the same time. `hero`
 and `tilehung` carry no number, street sign or plate. `newbuild` has a house-
-name plaque beside the door that is illegible even magnified eight times.
+name plaque beside the door that is illegible even magnified eight times. Their
+permission question is still open — see the table above — but none of them
+hands a reader the address.
 
-This does not answer the permission question below for the terrace pair. It
-removes the address; it does not establish who said yes.
+The gallery is three pairs now, so its pager is hidden: one page of cards does
+not need a dot and two dead arrows. Adding a fourth home brings it back.
 
 ## Derived files
 
