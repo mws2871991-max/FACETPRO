@@ -933,7 +933,24 @@ let SWATCHES = [
   { id: "terracotta",    name: "Terracotta",    hex: "#B45309", group: "Roof" },
 ];
 
-function findSwatch(id) { return SWATCHES.find(s => s.id === id) || SWATCHES[0]; }
+/* "Leaving it as it is" is a choice, and until now there was no way to make it.
+
+   Every group defaulted to a finish and the server had no way to hear "not
+   this trade", so somebody who only wanted their walls rendered was quoted a
+   roof and new fascias too — £27,372, of which £6,175 was the render. The
+   engine now takes `'none'`; this is how a visitor says it.
+
+   Given a hex rather than left blank so the schematic preview and the swatch
+   dot keep working without a null check at every use. The colour is a neutral
+   stone: it reads as "unchanged", not as a finish anybody picked. */
+const NONE_HEX = '#D8D4CE';
+const noneSwatch = (group) => ({ id: 'none', name: 'Leave as it is', hex: NONE_HEX, group, excluded: true });
+const isNone = (sw) => sw?.id === 'none';
+
+function findSwatch(id) {
+  if (id === 'none') return noneSwatch('Cladding');
+  return SWATCHES.find(s => s.id === id) || SWATCHES[0];
+}
 
 // The exact wording the homeowner agrees to. Sent with the lead and stored, so
 // there's a record of what was consented to and when — bump CONSENT_VERSION
@@ -1861,7 +1878,14 @@ function buildVisualizer() {
     afterPane = h('div', { className: 'absolute inset-0', style: { clipPath: `inset(0 ${100 - state.afterPct}% 0 0)` } }, [
       h('img', {
         src: state.renderUrl,
-        alt: `Your home with ${state.cladding.name} cladding, ${state.trim.name} trim and a ${state.roof.name} roof`,
+        /* Names only what is actually changing. "Alabaster cladding, Leave as
+           it is trim" would be nonsense, and describing work nobody chose is
+           the same mistake as pricing it. */
+        alt: `Your home with ${[
+          !isNone(state.cladding) && `${state.cladding.name} cladding`,
+          !isNone(state.trim) && `${state.trim.name} trim`,
+          !isNone(state.roof) && `a ${state.roof.name} roof`,
+        ].filter(Boolean).join(', ') || 'its finishes unchanged'}`,
         className: 'w-full h-full object-cover',
       }),
     ]);
@@ -1905,7 +1929,7 @@ function buildVisualizer() {
   const groupsRow = ['Cladding', 'Trim', 'Roof'].map(group =>
     h('div', { id: groupAnchors[group] || null, className: groupAnchors[group] ? 'scroll-mt-24' : '' }, [
       h('h3', { className: 'text-[10px] tracking-widest uppercase text-zinc-500' }, groupLabels[group]),
-      h('div', { className: 'mt-2 flex flex-wrap gap-2' }, SWATCHES.filter(s => s.group === group).map(sw => {
+      h('div', { className: 'mt-2 flex flex-wrap gap-2' }, [...SWATCHES.filter(s => s.group === group), noneSwatch(group)].map(sw => {
         const active = (group === 'Cladding' && state.cladding.id === sw.id) ||
                        (group === 'Trim' && state.trim.id === sw.id) ||
                        (group === 'Roof' && state.roof.id === sw.id);
@@ -1930,7 +1954,12 @@ function buildVisualizer() {
         }, [
           sw.image
             ? h('img', { src: sw.image, alt: '', className: 'w-5 h-5 rounded-full object-cover border border-black/10' })
-            : h('span', { className: 'w-4 h-4 rounded-full border border-black/10', style: { background: sw.hex } }),
+            /* The "leave as it is" dot is outlined rather than filled, so it
+               does not read as one more colour to choose between. */
+            : h('span', {
+                className: `w-4 h-4 rounded-full border ${sw.excluded ? 'border-dashed border-zinc-400' : 'border-black/10'}`,
+                style: { background: sw.excluded ? 'transparent' : sw.hex },
+              }),
           sw.name,
         ]);
       })),
@@ -2247,19 +2276,32 @@ function buildTotalBar() {
   const glaz = state.glazing;
   if (!price && !glaz?.price) return h('div', { id: 'total-bar' });
 
+  /* What the figure covers, and only that.
+
+     This used to read "8 windows · 1 door" off the window count whether or not
+     the windows were being priced, and "95 m² of wall" whether or not the
+     walls were. A composition that lists work nobody chose is the same lie as
+     a total that includes it. */
   const parts = [];
   if (glaz?.price) {
     const n = glaz.windowCount;
-    parts.push(`${n} window${n === 1 ? '' : 's'}`);
+    if (glaz.price.windowsIncluded !== false) parts.push(`${n} window${n === 1 ? '' : 's'}`);
     if (state.prefs.doorStyleId) parts.push('1 door');
   }
-  if (price?.footprintM2) parts.push(`${price.footprintM2} m² of wall`);
+  if (price?.footprintM2 && price.priced?.includes('cladding')) parts.push(`${price.footprintM2} m² of wall`);
+  if (price?.priced?.includes('roof')) parts.push('roof');
+  if (price?.priced?.includes('trim')) parts.push('roofline');
 
   /* Two figures, and they are not addable: the cladding total is a single
      number, the glazing is a range. Presenting a sum would be a precision
      neither of them has. */
-  const cladding = price ? fmtMoney(price.total) : null;
+  /* A price for nothing is not a price. With every trade left as it is there
+     is no figure to show, and "£0 nothing selected inc VAT" is furniture
+     pretending to be information. */
+  const clad = price && (price.priced ? price.priced.length > 0 : true);
+  const cladding = clad ? fmtMoney(price.total) : null;
   const glazing = glaz?.price ? `${fmtMoney(glaz.range.low)}–${fmtMoney(glaz.range.high)}` : null;
+  if (!cladding && !glazing) return h('div', { id: 'total-bar' });
 
   return h('div', {
     id: 'total-bar',
@@ -2279,13 +2321,22 @@ function buildTotalBar() {
         (state.useMeasurement && state.detectionId)
           ? null
           : h('span', { className: 'text-[10px] uppercase tracking-[0.14em] text-zinc-500 whitespace-nowrap' }, 'Typical home'),
+        /* The label names what the number covers. It read "walls, roof & trim"
+           always, which stopped being true the moment a trade could be left
+           out — £8,100 sat under a label promising three trades when it had
+           been asked to price one. */
         cladding ? h('span', {}, [
           h('span', { className: 'measured text-[20px]' }, cladding),
-          h('span', { className: 'text-[11px] text-zinc-500' }, ' walls, roof & trim'),
+          h('span', { className: 'text-[11px] text-zinc-500' }, ' ' + ((state.price?.priced || [])
+            .map(t => ({ cladding: 'walls', roof: 'roof', trim: 'trim' })[t])
+            .filter(Boolean)
+            .join(', ')
+            .replace(/, ([^,]*)$/, ' & $1') || 'nothing selected')),
         ]) : null,
         glazing ? h('span', {}, [
           h('span', { className: 'measured text-[15px]' }, glazing),
-          h('span', { className: 'text-[11px] text-zinc-500' }, ' windows & doors'),
+          h('span', { className: 'text-[11px] text-zinc-500' },
+            state.glazing?.price?.windowsIncluded === false ? ' doors' : ' windows & doors'),
         ]) : null,
         h('span', { className: 'text-[11px] text-zinc-500' },
           parts.length ? `inc VAT · ${parts.join(' · ')}` : 'inc VAT'),
