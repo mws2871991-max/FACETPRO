@@ -39,7 +39,26 @@ const priceRow = (label, value, strong) =>
 
 /* ── internal: new lead notification ── */
 
+/* A lead may have no priced wall work at all.
+
+   Somebody who only wants a conservatory, or only a front door, selects no
+   cladding, roof or trim — so `price` is null and there is nothing to itemise.
+   This used to read price.selections.cladding straight through, which printed
+   "Alabaster (Render) / undefined / undefined" for a walls-only lead and threw
+   outright on a conservatory-only one. It could not fire while homeowner email
+   was unconfigured, which is precisely why it needed finding before it was. */
+const selectionsLine = (price) => {
+  const named = ['cladding', 'trim', 'roof']
+    .map(k => price?.selections?.[k])
+    .filter(Boolean);
+  return named.length ? named.join(' / ') : 'No wall, roof or roofline work chosen';
+};
+
 function leadNotificationHtml(lead, price) {
+  const conservatory = lead.conservatory
+    ? `${lead.conservatory.name} (guide ${money(lead.conservatory.priceMin)}–${money(lead.conservatory.priceMax)})`
+    : null;
+
   return `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;color:#0F1012">
     <h2 style="font-size:20px;margin-bottom:16px">New lead from Facet Pro</h2>
     <table style="width:100%;border-collapse:collapse;font-size:14px">
@@ -48,9 +67,10 @@ function leadNotificationHtml(lead, price) {
       ${row('Email', `<a href="mailto:${encodeURI(String(lead.email || ''))}">${escapeHtml(lead.email)}</a>`)}
       ${row('Phone', escapeHtml(lead.phone) || '—')}
       ${row('Postcode', escapeHtml(lead.postcode) || '—')}
-      ${row('Selections', escapeHtml(`${price.selections.cladding} / ${price.selections.trim} / ${price.selections.roof}`))}
-      ${row('Wall area', `${escapeHtml(price.footprintM2)} m² (${escapeHtml(lead.measurementSource)})`)}
-      ${row('Quote total', `<strong>${money(price.total)}</strong>`)}
+      ${row('Selections', escapeHtml(selectionsLine(price)))}
+      ${price ? row('Wall area', `${escapeHtml(price.footprintM2)} m² (${escapeHtml(lead.measurementSource)})`) : ''}
+      ${price ? row('Quote total', `<strong>${money(price.total)}</strong>`) : ''}
+      ${conservatory ? row('Conservatory', escapeHtml(conservatory)) : ''}
     </table>
   </div>`;
 }
@@ -125,18 +145,18 @@ function designPackHtml(lead, price, siteUrl, withdrawToken, recipients) {
     ${render ? `<img src="${escapeHtml(render)}" alt="Your home with the finishes you chose"
       style="width:100%;border-radius:12px;margin:22px 0 0;display:block">` : ''}
 
-    <h2 style="font-size:15px;margin:26px 0 8px;font-weight:600">What you chose</h2>
+    ${price ? `<h2 style="font-size:15px;margin:26px 0 8px;font-weight:600">What you chose</h2>
     <table style="width:100%;border-collapse:collapse;font-size:14px">
-      ${row('Walls &amp; cladding', escapeHtml(price.selections.cladding))}
-      ${row('Fascia, soffit &amp; guttering', escapeHtml(price.selections.trim))}
-      ${row('Roof', escapeHtml(price.selections.roof))}
+      ${price.selections.cladding ? row('Walls &amp; cladding', escapeHtml(price.selections.cladding)) : ''}
+      ${price.selections.trim ? row('Fascia, soffit &amp; guttering', escapeHtml(price.selections.trim)) : ''}
+      ${price.selections.roof ? row('Roof', escapeHtml(price.selections.roof)) : ''}
     </table>
 
     <h2 style="font-size:15px;margin:26px 0 8px;font-weight:600">Your estimate</h2>
     <table style="width:100%;border-collapse:collapse;font-size:14px;background:#fff;border-radius:12px;padding:8px">
-      ${priceRow('Walls &amp; cladding, fitted', price.cladding)}
-      ${priceRow('Roof, fitted', price.roof)}
-      ${priceRow('Fascia, soffit &amp; guttering', price.trim)}
+      ${price.cladding ? priceRow('Walls &amp; cladding, fitted', price.cladding) : ''}
+      ${price.roof ? priceRow('Roof, fitted', price.roof) : ''}
+      ${price.trim ? priceRow('Fascia, soffit &amp; guttering', price.trim) : ''}
       ${priceRow('Scaffolding', price.scaffolding)}
       ${priceRow('Waste allowance', price.waste)}
       ${priceRow('VAT (20%)', price.vat)}
@@ -145,7 +165,7 @@ function designPackHtml(lead, price, siteUrl, withdrawToken, recipients) {
     </table>
     <p style="font-size:12px;line-height:1.6;color:#6B6E78;margin:10px 0 0">
       Based on a wall area of ${escapeHtml(price.footprintM2)} m².
-    </p>
+    </p>` : ''}
 
     <div style="background:#FFF7ED;border:1px solid #FCD34D;border-radius:12px;padding:14px 16px;margin:22px 0 0">
       <p style="font-size:13px;line-height:1.6;margin:0;color:#7c5b12">
@@ -206,24 +226,28 @@ function designPackText(lead, price, siteUrl, withdrawToken, recipients) {
     `Hello ${lead.name}, here's the design you saved${lead.postcode ? ` for ${lead.postcode}` : ''}.`,
     `Your reference is ${lead.id}.`,
     ``,
-    `WHAT YOU CHOSE`,
-    `  Walls & cladding:              ${price.selections.cladding}`,
-    `  Fascia, soffit & guttering:    ${price.selections.trim}`,
-    `  Roof:                          ${price.selections.roof}`,
-    ``,
-    `YOUR ESTIMATE (wall area ${price.footprintM2} m²)`,
-    `  Walls & cladding, fitted       ${money(price.cladding)}`,
-    `  Roof, fitted                   ${money(price.roof)}`,
-    `  Fascia, soffit & guttering     ${money(price.trim)}`,
-    `  Scaffolding                    ${money(price.scaffolding)}`,
-    `  Waste allowance                ${money(price.waste)}`,
-    `  VAT (20%)                      ${money(price.vat)}`,
-    `  Estimated total                ${money(price.total)}`,
-    ``,
-    `THIS IS A PLANNING ESTIMATE, NOT A FIXED QUOTE. Your final price depends on the`,
-    `condition of your walls and roof, access, and what an installer finds when they`,
-    `survey your home.`,
-    ``,
+    /* Same shape as the HTML: a lead with no priced wall work skips both
+       blocks entirely rather than printing "undefined" down a column. */
+    ...(price ? [
+      `WHAT YOU CHOSE`,
+      ...(price.selections.cladding ? [`  Walls & cladding:              ${price.selections.cladding}`] : []),
+      ...(price.selections.trim ? [`  Fascia, soffit & guttering:    ${price.selections.trim}`] : []),
+      ...(price.selections.roof ? [`  Roof:                          ${price.selections.roof}`] : []),
+      ``,
+      `YOUR ESTIMATE (wall area ${price.footprintM2} m²)`,
+      ...(price.cladding ? [`  Walls & cladding, fitted       ${money(price.cladding)}`] : []),
+      ...(price.roof ? [`  Roof, fitted                   ${money(price.roof)}`] : []),
+      ...(price.trim ? [`  Fascia, soffit & guttering     ${money(price.trim)}`] : []),
+      `  Scaffolding                    ${money(price.scaffolding)}`,
+      `  Waste allowance                ${money(price.waste)}`,
+      `  VAT (20%)                      ${money(price.vat)}`,
+      `  Estimated total                ${money(price.total)}`,
+      ``,
+      `THIS IS A PLANNING ESTIMATE, NOT A FIXED QUOTE. Your final price depends on the`,
+      `condition of your walls and roof, access, and what an installer finds when they`,
+      `survey your home.`,
+      ``,
+    ] : []),
     `WHAT HAPPENS NEXT`,
     ...whatHappensNextText(lead, recipients),
     ``,
