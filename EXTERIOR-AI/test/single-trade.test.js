@@ -1,0 +1,190 @@
+/* Somebody who wants one trade, not the whole outside of their house.
+
+   Every pricing path used to fill in what the visitor had not chosen, and
+   always upward. A missing roofId meant `catalogue.roof[0]`, not "no roof". A
+   missing window style meant a multiplier of 1, not "the windows are staying".
+   Measured on the default 95 m² house, before this:
+
+     a composite front door   £7,451–£13,837, of which £1,667 was the door
+     walls rendered           £27,372, of which £6,175 was render
+     a conservatory           £27,372 and the conservatory not priced at all
+
+   The defaults were silent and they never argued downward, which is the part
+   that matters: an installer pays £100 for a lead whose headline figure
+   describes work the homeowner never asked for, and finds out at survey.
+
+   `'none'` is how a caller says "not this trade". An ABSENT field still takes
+   the catalogue default — that is deliberate, so a client that has never heard
+   of opting out behaves exactly as it did, and it is the first thing asserted
+   below. */
+
+'use strict';
+
+require('./helpers/data-dir');
+
+const { test, before } = require('node:test');
+const assert = require('node:assert');
+const fs = require('fs');
+const path = require('path');
+
+process.env.LEAD_CAPTURE = 'on';   // this file saves a lead
+
+const PORT = 3213;
+const BASE = `http://127.0.0.1:${PORT}`;
+process.env.PORT = String(PORT);
+
+const glazing = require('../glazing');
+const catalogue = require('../catalogue.json');
+const leadscore = require('../leadscore');
+const store = require('../store');
+require('../server');   // PORT must be set before this line
+
+before(async () => { await require('./helpers/server-ready')(BASE); });
+
+const quote = async (body) => {
+  const res = await fetch(`${BASE}/api/quote`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  assert.strictEqual(res.status, 200, 'quote should price');
+  return res.json();
+};
+
+const glaze = (selections) => glazing.estimateGlazing({
+  detections: [], houseType: 'semi', selections, rates: catalogue.glazing,
+});
+
+/* ── the walls ────────────────────────────────────────────────────────── */
+
+test('omitting a trade still prices it, so old clients do not change', async () => {
+  const p = await quote({ claddingId: 'alabaster' });
+  assert.deepStrictEqual(p.priced, ['cladding', 'roof', 'trim'],
+    'an absent roofId means "not specified", not "not wanted"');
+  assert.ok(p.roof > 0 && p.trim > 0);
+});
+
+test('rendering the walls does not buy a roof and new fascias', async () => {
+  const all = await quote({ claddingId: 'alabaster' });
+  const walls = await quote({ claddingId: 'alabaster', roofId: 'none', trimId: 'none' });
+
+  assert.deepStrictEqual(walls.priced, ['cladding']);
+  assert.strictEqual(walls.roof, 0, 'a roof nobody asked for must cost nothing');
+  assert.strictEqual(walls.trim, 0);
+  assert.ok(walls.total < all.total / 2,
+    `walls-only should be far below the whole exterior — got ${walls.total} against ${all.total}`);
+});
+
+test('scaffolding follows the walls, not the roof', async () => {
+  /* Rendering a two-storey house needs a scaffold just as much as re-roofing
+     does, which is why the walls-only calculator has always charged it. The
+     mistake would be tying it to the roof and quietly dropping it. */
+  const walls = await quote({ claddingId: 'alabaster', roofId: 'none', trimId: 'none' });
+  assert.strictEqual(walls.scaffolding, catalogue.scaffoldingCost);
+});
+
+test('choosing no work at all costs nothing, not a floor of scaffolding and VAT', async () => {
+  const nothing = await quote({ claddingId: 'none', roofId: 'none', trimId: 'none' });
+  assert.deepStrictEqual(nothing.priced, []);
+  assert.strictEqual(nothing.total, 0);
+  assert.strictEqual(nothing.scaffolding, 0, 'nothing to reach means nothing to stand on');
+  assert.strictEqual(nothing.vat, 0);
+});
+
+test('an excluded trade is absent from selections, not named', async () => {
+  /* Otherwise the lead, the installer portal and the homeowner's email all
+     print a roof finish for a roof that is not being done. */
+  const walls = await quote({ claddingId: 'alabaster', roofId: 'none', trimId: 'none' });
+  assert.ok(walls.selections.cladding, 'the chosen finish is still named');
+  assert.ok(!('roof' in walls.selections), 'an excluded trade must not be named');
+  assert.ok(!('trim' in walls.selections));
+});
+
+/* ── the glazing ──────────────────────────────────────────────────────── */
+
+test('a front door on its own is priced as a front door', () => {
+  const r = glaze({ doorStyleId: 'composite', windowStyleId: 'none' });
+  const door = catalogue.glazing.doors.find(d => d.id === 'composite').supplyFit;
+
+  assert.strictEqual(r.price.windowsIncluded, false);
+  assert.strictEqual(r.price.supplyFit, 0, 'windows that are staying cost nothing');
+  assert.strictEqual(r.price.doors, door);
+  assert.ok(r.range.low < door * 2,
+    `a £${door} door should not open at £${r.range.low}`);
+});
+
+test('no scaffold tower to fit a front door', () => {
+  /* The access charge fires on any upstairs window. Upstairs windows are not
+     involved in fitting a door, and £780 was the single largest line on the
+     old door-only figure after the windows themselves. */
+  const r = glaze({ doorStyleId: 'composite', windowStyleId: 'none' });
+  assert.strictEqual(r.price.access, 0);
+});
+
+test('one door disposed of, not one door and every window in the house', () => {
+  const r = glaze({ doorStyleId: 'composite', windowStyleId: 'none' });
+  assert.strictEqual(r.price.disposal, catalogue.glazing.disposalPerUnit);
+});
+
+test('the minimum job charge finally reaches the jobs it was written for', () => {
+  /* minJobCharge has always been in the catalogue and was unreachable: the
+     whole-house window total buried it every time. A single uPVC door is
+     exactly the case it exists for — the van, the survey and the day are the
+     same whether it is one door or eleven windows. */
+  const r = glaze({ doorStyleId: 'upvc', windowStyleId: 'none' });
+  assert.strictEqual(r.price.minimumApplied, true);
+  assert.ok(r.price.total >= catalogue.glazing.minJobCharge);
+});
+
+test('asking for windows still prices windows', () => {
+  const r = glaze({ windowStyleId: 'casement', doorStyleId: 'composite' });
+  assert.strictEqual(r.price.windowsIncluded, true);
+  assert.ok(r.price.supplyFit > 0);
+  assert.ok(r.price.access > 0, 'upstairs windows still need access');
+});
+
+/* ── the conservatory ─────────────────────────────────────────────────── */
+
+test('a conservatory enquiry is not dressed as a whole-house refit', async () => {
+  /* The installer pays £100 for this. Sending it with a headline price of
+     £27,372 of render, roof and fascias means they ring expecting an exterior
+     job and find a conservatory — the product misdescribing what it sells to
+     the person buying it. */
+  const res = await fetch(`${BASE}/api/lead`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      name: 'Jane Smith', email: 'jane@example.com', phone: '07700900000', postcode: 'SW11 4NP',
+      claddingId: 'none', roofId: 'none', trimId: 'none',
+      conservatoryStyleId: 'orangery',
+      consent: { terms: true },
+    }),
+  });
+  const body = await res.clone().text();
+  assert.strictEqual(res.status, 200, `lead should save — got ${res.status}: ${body.slice(0, 300)}`);
+
+  const leads = JSON.parse(fs.readFileSync(path.join(store.DATA_DIR, 'leads.jsonl'), 'utf8')
+    .trim().split('\n').pop());
+
+  assert.strictEqual(leads.price, null, 'no priced work means no price, not a wrong one');
+  assert.strictEqual(leads.priceBreakdown, null);
+  assert.deepStrictEqual(leads.selections, {}, 'no finishes to name');
+  assert.ok(leads.conservatory, 'the thing they actually asked about survives');
+  assert.strictEqual(leads.conservatory.indicative, true);
+});
+
+test('a conservatory carries its value into the lead score', () => {
+  /* projectValueOf read lead.conservatory.price, which has never existed —
+     the guide band is priceMin/priceMax. Every conservatory enquiry scored
+     zero value, which went unnoticed while a whole-house wall price was
+     always there to hide it. */
+  const style = catalogue.conservatories.styles.find(s => s.id === 'orangery');
+  const lead = { conservatory: { id: 'orangery', priceMin: style.priceMin, priceMax: style.priceMax, indicative: true } };
+  const value = leadscore.projectValueOf
+    ? leadscore.projectValueOf(lead)
+    : leadscore.score(lead).projectValue;
+
+  const midpoint = (style.priceMin + style.priceMax) / 2;
+  assert.ok(value >= midpoint * 0.9,
+    `an orangery enquiry should be worth about £${midpoint}, scored £${value}`);
+});

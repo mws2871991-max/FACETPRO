@@ -89,7 +89,15 @@ function projectValueOf(lead) {
   const low = Number(lead?.glazing?.range?.low) || 0;
   const high = Number(lead?.glazing?.range?.high) || 0;
   const glazing = low && high ? (low + high) / 2 : (Number(lead?.glazing?.price) || 0);
-  const conservatory = Number(lead?.conservatory?.price) || 0;
+  /* The conservatory is a guide band, so it has priceMin and priceMax and has
+     never had a `price`. This read the field that does not exist, so every
+     conservatory enquiry contributed exactly nothing to the size of the job —
+     an orangery enquiry scored the same as no conservatory at all. Harmless
+     while a lead always carried a whole-house wall price; not harmless now
+     that a conservatory-only lead carries no wall price to hide behind. */
+  const cLow = Number(lead?.conservatory?.priceMin) || 0;
+  const cHigh = Number(lead?.conservatory?.priceMax) || 0;
+  const conservatory = cLow && cHigh ? (cLow + cHigh) / 2 : (cLow || cHigh);
   return Math.round(cladding + glazing + conservatory);
 }
 
@@ -156,7 +164,12 @@ function score(lead) {
      Somebody who has seen a price and carried on is past the objection the
      price would have raised. Inferred from there being a priced estimate on
      the lead, which is what they were shown. */
-  const sawEstimate = !!(Number(lead?.price) || lead?.glazing?.price);
+  /* A conservatory enquiry has seen a number too — a guide band rather than a
+     priced estimate, but it is still the figure they carried on past, which is
+     the whole point of this signal. Before leads could exist without a wall
+     price, this read as "did anything price at all" and got the right answer
+     by accident. */
+  const sawEstimate = !!(Number(lead?.price) || lead?.glazing?.price || lead?.conservatory);
   total += award(reasons, 'estimateViewed', sawEstimate ? 1 : 0,
     sawEstimate ? 'saw a costed estimate' : 'no estimate produced');
 
