@@ -85,6 +85,43 @@ test('a colour with no style changes nothing', async () => {
   assert.doesNotMatch(prompt, /Replace the window frames/);
 });
 
+test('a bifold is not painted onto the front of the house', async () => {
+  /* "Bifold, 3 m" used to reach the model as "a Bifold, 3 m front door" — a
+     three-metre opening asked for in a 0.9 m doorway, in the same prompt that
+     forbids resizing any opening. The model can only obey one of those. It
+     either widens the door and shows somebody a house they do not own, or
+     ignores the style and shows them a picture that is quietly wrong.
+
+     Bifolds open onto a garden; the photograph is of the front, by
+     instruction, and the front door is the 1.98 m scale reference. So the
+     elevation being rendered is not the one this door is on. */
+  const prompt = await render({
+    windowStyleName: '', doorStyleName: 'Bifold, 3 m', doorStyleId: 'bifold-3m',
+    windowDoorColourName: 'Anthracite Grey',
+  });
+  assert.doesNotMatch(prompt, /Bifold/, 'a bifold must not be drawn onto the front elevation');
+  assert.doesNotMatch(prompt, /front door/, 'and must not be described as a front door');
+});
+
+test('the other rear openings are on the same list', () => {
+  /* Asserted against the list rather than through the endpoint: the render
+     limiter allows five a minute and this file already uses them, so proving
+     the same rule twice more would cost two 429s and prove nothing new. The
+     bifold case above exercises the wiring; this checks the membership.
+
+     A real front door is deliberately absent from it — the case where a door
+     SHOULD still change is covered by "with a style and a colour, the frames
+     actually change" above, which passes no id and so is treated as a front
+     door. */
+  const { REAR_OPENINGS } = require('../server')._internals;
+  for (const id of ['bifold', 'bifold-3m', 'sliding', 'double']) {
+    assert.ok(REAR_OPENINGS.has(id), `${id} opens onto the garden, not the street`);
+  }
+  for (const id of ['upvc', 'composite']) {
+    assert.ok(!REAR_OPENINGS.has(id), `${id} is a front door and must still be drawn`);
+  }
+});
+
 test('the model is told not to invent an opening, either way', async () => {
   /* FLUX Kontext will happily "improve" a house by adding a window. A render
      showing an opening the homeowner does not have is a complaint an

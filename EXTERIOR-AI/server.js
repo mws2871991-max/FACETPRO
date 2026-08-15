@@ -1980,6 +1980,10 @@ function resolvePreferences(body) {
   };
 }
 
+/* Doors that open onto a garden, not onto the street. Priced from the
+   catalogue like any other, never drawn onto a photograph of the front. */
+const REAR_OPENINGS = new Set(['bifold', 'bifold-3m', 'sliding', 'double']);
+
 const JOURNEY_SOURCES = ['windows', 'doors', 'cladding', 'roofline', 'roof'];
 
 function resolveConservatory(styleId) {
@@ -2381,7 +2385,7 @@ app.post('/api/measure', (req, res) => {
    Accepts { image: 'data:image/...;base64,...', mimeType, claddingName, trimName, roofName } */
 app.post('/api/render', renderLimiter, async (req, res) => {
   const { image, mimeType, claddingName, trimName, roofName,
-          windowStyleName, doorStyleName, windowDoorColourName } = req.body || {};
+          windowStyleName, doorStyleName, doorStyleId, windowDoorColourName } = req.body || {};
   if (!image) return res.status(400).json({ error: 'image required' });
   if (typeof image !== 'string' || image.length < 10) return res.status(400).json({ error: 'Invalid image data.' });
   // Size is checked on the decoded bytes below, not on the base64 string —
@@ -2421,8 +2425,27 @@ app.post('/api/render', renderLimiter, async (req, res) => {
      trim visualiser is a real product too and freezing the frames is the
      right instruction when nobody has asked for new ones. */
   const windowStyle = String(windowStyleName || '').trim();
-  const doorStyle = String(doorStyleName || '').trim();
+  const doorStyleRaw = String(doorStyleName || '').trim();
   const glazingColour = String(windowDoorColourName || '').trim();
+
+  /* Bifolds are not front doors, and this prompt used to insist they were.
+
+     Every door in the catalogue was passed through as "a ${style} front door",
+     so choosing "Bifold, 3 m" asked for a three-metre bifold in a 0.9 m front
+     doorway — in the same prompt that says "do not add, remove, move or resize
+     any window, door or other opening". The two instructions cannot both be
+     obeyed. The model either widens the opening, and the homeowner is shown a
+     house they do not own, or ignores the style and the picture is a lie of a
+     quieter kind.
+
+     Bifolds, patio doors and double doors open onto a garden. The photograph
+     is of the front, by instruction — "get the whole front in, with the front
+     door visible" — and the front door is also the 1.98 m scale reference. So
+     the elevation being rendered is, by design, not the one these doors are
+     on. They are priced, because the price does not depend on seeing them, and
+     they are not drawn, because drawing them means drawing them somewhere they
+     are not. */
+  const doorStyle = REAR_OPENINGS.has(doorStyleId) ? '' : doorStyleRaw;
   const changingGlazing = !!(glazingColour && (windowStyle || doorStyle));
 
   const glazingChange = changingGlazing
@@ -3909,4 +3932,4 @@ const ready = start().then((server) => {
    that matters is that fifty thousand of them are fifty thousand distinct
    values, and there is no way to observe that through an endpoint that allows
    five submissions a minute. */
-module.exports = { ready, _internals: { newLeadId, readImage, runRetention, purgeLeadPiiFor } };
+module.exports = { ready, _internals: { newLeadId, readImage, runRetention, purgeLeadPiiFor, REAR_OPENINGS } };

@@ -966,6 +966,13 @@ const JOURNEYS = {
   roof:     { keeps: 'roof',     label: 'A roof',                      noun: 'roof',      swatches: ['cladding', 'trim'],         prefs: { windowStyleId: 'none', doorStyleId: 'none' } },
 };
 
+/* Doors that open onto a garden. Priced like any other, but never drawn onto
+   the photograph — which is of the front, by instruction. Kept in step with
+   REAR_OPENINGS in server.js; the server is the one that enforces it, this is
+   only what the picker says. */
+const REAR_OPENINGS = new Set(['bifold', 'bifold-3m', 'sliding', 'double']);
+const isRearOpening = (id) => REAR_OPENINGS.has(id);
+
 const journeyLabel = (id) => JOURNEYS[id]?.label || null;
 /* The word to put in front of "project" or "quotes" — "your rendering project",
    "get rendering quotes". Null when they have not said, so the copy falls back
@@ -2812,7 +2819,15 @@ function buildDetailOptions() {
         'Pick a style and a colour and we’ll show them on your home and work out a guide price.'),
       h('div', { className: 'mt-4 grid gap-5' }, [
         group('Window style', wd.windowStyles, 'windowStyleId', { optOut: 'windows' }),
-        group('Door style', wd.doorStyles, 'doorStyleId', { optOut: 'front door' }),
+        h('div', {}, [
+          group('Door style', wd.doorStyles, 'doorStyleId', { optOut: 'front door' }),
+          /* Said before they choose, not after they look at the render and
+             wonder where their bifolds are. */
+          isRearOpening(state.prefs.doorStyleId)
+            ? h('p', { className: 'mt-2 text-[11px] leading-5 text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2' },
+                'Priced, but not shown on the picture: these open onto the garden, and your photograph is of the front. The estimate includes them — the visualisation cannot, because they are not on this elevation.')
+            : null,
+        ]),
         colourRow(wd.colours, 'windowDoorColourId'),
       ]),
       glazingPanel(),
@@ -3095,6 +3110,9 @@ function glazingChoice() {
   const out = {
     windowStyleName: nameOf(wd.windowStyles, state.prefs.windowStyleId),
     doorStyleName: nameOf(wd.doorStyles, state.prefs.doorStyleId),
+    /* The id as well as the name: the server decides whether a door belongs on
+       this elevation, and it should not have to do that by matching a label. */
+    doorStyleId: state.prefs.doorStyleId,
     windowDoorColourName: nameOf(wd.colours, state.prefs.windowDoorColourId),
   };
   // A colour and at least one style, or there is nothing coherent to ask for.
