@@ -622,11 +622,61 @@ function relatedFor(slug) {
     .map(p => ({ href: `/cost/${p.slug}`, label: p.h1.replace(/\?$/, '') }));
 }
 
+/* §4 of the UX brief: somebody who searched "house rendering cost" should land
+   in a rendering experience, not only in a guide that links to one.
+
+   The guide stays — it is what ranks, and it answers the question they typed —
+   but the page now leads with the action instead of ending with it. One block,
+   above the answer, in the journey's own words, straight to the uploader with
+   the journey already set. A visitor who wants the number scrolls past it in a
+   second; a visitor who wants to see it on their house no longer has to read
+   two thousand words first. */
+const JOURNEY_HERO = {
+  cladding: {
+    h: 'See what your house would look like rendered',
+    p: 'Upload one photo. We will estimate your wall area, show you the finishes on your own house, and price the job.',
+    cta: 'Render my house',
+  },
+  windows: {
+    h: 'See new windows on your own house',
+    p: 'Upload one photo. We will find every window, size them against your front door and price the job.',
+    cta: 'Show me my windows',
+  },
+  doors: {
+    h: 'See a new front door on your own house',
+    p: 'Upload one photo. Try the styles and colours on your own doorway and see what it costs fitted.',
+    cta: 'Show me my door',
+  },
+  roof: {
+    h: 'See a new roof on your own house',
+    p: 'Upload one photo. We will estimate your roof area from your elevation and price it.',
+    cta: 'Show me my roof',
+  },
+  roofline: {
+    h: 'See new fascias, soffits and guttering on your house',
+    p: 'Upload one photo. We will measure your roofline from it and price the job, scaffolding included.',
+    cta: 'Show me my roofline',
+  },
+};
+
+const journeyHero = (siteUrl, slug) => {
+  const journey = slug ? journeyForSlug(slug) : null;
+  const copy = journey && JOURNEY_HERO[journey];
+  if (!copy) return '';
+  return `<div class="journey-hero">
+  <h2>${escapeHtml(copy.h)}</h2>
+  <p>${escapeHtml(copy.p)}</p>
+  <p><a class="cta" href="${escapeHtml(ctaHref(siteUrl, slug))}">${escapeHtml(copy.cta)}</a></p>
+  <p class="muted">Free &middot; One photo &middot; No sales call unless you ask</p>
+</div>`;
+};
+
 function renderCostPage(slug, { catalogue, siteUrl, siteMode }) {
   const def = COST_PAGES.find(p => p.slug === slug);
   if (!def) return null;
   const built = def.build(catalogue);
-  const body = `<div class="answer"><strong>The short answer</strong><span>${escapeHtml(built.answer)}</span></div>
+  const body = `${journeyHero(siteUrl, slug)}
+<div class="answer"><strong>The short answer</strong><span>${escapeHtml(built.answer)}</span></div>
 ${built.sections.map(section).join('\n')}`;
   return page({
     slug,

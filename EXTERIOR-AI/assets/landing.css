@@ -32,6 +32,16 @@
   a.cta{display:block;margin:18px 0 0;padding:16px 20px;background:#fff;color:#0F1012;text-decoration:none;border-radius:999px;text-align:center;font-weight:600}
   .muted{color:#6B6E78;font-size:13px}
   .cta-block .muted{color:rgba(255,255,255,.55)}
+  /* The journey hero, above the guide: the action first for somebody who came
+     to see it on their own house, and out of the way in a second for somebody
+     who came for the number. Lighter than .cta-block on purpose — the dark
+     block at the foot of the page is still the close, and two identical black
+     slabs on one page would read as an advert either side of an article. */
+  .journey-hero{margin:0 0 28px;padding:22px 20px;background:#FBF8F3;border:1px solid #e4e4e7;border-radius:18px}
+  .journey-hero h2{margin:0;font-size:21px;line-height:1.25}
+  .journey-hero p{margin:8px 0 0;color:#52525b}
+  .journey-hero a.cta{margin:16px 0 0;background:#0F1012;color:#fff}
+  .journey-hero .muted{margin-top:10px;text-align:center}
   .notice{margin-top:20px;padding:14px 16px;border-radius:12px;background:#FFFBEB;border:1px solid #FDE68A;font-size:13px;line-height:1.6;color:#78350F}
   .caveat{margin-top:28px;padding-top:18px;border-top:1px solid #e4e4e7;font-size:13px;line-height:1.6;color:#52525b}
   nav.related{margin-top:32px;font-size:14px}

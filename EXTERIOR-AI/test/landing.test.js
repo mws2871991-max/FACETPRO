@@ -176,6 +176,29 @@ test('a page about one trade carries that trade to the visualiser', () => {
   }
 });
 
+test('a trade page leads with the action, not only with the guide', () => {
+  /* §4 of the UX brief. Somebody who searched "house rendering cost" should
+     land in a rendering experience, not only in a guide that links to one. The
+     guide stays — it is what ranks — but the action comes first. */
+  const html = landing.renderCostPage('house-rendering-cost', OPTS);
+  const hero = html.indexOf('journey-hero');
+  const answer = html.indexOf('The short answer');
+  assert.ok(hero > -1, 'the rendering page should lead with a rendering hero');
+  assert.ok(hero < answer, 'the hero belongs above the guide, not below it');
+  assert.match(html, /See what your house would look like rendered/);
+  assert.match(html, /\?journey=cladding#your-photo/);
+});
+
+test('pages with no priced journey get no hero', () => {
+  /* A conservatory cannot be priced from a photograph and the whole-exterior
+     page is the default, so neither should promise an experience the product
+     does not have. */
+  for (const slug of ['conservatory-cost-uk', 'house-exterior-renovation-cost']) {
+    assert.ok(!landing.renderCostPage(slug, OPTS).includes('journey-hero'),
+      `${slug} should not carry a journey hero`);
+  }
+});
+
 test('the whole-exterior page carries no journey, because it is the default', () => {
   /* Absence is the answer here, not a sixth value. An exterior visitor wants
      the ordinary page: everything shown, nothing pre-declined. */
