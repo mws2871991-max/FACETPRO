@@ -3431,10 +3431,27 @@ const SERVER_ONLY_STAGES = new Set(['lead_qualified', 'lead_sent', 'installer_re
 app.post('/api/funnel', perMinute(120, 'Too many requests — please wait a moment.'), async (req, res) => {
   const stage = String(req.body?.stage || '');
   if (!FUNNEL_STAGES.includes(stage) || SERVER_ONLY_STAGES.has(stage)) return res.status(400).json({ error: 'Unknown stage.' });
+
+  /* The same stage, counted twice: once for everybody and once for the journey
+     they came in on.
+
+     A single total answers "where do we lose them" and cannot answer "who".
+     The question worth money is whether rendering visitors convert better than
+     window visitors, because that is the one that decides where to spend on
+     advertising — and it was unanswerable, because the counter recorded the
+     stage and nothing else.
+
+     Written as a second key rather than a second column, so no schema moves and
+     every existing total keeps its meaning: `landing` is still every landing. */
+  const journey = JOURNEY_SOURCES.includes(String(req.body?.journey || '')) ? String(req.body.journey) : null;
+
   /* Answered before the write. A counter that fails must never cost a visitor
      their journey, and the browser is not waiting for anything useful. */
   res.status(204).end();
-  try { await store.countStage(stage); }
+  try {
+    await store.countStage(stage);
+    if (journey) await store.countStage(`${journey}:${stage}`);
+  }
   catch (err) { obs.record('funnel', 'could not record a stage', { stage, reason: err.message }); }
 });
 
@@ -3457,8 +3474,22 @@ app.get('/api/funnel', installerLimiter, requireInstallerPassword, async (req, r
     return { stage, count: n, ofPreviousPct: ofPrevious };
   });
 
+  /* Per journey, same shape, so the two can be read side by side. A journey
+     with no traffic is omitted rather than shown as a column of zeroes. */
+  const byJourney = {};
+  for (const j of JOURNEY_SOURCES) {
+    let prev = null;
+    const rows = FUNNEL_STAGES.map(stage => {
+      const n = counts[`${j}:${stage}`] || 0;
+      const ofPrevious = prev === null ? null : (prev > 0 ? Math.round((n / prev) * 1000) / 10 : 0);
+      prev = n;
+      return { stage, count: n, ofPreviousPct: ofPrevious };
+    });
+    if (rows.some(r => r.count > 0)) byJourney[j] = rows;
+  }
+
   res.setHeader('Cache-Control', 'no-store');
-  res.json({ days, funnel, note: 'Counts are per stage, not per person — see the funnel table in store.js.' });
+  res.json({ days, funnel, byJourney, note: 'Counts are per stage, not per person — see the funnel table in store.js. byJourney counts only visitors who arrived on a journey; the totals above include everyone.' });
 });
 
 app.get('/api/ops', installerLimiter, requireInstallerPassword, (req, res) => {

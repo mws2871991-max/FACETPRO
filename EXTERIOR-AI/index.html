@@ -959,12 +959,18 @@ function findSwatch(id) {
    this one has to agree with landing.js's journeyForSlug and with the ids the
    pricing engine accepts. */
 const JOURNEYS = {
-  windows:  { keeps: 'windows',  swatches: ['cladding', 'trim', 'roof'], prefs: { doorStyleId: 'none' } },
-  doors:    { keeps: 'doors',    swatches: ['cladding', 'trim', 'roof'], prefs: { windowStyleId: 'none' } },
-  cladding: { keeps: 'cladding', swatches: ['trim', 'roof'],             prefs: { windowStyleId: 'none', doorStyleId: 'none' } },
-  roofline: { keeps: 'trim',     swatches: ['cladding', 'roof'],         prefs: { windowStyleId: 'none', doorStyleId: 'none' } },
-  roof:     { keeps: 'roof',     swatches: ['cladding', 'trim'],         prefs: { windowStyleId: 'none', doorStyleId: 'none' } },
+  windows:  { keeps: 'windows',  label: 'Windows',                     noun: 'window',    swatches: ['cladding', 'trim', 'roof'], prefs: { doorStyleId: 'none' } },
+  doors:    { keeps: 'doors',    label: 'A front door',                noun: 'door',      swatches: ['cladding', 'trim', 'roof'], prefs: { windowStyleId: 'none' } },
+  cladding: { keeps: 'cladding', label: 'Render or cladding',          noun: 'rendering', swatches: ['trim', 'roof'],             prefs: { windowStyleId: 'none', doorStyleId: 'none' } },
+  roofline: { keeps: 'trim',     label: 'Fascias, soffits & guttering', noun: 'roofline',  swatches: ['cladding', 'roof'],         prefs: { windowStyleId: 'none', doorStyleId: 'none' } },
+  roof:     { keeps: 'roof',     label: 'A roof',                      noun: 'roof',      swatches: ['cladding', 'trim'],         prefs: { windowStyleId: 'none', doorStyleId: 'none' } },
 };
+
+const journeyLabel = (id) => JOURNEYS[id]?.label || null;
+/* The word to put in front of "project" or "quotes" — "your rendering project",
+   "get rendering quotes". Null when they have not said, so the copy falls back
+   to the general wording rather than inventing a specific one. */
+const journeyNoun = (id) => JOURNEYS[id]?.noun || null;
 
 /* An unknown value is not an error worth showing anybody — it is a stale link
    or somebody typing in the address bar, and the right answer is the ordinary
@@ -1019,7 +1025,10 @@ const state = {
      answer. `intent` records which button brought them here, because "save my
      design" and "get me quotes" are different asks and the last step should
      not pretend otherwise. */
-  quote: { step: 0, intent: null, project: [], timing: null, propertyType: null, homeowner: false },
+  /* project starts pre-ticked from the journey, so the form confirms what they
+     said rather than asking a third time. Still a multi-select — adding a trade
+     here is exactly the optional cross-sell, and removing one is allowed. */
+  quote: { step: 0, intent: null, project: readJourney() ? [readJourney()] : [], timing: null, propertyType: null, homeowner: false },
   /* Which trade brought them here, from ?journey= on a /cost/ page's CTA.
 
      Sixteen landing pages already targeted sixteen search intents and then
@@ -1034,6 +1043,10 @@ const state = {
      can undo. `journeySource` keeps that distinction on the lead, so routing
      can never mistake a click for a decision. */
   journey: readJourney(),
+  /* Whether the triage question is showing its full form. Open when nobody has
+     answered; closed once somebody has, so the page states their project
+     instead of asking again. "Change" reopens it. */
+  triageOpen: !readJourney(),
   cladding: findSwatch(journeyExcludes('cladding') ? 'none' : 'alabaster'),
   trim: findSwatch(journeyExcludes('trim') ? 'none' : 'ink-trim'),
   roof: findSwatch(journeyExcludes('roof') ? 'none' : 'slate-roof'),
@@ -1538,6 +1551,29 @@ const TRIAGE = [
 function buildTriage() {
   if (state.stage !== 'landing') return h('div', { id: 'mount-triage' });
 
+  /* Somebody who searched "house rendering cost" has already told us. Asking
+     again — even with their answer pre-selected — is the thing that makes a
+     site feel like a sequence of forms rather than one journey. So when the
+     intent arrived with them, this states it and offers to change it, and the
+     question is only asked of people who have not answered it. */
+  const known = JOURNEYS[state.journey];
+  if (known && !state.triageOpen) {
+    return h('div', { id: 'mount-triage', className: 'max-w-6xl mx-auto px-6 mt-10' }, [
+      h('section', { className: 'rounded-2xl border border-zinc-200 bg-white px-6 py-4 flex items-center justify-between gap-4 flex-wrap' }, [
+        h('p', { className: 'text-[13px] leading-6 text-zinc-700' }, [
+          h('span', { className: 'text-zinc-500' }, 'Your project: '),
+          h('strong', { className: 'font-medium text-zinc-900' }, journeyLabel(state.journey)),
+          h('span', { className: 'text-zinc-500' }, ' — the rest is optional and you can add it any time.'),
+        ]),
+        h('button', {
+          type: 'button',
+          className: 'text-[12px] px-4 rounded-full border border-zinc-200 hover:border-zinc-900 transition min-h-[44px] inline-grid place-items-center',
+          onClick: () => { state.triageOpen = true; render(); },
+        }, 'Change'),
+      ]),
+    ]);
+  }
+
   return h('div', { id: 'mount-triage', className: 'max-w-6xl mx-auto px-6 mt-10' }, [
     h('section', { className: 'rounded-2xl border border-zinc-200 bg-white p-6 md:p-7' }, [
       h('h2', { className: 'serif text-[20px] md:text-[24px] tracking-tight' }, 'What are you looking for today?'),
@@ -1553,6 +1589,7 @@ function buildTriage() {
             : 'bg-white border-zinc-200 hover:border-zinc-900'}`,
           onClick: async () => {
             if (t.href) { document.querySelector(t.href)?.scrollIntoView({ behavior: 'smooth' }); return; }
+            state.triageOpen = false;   // answered; state it from here rather than ask again
             await applyJourney(t.id);
             document.getElementById('your-photo')?.scrollIntoView({ behavior: 'smooth' });
           },
@@ -3407,7 +3444,11 @@ function buildSaveMoment() {
   return h('section', { id: 'save-moment', className: 'rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24' }, [
     h('div', { className: 'grid md:grid-cols-[1.1fr_0.9fr] gap-6 items-center' }, [
       h('div', {}, [
-        h('p', { className: 'text-[11px] tracking-widest uppercase text-zinc-400' }, 'Your design'),
+        /* "Your design" when we do not know, "Your rendering project" when we
+           do. The intent was captured at the door and then never spoken aloud
+           again, which is what makes a journey feel like a sequence of forms. */
+        h('p', { className: 'text-[11px] tracking-widest uppercase text-zinc-400' },
+          journeyNoun(state.journey) ? `Your ${journeyNoun(state.journey)} project` : 'Your design'),
         h('h2', { className: 'mt-1 serif text-[26px] md:text-[32px] tracking-tight' }, 'Like your new design?'),
         h('p', { className: 'mt-3 text-sm leading-6 text-zinc-600 max-w-[52ch]' },
           'Save it and we’ll keep your project details — your before-and-after, everything you chose and your itemised estimate. Quotes are a separate step, and only if you want them.'),
@@ -3421,7 +3462,7 @@ function buildSaveMoment() {
             type: 'button',
             className: 'w-full sm:w-auto px-6 py-3.5 rounded-full border border-zinc-300 text-[15px] font-medium hover:border-zinc-900 transition min-h-[52px]',
             onClick: () => go('quotes'),
-          }, 'Get local quotes'),
+          }, journeyNoun(state.journey) ? `Get local ${journeyNoun(state.journey)} quotes` : 'Get local quotes'),
         ]),
         h('p', { className: 'mt-3 text-[12px] text-zinc-500' }, 'No account needed. Nobody calls unless you ask them to.'),
       ]),
@@ -3663,9 +3704,16 @@ function buildSaveFraming() {
         if (at >= 0) q.project.splice(at, 1); else q.project.push(id);
         render();
       };
-      return shell('Step 1 of 4 · Project', 'What are you interested in?', h('div', {}, [
+      /* They have told us twice by now — once at the door and again by what
+         they designed — so this confirms rather than interrogates. "What are
+         you interested in?" asked for the third time is the moment a journey
+         turns back into a lead form. */
+      const already = journeyLabel(state.journey);
+      return shell('Step 1 of 4 · Project', already ? `Your ${journeyNoun(state.journey)} project` : 'What are you interested in?', h('div', {}, [
         h('p', { className: 'mt-3 text-[13px] leading-6 text-white/60 max-w-[54ch]' },
-          'Pick as many as you like. This is what we tell the installer you are shopping for, alongside the design you have made.'),
+          already
+            ? 'Ticked already, from what you told us. Add anything else you would like quoting — or leave it and carry on.'
+            : 'Pick as many as you like. This is what we tell the installer you are shopping for, alongside the design you have made.'),
         h('div', { className: 'mt-5 grid sm:grid-cols-2 gap-2' }, items.map(([id, label]) =>
           choice(label, q.project.includes(id), () => toggle(id)))),
       ]), { onNext: () => goStep(2), skip: () => { q.project = []; goStep(2); } });
@@ -3830,7 +3878,11 @@ function buildSaveFraming() {
         type: 'submit',
         className: `mt-4 w-full py-3 rounded-full text-sm font-medium ${state.sendingLead ? 'bg-zinc-300 text-zinc-500' : 'cta'}`,
         disabled: state.sendingLead,
-      }, state.sendingLead ? 'Saving your design…' : (state.consent.installerQuotes ? 'Get my free quotes →' : 'Save my design →')),
+      }, state.sendingLead
+          ? 'Saving your design…'
+          : (state.consent.installerQuotes
+              ? `Get my free ${journeyNoun(state.journey) ? journeyNoun(state.journey) + ' ' : ''}quotes →`
+              : 'Save my design →')),
       h('p', { className: 'mt-3 text-[11px] leading-5 text-zinc-500' }, [
         'You can withdraw your consent at any time — see the ',
         h('a', { href: '/privacy', target: '_blank', rel: 'noopener', className: 'underline hover:text-zinc-700' }, 'Privacy Notice'),
@@ -4212,7 +4264,10 @@ function reachedStage(stage) {
     fetch('/api/funnel', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ stage }),
+      /* The journey goes with the stage so the funnel can be read per intent.
+         The server validates it against its own list and records a second,
+         prefixed counter — the untagged totals are unchanged. */
+      body: JSON.stringify({ stage, journey: state.journey || undefined }),
       keepalive: true,
     }).catch(() => {});
   } catch (_) { /* never in the way */ }
