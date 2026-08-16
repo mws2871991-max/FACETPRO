@@ -189,6 +189,48 @@ test('a trade page leads with the action, not only with the guide', () => {
   assert.match(html, /\?journey=cladding#your-photo/);
 });
 
+test('no cost page is an orphan', () => {
+  /* relatedFor took the first five of COST_PAGES every time, so every page
+     linked to the same five window guides and five pages had no inbound
+     internal link at all — rendering, roof, roofline, conservatory and
+     whole-exterior. On a site whose whole point is being found, a page
+     reachable only from the sitemap is a page nobody reaches. */
+  const inbound = new Map(landing.COST_PAGES.map(p => [p.slug, 0]));
+  for (const p of landing.COST_PAGES) {
+    const html = landing.renderCostPage(p.slug, OPTS);
+    for (const m of html.matchAll(/href="\/cost\/([a-z0-9-]+)"/g)) {
+      if (m[1] !== p.slug && inbound.has(m[1])) inbound.set(m[1], inbound.get(m[1]) + 1);
+    }
+  }
+  const orphans = [...inbound].filter(([, n]) => n === 0).map(([slug]) => slug);
+  assert.deepStrictEqual(orphans, [], `these pages have no inbound internal link: ${orphans.join(', ')}`);
+});
+
+test('the bifold page does not promise a visualisation it cannot give', () => {
+  /* The doors hero says "see a new front door on your own house". Bifolds are
+     on the back, the photograph is of the front, and the page says so — so
+     promising the visualisation on the way in and withdrawing it two sections
+     later would be the small dishonesty that costs more than it buys. */
+  const html = landing.renderCostPage('bifold-doors-cost', OPTS);
+  assert.doesNotMatch(html, /See a new front door on your own house/);
+  assert.match(html, /Price your bifolds/);
+  assert.match(html, /do not draw them onto a photograph of your front/);
+  /* It still feeds the doors journey — the estimate covers them. */
+  assert.match(html, /\?journey=doors#your-photo/);
+});
+
+test('the bifold figures come from the catalogue, not from prose', () => {
+  const c = require('../catalogue.json');
+  const bifold3m = c.glazing.doors.find(d => d.id === 'bifold-3m');
+  const html = landing.renderCostPage('bifold-doors-cost', OPTS);
+  /* The lowest figure quoted must be reachable from the rate — proves the page
+     is computed rather than typed, which is the rule the whole file follows. */
+  const spread = require('../glazing').INSTALLER_SPREAD;
+  const low = Math.round(bifold3m.supplyFit * (1 + c.glazing.vatPct / 100) * spread.low);
+  assert.ok(html.includes(low.toLocaleString('en-GB')),
+    `expected the computed £${low} to appear on the page`);
+});
+
 test('pages with no priced journey get no hero', () => {
   /* A conservatory cannot be priced from a photograph and the whole-exterior
      page is the default, so neither should promise an experience the product

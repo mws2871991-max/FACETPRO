@@ -421,6 +421,45 @@ const COST_PAGES = [
     },
   },
   {
+    slug: 'bifold-doors-cost',
+    title: 'Bifold door cost UK (2026 prices)',
+    h1: 'What do bifold doors cost?',
+    intent: 'bifold doors cost UK',
+    description: 'What bifold and patio doors cost fitted in the UK, by width, from real supply-and-fit rates — and why the price sits where it does.',
+    build: (c) => {
+      const all = doorPrices(c);
+      const pick = (re) => all.find(d => re.test(d.name));
+      const bi24 = pick(/bifold, up to 2\.4/i);
+      const bi3 = pick(/bifold, 3/i);
+      const patio = pick(/sliding patio/i);
+      const french = pick(/double doors/i);
+      return {
+        answer: `A three-panel bifold up to 2.4 m runs about ${money(bi24.low)} to ${money(bi24.high)} fitted, and a 3 m opening about ${money(bi3.low)} to ${money(bi3.high)}. A sliding patio door is roughly ${money(patio.low)} to ${money(patio.high)}. Those are supply and fit including VAT, from what these jobs settle at rather than a list price.`,
+        sections: [
+          { heading: 'By door type', table: {
+            head: ['Door', 'Estimated cost fitted, inc VAT'],
+            rows: [
+              ['Bifold, up to 2.4 m (3 panels)', `${money(bi24.low)} – ${money(bi24.high)}`],
+              ['Bifold, 3 m (wider fold)', `${money(bi3.low)} – ${money(bi3.high)}`],
+              ['Sliding patio door', `${money(patio.low)} – ${money(patio.high)}`],
+              ['French / double doors', `${money(french.low)} – ${money(french.high)}`],
+            ],
+          } },
+          { heading: 'Why a bifold costs what it does', paras: [
+            `Width is most of it. A 3 m opening is not a 2.4 m opening with a bit more glass — it is another panel, more track, heavier leaves and usually a structural lintel above it. That is why the step from ${money(bi24.low)} to ${money(bi3.low)} is steeper than the extra 600 mm suggests.`,
+            'The rest is the opening itself. Bifolds usually replace a window or a single back door, so somebody has to make the hole bigger, and that is building work rather than glazing. If your opening is already the right size the figures above are the job; if it is not, add the builder.',
+            `French doors and a sliding patio door land in the same place as each other, around ${money(french.low)} to ${money(french.high)}, and both are markedly cheaper than a bifold because there is less hardware and less glass carrying its own weight.`,
+          ] },
+          { heading: 'We will price these, and we will not pretend to show them', paras: [
+            'Facet Pro works from one photograph of the front of your house — that is where the front door is, and a UK front door is 1.98 m, which is what gives every measurement on this site its scale.',
+            'Bifolds and patio doors open onto the garden. They are not on that elevation, so we price them from the same rate card as everything else and we do not draw them onto the picture. A visualiser that put your bifolds on the front of your house would be showing you a building you do not own.',
+            'So: upload your front, design your windows, front door, walls, roofline and roof and see those on your own house — and add the bifolds to the estimate and to what your installer quotes.',
+          ] },
+        ],
+      };
+    },
+  },
+  {
     slug: 'conservatory-cost-uk',
     title: 'Conservatory cost UK (2026 guide prices)',
     h1: 'What does a conservatory cost in the UK?',
@@ -617,8 +656,31 @@ function faqFor(built) {
 
 /* ── RENDERING ──────────────────────────────────────────────────────────── */
 
+/* Related pages, by relevance rather than by array order.
+
+   This took the first five of COST_PAGES every time, which meant every page on
+   the site linked to the same five window guides and nothing ever linked to
+   anything added later. The bifold page sits at index 9 and would have been
+   reachable only from the sitemap — an orphan on a site whose whole point is
+   being found by search.
+
+   Same trade first, because somebody reading about bifolds is more likely to
+   want patio doors than a roof, then the rest to fill the five. */
 function relatedFor(slug) {
-  return COST_PAGES.filter(p => p.slug !== slug).slice(0, 5)
+  const mine = journeyForSlug(slug);
+  const at = COST_PAGES.findIndex(p => p.slug === slug);
+  /* The rest taken cyclically from this page's own position rather than from
+     the top of the array. Five window guides sat at the top, so every page
+     linked to those five and five other pages had no inbound link at all —
+     measured, before this: rendering 0, roof 0, roofline 0, conservatory 0,
+     whole-exterior 0. Rotating the start spreads the links evenly, so a page
+     added at the end is as reachable as one added at the beginning. */
+  const rotated = COST_PAGES
+    .map((_, i) => COST_PAGES[(at + 1 + i) % COST_PAGES.length])
+    .filter(p => p.slug !== slug);
+  const sameTrade = mine ? rotated.filter(p => journeyForSlug(p.slug) === mine) : [];
+  const rest = rotated.filter(p => !sameTrade.includes(p));
+  return [...sameTrade, ...rest].slice(0, 5)
     .map(p => ({ href: `/cost/${p.slug}`, label: p.h1.replace(/\?$/, '') }));
 }
 
@@ -659,9 +721,23 @@ const JOURNEY_HERO = {
   },
 };
 
+/* Per-page overrides, where the trade's general promise is not true of this
+   page. The bifold page is the case that forced it: the doors hero says "see a
+   new front door on your own house", and the whole point of that page is that
+   bifolds are on the back and cannot be shown. Promising the visualisation on
+   the way in and withdrawing it two sections later is the sort of small
+   dishonesty that costs more than it buys. */
+const SLUG_HERO = {
+  'bifold-doors-cost': {
+    h: 'Price your bifolds, and see the rest on your own house',
+    p: 'Bifolds open onto the garden, so we price them from the same rate card and do not draw them onto a photograph of your front. Upload one photo and design your windows, front door, walls, roofline and roof on your actual house.',
+    cta: 'Upload my house',
+  },
+};
+
 const journeyHero = (siteUrl, slug) => {
   const journey = slug ? journeyForSlug(slug) : null;
-  const copy = journey && JOURNEY_HERO[journey];
+  const copy = (slug && SLUG_HERO[slug]) || (journey && JOURNEY_HERO[journey]);
   if (!copy) return '';
   return `<div class="journey-hero">
   <h2>${escapeHtml(copy.h)}</h2>
