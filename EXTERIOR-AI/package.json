@@ -12,7 +12,8 @@
     "build:css": "node scripts/prestart-css.js",
     "prestart": "node scripts/prestart-css.js",
     "installer-password": "node scripts/installer-password.js",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "check-pair": "node scripts/check-gallery-pair.js"
   },
   "license": "ISC",
   "dependencies": {

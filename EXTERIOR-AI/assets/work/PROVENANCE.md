@@ -15,6 +15,19 @@ The files carry no EXIF and no origin markers — they have been stripped — so
 the provenance cannot be recovered from the images. It has to come from whoever
 put them there.
 
+## Before adding a pair
+
+    npm run check-pair before.jpg after.jpg -- --out /tmp/diff.png
+
+It checks what a machine can: matching dimensions, that something actually
+changed, and whether any part of the frame is untouched. That last number is
+the useful one, calibrated against the pairs already here — a photograph
+re-finished scores under 8, generated imagery scores over 13, because
+generating redraws every pixel even when it is the same house.
+
+It cannot tell a good generated pair from a bad one, and says so rather than
+guessing. The three questions below are still yours.
+
 ## Fill this in
 
 | File | Real job? | Address or job ref | Date | Work carried out | Photographer | Homeowner permission held |
