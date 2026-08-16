@@ -120,3 +120,29 @@ test('a render that could not be kept is recorded, not just logged', () => {
   assert.match(server, /obs\.record\('render',\s*'could not keep the render/,
     'the ephemeral fallback is logged but not counted');
 });
+
+test('timings report the tail, not just the middle', () => {
+  /* The homepage said "<60s photo to itemised estimate" and nothing measured
+     it. A mean would have hidden the tail, and the tail is what somebody
+     waiting on a spinner actually experiences — so median, p90 and slowest. */
+  obs.reset && obs.reset();
+  [820, 940, 1100, 1500, 3200].forEach(ms => obs.time('detect', ms));
+  const t = obs.timingSummary().detect;
+  assert.strictEqual(t.samples, 5);
+  assert.strictEqual(t.medianMs, 1100);
+  assert.strictEqual(t.slowestMs, 3200);
+});
+
+test('a timing that is not a number is ignored rather than recorded as one', () => {
+  obs.reset && obs.reset();
+  ['', null, undefined, NaN, -1, 'soon'].forEach(v => obs.time('detect', v));
+  assert.deepStrictEqual(obs.timingSummary(), {},
+    'a bad sample must not become a plausible-looking figure');
+});
+
+test('nothing measured means nothing reported', () => {
+  /* Not defaulted to zero or to a placeholder: the point of the block this
+     replaces is that a number there has been observed. */
+  obs.reset && obs.reset();
+  assert.deepStrictEqual(obs.summary({ limit: 1 }).timings, {});
+});

@@ -1653,6 +1653,13 @@ function readImage(image, declaredMime, { requireDeclared = true } = {}) {
 /* ── POST /api/detect ──
    Real AI detection via Claude vision. Requires ANTHROPIC_API_KEY. */
 app.post('/api/detect', detectLimiter, async (req, res) => {
+  /* Timed end to end, because detection is the long pole between a homeowner
+     tapping upload and seeing a number, and because "<60s photo to itemised
+     estimate" was on the homepage with nothing behind it. Recorded on the way
+     out whatever the outcome — a slow failure is the one worth knowing about. */
+  const detectStartedAt = Date.now();
+  res.on('finish', () => obs.time('detect', Date.now() - detectStartedAt));
+
   const { image, mimeType, sessionId } = req.body || {};
   if (!image || !mimeType) return res.status(400).json({ error: 'Missing image or mimeType.' });
   const img = readImage(image, mimeType);

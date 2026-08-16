@@ -67,6 +67,48 @@ function scrubDetail(detail) {
   return Object.keys(out).length ? out : undefined;
 }
 
+/* How long things took, as opposed to how often they went wrong.
+
+   The homepage claimed "<60s photo to itemised estimate" and nothing measured
+   it — every other figure in that block is computed from the catalogue or
+   enforced in code, which made that one the odd claim out. A number in the
+   same typeface as substantiated ones, resting on a hope.
+
+   A rolling window rather than a running mean: a mean hides the tail, and the
+   tail is what a homeowner waiting on a spinner actually experiences. Same
+   in-memory, same-process caveat as the events above — a deploy resets it, and
+   summary() says so. */
+const MAX_TIMINGS = 200;
+const timings = {};
+
+function time(name, ms) {
+  const n = String(name || 'unknown');
+  /* typeof before Number(), because Number('') and Number(null) are both 0 —
+     finite, non-negative, and indistinguishable from a request that took no
+     time at all. Two of those would have dragged a median down and nobody
+     would have known why. */
+  if (typeof ms !== 'number' || !Number.isFinite(ms) || ms < 0) return;
+  (timings[n] ||= []).push(Math.round(ms));
+  while (timings[n].length > MAX_TIMINGS) timings[n].shift();
+}
+
+const pct = (sorted, p) => sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))];
+
+function timingSummary() {
+  const out = {};
+  for (const [name, list] of Object.entries(timings)) {
+    if (!list.length) continue;
+    const sorted = [...list].sort((a, b) => a - b);
+    out[name] = {
+      samples: sorted.length,
+      medianMs: pct(sorted, 0.5),
+      p90Ms: pct(sorted, 0.9),
+      slowestMs: sorted[sorted.length - 1],
+    };
+  }
+  return out;
+}
+
 /* kind is the thing you would group by when deciding what to fix first:
    'render', 'detect', 'delivery', 'storage', 'request', 'crash'. */
 function record(kind, message, detail) {
@@ -97,10 +139,22 @@ function summary({ limit = 50 } = {}) {
        started, not a history. A deploy resets it. */
     retention: 'in memory only; the last ' + MAX_EVENTS + ' events since this process started',
     byKind,
+    /* Empty until something has been measured. Deliberately not defaulted to a
+       plausible-looking figure: the point of this block is that a number here
+       has been observed. */
+    timings: timingSummary(),
     recent: events.slice(-limit).reverse(),
   };
 }
 
-const reset = () => { events.length = 0; for (const k of Object.keys(counts)) { delete counts[k]; delete firstSeen[k]; delete lastSeen[k]; } };
+/* Everything, including the timings — adding a second store and leaving reset
+   clearing only the first is how a test passes on state a previous test left
+   behind. Caught by exactly that: "nothing measured means nothing reported"
+   read five samples from the test above it. */
+const reset = () => {
+  events.length = 0;
+  for (const k of Object.keys(counts)) { delete counts[k]; delete firstSeen[k]; delete lastSeen[k]; }
+  for (const k of Object.keys(timings)) delete timings[k];
+};
 
-module.exports = { record, summary, reset, MAX_EVENTS, _internals: { scrubText, scrubDetail } };
+module.exports = { record, time, timingSummary, summary, reset, MAX_EVENTS, _internals: { scrubText, scrubDetail } };

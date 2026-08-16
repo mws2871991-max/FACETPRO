@@ -651,7 +651,17 @@
     <div class="mt-6 grid grid-cols-2 md:grid-cols-3 gap-4">
       <div class="rounded-xl border border-zinc-200 p-5 text-center"><div class="serif text-[28px] measured">5</div><div class="mt-1 text-[12px] uppercase tracking-widest text-zinc-500">Trades priced from one photo</div></div>
       <div class="rounded-xl border border-zinc-200 p-5 text-center"><div class="serif text-[28px] measured">1</div><div class="mt-1 text-[12px] uppercase tracking-widest text-zinc-500">Photograph required</div></div>
-      <div class="rounded-xl border border-zinc-200 p-5 text-center"><div class="serif text-[28px] measured">&lt;60s</div><div class="mt-1 text-[12px] uppercase tracking-widest text-zinc-500">Photo to itemised estimate</div></div>
+      <!-- "<60s photo to itemised estimate" stood here. Every other figure in
+           this block is computed from the catalogue or enforced in code and can
+           be pointed at: five trades priced, one photograph, three installers
+           capped in MAX_INSTALLERS_PER_LEAD, two contracted, twenty-four years.
+           That one was a hope in the same typeface as the substantiated ones,
+           and nothing measured it.
+
+           /api/detect is now timed and obs.timings reports median, p90 and
+           slowest. When there are enough real runs to mean anything, this tile
+           comes back with an observed number — which is exactly what the note
+           under this block already promises about usage figures. -->
       <div class="rounded-xl border border-zinc-200 p-5 text-center"><div class="serif text-[28px] measured">2</div><div class="mt-1 text-[12px] uppercase tracking-widest text-zinc-500">National installers contracted</div></div>
       <div class="rounded-xl border border-zinc-200 p-5 text-center"><div class="serif text-[28px] measured">3</div><div class="mt-1 text-[12px] uppercase tracking-widest text-zinc-500">Installers per lead, capped</div></div>
       <div class="rounded-xl border border-zinc-200 p-5 text-center"><div class="serif text-[28px] measured">24</div><div class="mt-1 text-[12px] uppercase tracking-widest text-zinc-500">Years in the trade behind the pricing</div></div>
