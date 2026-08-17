@@ -1514,6 +1514,12 @@ function priceRange(selections, m2) {
 // Recomputes a price live from catalogue data as the user changes swatches —
 // no AI call, instant. Real numbers (from catalogue.json), not a client guess.
 app.post('/api/quote', (req, res) => {
+  const quoteStartedAt = Date.now();
+  res.on('finish', () => {
+    obs.time('quote_request', Date.now() - quoteStartedAt);
+    obs.outcome('quote_request', res.statusCode < 400);
+  });
+
   const { claddingId, trimId, roofId, footprintM2, trimLengthM, detectionId, houseType } = req.body || {};
   const footprint = resolveFootprint({ footprintM2, detectionId, houseType });
   const price = computePrice({ claddingId, trimId, roofId, footprintM2: footprint.m2, trimLengthM });
@@ -1664,7 +1670,10 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
      whatever the outcome, because a slow failure is the one worth knowing
      about. */
   const detectStartedAt = Date.now();
-  res.on('finish', () => obs.time('detect_request', Date.now() - detectStartedAt));
+  res.on('finish', () => {
+    obs.time('detect_request', Date.now() - detectStartedAt);
+    obs.outcome('detect_request', res.statusCode < 400);
+  });
 
   const { image, mimeType, sessionId } = req.body || {};
   if (!image || !mimeType) return res.status(400).json({ error: 'Missing image or mimeType.' });
@@ -2348,6 +2357,12 @@ app.post('/api/glazing', (req, res) => {
 });
 
 app.post('/api/measure', (req, res) => {
+  const measureStartedAt = Date.now();
+  res.on('finish', () => {
+    obs.time('measure_request', Date.now() - measureStartedAt);
+    obs.outcome('measure_request', res.statusCode < 400);
+  });
+
   const { detectionId, houseType } = req.body || {};
   if (!detectionId) return res.status(400).json({ error: 'detectionId required.' });
 
@@ -3463,6 +3478,33 @@ const FUNNEL_STAGES = [
    nothing: the server records these itself, by calling store.countStage
    directly rather than by coming through here. */
 const SERVER_ONLY_STAGES = new Set(['lead_qualified', 'lead_sent', 'installer_received', 'installer_accepted']);
+
+/* ── POST /api/journey-timing ──
+   The only number the server cannot measure: how long the homeowner waited.
+
+   detect_request, measure_request and quote_request are three calls in the
+   middle of a journey that starts when somebody taps upload and ends when a
+   figure appears on their screen. Between them sit the upload itself, on
+   whatever connection they have, and the browser doing the work. A server-side
+   total would be the fast part of somebody else's experience — which is how
+   "<60s photo to itemised estimate" came to be on the homepage in the first
+   place.
+
+   So the browser reports it, once, when the estimate is on screen. Bounded and
+   validated because it is client-supplied: anything absurd is dropped rather
+   than allowed to move a median that a claim might later rest on. */
+const MAX_REPORTED_JOURNEY_MS = 15 * 60 * 1000;
+
+app.post('/api/journey-timing', perMinute(60, 'Too many requests — please wait a moment.'), (req, res) => {
+  const ms = req.body?.ms;
+  const stage = String(req.body?.stage || 'photo_to_estimate');
+  const allowed = ['photo_to_estimate'];
+  res.status(204).end();
+  if (!allowed.includes(stage)) return;
+  if (typeof ms !== 'number' || !Number.isFinite(ms) || ms <= 0 || ms > MAX_REPORTED_JOURNEY_MS) return;
+  obs.time(stage, ms);
+  obs.outcome(stage, true);
+});
 
 app.post('/api/funnel', perMinute(120, 'Too many requests — please wait a moment.'), async (req, res) => {
   const stage = String(req.body?.stage || '');

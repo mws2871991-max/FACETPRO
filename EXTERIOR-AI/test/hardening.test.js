@@ -171,3 +171,54 @@ test('a single-letter TLD is not an email address', async () => {
   });
   assert.strictEqual(status, 400);
 });
+
+/* ── the journey timing a client reports ─────────────────────────────────
+   The one number the server cannot measure itself, and therefore the one it
+   has to be sceptical about. If a claim ever rests on this figure, the figure
+   has to have refused everything absurd on the way in. */
+
+const postTiming = (body) => fetch(`${BASE}/api/journey-timing`, {
+  method: 'POST', headers: { 'content-type': 'application/json' },
+  body: JSON.stringify(body),
+});
+
+test('a reported journey time is recorded', async () => {
+  const obs = require('../observability');
+  obs.reset();
+  const res = await postTiming({ stage: 'photo_to_estimate', ms: 41200 });
+  assert.strictEqual(res.status, 204, 'the browser must never wait on a measurement');
+  const t = obs.timingSummary().photo_to_estimate;
+  assert.ok(t, 'expected the figure to be recorded');
+  assert.strictEqual(t.samples, 1);
+  assert.strictEqual(t.medianMs, 41200);
+});
+
+test('nonsense is refused rather than allowed to move a median', async () => {
+  const obs = require('../observability');
+  obs.reset();
+  for (const body of [
+    { stage: 'photo_to_estimate', ms: -5 },            // before it began
+    { stage: 'photo_to_estimate', ms: 'soon' },        // not a number
+    { stage: 'photo_to_estimate', ms: 0 },             // instant, which it never is
+    { stage: 'photo_to_estimate', ms: 99999999 },      // a tab left open for a day
+    { stage: 'made_up_stage', ms: 1000 },              // a name nobody publishes
+    {},
+  ]) {
+    const res = await postTiming(body);
+    assert.strictEqual(res.status, 204, 'still answers, still records nothing');
+  }
+  assert.deepStrictEqual(obs.timingSummary(), {},
+    'a client-supplied figure must not be able to invent a statistic');
+});
+
+test('the failure rate counts both sides', () => {
+  const obs = require('../observability');
+  obs.reset();
+  for (let i = 0; i < 9; i++) obs.outcome('detect_request', true);
+  obs.outcome('detect_request', false);
+  const t = obs.timingSummary().detect_request;
+  assert.strictEqual(t.ok, 9);
+  assert.strictEqual(t.failed, 1);
+  assert.strictEqual(t.failureRatePct, 10);
+});
+

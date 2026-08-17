@@ -94,17 +94,42 @@ function time(name, ms) {
 
 const pct = (sorted, p) => sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))];
 
+/* How often it worked, beside how long it took.
+
+   A median of 900 ms is a different fact depending on whether one in fifty
+   requests failed or one in three did, and a timing block without it invites
+   the flattering reading. Counted separately from record(), which is for
+   things worth reading individually — this is just the tally. */
+const outcomes = {};
+
+function outcome(name, ok) {
+  const n = String(name || 'unknown');
+  const o = (outcomes[n] ||= { ok: 0, failed: 0 });
+  if (ok) o.ok += 1; else o.failed += 1;
+}
+
 function timingSummary() {
   const out = {};
-  for (const [name, list] of Object.entries(timings)) {
-    if (!list.length) continue;
-    const sorted = [...list].sort((a, b) => a - b);
-    out[name] = {
-      samples: sorted.length,
-      medianMs: pct(sorted, 0.5),
-      p90Ms: pct(sorted, 0.9),
-      slowestMs: sorted[sorted.length - 1],
-    };
+  const names = new Set([...Object.keys(timings), ...Object.keys(outcomes)]);
+  for (const name of names) {
+    const list = timings[name] || [];
+    const o = outcomes[name];
+    const entry = {};
+    if (list.length) {
+      const sorted = [...list].sort((a, b) => a - b);
+      entry.samples = sorted.length;
+      entry.medianMs = pct(sorted, 0.5);
+      entry.p90Ms = pct(sorted, 0.9);
+      entry.p95Ms = pct(sorted, 0.95);
+      entry.slowestMs = sorted[sorted.length - 1];
+    }
+    if (o) {
+      entry.ok = o.ok;
+      entry.failed = o.failed;
+      const total = o.ok + o.failed;
+      entry.failureRatePct = total ? Math.round((o.failed / total) * 1000) / 10 : 0;
+    }
+    if (Object.keys(entry).length) out[name] = entry;
   }
   return out;
 }
@@ -155,6 +180,7 @@ const reset = () => {
   events.length = 0;
   for (const k of Object.keys(counts)) { delete counts[k]; delete firstSeen[k]; delete lastSeen[k]; }
   for (const k of Object.keys(timings)) delete timings[k];
+  for (const k of Object.keys(outcomes)) delete outcomes[k];
 };
 
-module.exports = { record, time, timingSummary, summary, reset, MAX_EVENTS, _internals: { scrubText, scrubDetail } };
+module.exports = { record, time, outcome, timingSummary, summary, reset, MAX_EVENTS, _internals: { scrubText, scrubDetail } };

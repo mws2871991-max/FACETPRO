@@ -2431,7 +2431,10 @@ async function refreshGlazing() {
     const data = await res.json();
     if (ticket !== glazingRequest) return;        // a later choice already won
     state.glazing = res.ok ? data : null;
-    if (state.glazing?.price) reachedStage('estimate_viewed');
+    if (state.glazing?.price) {
+      reachedStage('estimate_viewed');
+      reportJourneyTiming();
+    }
   } catch (_) {
     if (ticket === glazingRequest) state.glazing = null;
   } finally {
@@ -4343,6 +4346,33 @@ document.addEventListener('visibilitychange', () => {
    closing. A failure is swallowed: a counter is never worth an error in front
    of somebody trying to price their windows. */
 const stagesSeen = new Set();
+/* Photo to itemised estimate, measured where it is actually felt.
+
+   The server can time its own three calls and cannot time the upload, the
+   network, or the browser doing the work — so a server-side total would be the
+   fast part of somebody else's experience. That gap is how "<60s photo to
+   itemised estimate" got onto the homepage with nothing behind it.
+
+   Reported once per journey: a homeowner changing a swatch is not starting the
+   clock again, and counting it twice would flatter the number by measuring a
+   cached round trip. */
+let journeyStartedAt = null;
+let journeyReported = false;
+
+function reportJourneyTiming() {
+  if (journeyReported || !journeyStartedAt) return;
+  journeyReported = true;
+  const ms = Date.now() - journeyStartedAt;
+  try {
+    fetch('/api/journey-timing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stage: 'photo_to_estimate', ms }),
+      keepalive: true,
+    }).catch(() => {});
+  } catch (_) { /* a measurement must never cost somebody their journey */ }
+}
+
 function reachedStage(stage) {
   if (stagesSeen.has(stage)) return;
   stagesSeen.add(stage);
@@ -4383,6 +4413,11 @@ function stopAnalysisNarration() {
 
 async function handleUpload(file) {
   reachedStage('upload_started');
+  /* The homeowner's clock starts here, not when the server receives anything.
+     Everything before this is them choosing a photo; everything after is them
+     waiting on us — including the upload itself, on whatever connection they
+     have. See reportJourneyTiming. */
+  journeyStartedAt = Date.now();
   startAnalysisNarration();
   const url = URL.createObjectURL(file);
   state.uploadedImg = url;
