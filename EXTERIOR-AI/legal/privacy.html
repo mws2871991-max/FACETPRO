@@ -145,7 +145,19 @@
         <tr><td>Technical and security logs</td><td>12 months</td></tr>
       </tbody>
     </table>
-    <p>Deletion is automatic. At the end of each period the records are removed rather than archived. If you ask us to delete something sooner, we will.</p>
+    <!-- "Deletion is automatic" covered every row in the table above, and one
+         of them has no automation behind it. retention.js enforces five:
+         designOnlyDays 183, sharedEnquiryDays 730, consentRecordDays 2191,
+         accessLogDays 365, and the detection cache at 7 days — each matching
+         the figure stated above exactly, checked line by line.
+
+         Complaints are the exception. Nothing in the application records one;
+         a complaint arrives by email and is kept wherever email is kept. The
+         six years is real as a policy and there is no sweep behind it, so
+         saying deletion is automatic for that row would be claiming a
+         mechanism that does not exist. If complaint handling is ever built
+         into the product, this paragraph goes back to being one sentence. -->
+    <p>Deletion is automatic for everything the site itself holds &mdash; your design, your enquiry, the consent records, the technical logs and the photograph fingerprint. At the end of each period those records are removed rather than archived. Complaints reach us by email rather than through the site, so those we keep and delete by hand to the same six years. If you ask us to delete something sooner, we will.</p>
 
     <h2>How we keep it safe</h2>
     <ul>
@@ -198,7 +210,20 @@
     <h2>Cookies and similar technologies</h2>
     <p>We do not use analytics cookies, advertising cookies, or any cross-site tracking. Nothing on this site follows you anywhere else, and there is no cookie banner because there is nothing to consent to.</p>
     <p>The only thing we store on your device is a session cookie that keeps installers signed in to the installer area while they are using it. It is deleted when the browser tab closes. That is exempt from the consent requirement under regulation 6(4) of the Privacy and Electronic Communications Regulations 2003, because the service cannot work without it.</p>
-    <p>If we ever add analytics, we will update this notice first and give you a way to opt out.</p>
+    <!-- Added after auditing this notice against what the code does.
+
+         The three sentences above were true and remained true — the counters
+         below set no cookie, carry no identifier, and write nothing that could
+         single anybody out. But a reader would fairly infer from "we do not use
+         analytics" that nothing is measured at all, and something is: the
+         funnel posts a stage name, and the browser reports how long it waited.
+
+         There is no duty to disclose an aggregate count that cannot identify a
+         person. This is here because a notice that is accurate by omission is
+         the same shape as the "<60s photo to itemised estimate" claim we took
+         off the homepage for having nothing behind it. Say the thing. -->
+    <p>We do count how many people reach each step &mdash; how many upload a photo, how many see an estimate, how many ask for quotes &mdash; and how long the estimate took to appear. It is a tally and a stopwatch, not a profile: no cookie, nothing stored on your device, and nothing recorded that could tell us which visitor you were. We use it to find where the site is slow or confusing.</p>
+    <p>If we ever add analytics that identify you or follow you between sites, we will update this notice first and give you a way to opt out.</p>
 
     <h2>AI, and decisions made about you</h2>
     <p>We use AI in two places: to identify the parts of your home in the photograph, and to generate the visualisation. The estimate is worked out by ordinary arithmetic from the choices you make and typical rates for materials, labour, scaffolding and waste.</p>
