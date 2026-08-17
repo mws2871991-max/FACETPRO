@@ -1653,12 +1653,18 @@ function readImage(image, declaredMime, { requireDeclared = true } = {}) {
 /* ── POST /api/detect ──
    Real AI detection via Claude vision. Requires ANTHROPIC_API_KEY. */
 app.post('/api/detect', detectLimiter, async (req, res) => {
-  /* Timed end to end, because detection is the long pole between a homeowner
-     tapping upload and seeing a number, and because "<60s photo to itemised
-     estimate" was on the homepage with nothing behind it. Recorded on the way
-     out whatever the outcome — a slow failure is the one worth knowing about. */
+  /* Named detect_request, not detect, because it measures this request and
+     not the thing the homepage was claiming.
+
+     "<60s photo to itemised estimate" covers upload, detection, measurement
+     and pricing. This covers one call in the middle of that. A metric called
+     `detect` sitting under a heading about photo-to-estimate time is how a
+     number gets quoted for something it never measured — which is the exact
+     failure the claim it replaced was guilty of. Recorded on the way out
+     whatever the outcome, because a slow failure is the one worth knowing
+     about. */
   const detectStartedAt = Date.now();
-  res.on('finish', () => obs.time('detect', Date.now() - detectStartedAt));
+  res.on('finish', () => obs.time('detect_request', Date.now() - detectStartedAt));
 
   const { image, mimeType, sessionId } = req.body || {};
   if (!image || !mimeType) return res.status(400).json({ error: 'Missing image or mimeType.' });

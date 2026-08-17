@@ -113,7 +113,19 @@
     <p>The site, its design, our catalogue and our content belong to us or our licensors. You may use them for your own personal, non-commercial purposes &mdash; including showing your design and estimate to installers, builders, or anyone else advising you on the work.</p>
 
     <h2>14. Installer accounts</h2>
-    <p>This section applies if you are an installer. Access to the installer area is by individual account with two-factor authentication. You must keep your credentials confidential and must not share an account. You may use homeowner data only to quote for the enquiry it relates to, and you must comply with your own obligations under UK data protection law and the Privacy and Electronic Communications Regulations. Your full obligations are in your installer agreement with us, which takes precedence over this section.</p>
+    <!-- This said access was "by individual account with two-factor
+         authentication". The account part is true — installers.js gives each
+         installer their own and scopes the portal to the leads the delivery
+         log says they received. The second factor is not built, and grep for
+         totp/2fa across installers.js and server.js returns nothing.
+
+         The privacy notice had already been corrected to say so —
+         "We do not yet require two-factor authentication on those accounts" —
+         which left the two documents contradicting each other on a security
+         control, with the false version in the one an installer signs against.
+         A claim about a control you do not have is the kind that gets read
+         back to you after an incident. -->
+    <p>This section applies if you are an installer. Access to the installer area is by individual account. We do not yet require two-factor authentication on those accounts, and will update these terms when we do. You must keep your credentials confidential and must not share an account. You may use homeowner data only to quote for the enquiry it relates to, and you must comply with your own obligations under UK data protection law and the Privacy and Electronic Communications Regulations. Your full obligations are in your installer agreement with us, which takes precedence over this section.</p>
 
     <h2>15. Changes to these terms</h2>
     <p>We may change these terms as the service or the law changes. Any change applies only from the date it is published, and <strong>it does not affect a design or enquiry you have already submitted</strong> &mdash; that stays governed by the version in force at the time.</p>
