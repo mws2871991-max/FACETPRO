@@ -46,6 +46,10 @@
 
 'use strict';
 
+/* Shared with measure.js. These lived in both files as identical copies, and
+   the fanlight bug had to be found in each of them separately. */
+const { clamp, isFiniteNumber, box, doorReference } = require('./geometry');
+
 const { DOOR_HEIGHT_M } = require('./measure');
 
 /* ── TUNING ──
@@ -209,23 +213,7 @@ const FRONT_TO_TOTAL_WINDOWS = {
   bungalow:   2.4,
 };
 
-const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
-const isFiniteNumber = (n) => typeof n === 'number' && Number.isFinite(n);
 const round = (n) => Math.round(n);
-
-/* Same contract as measure.js's box(): percentages in, null for anything
-   malformed, so NaN never reaches the arithmetic. Duplicated rather than
-   imported because measure.js does not export it and this module is not
-   worth widening that surface for. */
-function box(d) {
-  const x = Number(d?.x_pct), y = Number(d?.y_pct), w = Number(d?.w_pct), h = Number(d?.h_pct);
-  if (![x, y, w, h].every(isFiniteNumber)) return null;
-  if (w <= 0 || h <= 0) return null;
-  return {
-    x: clamp(x, 0, 100), y: clamp(y, 0, 100),
-    w: clamp(w, 0, 100), h: clamp(h, 0, 100),
-  };
-}
 
 function iou(a, b) {
   const w = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x));
@@ -235,64 +223,7 @@ function iou(a, b) {
   return inter / (a.w * a.h + b.w * b.h - inter);
 }
 
-/* A UK door leaf is 1.98 m by about 0.84 m — call it 2.36 tall for every one
-   across. Everything on the house is measured against it. */
-const DOOR_LEAF_RATIO = 1.98 / 0.838;
 
-/* The real proportions of a box, from percentages of a frame that is not
-   square: heights are percentages of the frame height and widths percentages
-   of its width, so the aspect ratio has to come back out before two of them
-   can be compared. */
-const shapeRatio = (b, aspectRatio) =>
-  (b && b.w > 0 && isFiniteNumber(aspectRatio) && aspectRatio > 0)
-    ? (b.h / b.w) / aspectRatio
-    : null;
-
-/* Which box is the door, when more than one thing claims to be.
-
-   This took the tallest, which is the wrong instinct the moment a fanlight is
-   involved: a Victorian doorway offered as door-leaf and as door-plus-fanlight
-   would always have been read as the taller of the two. The scale is 1.98 m
-   divided by that height, so a box 29% too tall makes every window 22% too
-   small and — because wall area goes as the square — the walls 40% too small.
-   Measured on a synthetic terrace: 77 m² read as 46 m², and a quote of
-   £10,217–£14,703 read as £7,347–£10,573, with nothing to say it had happened.
-
-   So: prefer the most door-shaped box rather than the biggest one. Where only
-   one is offered this changes nothing, which is why the detection prompt now
-   says to box the leaf alone — this is the second line of defence, not the
-   first. */
-function doorReference(detections, aspectRatio) {
-  const doors = detections
-    .filter(d => d?.type === 'door-front')
-    .map(d => ({ b: box(d), confidence: Number(d?.confidence) || 0 }))
-    .filter(d => d.b && d.b.h >= 2);   // implausibly small box — reject rather than divide by it
-  if (!doors.length) return null;
-
-  /* Nothing wider than it is tall is a front door leaf.
-
-     A garage door is about 2.4 m by 2.1 m — wider than tall, ratio 0.88
-     against a leaf's 2.36 — and treated as the 1.98 m reference it read a
-     77 m² terrace as 62 m². Unlike the too-tall cases this is a threshold
-     worth having: door leaves sit between about 2.1 and 2.9, garage doors
-     under 1.1, and there is nothing in between to get wrong. Rejecting leaves
-     no door at all, which the pipeline already handles by counting instead
-     and saying that is what it did. */
-  const plausible = doors.filter(d => {
-    const r = shapeRatio(d.b, aspectRatio);
-    return r === null || r >= 1.2;
-  });
-  if (!plausible.length) return null;
-
-  const scored = plausible.map(d => {
-    const r = shapeRatio(d.b, aspectRatio);
-    return { ...d, ratio: r, off: r === null ? Infinity : Math.abs(r - DOOR_LEAF_RATIO) };
-  });
-  /* Falls back to the old behaviour when the frame shape is unknown, so a
-     caller without an aspect ratio is no worse off than before. */
-  if (scored.every(d => d.off === Infinity)) return plausible.sort((a, b) => b.b.h - a.b.h)[0];
-  return scored.sort((a, b) => a.off - b.off)[0];
-}
 
 const normaliseType = (s) => String(s || '').toLowerCase().replace(/[^a-z]/g, '');
 const TYPE_LOOKUP = new Map(Object.keys(HOUSE_TYPE_GLAZING_PRIORS).map(k => [normaliseType(k), k]));

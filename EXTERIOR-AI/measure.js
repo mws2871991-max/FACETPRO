@@ -25,7 +25,12 @@
 
 'use strict';
 
-const DOOR_HEIGHT_M = 1.98;   // standard UK external door leaf
+/* Shared with glazing.js. These were identical copies in both files until the
+   same bug had to be found in each of them separately. */
+const {
+  DOOR_HEIGHT_M, isFiniteNumber, box, intersectionPct, doorReference, sawDoorBox,
+} = require('./geometry');
+
 
 /* ── PLAN GEOMETRY → front-to-total multiplier ──
    A photo shows one elevation; the quote needs whole-house wall area. The
@@ -191,11 +196,8 @@ const UNCERTAINTY = { door: 0.12, coverage: 0.20, prior: 0.25 };
 const CROSS_CHECK_TOLERANCE = 0.20;
 
 const WALL_TYPES = new Set(['cladding']);
-const DOOR_TYPES = new Set(['door-front']);
 const OPENING_TYPES = new Set(['window', 'door-front']);
 
-const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
-const isFiniteNumber = (n) => typeof n === 'number' && Number.isFinite(n);
 
 /* Resolve whatever the caller said into a canonical type key.
 
@@ -225,23 +227,6 @@ function houseTypeKey(input) {
   return TYPE_LOOKUP.get(normaliseType(input)) || DEFAULT_HOUSE_TYPE;
 }
 
-/* A detection box is in percentages of image width/height. Returns null for
-   anything malformed rather than letting NaN leak into the arithmetic. */
-function box(d) {
-  const x = Number(d?.x_pct), y = Number(d?.y_pct), w = Number(d?.w_pct), h = Number(d?.h_pct);
-  if (![x, y, w, h].every(isFiniteNumber)) return null;
-  if (w <= 0 || h <= 0) return null;
-  return {
-    x: clamp(x, 0, 100), y: clamp(y, 0, 100),
-    w: clamp(w, 0, 100), h: clamp(h, 0, 100),
-  };
-}
-
-const intersectionPct = (a, b) => {
-  const w = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x));
-  const h = Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
-  return w * h;
-};
 
 /* Merged extent of every wall/cladding detection, as one bounding box.
    Walls are often returned as several regions either side of a door. */
@@ -253,48 +238,6 @@ function wallExtent(detections) {
   const x1 = Math.max(...boxes.map(b => b.x + b.w));
   const y1 = Math.max(...boxes.map(b => b.y + b.h));
   return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
-}
-
-/* The most door-shaped front door in frame, which is not the same as the
-   tallest — see the same function in glazing.js for the arithmetic. A doorway
-   with a fanlight boxed as one element is 29% taller than the leaf, and wall
-   area goes as the square of that: 77 m² read as 46 m² on a synthetic terrace,
-   silently. Shape is the tell; height is what gets it wrong. */
-const DOOR_LEAF_RATIO = DOOR_HEIGHT_M / 0.838;
-
-const shapeRatio = (b, aspectRatio) =>
-  (b && b.w > 0 && isFiniteNumber(aspectRatio) && aspectRatio > 0)
-    ? (b.h / b.w) / aspectRatio
-    : null;
-
-function doorReference(detections, aspectRatio) {
-  const doors = detections
-    .filter(d => DOOR_TYPES.has(d?.type))
-    .map(d => ({ b: box(d), confidence: Number(d?.confidence) || 0 }))
-    .filter(d => d.b);
-  if (!doors.length) return null;
-
-  /* Nothing wider than it is tall is a front door leaf.
-
-     A garage door is about 2.4 m by 2.1 m — wider than tall, ratio 0.88
-     against a leaf's 2.36 — and treated as the 1.98 m reference it read a
-     77 m² terrace as 62 m². Unlike the too-tall cases this is a threshold
-     worth having: door leaves sit between about 2.1 and 2.9, garage doors
-     under 1.1, and there is nothing in between to get wrong. Rejecting leaves
-     no door at all, which the pipeline already handles by counting instead
-     and saying that is what it did. */
-  const plausible = doors.filter(d => {
-    const r = shapeRatio(d.b, aspectRatio);
-    return r === null || r >= 1.2;
-  });
-  if (!plausible.length) return null;
-
-  const scored = plausible.map(d => {
-    const r = shapeRatio(d.b, aspectRatio);
-    return { ...d, ratio: r, off: r === null ? Infinity : Math.abs(r - DOOR_LEAF_RATIO) };
-  });
-  if (scored.every(d => d.off === Infinity)) return plausible.sort((a, b) => b.b.h - a.b.h)[0];
-  return scored.sort((a, b) => a.off - b.off)[0];
 }
 
 /* ── METHOD 1: door reference ──
@@ -484,7 +427,7 @@ function estimateWallArea({ detections, aspectRatio, houseType, tuning } = {}) {
          mean anything — and telling somebody nothing was detected when
          something was is the same small dishonesty this file keeps removing
          elsewhere. */
-      const sawADoorBox = detections.some(d => DOOR_TYPES.has(d?.type) && box(d));
+      const sawADoorBox = sawDoorBox(detections);
       notes.push(sawADoorBox
         ? `The front door we found didn't look like a door — too wide for its height — so rather than measure against it, this is based on the walls filling ${(byCoverage.coverage * 100).toFixed(1)}% of the photo.`
         : `No front door detected, so this is based on the walls filling ${(byCoverage.coverage * 100).toFixed(1)}% of the photo.`);

@@ -462,3 +462,22 @@ test('a hole is not subtracted twice because it was detected twice', () => {
     `the same door twice must not remove its area twice: ${areaOf(once).toFixed(1)} against ${areaOf(twice).toFixed(1)}`);
 });
 
+test('a door boxed with its sidelights is not measured against, and says so', () => {
+  /* The deliberate trade in geometry.js. Sidelights do not change the door's
+     HEIGHT, so the scale would survive — but a door-plus-sidelights box scores
+     0.90 on shape and a garage door 0.87, which no threshold separates. Using
+     an ambiguous box as the 1.98 m ruler risks a confident 19% under-measure;
+     declining it costs accuracy but returns a figure that says what it is.
+
+     Pinned here so that if somebody later decides the trade is wrong, they
+     change it on purpose rather than by accident. */
+  const wideBox = semiPhoto
+    .filter(d => d.type !== 'door-front')
+    .concat([{ type: 'door-front', label: 'Door with sidelights', confidence: 0.93,
+               x_pct: pctW(5.5), y_pct: pctH(7.4), w_pct: pctW(2.2), h_pct: pctH(1.98) }]);
+  const r = estimateWallArea({ detections: wideBox, aspectRatio: ASPECT_4_3, houseType: 'semi' });
+  assert.notStrictEqual(r.method, 'door');
+  assert.ok(r.notes.some(n => /didn't look like a door/.test(n)),
+    'the homeowner should be told a door was found and not used, not that none was found');
+});
+
