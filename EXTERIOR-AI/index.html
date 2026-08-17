@@ -211,6 +211,14 @@
       "mainEntity": [
         {
           "@type": "Question",
+          "name": "Will someone call me?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Only if you ask. You can upload a photo, design your whole exterior and read the itemised estimate without giving us a name, a number or an email. If you do want quotes, you choose when — and at most three installers ever receive your details, which is a limit in the code rather than a promise in the copy."
+          }
+        },
+        {
+          "@type": "Question",
           "name": "How much do new windows cost in the UK?",
           "acceptedAnswer": {
             "@type": "Answer",
@@ -238,7 +246,7 @@
           "name": "What happens to my photo?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Your photo is sent to the AI services that analyse your home and create the render. It is not saved to our records and it is not published anywhere. Only your design choices, your estimate and the contact details you type in are kept, so we can get back to you."
+            "text": "Your original photograph is never saved. It goes to the AI services that find the parts of your home and generate the picture, and it is not kept, published, sold, or used to train anybody's models. We keep the picture we generate for you, the choices you made, and a fingerprint of your photo with the measurements taken from it — the fingerprint for seven days, so the same photo always gives you the same estimate."
           }
         },
         {
@@ -283,7 +291,17 @@
     <a href="/" class="flex items-center gap-3" aria-label="Facet Pro home">
       <span class="w-8 h-8 rounded-[7px] bg-zinc-900 text-white grid place-items-center serif text-[18px] leading-none" aria-hidden="true">F</span>
       <span class="serif text-[19px] tracking-tight">Facet Pro</span>
-      <span id="beta-badge" hidden class="text-[10px] tracking-widest uppercase px-2 py-0.5 rounded-full bg-amber-100 border border-amber-300 text-amber-900">Beta</span>
+      <!-- The BETA badge stood here, beside the wordmark, and was the first
+           thing every visitor read. Section 03 of the homepage copy handoff:
+           it signals "unfinished, don't trust the numbers" before anybody has
+           seen a number, and it says nothing the announcement bar directly
+           below does not say better — that one explains what the estimate is
+           and can be dismissed once read.
+
+           Removed from the nav only. beta-notice and beta-footer still appear
+           when SITE_MODE says beta, so the honesty is intact and one env var
+           still controls it; what goes is the permanent apology in the
+           masthead. -->
     </a>
     <nav class="flex items-center gap-2" aria-label="Primary">
       <!-- This was five category links: windows, roofline, conservatories,
@@ -548,94 +566,7 @@
     <p class="mt-6 text-sm leading-6 text-zinc-600 max-w-[68ch]">That one photo covers <strong>windows</strong>, <strong>doors</strong>, <strong>walls &mdash; cladding or render</strong>, <strong>fascias, soffits and guttering</strong>, and <strong>the roof</strong>. Five trades. Five companies you would otherwise be booking, waiting in for, and chasing. Priced here together, so you see what the job really costs instead of five figures that never add up to one. A conservatory can travel with your enquiry too, as a guide range rather than a price from your photo.</p>
   </section>
 
-  <!-- P3 from the investor pack.
-
-       The pack asked for the heading "Proprietary technology" and it is used,
-       because everything under it is: the door-reference measurement, the
-       whole-house inference, the pricing engine and the rate catalogue behind
-       it are all ours and are the hard part.
-
-       What is NOT claimed is that the models are. Detection runs on
-       Anthropic's API and image generation on FLUX Kontext Pro via Replicate.
-       Both are available to anybody with an account, so asserting otherwise
-       would be false to a homeowner and the first thing a technical investor
-       disproves — and it is unnecessary, because the models are the commodity
-       layer and the measurement is not. The closing line says which is which,
-       and a reader who checks finds the page was straight with them.
-
-       What IS ours is the part described below: measuring a real building
-       from one consumer photograph against the front door, and turning those
-       measurements into five trades priced together. That is the defensible
-       claim, and it is stronger for being true.
-
-       Five, not six. The sixth was the conservatory, and a conservatory is not
-       priced from the photograph — it is a fixed guide band per style, the same
-       for every house on the street, and catalogue.json says so itself. Adding
-       it to the count borrowed credibility the pricing engine had earned and
-       the conservatory guide had not. -->
-  <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="tech-heading">
-    <p class="text-[11px] tracking-[0.25em] uppercase text-zinc-400">Proprietary technology</p>
-    <h2 id="tech-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">What happens to your photograph</h2>
-    <p class="mt-3 max-w-[72ch] text-[14px] leading-7 text-zinc-600">
-      A photograph is not a measurement. Turning one into a price means working out how big the building
-      actually is, and there is only one object of known size in almost every picture of a British home:
-      the front door. It is 1.98&nbsp;m. Everything else follows from it.
-    </p>
-    <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Component detection</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">Every window, door, wall and roof located as a distinct element, with a confidence score attached to each.</p></div>
-      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Scale from the door</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">A UK front door is a known height. The elevation is measured against it &mdash; no reference object, no tape measure, no visit.</p></div>
-      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Whole-house inference</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">One elevation is visible; a quote covers the house. Front measurements scale to the whole property by house type.</p></div>
-      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Pricing engine</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">Areas and counts become itemised costs across five trades, computed on the server so the figure cannot be tampered with.</p></div>
-      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Visualisation</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">Your actual house re-finished photorealistically &mdash; the perspective, shadows and openings held exactly as they were.</p></div>
-      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Stated uncertainty</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">Every estimate carries a range and says which method produced it. A number without its error bars is a guess.</p></div>
-    </div>
-    <!-- Final review, point 4: put the emphasis on what is owned rather than
-         on what is rented. The fact itself is unchanged and still stated — a
-         technical reader establishes it in a minute either way, and a page
-         that volunteered it first is trusted on everything else it says. What
-         changes is which half of the sentence leads. -->
-    <p class="mt-5 text-[12px] leading-6 text-zinc-500 max-w-[72ch]">
-      The vision and image-generation models Facet Pro uses are licensed. The measurement method, the
-      whole-house inference, the pricing engine and the rate catalogue behind it are ours.
-    </p>
-    <!-- The pack lists four questions an investor arrives with: what is
-         proprietary, how does it scale, what is the business model, and why
-         can't somebody else build this. Three are answered by sections. The
-         fourth was answered nowhere, and it is the one that decides a meeting.
-
-         It sits here rather than in a section of its own because the honest
-         answer is not a feature — it is that the models are cheap and the
-         pricing knowledge is not. That lands hardest immediately after a
-         reader has been told exactly what the models are. -->
-    <div class="mt-6 rounded-xl bg-[#FDFCF9] border border-zinc-200 p-5">
-      <h3 class="text-[15px] font-medium">Why this is hard to copy</h3>
-      <p class="mt-2 max-w-[72ch] text-[13px] leading-6 text-zinc-600">
-        The models can be rented by anybody. What cannot be rented is knowing what a job settles at
-        &mdash; not the list price, but the number it actually goes out at once the discounting is
-        done. That came from twenty-four years of selling these in people&rsquo;s houses, and it is what
-        the whole estimate rests on. A competitor with the same models and a published rate card
-        produces confident figures that are wrong, and finds out at survey.
-      </p>
-      <p class="mt-3 max-w-[72ch] text-[13px] leading-6 text-zinc-600">
-        The second half is supply. Installers who will pay for leads have to be signed, and they sign
-        with somebody they already know. Both of ours were.
-      </p>
-      <!-- Final review, point 5: the scaling story. Written as what the system
-           is built to do rather than what it already does, because it does not
-           do it yet — there is no feedback loop wired in, and the calibration
-           set is data/survey-samples.json with seventeen rows and no known
-           wall areas in them. "Every property analysed strengthens…" as a
-           present-tense claim is the kind a technically curious investor asks
-           to see, and there would be nothing to show. Stated as design, it is
-           true today and becomes truer with every completed job. -->
-      <p class="mt-3 max-w-[72ch] text-[13px] leading-6 text-zinc-600">
-        And it compounds. The system is built so that every property analysed and every job completed
-        feeds back into the pricing intelligence, the measurement accuracy and the picture of what
-        people are actually renovating &mdash; so the estimates get sharper as the platform grows,
-        and the gap in front of anybody starting from scratch widens.
-      </p>
-    </div>
-  </section>
+  
 
   <!-- P4: the signature graphic. Plain markup rather than SVG so it reflows on
        a phone and inherits the palette. -->
@@ -760,23 +691,34 @@
   <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="diff-heading">
     <h2 id="diff-heading" class="serif text-[26px] md:text-[32px] tracking-tight">Why this is different</h2>
     <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Section 07 of the copy handoff: the right column mirrored the
+           negatives on the left, so it read as a list of things that do not
+           happen rather than a list of things you get. Each line now names the
+           relief.
+
+           Two corrections that came out of rewriting it rather than from the
+           document. "Six trades off the same photo" survived Saturday's sweep
+           that made the count five everywhere else — the sweep grepped for
+           "six trades" and this one is capitalised. And "An estimate in about
+           a minute" is the timing claim that came off the numbers block for
+           having nothing behind it; it had a second home here. -->
       <div class="rounded-xl border border-zinc-200 p-5">
         <div class="text-[12px] uppercase tracking-widest text-zinc-500">The usual way</div>
         <ul class="mt-3 space-y-2 text-[14px] text-zinc-600">
-          <li>An appointment, in your house</li>
-          <li>A survey before any number at all</li>
-          <li>Days to a quote</li>
-          <li>A separate visit per trade</li>
+          <li>Five companies, five appointments in your house</li>
+          <li>A salesman in your living room</li>
+          <li>Days of waiting before you see a number</li>
+          <li>No idea what it should cost before they arrive</li>
           <li>A price that moves on how hard you push</li>
         </ul>
       </div>
       <div class="rounded-xl border border-zinc-900 bg-zinc-900 text-[#FBF8F3] p-5">
         <div class="text-[12px] uppercase tracking-widest text-white/50">Facet Pro</div>
         <ul class="mt-3 space-y-2 text-[14px] text-white/90">
-          <li>One photograph</li>
-          <li>Measured from the picture</li>
-          <li>An estimate in about a minute</li>
-          <li>Six trades off the same photo</li>
+          <li>One photograph, taken from your own pavement</li>
+          <li>Your home, your choices, your evening</li>
+          <li>An itemised estimate before anybody visits</li>
+          <li>Five trades off the same photograph</li>
           <li>The same house gets the same number</li>
         </ul>
       </div>
@@ -868,7 +810,22 @@
     <h2 id="faq-heading" class="serif text-[26px] md:text-[32px] tracking-tight">Questions homeowners ask</h2>
     <div class="mt-6 divide-y divide-zinc-200 border-y border-zinc-200">
 
-      <details class="group">
+            <!-- Section 09 of the copy handoff rates this the highest-conversion
+           objection on the page, and nothing answered it directly. Placed
+           first because it is the fear that stops somebody uploading, not one
+           they have after reading.
+
+           Every sentence here is enforced rather than promised:
+           MAX_INSTALLERS_PER_LEAD refuses an env var above three,
+           LEAD_RECIPIENTS is only written to when installerQuotes consent is
+           given, and the withdrawal link is a hard requirement before that
+           consent is even accepted. -->
+      <details class="group border-b border-zinc-200">
+        <summary class="flex items-center justify-between gap-4 py-4"><h3 class="text-[15px] font-medium">Will someone call me?</h3><span class="chev text-zinc-400 transition-transform" aria-hidden="true">&#8964;</span></summary>
+        <p class="pb-4 text-[13px] leading-6 text-zinc-600 max-w-[72ch]">Only if you ask. You can upload a photo, design your whole exterior and read the itemised estimate without giving us a name, a number or an email. If you do want quotes, you choose when &mdash; and at most three installers ever receive your details, which is a limit in the code rather than a promise in this paragraph. No call centres, and no follow-up if you never asked.</p>
+      </details>
+
+<details class="group">
         <summary class="flex items-center justify-between gap-4 py-4"><h3 class="text-[15px] font-medium">How much do new windows cost in the UK?</h3><span class="chev text-zinc-400 transition-transform" aria-hidden="true">⌄</span></summary>
         <p class="pb-4 text-[13px] leading-6 text-zinc-600 max-w-[72ch]">It depends on how many windows you're replacing, how big they are and the style you choose. Facet Pro prices yours the way an installer would: each window by its size and style, the door by the leaf, plus access for anything upstairs, taking the old frames away, and VAT at 20%. You see every line. It's an estimate to plan with, not a fixed quote. The rates behind it are what these jobs actually settle at, from twenty-four years of selling them — not a list price nobody pays.</p>
       </details>
@@ -885,7 +842,17 @@
 
       <details class="group">
         <summary class="flex items-center justify-between gap-4 py-4"><h3 class="text-[15px] font-medium">What happens to my photo?</h3><span class="chev text-zinc-400 transition-transform" aria-hidden="true">⌄</span></summary>
-        <p class="pb-4 text-[13px] leading-6 text-zinc-600 max-w-[72ch]">Your photo is sent to the AI services that analyse your home and create the render. It isn't saved to our records and it isn't published anywhere. Only your design choices, your estimate and the contact details you type in are kept, so we can get back to you.</p>
+        <!-- Rewritten to agree with legal/privacy.html exactly, rather than
+             approximately. The old answer said only design choices, the
+             estimate and contact details are kept, which left out two things
+             the notice states plainly: the photograph's fingerprint and its
+             measurements for 7 days, and the generated image for 6 months. The
+             copy handoff's replacement went the other way and said "nothing is
+             stored after you close the page", which is further from the truth
+             again. A FAQ and a privacy notice disagreeing about storage is the
+             same failure as the terms and the notice disagreeing about
+             two-factor authentication. -->
+        <p class="pb-4 text-[13px] leading-6 text-zinc-600 max-w-[72ch]">Your original photograph is never saved. It goes to the AI services that find the parts of your home and generate the picture, and it is not kept, published, sold, or used to train anybody's models. What we do keep: the picture we generate for you, the choices you made, and a fingerprint of your photo with the measurements taken from it &mdash; the fingerprint for seven days, so the same photo always gives you the same estimate. Full detail is in the <a href="/privacy" class="underline hover:text-zinc-900">privacy notice</a>.</p>
       </details>
 
       <details class="group">
@@ -904,6 +871,128 @@
       </details>
 
     </div>
+  </section>
+
+  <!-- Section 08 of the copy handoff: the methodology moved below the FAQ.
+
+       This block — component detection, scale from the door, whole-house
+       inference, the pricing engine — sat between the visualiser and the
+       comparison, so the page explained how the machinery works before a
+       homeowner had been given a reason to care about it. The funnel says four
+       in five leave before touching anything, which is the shape of a page
+       that leads with engineering.
+
+       Not deleted, because it is the most convincing thing on the site for the
+       reader who has decided they are interested and now wants to know whether
+       to believe it. That reader reaches the bottom. This is where they are. -->
+<!-- P3 from the investor pack.
+
+       The pack asked for the heading "Proprietary technology" and it is used,
+       because everything under it is: the door-reference measurement, the
+       whole-house inference, the pricing engine and the rate catalogue behind
+       it are all ours and are the hard part.
+
+       What is NOT claimed is that the models are. Detection runs on
+       Anthropic's API and image generation on FLUX Kontext Pro via Replicate.
+       Both are available to anybody with an account, so asserting otherwise
+       would be false to a homeowner and the first thing a technical investor
+       disproves — and it is unnecessary, because the models are the commodity
+       layer and the measurement is not. The closing line says which is which,
+       and a reader who checks finds the page was straight with them.
+
+       What IS ours is the part described below: measuring a real building
+       from one consumer photograph against the front door, and turning those
+       measurements into five trades priced together. That is the defensible
+       claim, and it is stronger for being true.
+
+       Five, not six. The sixth was the conservatory, and a conservatory is not
+       priced from the photograph — it is a fixed guide band per style, the same
+       for every house on the street, and catalogue.json says so itself. Adding
+       it to the count borrowed credibility the pricing engine had earned and
+       the conservatory guide had not. -->
+  <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="tech-heading">
+    <p class="text-[11px] tracking-[0.25em] uppercase text-zinc-400">Proprietary technology</p>
+    <h2 id="tech-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">What happens to your photograph</h2>
+    <p class="mt-3 max-w-[72ch] text-[14px] leading-7 text-zinc-600">
+      A photograph is not a measurement. Turning one into a price means working out how big the building
+      actually is, and there is only one object of known size in almost every picture of a British home:
+      the front door. It is 1.98&nbsp;m. Everything else follows from it.
+    </p>
+    <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Component detection</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">Every window, door, wall and roof located as a distinct element, with a confidence score attached to each.</p></div>
+      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Scale from the door</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">A UK front door is a known height. The elevation is measured against it &mdash; no reference object, no tape measure, no visit.</p></div>
+      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Whole-house inference</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">One elevation is visible; a quote covers the house. Front measurements scale to the whole property by house type.</p></div>
+      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Pricing engine</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">Areas and counts become itemised costs across five trades, computed on the server so the figure cannot be tampered with.</p></div>
+      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Visualisation</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">Your actual house re-finished photorealistically &mdash; the perspective, shadows and openings held exactly as they were.</p></div>
+      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Stated uncertainty</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">Every estimate carries a range and says which method produced it. A number without its error bars is a guess.</p></div>
+    </div>
+    <!-- Final review, point 4: put the emphasis on what is owned rather than
+         on what is rented. The fact itself is unchanged and still stated — a
+         technical reader establishes it in a minute either way, and a page
+         that volunteered it first is trusted on everything else it says. What
+         changes is which half of the sentence leads. -->
+    <p class="mt-5 text-[12px] leading-6 text-zinc-500 max-w-[72ch]">
+      The vision and image-generation models Facet Pro uses are licensed. The measurement method, the
+      whole-house inference, the pricing engine and the rate catalogue behind it are ours.
+    </p>
+    <!-- The pack lists four questions an investor arrives with: what is
+         proprietary, how does it scale, what is the business model, and why
+         can't somebody else build this. Three are answered by sections. The
+         fourth was answered nowhere, and it is the one that decides a meeting.
+
+         It sits here rather than in a section of its own because the honest
+         answer is not a feature — it is that the models are cheap and the
+         pricing knowledge is not. That lands hardest immediately after a
+         reader has been told exactly what the models are. -->
+    <div class="mt-6 rounded-xl bg-[#FDFCF9] border border-zinc-200 p-5">
+      <h3 class="text-[15px] font-medium">Why this is hard to copy</h3>
+      <p class="mt-2 max-w-[72ch] text-[13px] leading-6 text-zinc-600">
+        The models can be rented by anybody. What cannot be rented is knowing what a job settles at
+        &mdash; not the list price, but the number it actually goes out at once the discounting is
+        done. That came from twenty-four years of selling these in people&rsquo;s houses, and it is what
+        the whole estimate rests on. A competitor with the same models and a published rate card
+        produces confident figures that are wrong, and finds out at survey.
+      </p>
+      <p class="mt-3 max-w-[72ch] text-[13px] leading-6 text-zinc-600">
+        The second half is supply. Installers who will pay for leads have to be signed, and they sign
+        with somebody they already know. Both of ours were.
+      </p>
+      <!-- Final review, point 5: the scaling story. Written as what the system
+           is built to do rather than what it already does, because it does not
+           do it yet — there is no feedback loop wired in, and the calibration
+           set is data/survey-samples.json with seventeen rows and no known
+           wall areas in them. "Every property analysed strengthens…" as a
+           present-tense claim is the kind a technically curious investor asks
+           to see, and there would be nothing to show. Stated as design, it is
+           true today and becomes truer with every completed job. -->
+      <p class="mt-3 max-w-[72ch] text-[13px] leading-6 text-zinc-600">
+        And it compounds. The system is built so that every property analysed and every job completed
+        feeds back into the pricing intelligence, the measurement accuracy and the picture of what
+        people are actually renovating &mdash; so the estimates get sharper as the platform grows,
+        and the gap in front of anybody starting from scratch widens.
+      </p>
+    </div>
+  </section>
+
+  <!-- Section 10 of the copy handoff: a close.
+
+       The page ended on the FAQ and then an installer accordion, so a
+       homeowner who read the whole thing was handed to somebody else's
+       audience. This is the last thing they read instead.
+
+       Deliberately not a repeat of the hero — somebody who has scrolled this
+       far has either decided or has an objection, and the answer to both is
+       the same low-risk restatement of what it costs them to try. The
+       installer accordion follows, smaller, where it belongs. -->
+  <section class="rounded-2xl bg-zinc-900 text-[#FBF8F3] p-6 md:p-10 text-center" aria-labelledby="close-heading">
+    <h2 id="close-heading" class="serif text-[26px] md:text-[36px] leading-[1.08] tracking-[-0.02em] max-w-[22ch] mx-auto">
+      You won't know what it could look like until you see it.
+    </h2>
+    <p class="mt-5 text-[15px] leading-7 text-white/75 max-w-[54ch] mx-auto">
+      Upload one photograph. See your home with new windows, a new door, render, cladding or a new roof &mdash; and get an itemised estimate before you speak to anybody.
+    </p>
+    <button type="button" class="mt-7 cta px-7 py-4 rounded-full text-[15px] font-semibold transition min-h-[52px]" onclick="document.getElementById('your-photo')?.scrollIntoView({behavior:'smooth'})">See what my house could look like &rarr;</button>
+    <p class="mt-4 text-[13px] text-white/60">Free to try &nbsp;&bull;&nbsp; One photo &nbsp;&bull;&nbsp; No sales call unless you ask</p>
   </section>
 
   <details id="trade" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8">
@@ -1250,7 +1339,7 @@ async function loadConfig() {
 // The badge and notice ship hidden and are revealed by the server's answer,
 // so nothing has to be edited in two places to switch mode.
 function applyBetaMode() {
-  for (const id of ['beta-badge', 'beta-notice', 'beta-footer']) {
+  for (const id of ['beta-notice', 'beta-footer']) {
     const el = document.getElementById(id);
     if (el) el.hidden = !state.beta;
   }
