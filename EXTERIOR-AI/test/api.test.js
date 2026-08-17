@@ -103,6 +103,34 @@ test('measure returns a range, a method and a caveat', async () => {
   assert.ok(Math.abs(body.m2 - expected) < 2, `m2 was ${body.m2}, expected ≈ ${expected.toFixed(1)}`);
 });
 
+test('measuring leaves one row of evidence behind', async () => {
+  /* Three thresholds in geometry.js are set from a synthetic terrace: where a
+     door box stops being door-shaped, whether the house-type band needs a
+     lower bound as well as an upper one, and whether a door boxed with its
+     sidelights can be trusted. None can be settled by argument — only by
+     seeing where real front doors sit. This is the row that accumulates.
+
+     Asserted through the endpoint rather than the store, because the wiring is
+     the part that would silently not happen. */
+  const store = require('../store');
+  const before = (await store.readMeasurements(5000)).length;
+
+  const { body: det } = await post('/api/detect', { image: fakeJpegBase64(), mimeType: 'image/jpeg' });
+  await post('/api/measure', { detectionId: det.detectionId, houseType: 'semi' });
+
+  const rows = await store.readMeasurements(5000);
+  assert.strictEqual(rows.length, before + 1, 'measuring should record exactly one observation');
+
+  const row = rows[0];
+  assert.strictEqual(row.method, 'door');
+  assert.ok(Number.isFinite(Number(row.doorRatio)), 'the door shape is the point of the row');
+  assert.ok(Number(row.doorRatio) > 1, `a door leaf is taller than it is wide, got ${row.doorRatio}`);
+  /* Nothing that could be tied to a person or a property. */
+  for (const forbidden of ['image', 'detections', 'postcode', 'email', 'sessionId']) {
+    assert.ok(!(forbidden in row), `an observation must not carry ${forbidden}`);
+  }
+});
+
 test('the quote uses the measured area once measuring has run', async () => {
   const { body } = await post('/api/quote', { claddingId: 'sage-slate', roofId: 'terracotta', trimId: 'cedar', detectionId });
   assert.strictEqual(body.footprintSource, 'photo_door');

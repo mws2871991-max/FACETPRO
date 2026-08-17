@@ -141,8 +141,28 @@ function doorReference(detections, aspectRatio) {
    and "a door was detected and discarded" is a sentence a homeowner reads. */
 const sawDoorBox = (detections) => detections.some(d => DOOR_TYPES.has(d?.type) && box(d));
 
+/* The shape of the most door-like box the photograph offered, INCLUDING the
+   ones doorReference refuses.
+
+   Recording only accepted boxes would be sampling the answer: every rejected
+   garage door and every wide sidelight box — the shapes MIN_DOOR_RATIO is
+   guessing about — would be missing from the evidence used to set
+   MIN_DOOR_RATIO. The rejects are the interesting half. */
+function observedDoorShape(detections, aspectRatio) {
+  const shapes = detections
+    .filter(d => DOOR_TYPES.has(d?.type))
+    .map(d => box(d))
+    .filter(Boolean)
+    .map(b => ({ ratio: shapeRatio(b, aspectRatio), heightPct: b.h }))
+    .filter(x => x.ratio !== null);
+  if (!shapes.length) return { ratio: null, heightPct: null, count: 0 };
+  const best = shapes.slice().sort((a, b) =>
+    Math.abs(a.ratio - DOOR_LEAF_RATIO) - Math.abs(b.ratio - DOOR_LEAF_RATIO))[0];
+  return { ratio: best.ratio, heightPct: best.heightPct, count: shapes.length };
+}
+
 module.exports = {
   DOOR_HEIGHT_M, DOOR_LEAF_RATIO, MIN_DOOR_RATIO, DOOR_TYPES,
   clamp, isFiniteNumber, box, intersectionPct, shapeRatio,
-  doorReference, sawDoorBox,
+  doorReference, sawDoorBox, observedDoorShape,
 };

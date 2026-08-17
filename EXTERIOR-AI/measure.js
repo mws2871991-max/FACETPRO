@@ -28,7 +28,7 @@
 /* Shared with glazing.js. These were identical copies in both files until the
    same bug had to be found in each of them separately. */
 const {
-  DOOR_HEIGHT_M, isFiniteNumber, box, intersectionPct, doorReference, sawDoorBox,
+  DOOR_HEIGHT_M, isFiniteNumber, box, intersectionPct, doorReference, sawDoorBox, shapeRatio, observedDoorShape,
 } = require('./geometry');
 
 
@@ -317,6 +317,9 @@ function measureByDoor({ detections, aspectRatio }) {
     openingsM2,
     doorHeightPct: door.b.h,
     doorConfidence: door.confidence,
+    /* The shape of the box that won, so estimateWallArea can record it. This
+       is the number the thresholds in geometry.js are guessing at. */
+    doorRatio: shapeRatio(door.b, aspectRatio),
     // How many door-heights tall the wall is — a proxy for storeys that comes
     // free with the geometry. Two storeys is around 3, a bungalow around 1.3.
     wallToDoorHeight: wall.h / door.b.h,
@@ -477,6 +480,16 @@ function estimateWallArea({ detections, aspectRatio, houseType, tuning } = {}) {
       : method === 'coverage' ? 'rough' : 'typical figure',
     crossCheck,
     notes,
+    /* What this photograph looked like to the measurer, for calibration.
+       Shape numbers only — no image, nothing identifying — recorded so the
+       thresholds in geometry.js can eventually be set from real front doors
+       rather than from a synthetic terrace. See store.recordMeasurement. */
+    observed: (() => {
+      /* The shape offered, not only the shape used — a rejected garage door is
+         the evidence MIN_DOOR_RATIO needs most. */
+      const seen = observedDoorShape(list, aspectRatio);
+      return { doorBoxes: seen.count, doorRatio: seen.ratio, doorHeightPct: seen.heightPct };
+    })(),
   };
 }
 

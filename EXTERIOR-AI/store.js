@@ -208,6 +208,22 @@ const SCHEMA = [
     day DATE NOT NULL, stage TEXT NOT NULL, hits INT NOT NULL DEFAULT 0,
     PRIMARY KEY (day, stage)
   )`,
+  /* What a photograph looked like to the measurer, and what it decided.
+     Shape numbers and an outcome — no image, no identifier, nothing that could
+     be tied to a person or a property. It exists because three thresholds in
+     the measurement path are currently set from a synthetic terrace, and the
+     only way to set them properly is to see where real front doors actually
+     sit. Every row is one upload's worth of evidence toward that. */
+  `CREATE TABLE IF NOT EXISTS measurement_observations (
+    id SERIAL PRIMARY KEY,
+    ts TIMESTAMPTZ NOT NULL,
+    house_type TEXT,
+    door_ratio REAL,
+    door_height_pct REAL,
+    door_boxes INT,
+    method TEXT,
+    m2 REAL
+  )`,
 
   `CREATE TABLE IF NOT EXISTS detection_cache (
     image_hash TEXT PRIMARY KEY, ts TIMESTAMPTZ NOT NULL, aspect_ratio DOUBLE PRECISION, detections JSONB NOT NULL
@@ -570,6 +586,7 @@ const RENDER_DIR = path.join(DATA_DIR, 'renders');
 /* ── THE FUNNEL ──
    Counters only. See the funnel table above for why it cannot identify anyone. */
 
+const MEASUREMENT_FILE = 'measurements.jsonl';
 const FUNNEL_FILE = 'funnel.json';
 const funnelDay = () => new Date().toISOString().slice(0, 10);
 
@@ -592,6 +609,55 @@ async function countStage(stage) {
 }
 
 /* Totals per stage over a window of days. */
+/* One upload's worth of evidence about how a house was measured.
+
+   Deliberately not personal data and deliberately not a photograph: the shape
+   of the door box the measurer used, how many it was offered, which method
+   won, and the answer. A row cannot be tied to a person, a property or a
+   session, which is why it can be kept without a retention period attached to
+   somebody.
+
+   In memory it would be useless — eighteen deploys in two days, and each one
+   would have wiped it. The thresholds this exists to settle need hundreds of
+   real uploads, which takes longer than any process here stays up. */
+async function recordMeasurement(row) {
+  const at = new Date().toISOString();
+  const r = {
+    ts: at,
+    houseType: row?.houseType ?? null,
+    doorRatio: Number.isFinite(row?.doorRatio) ? row.doorRatio : null,
+    doorHeightPct: Number.isFinite(row?.doorHeightPct) ? row.doorHeightPct : null,
+    doorBoxes: Number.isFinite(row?.doorBoxes) ? row.doorBoxes : 0,
+    method: row?.method ?? null,
+    m2: Number.isFinite(row?.m2) ? row.m2 : null,
+  };
+  if (pool) {
+    await pool.query(
+      `INSERT INTO ${SCHEMA_NAME}.measurement_observations
+         (ts, house_type, door_ratio, door_height_pct, door_boxes, method, m2)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+      [r.ts, r.houseType, r.doorRatio, r.doorHeightPct, r.doorBoxes, r.method, r.m2]);
+    return;
+  }
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.appendFileSync(path.join(DATA_DIR, MEASUREMENT_FILE), JSON.stringify(r) + '\n');
+}
+
+async function readMeasurements(limit = 1000) {
+  if (pool) {
+    const { rows } = await pool.query(
+      `SELECT ts, house_type AS "houseType", door_ratio AS "doorRatio",
+              door_height_pct AS "doorHeightPct", door_boxes AS "doorBoxes", method, m2
+         FROM ${SCHEMA_NAME}.measurement_observations
+        ORDER BY id DESC LIMIT $1`, [limit]);
+    return rows;
+  }
+  try {
+    return fs.readFileSync(path.join(DATA_DIR, MEASUREMENT_FILE), 'utf8')
+      .trim().split('\n').filter(Boolean).map(l => JSON.parse(l)).slice(-limit).reverse();
+  } catch (_) { return []; }
+}
+
 async function readFunnel(days = 30) {
   const since = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
   if (pool) {
@@ -763,7 +829,7 @@ async function end() {
 module.exports = {
   ensureSchema, append, readAll, replaceAll, mutate, end, getResume, DATA_DIR, putRender, getRender, deleteRenders, staleRenderIds, hasDb: !!pool,
   getDetectionCache, putDetectionCache,
-  countStage, readFunnel,
+  countStage, readFunnel, recordMeasurement, readMeasurements,
   // Exported for tests: scraping these out of the source with a regex broke
   // the moment another table was added after leads.
   _internals: { INSERT_PARAMS, INSERT_SQL, SELECT_SQL, FILE_NAMES, checkServerIdentity },

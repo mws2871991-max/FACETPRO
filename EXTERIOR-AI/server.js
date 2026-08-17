@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const store = require('./store');
 const measure = require('./measure');
+const geometry = require('./geometry');
 const emails = require('./emails');
 const delivery = require('./delivery');
 const retention = require('./retention');
@@ -2362,7 +2363,7 @@ app.post('/api/glazing', (req, res) => {
   }
 });
 
-app.post('/api/measure', (req, res) => {
+app.post('/api/measure', async (req, res) => {
   const measureStartedAt = Date.now();
   res.on('finish', () => {
     obs.time('measure_request', Date.now() - measureStartedAt);
@@ -2407,6 +2408,33 @@ app.post('/api/measure', (req, res) => {
   // Remembered against the record so /api/quote and /api/lead can use the
   // figure without the client being able to send one of its own.
   record.measurement = result;
+
+  /* One row of evidence about how this photograph measured.
+
+     Three thresholds in geometry.js are currently set from a synthetic
+     terrace: where a door box stops being door-shaped, whether the
+     house-type band needs a lower bound as well as an upper one, and whether
+     a door boxed with its sidelights can be trusted. None of them can be
+     settled by argument, only by seeing where real front doors sit.
+
+     Shape numbers and an outcome. No image, no identifier, nothing tied to a
+     person or a property — which is why it can be kept without attaching a
+     retention period to somebody, and why the privacy notice's counting
+     paragraph covers it. Awaited so a storage failure surfaces rather than
+     becoming an unhandled rejection, but never allowed to cost the homeowner
+     their measurement. */
+  try {
+    await store.recordMeasurement({
+      houseType: result.houseType,
+      method: result.method,
+      m2: result.m2,
+      doorRatio: result.observed?.doorRatio,
+      doorHeightPct: result.observed?.doorHeightPct,
+      doorBoxes: result.observed?.doorBoxes,
+    });
+  } catch (err) {
+    obs.record('storage', 'could not record a measurement observation', { reason: err.message });
+  }
 
   res.json({
     ...result,
@@ -3574,6 +3602,46 @@ app.get('/api/funnel', installerLimiter, requireInstallerPassword, async (req, r
 
   res.setHeader('Cache-Control', 'no-store');
   res.json({ days, funnel, byJourney, note: 'Counts are per stage, not per person — see the funnel table in store.js. byJourney counts only visitors who arrived on a journey; the totals above include everyone.' });
+});
+
+/* ── GET /api/measurements ──
+   The evidence for the thresholds, in the shape you would actually read it.
+
+   Not a dump: buckets of door-box proportions against what the measurer did
+   with them. The question this exists to answer is "where do real front doors
+   stop and garage doors begin", and a list of rows does not answer it — a
+   histogram does. Behind the installer password like everything else that
+   describes the business rather than the product. */
+app.get('/api/measurements', installerLimiter, requireInstallerPassword, async (req, res) => {
+  const limit = Math.min(5000, Math.max(1, parseInt(req.query.limit, 10) || 1000));
+  let rows = [];
+  try { rows = await store.readMeasurements(limit); }
+  catch (err) { return res.status(500).json({ error: 'Could not read the observations.' }); }
+
+  const buckets = {};
+  const byMethod = {};
+  for (const r of rows) {
+    byMethod[r.method || 'unknown'] = (byMethod[r.method || 'unknown'] || 0) + 1;
+    const ratio = Number(r.doorRatio);
+    if (!Number.isFinite(ratio)) continue;
+    /* Half-unit buckets: a door leaf sits near 2.36, a garage near 0.88, and
+       the interesting question is what lands between them. */
+    const key = (Math.floor(ratio * 2) / 2).toFixed(1);
+    (buckets[key] ||= { doorRatioFrom: Number(key), samples: 0, usedAsScale: 0 });
+    buckets[key].samples += 1;
+    if (r.method === 'door') buckets[key].usedAsScale += 1;
+  }
+
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({
+    samples: rows.length,
+    byMethod,
+    currentThreshold: geometry.MIN_DOOR_RATIO,
+    doorLeafRatio: Number(geometry.DOOR_LEAF_RATIO.toFixed(2)),
+    ratioBuckets: Object.values(buckets).sort((a, b) => a.doorRatioFrom - b.doorRatioFrom),
+    note: 'Shape of the most door-like box each photograph offered, including boxes the measurer refused. '
+        + 'MIN_DOOR_RATIO and the band in measure.js are currently set from a synthetic terrace; this is what would replace that.',
+  });
 });
 
 app.get('/api/ops', installerLimiter, requireInstallerPassword, (req, res) => {
