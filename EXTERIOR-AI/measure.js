@@ -274,11 +274,26 @@ function doorReference(detections, aspectRatio) {
     .filter(d => d.b);
   if (!doors.length) return null;
 
-  const scored = doors.map(d => {
+  /* Nothing wider than it is tall is a front door leaf.
+
+     A garage door is about 2.4 m by 2.1 m — wider than tall, ratio 0.88
+     against a leaf's 2.36 — and treated as the 1.98 m reference it read a
+     77 m² terrace as 62 m². Unlike the too-tall cases this is a threshold
+     worth having: door leaves sit between about 2.1 and 2.9, garage doors
+     under 1.1, and there is nothing in between to get wrong. Rejecting leaves
+     no door at all, which the pipeline already handles by counting instead
+     and saying that is what it did. */
+  const plausible = doors.filter(d => {
+    const r = shapeRatio(d.b, aspectRatio);
+    return r === null || r >= 1.2;
+  });
+  if (!plausible.length) return null;
+
+  const scored = plausible.map(d => {
     const r = shapeRatio(d.b, aspectRatio);
     return { ...d, ratio: r, off: r === null ? Infinity : Math.abs(r - DOOR_LEAF_RATIO) };
   });
-  if (scored.every(d => d.off === Infinity)) return doors.sort((a, b) => b.b.h - a.b.h)[0];
+  if (scored.every(d => d.off === Infinity)) return plausible.sort((a, b) => b.b.h - a.b.h)[0];
   return scored.sort((a, b) => a.off - b.off)[0];
 }
 
@@ -463,7 +478,16 @@ function estimateWallArea({ detections, aspectRatio, houseType, tuning } = {}) {
     if (byCoverage && byCoverage.framingOk) {
       m2 = byCoverage.totalM2;
       method = 'coverage';
-      notes.push(`No front door detected, so this is based on the walls filling ${(byCoverage.coverage * 100).toFixed(1)}% of the photo.`);
+      /* "No front door detected" was true when the only way to get here was an
+         empty frame. A door box can now be detected and then discarded for
+         being wider than it is tall — a garage door, or a box too small to
+         mean anything — and telling somebody nothing was detected when
+         something was is the same small dishonesty this file keeps removing
+         elsewhere. */
+      const sawADoorBox = detections.some(d => DOOR_TYPES.has(d?.type) && box(d));
+      notes.push(sawADoorBox
+        ? `The front door we found didn't look like a door — too wide for its height — so rather than measure against it, this is based on the walls filling ${(byCoverage.coverage * 100).toFixed(1)}% of the photo.`
+        : `No front door detected, so this is based on the walls filling ${(byCoverage.coverage * 100).toFixed(1)}% of the photo.`);
     } else if (byCoverage) {
       notes.push(`The walls fill ${(byCoverage.coverage * 100).toFixed(1)}% of the photo, outside the ${(tuned.coverageBand[0] * 100).toFixed(0)}–${(tuned.coverageBand[1] * 100).toFixed(0)}% expected for a ${prior.label.toLowerCase()} — the photo is probably framed too close or too far.`);
     } else {

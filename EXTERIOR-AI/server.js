@@ -1763,11 +1763,13 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
             { type: 'text', text: `Detect every exterior architectural element on this UK home. Return ONLY a JSON array, no markdown. Detect ALL of these element types if visible:
 
 - "window": any window
-- "door-front": the main front door. Box the door LEAF ONLY. Exclude any fanlight,
-  transom or overlight window above it, and exclude any sidelight panels beside it,
-  even where they share one frame. This box sets the scale for the whole survey: a
-  UK front door is 1.98 m, and including the glass above it makes every other
-  measurement on the house too small.
+- "door-front": the main front door, and only a pedestrian front door — never a
+  garage door. Box the door LEAF ONLY: from the threshold at its foot to the top of
+  the door itself. Exclude any fanlight, transom or overlight above it, any sidelight
+  panels beside it, any porch canopy or arch over it, and any steps below it, even
+  where they share one frame with the door. This box sets the scale for the whole
+  survey: a UK front door is 1.98 m, and every centimetre of canopy, fanlight or
+  doorstep inside this box makes the entire house measure smaller than it is.
 - "roof": the main roof surface
 - "cladding": exterior wall cladding/render/brick surface
 - "fascia": the fascia board (under the roofline edge)

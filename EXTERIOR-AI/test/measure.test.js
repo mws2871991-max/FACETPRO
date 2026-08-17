@@ -61,12 +61,33 @@ test('door method is independent of how far away the photo was taken', () => {
 });
 
 test('falls back to the prior when the result is outside the house-type band', () => {
-  // A tiny door box inflates metres-per-pixel enormously.
-  const badDoor = semiPhoto.map(d => d.type === 'door-front' ? { ...d, h_pct: 4 } : d);
+  /* A door box that is still door-SHAPED but far too small in the frame: the
+     scale inflates, the answer comes out absurd, and the band check catches
+     it. Narrow rather than merely short, because a box wider than it is tall
+     is now rejected earlier as not a door leaf — a different guard, tested
+     below. */
+  const badDoor = semiPhoto.map(d => d.type === 'door-front' ? { ...d, h_pct: 4, w_pct: 1 } : d);
   const r = estimateWallArea({ detections: badDoor, aspectRatio: ASPECT_4_3, houseType: 'semi' });
   assert.strictEqual(r.method, 'prior');
   assert.strictEqual(r.m2, HOUSE_TYPE_PRIORS.semi.wallM2);
   assert.ok(r.notes.some(n => n.includes('outside')), 'should explain why');
+});
+
+test('a garage door is not used as the 1.98 m ruler', () => {
+  /* A garage door is about 2.4 m by 2.1 m — wider than tall. Measured against
+     as if it were a front door it read a 77 m² terrace as 62 m², accepted with
+     the strongest confidence the system has, because a smaller number is still
+     a plausible one. Door leaves run about 2.1 to 2.9 tall for every one
+     across and garage doors under 1.1, so this threshold has nothing in
+     between to get wrong. */
+  const withGarage = semiPhoto
+    .filter(d => d.type !== 'door-front')
+    .concat([{ type: 'door-front', label: 'Garage door', confidence: 0.9,
+               x_pct: pctW(5), y_pct: pctH(7.3), w_pct: pctW(2.4), h_pct: pctH(2.1) }]);
+  const r = estimateWallArea({ detections: withGarage, aspectRatio: ASPECT_4_3, houseType: 'semi' });
+  assert.notStrictEqual(r.method, 'door', 'a garage door must not become the scale reference');
+  assert.ok(r.notes.some(n => /didn't look like a door/.test(n)),
+    'and it should say so rather than claim no door was found');
 });
 
 test('no door: uses coverage when framing is plausible', () => {
