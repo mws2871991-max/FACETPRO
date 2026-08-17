@@ -331,21 +331,45 @@
     <div class="grid lg:grid-cols-[1.05fr_1fr] gap-8 lg:gap-12 items-center">
       <div>
         <p class="text-[11px] tracking-[0.25em] uppercase text-white/50">Home exterior planning &middot; UK</p>
-        <h1 id="hero-heading" class="mt-4 serif text-[34px] sm:text-[42px] md:text-[52px] leading-[0.98] tracking-[-0.03em]">See what your house could look&nbsp;like &mdash; and what it could cost.</h1>
-        <p class="mt-5 text-[16px] md:text-[18px] leading-7 text-white/75 max-w-[46ch]">Upload one photo of your house. Facet Pro will visualise your exterior renovation and give you an instant estimated price.</p>
+        <!-- Rewritten from the homepage copy handoff, Section 04 Option A.
+             The old headline described the mechanism; this one leads with what
+             the homeowner gets and demotes the how to the subhead.
+
+             Two departures from that document, both deliberate. Its trust
+             strip reads "Free to try · One photo · Takes about a minute" — the
+             timing claim came off the numbers block on Saturday because
+             nothing measured it, and putting it back in the hero would be the
+             same unsubstantiated number somewhere more prominent. The strip
+             keeps "No sales call unless you ask", which is enforced in code
+             rather than promised in copy. -->
+        <h1 id="hero-heading" class="mt-4 serif text-[34px] sm:text-[42px] md:text-[52px] leading-[0.98] tracking-[-0.03em]">See your house. See the price. Before anyone comes&nbsp;round.</h1>
+        <p class="mt-5 text-[16px] md:text-[18px] leading-7 text-white/75 max-w-[46ch]">Upload one photo of your home. Facet Pro shows you what it could look like &mdash; then gives you an itemised estimate for the work. Windows, doors, cladding, roof, fascias. Five trades. One photograph.</p>
+        <p class="mt-4 serif text-[17px] md:text-[19px] text-white/90">No survey. No salesman. No guesswork.</p>
 
         <div class="mt-7 flex flex-col sm:flex-row gap-3">
           <!-- The id stays: the handler bound to it scrolls to the upload
                block, which now sits directly underneath rather than five
                screens down. -->
-          <button id="hero-upload" type="button" class="cta w-full sm:w-auto px-7 py-4 rounded-full text-[15px] font-semibold transition min-h-[52px]">See my house &rarr;</button>
+          <button id="hero-upload" type="button" class="cta w-full sm:w-auto px-7 py-4 rounded-full text-[15px] font-semibold transition min-h-[52px]">See what my house could look like &rarr;</button>
           <a href="#our-work" class="w-full sm:w-auto px-6 py-4 rounded-full border border-white/20 text-[15px] font-medium hover:bg-white/10 transition text-center min-h-[52px] grid place-items-center">See real homes</a>
         </div>
 
         <p class="mt-5 text-[13px] text-white/60">Free to try &nbsp;&bull;&nbsp; One photo &nbsp;&bull;&nbsp; No sales call unless you ask</p>
 
+        <!-- The fairness line stays in the hero as a hook; the full section
+             lives further down the page.
+
+             The handoff opens it with "Two neighbours. Same street. Same
+             windows. £8,000 apart." That figure is invented, and this file's
+             own rule — stated in landing.js — is that no price is ever typed
+             into prose, because the day the rate card changes nobody greps the
+             marketing. The engine's own installer spread puts the gap at about
+             £6,400 on a typical semi and £8,100 on a detached, so the number
+             is not wrong so much as unanchored, and the browser is never sent
+             the rates to compute it with: /api/catalogue strips the cost model
+             deliberately. So it is said without a figure. -->
         <p class="mt-6 pt-6 border-t border-white/10 serif text-[19px] md:text-[21px] leading-snug text-white/90">The same house gets the same number.</p>
-        <p class="mt-2 text-[13px] leading-6 text-white/55 max-w-[52ch]">Two neighbours can buy the same windows and pay wildly different prices, because one of them pushed harder on a weeknight in their own front room. Priced from the photograph, the number does not move on how hard you are willing to push.</p>
+        <p class="mt-2 text-[13px] leading-6 text-white/55 max-w-[52ch]">Two neighbours can buy the same windows and pay thousands apart, because one of them sat in the room longer on a Wednesday evening. Priced from the photograph, the number does not move on how hard you are willing to push.</p>
       </div>
 
       <!-- Show the product on the first screen. Static pair rather than the
@@ -691,6 +715,45 @@
       worth more to them than a name from a call centre. <strong>Three installers at most</strong>, ever
       &mdash; a limit enforced in the code, not a promise in the copy.
     </p>
+  </section>
+
+  <!-- The fairness story, given its own moment.
+
+       Section 06 of the homepage copy handoff, and its best idea: this was a
+       subheading in the hero, which is the wrong weight for the thing the
+       whole product exists to fix. It comes before the comparison because the
+       comparison is the answer and this is the question.
+
+       Written without the handoff's "£8,000 apart". No price is typed into
+       prose anywhere in this codebase — landing.js states the rule and the
+       reason: somebody updates the rate card and nobody greps the marketing.
+       The engine puts the real gap at roughly £6,400 on a semi and £8,100 on a
+       detached, and the browser is deliberately never sent the rates to
+       compute it, so the claim is made in the one currency the page can
+       always back: the estimate range every visitor is shown IS that spread. -->
+  <section class="rounded-2xl bg-zinc-900 text-[#FBF8F3] p-6 md:p-10" aria-labelledby="fairness-heading">
+    <p class="text-[11px] tracking-[0.25em] uppercase text-white/50">The pricing problem</p>
+    <h2 id="fairness-heading" class="mt-3 serif text-[28px] md:text-[38px] leading-[1.05] tracking-[-0.02em]">
+      Two neighbours. Same street.<br>Same windows. Thousands apart.
+    </h2>
+    <div class="mt-6 grid md:grid-cols-2 gap-6 md:gap-10">
+      <div class="space-y-4 text-[15px] leading-7 text-white/75">
+        <p>One of them sat in the room longer on a Wednesday evening. That is the only difference. The product is identical. The price is not.</p>
+        <p>That is not a market price. It is a negotiation tax on people who have no way of knowing what the job should cost before somebody is sitting in their front room.</p>
+        <p>Facet Pro was built by somebody who sold these jobs from front rooms for twenty-four years. Not to explain the problem &mdash; to end it.</p>
+      </div>
+      <div class="md:border-l md:border-white/10 md:pl-10">
+        <p class="serif text-[24px] md:text-[30px] leading-tight">The same house gets<br>the same number.</p>
+        <p class="mt-4 text-[15px] leading-7 text-white/75">Priced from the photograph. The number does not move on how long you are willing to sit there, how hard you push, or what day of the week it is.</p>
+        <!-- Why the estimate is a range, answered here rather than left to be
+             wondered about beside the figure. The spread between what two
+             firms quote for identical work is the thing this section is about,
+             so the range is evidence for the argument rather than a caveat. -->
+        <p class="mt-4 text-[13px] leading-6 text-white/55">It is why your estimate arrives as a range rather than one number. The lower end is close to what the keener of the two national installers settles at; the higher end is what the same job goes out at elsewhere. Same windows, same house, same work.</p>
+        <button type="button" class="mt-6 cta px-6 py-3.5 rounded-full text-[14px] font-semibold transition min-h-[48px]" onclick="document.getElementById('your-photo')?.scrollIntoView({behavior:'smooth'})">See what my house should cost &rarr;</button>
+        <p class="mt-3 text-[12px] text-white/50">Free to try &nbsp;&bull;&nbsp; No sales call unless you ask</p>
+      </div>
+    </div>
   </section>
 
   <!-- P7: comparison cards, straight from the pack. -->
