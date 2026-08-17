@@ -389,3 +389,55 @@ test('imageSize reads PNG and JPEG dimensions', () => {
   assert.strictEqual(imageSize(Buffer.from('not an image')), null);
   assert.strictEqual(imageSize(null), null);
 });
+
+/* ── the fanlight ────────────────────────────────────────────────────────
+   A doorway with a fanlight above it is one of the commonest things on a
+   Victorian or Edwardian terrace, and the front door is the 1.98 m ruler that
+   every other measurement on the house is taken against.
+
+   If the fanlight lands inside the door box, that box is about 29% taller than
+   the leaf. Wall area goes as the SQUARE of the door height, so the error
+   compounds: measured before the fix, 77 m² of terrace read as 46 m² — a 40%
+   under-measurement, silently, on a house type the product is aimed at. */
+
+const terrace = (doorHeightM) => ([
+  { type: 'cladding',   label: 'Front wall', confidence: 0.9,  x_pct: pctW(3.2), y_pct: pctH(3.4), w_pct: pctW(7),   h_pct: pctH(6) },
+  { type: 'door-front', label: 'Front door', confidence: 0.94, x_pct: pctW(6.2), y_pct: pctH(7.4), w_pct: pctW(0.9), h_pct: pctH(doorHeightM) },
+  { type: 'window',     label: 'W',          confidence: 0.9,  x_pct: pctW(4.0), y_pct: pctH(7.6), w_pct: pctW(1.4), h_pct: pctH(1.3) },
+]);
+
+const areaOf = (r) => r.totalM2 ?? r.m2 ?? r.frontM2;
+
+test('the door-shaped box is preferred over the tallest one', () => {
+  /* The model may offer the doorway both ways. Taking the taller made the
+     fanlight the ruler; taking the most door-shaped does not. */
+  const leafOnly = estimateWallArea({ detections: terrace(1.98), aspectRatio: ASPECT_4_3, houseType: 'terrace' });
+  const both = estimateWallArea({
+    detections: [...terrace(1.98), {
+      type: 'door-front', label: 'Door with fanlight', confidence: 0.91,
+      x_pct: pctW(6.2), y_pct: pctH(6.83), w_pct: pctW(0.9), h_pct: pctH(2.55),
+    }],
+    aspectRatio: ASPECT_4_3, houseType: 'terrace',
+  });
+
+  const drift = Math.abs(areaOf(both) - areaOf(leafOnly)) / areaOf(leafOnly);
+  assert.ok(drift < 0.05,
+    `a fanlight box should not move the survey: ${areaOf(leafOnly).toFixed(1)} m² against ${areaOf(both).toFixed(1)} m²`);
+});
+
+test('a hole is not subtracted twice because it was detected twice', () => {
+  /* Openings were summed with no overlap handling, so a doorway returned as
+     leaf and as leaf-plus-fanlight lost its area from the wall twice — as
+     would a bay returned once whole and again as its three lights. */
+  const once = estimateWallArea({ detections: terrace(1.98), aspectRatio: ASPECT_4_3, houseType: 'terrace' });
+  const twice = estimateWallArea({
+    detections: [...terrace(1.98), {
+      type: 'door-front', label: 'Front door again', confidence: 0.9,
+      x_pct: pctW(6.2), y_pct: pctH(7.4), w_pct: pctW(0.9), h_pct: pctH(1.98),
+    }],
+    aspectRatio: ASPECT_4_3, houseType: 'terrace',
+  });
+  assert.ok(Math.abs(areaOf(twice) - areaOf(once)) < 0.51,
+    `the same door twice must not remove its area twice: ${areaOf(once).toFixed(1)} against ${areaOf(twice).toFixed(1)}`);
+});
+

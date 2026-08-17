@@ -255,14 +255,31 @@ function wallExtent(detections) {
   return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
 }
 
-// Tallest detected front door — the most reliable scale reference in frame.
-function doorReference(detections) {
+/* The most door-shaped front door in frame, which is not the same as the
+   tallest — see the same function in glazing.js for the arithmetic. A doorway
+   with a fanlight boxed as one element is 29% taller than the leaf, and wall
+   area goes as the square of that: 77 m² read as 46 m² on a synthetic terrace,
+   silently. Shape is the tell; height is what gets it wrong. */
+const DOOR_LEAF_RATIO = DOOR_HEIGHT_M / 0.838;
+
+const shapeRatio = (b, aspectRatio) =>
+  (b && b.w > 0 && isFiniteNumber(aspectRatio) && aspectRatio > 0)
+    ? (b.h / b.w) / aspectRatio
+    : null;
+
+function doorReference(detections, aspectRatio) {
   const doors = detections
     .filter(d => DOOR_TYPES.has(d?.type))
     .map(d => ({ b: box(d), confidence: Number(d?.confidence) || 0 }))
     .filter(d => d.b);
   if (!doors.length) return null;
-  return doors.sort((a, b) => b.b.h - a.b.h)[0];
+
+  const scored = doors.map(d => {
+    const r = shapeRatio(d.b, aspectRatio);
+    return { ...d, ratio: r, off: r === null ? Infinity : Math.abs(r - DOOR_LEAF_RATIO) };
+  });
+  if (scored.every(d => d.off === Infinity)) return doors.sort((a, b) => b.b.h - a.b.h)[0];
+  return scored.sort((a, b) => a.off - b.off)[0];
 }
 
 /* ── METHOD 1: door reference ──
@@ -281,20 +298,54 @@ function doorReference(detections) {
 function measureByDoor({ detections, aspectRatio }) {
   if (!isFiniteNumber(aspectRatio) || aspectRatio <= 0) return null;
   const wall = wallExtent(detections);
-  const door = doorReference(detections);
+  const door = doorReference(detections, aspectRatio);
   if (!wall || !door) return null;
   if (door.b.h < 2) return null;   // implausibly small door box — reject rather than divide by it
 
   const scale = aspectRatio * DOOR_HEIGHT_M * DOOR_HEIGHT_M / (door.b.h * door.b.h);
   const grossM2 = wall.w * wall.h * scale;
 
-  // Subtract windows and doors, clipped to the wall extent so a box that
-  // overhangs the wall can't remove more area than the wall has.
-  const openingsPct = detections
+  /* Subtract windows and doors, clipped to the wall extent so a box that
+     overhangs the wall can't remove more area than the wall has.
+
+     Boxes that sit inside other boxes are dropped first, because this was a
+     plain sum and the same hole could be subtracted twice. A doorway offered
+     as both leaf and leaf-plus-fanlight is exactly that, and so is a bay
+     returned as one window and again as its three lights: on a synthetic
+     terrace the duplicate door alone took 77 m² to 72 m². glazing.js already
+     dedupes its window candidates by overlap; this did not.
+
+     Containment rather than IoU, because the shapes here are nested rather
+     than merely similar — a leaf inside a fanlight box overlaps almost
+     entirely from the small box's point of view and only partly from the
+     large one's. */
+  const openingBoxes = detections
     .filter(d => OPENING_TYPES.has(d?.type))
     .map(box)
-    .filter(Boolean)
-    .reduce((sum, b) => sum + intersectionPct(wall, b), 0);
+    .filter(Boolean);
+
+  const areaOf = (b) => b.w * b.h;
+  const containedIn = (inner, outer) => {
+    const x0 = Math.max(inner.x, outer.x);
+    const y0 = Math.max(inner.y, outer.y);
+    const x1 = Math.min(inner.x + inner.w, outer.x + outer.w);
+    const y1 = Math.min(inner.y + inner.h, outer.y + outer.h);
+    if (x1 <= x0 || y1 <= y0) return 0;
+    const overlap = (x1 - x0) * (y1 - y0);
+    return areaOf(inner) > 0 ? overlap / areaOf(inner) : 0;
+  };
+
+  /* Strictly-larger would leave an exact duplicate standing: two identical
+     boxes are each not smaller than the other, so neither was dropped and the
+     hole still came out twice. The index breaks that tie. */
+  const kept = openingBoxes.filter((b, i) =>
+    !openingBoxes.some((other, j) => {
+      if (j === i) return false;
+      const bigger = areaOf(other) > areaOf(b) || (areaOf(other) === areaOf(b) && j < i);
+      return bigger && containedIn(b, other) > 0.7;
+    }));
+
+  const openingsPct = kept.reduce((sum, b) => sum + intersectionPct(wall, b), 0);
   const openingsM2 = openingsPct * scale;
 
   // Never let openings eat more than 60% of the elevation — that would mean

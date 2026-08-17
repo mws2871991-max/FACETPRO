@@ -235,13 +235,48 @@ function iou(a, b) {
   return inter / (a.w * a.h + b.w * b.h - inter);
 }
 
-function doorReference(detections) {
+/* A UK door leaf is 1.98 m by about 0.84 m — call it 2.36 tall for every one
+   across. Everything on the house is measured against it. */
+const DOOR_LEAF_RATIO = 1.98 / 0.838;
+
+/* The real proportions of a box, from percentages of a frame that is not
+   square: heights are percentages of the frame height and widths percentages
+   of its width, so the aspect ratio has to come back out before two of them
+   can be compared. */
+const shapeRatio = (b, aspectRatio) =>
+  (b && b.w > 0 && isFiniteNumber(aspectRatio) && aspectRatio > 0)
+    ? (b.h / b.w) / aspectRatio
+    : null;
+
+/* Which box is the door, when more than one thing claims to be.
+
+   This took the tallest, which is the wrong instinct the moment a fanlight is
+   involved: a Victorian doorway offered as door-leaf and as door-plus-fanlight
+   would always have been read as the taller of the two. The scale is 1.98 m
+   divided by that height, so a box 29% too tall makes every window 22% too
+   small and — because wall area goes as the square — the walls 40% too small.
+   Measured on a synthetic terrace: 77 m² read as 46 m², and a quote of
+   £10,217–£14,703 read as £7,347–£10,573, with nothing to say it had happened.
+
+   So: prefer the most door-shaped box rather than the biggest one. Where only
+   one is offered this changes nothing, which is why the detection prompt now
+   says to box the leaf alone — this is the second line of defence, not the
+   first. */
+function doorReference(detections, aspectRatio) {
   const doors = detections
     .filter(d => d?.type === 'door-front')
     .map(d => ({ b: box(d), confidence: Number(d?.confidence) || 0 }))
     .filter(d => d.b && d.b.h >= 2);   // implausibly small box — reject rather than divide by it
   if (!doors.length) return null;
-  return doors.sort((a, b) => b.b.h - a.b.h)[0];
+
+  const scored = doors.map(d => {
+    const r = shapeRatio(d.b, aspectRatio);
+    return { ...d, ratio: r, off: r === null ? Infinity : Math.abs(r - DOOR_LEAF_RATIO) };
+  });
+  /* Falls back to the old behaviour when the frame shape is unknown, so a
+     caller without an aspect ratio is no worse off than before. */
+  if (scored.every(d => d.off === Infinity)) return doors.sort((a, b) => b.b.h - a.b.h)[0];
+  return scored.sort((a, b) => a.off - b.off)[0];
 }
 
 const normaliseType = (s) => String(s || '').toLowerCase().replace(/[^a-z]/g, '');
@@ -321,7 +356,7 @@ function windowCandidates(detections) {
 
 function measureWindows({ detections, aspectRatio, bands }) {
   if (!isFiniteNumber(aspectRatio) || aspectRatio <= 0) return null;
-  const door = doorReference(detections);
+  const door = doorReference(detections, aspectRatio);
   if (!door) return null;
 
   const { kept, duplicates } = windowCandidates(detections);
