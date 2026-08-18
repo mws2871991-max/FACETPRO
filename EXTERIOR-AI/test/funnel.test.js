@@ -42,11 +42,36 @@ const send = (stage) => fetch(`${BASE}/api/funnel`, {
 const read = (headers = { Authorization: `Bearer ${PASSWORD}` }) =>
   fetch(`${BASE}/api/funnel`, { headers });
 
+/* The endpoint answers 204 and writes afterwards, deliberately: a counter that
+   fails must never cost a visitor their journey, and the browser is not waiting
+   for anything useful. That means a read taken the instant the 204 lands can
+   legitimately arrive before the row does.
+
+   This test used to read once and assert, which passed whenever the write won
+   the race and failed when it did not — once against Postgres, where an insert
+   is a network round trip rather than a file append. A flaky test is worse than
+   a missing one: it teaches whoever sees it to press re-run rather than look,
+   which is the same lesson as a red cross that appears every night.
+
+   So it waits for the count instead of assuming it. */
+const countOf = async (stage) =>
+  (await (await read()).json()).funnel.find(f => f.stage === stage).count;
+
+async function countReaches(stage, target, timeoutMs = 3000) {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const n = await countOf(stage);
+    if (n >= target) return n;
+    if (Date.now() > deadline) return n;
+    await new Promise(r => setTimeout(r, 25));
+  }
+}
+
 test('a stage is counted, and the funnel reports it', async () => {
-  const before = (await (await read()).json()).funnel.find(f => f.stage === 'landing').count;
+  const before = await countOf('landing');
   assert.strictEqual((await send('landing')).status, 204);
   assert.strictEqual((await send('landing')).status, 204);
-  const after = (await (await read()).json()).funnel.find(f => f.stage === 'landing').count;
+  const after = await countReaches('landing', before + 2);
   assert.strictEqual(after, before + 2, 'the counter did not move');
 });
 
