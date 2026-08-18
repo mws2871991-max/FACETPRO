@@ -720,6 +720,10 @@ async function record(table, row) {
 
 const planDelivery = (lead) => routing.chooseRecipients(LEAD_RECIPIENTS, lead, { max: MAX_INSTALLERS_PER_LEAD });
 
+/* Deliveries that are still in flight after their response has gone. Drained
+   on shutdown — see the SIGTERM handler. */
+const pendingDeliveries = new Set();
+
 async function deliverAndRecord(lead, plan) {
   /* The whole point of a separate, optional box: if they didn't ask for
      quotes, nobody gets their details. Recorded either way, so there is a
@@ -2684,7 +2688,7 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
     });
   }
 
-  const { claddingId, trimId, roofId, footprintM2, trimLengthM, measurementSource, detections, renderId, notes, consent, detectionId, conservatoryStyleId, journeySource } = req.body || {};
+  const { claddingId, trimId, roofId, footprintM2, trimLengthM, measurementSource, detections, renderId, notes, consent, detectionId, conservatoryStyleId, journeySource, houseType } = req.body || {};
 
   /* Trimmed and capped at the boundary, once, before any of it is stored,
      interpolated into an email or POSTed to an installer.
@@ -2739,7 +2743,13 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
     });
   }
 
-  const footprint = resolveFootprint({ footprintM2, detectionId });
+  /* houseType too, exactly as /api/quote passes it.
+     Without it resolveFootprint fell through to catalogue.defaultFootprintM2 —
+     95 m², a semi — so a detached homeowner who picked their house type but
+     never uploaded a photo was shown one number and had a different, smaller
+     one stored on their lead and emailed to the installer. The quote endpoint
+     had always passed it; this one never had. */
+  const footprint = resolveFootprint({ footprintM2, detectionId, houseType });
   const price = computePrice({ claddingId, trimId, roofId, footprintM2: footprint.m2, trimLengthM });
 
   /* A lead can be real and carry no priced work.
@@ -2861,8 +2871,21 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
      homeowner shouldn't wait on three third-party webhooks. The lead is
      already stored, so nothing is lost if the process dies mid-delivery; the
      reconciliation log below is what tells you it needs re-sending. */
-  deliverAndRecord(lead, plan).catch(err =>
-    console.error(`Lead ${lead.id}: delivery threw after the response:`, err?.stack || err?.message || err));
+  /* Tracked, because "nothing is lost if the process dies mid-delivery" is
+     true of the lead and not of the delivery record. The lead is stored before
+     this runs; the deliveries row — the evidence an installer was sent it, and
+     the thing they are billed against — is written inside it. A redeploy
+     landing here loses that row and the installer never hears about a lead the
+     homeowner was told had been sent.
+
+     server.close() waits for open HTTP connections, and this deliberately is
+     not one: the response has already gone. So it is held here and drained
+     below rather than left to the forced-exit timer. */
+  const delivery = deliverAndRecord(lead, plan)
+    .catch(err =>
+      console.error(`Lead ${lead.id}: delivery threw after the response:`, err?.stack || err?.message || err))
+    .finally(() => pendingDeliveries.delete(delivery));
+  pendingDeliveries.add(delivery);
 
   /* The hash is ours. It is no use to an installer and no use to the browser,
      and the fewer places a credential's shadow appears the better. */
@@ -4037,12 +4060,20 @@ const ready = start().then((server) => {
     if (closing) return;
     closing = true;
     console.log(`${signal} received — finishing what's in flight.`);
+    /* Ten seconds was shorter than a delivery to three webhooks with retries,
+       so the drain added below would have been cut off by this. */
     const forced = setTimeout(() => {
-      console.error('Still busy after 10s — exiting anyway.');
+      console.error('Still busy after 30s — exiting anyway.');
       process.exit(1);
-    }, 10_000);
+    }, 30_000);
     forced.unref();
     server.close(async () => {
+      /* Before store.end(), because a delivery still running needs the pool it
+         is writing its record with. */
+      if (pendingDeliveries.size) {
+        console.log(`Waiting on ${pendingDeliveries.size} delivery(s) still in flight.`);
+        await Promise.allSettled([...pendingDeliveries]);
+      }
       clearTimeout(forced);
       try { await store.end(); } catch (_) { /* already gone */ }
       console.log('Closed cleanly.');

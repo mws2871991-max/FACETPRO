@@ -437,9 +437,38 @@ async function append(table, obj) {
   return withWriteLock(() => appendNow(table, obj));
 }
 
+/* The same advisory lock mutate() takes, for the same reason.
+
+   withWriteLock above serialises appends within one process, and that was the
+   whole guard. mutate() is DELETE-everything-then-reinsert, wrapped in a
+   transaction holding pg_advisory_xact_lock on the table — but a plain INSERT
+   never asked for that lock, so it was free to land in the middle of the
+   sequence. Between mutate's SELECT and its DELETE, a new lead is inserted;
+   the DELETE removes it, and the reinsert only puts back what the SELECT saw.
+   The row is in neither set. The homeowner's browser already has its 200 and
+   its lead id, and the lead does not exist.
+
+   Rolling deploys are exactly when this happens: two containers alive at once
+   by design, which is also when a retention run and somebody pressing save are
+   most likely to overlap. numReplicas: 1 does not help.
+
+   pg_advisory_xact_lock rather than a lock/unlock pair, matching mutate:
+   it releases on commit or rollback, so there is no unlocking code to forget
+   and a thrown INSERT cannot strand the lock. */
 async function appendNow(table, obj) {
   if (pool) {
-    await pool.query(INSERT_SQL[table], INSERT_PARAMS[table](obj));
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))', [SCHEMA_NAME, table]);
+      await client.query(INSERT_SQL[table], INSERT_PARAMS[table](obj));
+      await client.query('COMMIT');
+    } catch (err) {
+      try { await client.query('ROLLBACK'); } catch (_) { /* the transaction is already gone */ }
+      throw err;
+    } finally {
+      client.release();
+    }
   } else {
     appendLine(FILE_NAMES[table], obj);
   }

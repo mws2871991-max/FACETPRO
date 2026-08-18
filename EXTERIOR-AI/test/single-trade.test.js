@@ -258,6 +258,37 @@ test('a lead records where it came from, and refuses an invented source', async 
   assert.strictEqual(all[all.length - 1].journeySource, null);
 });
 
+test('the lead is priced for the house the homeowner said they had', async () => {
+  /* /api/quote passed houseType to resolveFootprint and /api/lead did not, so
+     somebody who picked "Detached" without uploading a photo saw a detached
+     price and had a 95 m² semi price stored and emailed to the installer. The
+     whole suite passed before the fix and after it, which is why this exists:
+     nothing compared the two endpoints for the same inputs. */
+  const body = { houseType: 'detached', claddingId: 'alabaster' };
+
+  const quote = await (await fetch(`${BASE}/api/quote`, {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  })).json();
+
+  const res = await fetch(`${BASE}/api/lead`, {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      ...body, name: 'Jane Smith', email: 'jane@example.com',
+      phone: '07700900000', postcode: 'SW11 4NP', consent: { terms: true },
+    }),
+  });
+  assert.strictEqual(res.status, 200);
+
+  const all = await store.readAll('leads');
+  const lead = all[all.length - 1];
+
+  assert.strictEqual(lead.priceBreakdown.footprintM2, quote.footprintM2,
+    `the installer must be sent the area the homeowner was shown: lead ${lead.priceBreakdown.footprintM2} m² against quote ${quote.footprintM2} m²`);
+  assert.strictEqual(lead.price, quote.total,
+    `and the same total: lead £${lead.price} against quote £${quote.total}`);
+});
+
 test('a conservatory carries its value into the lead score', () => {
   /* projectValueOf read lead.conservatory.price, which has never existed —
      the guide band is priceMin/priceMax. Every conservatory enquiry scored
