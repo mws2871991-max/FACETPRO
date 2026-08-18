@@ -100,6 +100,35 @@ test('an unfinished investor page is refused at the door, not at startup', () =>
     'the startup guard still takes the whole process down over the investor page');
 });
 
+test('the reporting script uses the same pattern as the guard', () => {
+  /* There are now two bracket-matching regexes: the one in server.js that
+     refuses to start, and the one in scripts/check-legal-placeholders.js that
+     lists what is left. Two of these drifting apart is precisely how six real
+     placeholders became invisible to the last version of the guard — a
+     reporting tool that sees fewer than the gate does would tell somebody the
+     job was finished when it was not.
+
+     Compared by source rather than by behaviour, because "equivalent regex" is
+     not a thing you can check. If one is edited, edit both. */
+  const script = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'check-legal-placeholders.js'), 'utf8');
+  const patternIn = (src, where) => {
+    const m = src.match(/const PLACEHOLDER = (\/(?:[^/\\]|\\.)+\/[gimsuy]*)/);
+    assert.ok(m, `const PLACEHOLDER has moved in ${where}`);
+    return m[1];
+  };
+  assert.strictEqual(patternIn(script, 'the script'), patternIn(server, 'server.js'),
+    'the reporting script and the startup guard no longer match the same placeholders');
+});
+
+test('the reporting script covers every page the guard does', () => {
+  /* Reporting on fewer pages than the gate blocks on would produce a clean
+     report and a deployment that will not boot. */
+  const script = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'check-legal-placeholders.js'), 'utf8');
+  for (const page of ['legal/privacy.html', 'legal/terms.html', 'gated/investors.html']) {
+    assert.ok(script.includes(`'${page}'`), `the script does not read ${page}`);
+  }
+});
+
 test('the pages on disk match what the guard reports', () => {
   /* The count is what somebody reads before deciding the pages are done. If
      the pattern regresses, this is the assertion that notices — it fails when

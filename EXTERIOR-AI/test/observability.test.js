@@ -109,16 +109,41 @@ test('the ops endpoint is behind the installer password', () => {
 });
 
 test('a render that could not be kept is recorded, not just logged', () => {
-  /* The degraded path, and the one with a privacy consequence: the image ends
-     up on the provider's CDN at a URL we cannot delete, while the notice says
-     it is removed with the lead. Whether that allowance in the CSP can ever
-     go depends on how often this fires, and a console.error nobody reads
-     afterwards cannot answer that. */
+  /* Both halves of it. The fetch failing is the provider or the network; the
+     store failing is our database. Counting them as one number cannot tell an
+     operator which of the two to go and fix, and they are fixed in different
+     places. */
   const fs = require('fs');
   const path = require('path');
   const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
-  assert.match(server, /obs\.record\('render',\s*'could not keep the render/,
-    'the ephemeral fallback is logged but not counted');
+  assert.match(server, /obs\.record\('render',\s*'could not fetch the render from the provider'/,
+    'a failed fetch from the provider is logged but not counted');
+  assert.match(server, /obs\.record\('render',\s*'fetched the render but could not store it'/,
+    'a failed store is logged but not counted');
+});
+
+test('a render we could not keep is never handed back as a provider URL', () => {
+  /* The privacy consequence, pinned in a test because it is the kind of thing
+     that gets put back to spare a homeowner an error.
+
+     Handing over Replicate's URL leaves a photorealistic image of an
+     identified person's home at an unauthenticated address we cannot delete,
+     while the notice says the generated image goes when the lead does. The
+     CSP allowance existed only to display it, so it goes too — and if either
+     ever comes back, this fails. */
+  const fs = require('fs');
+  const path = require('path');
+  const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+
+  const keep = server.slice(server.indexOf('async function keepRender'), server.indexOf('async function respondWithRender'));
+  assert.ok(keep.length > 0, 'keepRender has moved — this test is checking nothing');
+  assert.ok(!/return\s*{\s*url:\s*replicateUrl/.test(keep),
+    'keepRender hands the provider URL back to the browser when it cannot take a copy');
+  assert.match(keep, /throw new RenderNotKept/, 'keepRender no longer fails loudly');
+
+  const csp = server.slice(server.indexOf('const CSP_APP'), server.indexOf('const CSP_LEGAL'));
+  assert.ok(!/replicate\.delivery/.test(csp),
+    'the CSP still lets the page load images straight from the provider');
 });
 
 test('timings report the tail, not just the middle', () => {

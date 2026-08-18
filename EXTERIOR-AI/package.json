@@ -13,7 +13,8 @@
     "prestart": "node scripts/prestart-css.js",
     "installer-password": "node scripts/installer-password.js",
     "lint": "eslint .",
-    "check-pair": "node scripts/check-gallery-pair.js"
+    "check-pair": "node scripts/check-gallery-pair.js",
+    "check-legal": "node scripts/check-legal-placeholders.js"
   },
   "license": "ISC",
   "dependencies": {

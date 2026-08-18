@@ -245,7 +245,12 @@ const CSP_APP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://replicate.delivery",   // renders, before we have stored them
+  /* No provider host here any more. It was allowed so the page could show a
+     render straight off Replicate's CDN when we failed to take a copy of it;
+     that fallback is gone, so every image the app displays is either ours or
+     the homeowner's own upload. Left as a comment rather than deleted quietly,
+     because an allowance that reappears should have to argue for itself. */
+  "img-src 'self' data: blob:",
   "font-src 'self'",
   "connect-src 'self'",
   "frame-ancestors 'none'",
@@ -1390,6 +1395,30 @@ const { MANUAL_AREA_MIN_M2, MANUAL_AREA_MAX_M2, TRIM_LENGTH_MIN_M, TRIM_LENGTH_M
 const NONE = 'none';
 const pick = (list, id) => (id === NONE ? null : (list.find(x => x.id === id) || list[0]));
 
+/* Which rates produced a number, travelling with the number.
+ *
+ * The catalogue is versioned and dated, and until now neither travelled with
+ * anything it priced. An installer buys a lead and works it days or weeks
+ * later; the homeowner has an itemised estimate in an email; and when the two
+ * disagree — because trim went up, or a band was re-sourced in between —
+ * nothing in the record says which rate card either of them is holding. The
+ * only honest answer available was "whatever was in the file at the time",
+ * which is not an answer, because the file has since changed.
+ *
+ * Written to the lead as well as to the response, because the lead is the one
+ * that survives. Cheap: two scalars on a JSONB column already being written,
+ * so no migration and nothing to backfill. Leads written before this simply
+ * have no version, which is itself the truthful record — nobody knows.
+ */
+const pricingVersion = () => ({
+  version: catalogue.version ?? null,
+  updated: catalogue.updated ?? null,
+  /* Whether the glazing half rests on sourced rates or on the older estimates.
+     Already surfaced to the page as ratesSourced; kept here so a stored lead
+     answers it without anyone having to know what the flag was that week. */
+  glazingSourced: GLAZING_RATES_SOURCED,
+});
+
 function computePrice({ claddingId, trimId, roofId, footprintM2, trimLengthM }) {
   const cladding = pick(catalogue.cladding, claddingId);
   const trim = pick(catalogue.trim, trimId);
@@ -1539,6 +1568,7 @@ app.post('/api/quote', (req, res) => {
     // precise is never attached to a house we haven't seen.
     exact: footprint.exact,
     range: footprint.exact ? null : priceRange({ claddingId, trimId, roofId, trimLengthM }, footprint.m2),
+    pricing: pricingVersion(),
   });
 });
 
@@ -2086,46 +2116,106 @@ app.post('/api/whole-house', (req, res) => {
    the generated image when we kept a string that was already dead.
 
    So the bytes are fetched while the URL is still alive and stored by us,
-   under an unguessable id. If fetching fails we fall back to returning
-   Replicate's URL rather than losing the render entirely — the homeowner still
-   sees it in that session, and the lead simply carries no render. */
+   under an unguessable id.
+
+   This used to fall back to handing back Replicate's URL when that failed, so
+   the homeowner still saw their render. That trade is the wrong way round. It
+   bought one person one image and paid for it with a photorealistic picture of
+   their identified home sitting at an unauthenticated URL we cannot delete,
+   under a privacy notice that says the generated image is removed with the
+   lead. A promise we cannot keep is worse than a render we cannot produce, and
+   "try again" is a sentence a homeowner can act on.
+
+   Two failures live in here and they are not the same failure, so they are
+   counted apart: the fetch from the provider is a network blip and worth
+   retrying, while a failed store is our database and worth knowing about
+   immediately. Both now end in an error rather than a URL. */
 async function ourRenderUrl(renderId) {
   if (!renderId) return null;
   const found = await store.getRender(renderId);
   return found ? `/r/${renderId}` : null;
 }
 
+/* Thrown when the bytes exist at the provider and we could not take a copy.
+   A distinct type so the route can answer 502 with its own words rather than
+   pattern-matching on a message. */
+class RenderNotKept extends Error {}
+
+/* Two attempts, not one. The provider's CDN drops the occasional connection
+   and a second try a moment later costs a homeowner half a second, where
+   giving up costs them the render. Two rather than five because past two this
+   stops being a blip and starts being an outage, and holding somebody on a
+   spinner through five round trips helps nobody. */
+const KEEP_ATTEMPTS = 2;
+const KEEP_RETRY_MS = 400;
+
 async function keepRender(replicateUrl) {
+  let bytes = null;
+  let mime = 'image/jpeg';
+  let lastFetchError = null;
+
+  for (let attempt = 1; attempt <= KEEP_ATTEMPTS; attempt++) {
+    try {
+      /* A timeout of our own: Node's fetch has none, and the render route has
+         already spent up to ninety seconds getting here. */
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 15000);
+      let res;
+      try {
+        res = await fetch(replicateUrl, { signal: controller.signal });
+      } finally {
+        clearTimeout(timer);
+      }
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const body = Buffer.from(await res.arrayBuffer());
+      if (!body.length) throw new Error('empty body');
+      bytes = body;
+      mime = res.headers.get('content-type') || 'image/jpeg';
+      break;
+    } catch (err) {
+      lastFetchError = err;
+      if (attempt < KEEP_ATTEMPTS) await new Promise(r => setTimeout(r, KEEP_RETRY_MS));
+    }
+  }
+
+  if (!bytes) {
+    /* Counted as its own kind. A run of these is the provider or the network,
+       and nothing we can fix in the database. */
+    obs.record('render', 'could not fetch the render from the provider', { reason: lastFetchError?.message });
+    console.error('Could not fetch the render from the provider:', lastFetchError?.message);
+    throw new RenderNotKept('fetch failed');
+  }
+
+  const id = crypto.randomBytes(16).toString('hex');
   try {
-    const res = await fetch(replicateUrl);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const bytes = Buffer.from(await res.arrayBuffer());
-    if (!bytes.length) throw new Error('empty body');
-    const id = crypto.randomBytes(16).toString('hex');
-    await store.putRender(id, bytes, { mime: res.headers.get('content-type') || 'image/jpeg' });
-    return { url: `/r/${id}`, renderId: id };
+    await store.putRender(id, bytes, { mime });
   } catch (err) {
-    /* Recorded, not just logged. This is the degraded path and it has a
-       privacy consequence rather than only a quality one.
+    /* And this one is ours. The bytes arrived and the database would not take
+       them, which is worth being told about on the first occurrence rather
+       than discovering in a weekly count. */
+    obs.record('render', 'fetched the render but could not store it', { reason: err.message });
+    console.error('Fetched the render but could not store it:', err.message);
+    throw new RenderNotKept('store failed');
+  }
+  return { url: `/r/${id}`, renderId: id };
+}
 
-       When it fires, the homeowner still sees their render, which is the
-       right priority. But the image is then sitting on the provider's CDN at
-       an unauthenticated URL we do not control and cannot delete, and the
-       privacy notice says the generated image is kept for the same period as
-       the lead and then removed. A Replicate URL does not honour that — it
-       expires on their schedule, not ours, and until it does the URL is the
-       only credential protecting a photorealistic picture of somebody's
-       identified home.
+/* The render succeeded upstream; whether we can hand it over depends on
+   whether we managed to take a copy. Shared by both success paths so the two
+   cannot drift into answering differently.
 
-       It is also why the CSP has to allow replicate.delivery at all. If this
-       turns out to be rare, that allowance can go and the fallback can become
-       an honest failure instead. If it turns out to be common, that is a
-       storage problem worth fixing before launch rather than a footnote. The
-       only way to know which is to be able to count it, and a console.error
-       nobody reads afterwards cannot. */
-    obs.record('render', 'could not keep the render, fell back to the provider URL', { reason: err.message });
-    console.error('Could not keep the render, falling back to the provider URL:', err.message);
-    return { url: replicateUrl, renderId: null, ephemeral: true };
+   The message says try again, because trying again is what works: the
+   prediction is cheap to repeat and the two failures behind this are both
+   transient more often than not. It deliberately does not say the render
+   failed, which would be a lie about the part that went right. */
+async function respondWithRender(res, url) {
+  try {
+    return res.json(await keepRender(url));
+  } catch (err) {
+    if (err instanceof RenderNotKept) {
+      return res.status(502).json({ error: "We made your image but couldn't save it — please try again." });
+    }
+    throw err;
   }
 }
 
@@ -2360,7 +2450,7 @@ app.post('/api/glazing', (req, res) => {
       windowCountOverride: windowCount,
       openerCount,
     });
-    res.json({ ...result, ratesSourced: GLAZING_RATES_SOURCED });
+    res.json({ ...result, ratesSourced: GLAZING_RATES_SOURCED, pricing: pricingVersion() });
   } catch (err) {
     console.error('Glazing estimate failed:', err.message);
     res.status(500).json({ error: 'We couldn’t work out a window estimate for that photo.' });
@@ -2599,7 +2689,7 @@ app.post('/api/render', renderLimiter, async (req, res) => {
     const pred = await predRes.json();
     if (pred.status === 'succeeded' && pred.output) {
       const url = Array.isArray(pred.output) ? pred.output[0] : pred.output;
-      return res.json(await keepRender(url));
+      return respondWithRender(res, url);
     }
 
     /* Poll until the deadline.
@@ -2657,7 +2747,7 @@ app.post('/api/render', renderLimiter, async (req, res) => {
 
       if (p.status === 'succeeded') {
         const url = Array.isArray(p.output) ? p.output[0] : p.output;
-        return res.json(await keepRender(url));
+        return respondWithRender(res, url);
       }
       /* Terminal either way. Waiting out the clock on a prediction that has
          already stopped is ninety seconds of a homeowner watching a spinner. */
@@ -2777,6 +2867,12 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
     selections: hasPricedWork ? price.selections : {},
     price: hasPricedWork ? price.total : null,
     priceBreakdown: hasPricedWork ? price : null,
+    /* Which rate card produced the figures above — see pricingVersion(). An
+       installer may work this lead a fortnight after it was priced, and the
+       catalogue will have moved by then. Recorded unconditionally, including
+       when nothing was priced, because "no work chosen, under v2 rates" is
+       still a fact about this lead. */
+    pricing: pricingVersion(),
     // Server's own view of where the area came from — the client-sent
     // measurementSource is kept only as a record of what the UI believed.
     measurementSource: footprint.source,

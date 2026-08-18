@@ -25,6 +25,7 @@ const PORT = 3086;
 const BASE = `http://127.0.0.1:${PORT}`;
 
 const upstream = { anthropic: 0, replicate: 0 };
+const renderOutput = require('./helpers/render-output');
 const realFetch = globalThis.fetch;
 globalThis.fetch = async (url, opts) => {
   const u = String(url);
@@ -36,6 +37,9 @@ globalThis.fetch = async (url, opts) => {
     upstream.replicate++;
     return { ok: true, status: 200, json: async () => ({ status: 'succeeded', output: 'https://example.test/r.jpg' }) };
   }
+  /* The provider's output URL, serving bytes the way the real one does —
+     the render is only a success once we have taken a copy of it. */
+  if (renderOutput.isRenderOutput(u)) return renderOutput.response();
   return realFetch(u, opts);
 };
 

@@ -33,6 +33,7 @@ const BASE = `http://127.0.0.1:${PORT}`;
 let onPoll = null;
 let pollCount = 0;
 
+const renderOutput = require('./helpers/render-output');
 const realFetch = globalThis.fetch;
 globalThis.fetch = async (url, opts) => {
   const u = String(url);
@@ -44,6 +45,9 @@ globalThis.fetch = async (url, opts) => {
     pollCount++;
     return onPoll(pollCount, opts);
   }
+  /* The provider's output URL, serving bytes the way the real one does —
+     the render is only a success once we have taken a copy of it. */
+  if (renderOutput.isRenderOutput(u)) return renderOutput.response();
   return realFetch(url, opts);
 };
 
@@ -116,8 +120,10 @@ test('a single hiccup is ridden out rather than failing the render', async () =>
   };
 
   const res = await render();
-  assert.ok(res.status === 200 || res.status === 502,
-    `expected the render to complete or fail cleanly, got ${res.status}`);
+  /* Was "200 or 502", which passed whatever happened and would have gone on
+     passing if the retry were deleted. The provider's output URL now serves
+     bytes, so riding out a hiccup has one correct outcome: the render. */
+  assert.strictEqual(res.status, 200, `a single hiccup lost the render: ${res.status}`);
   assert.ok(pollCount >= 3, 'the loop gave up on the first hiccup instead of retrying');
 });
 
@@ -142,4 +148,32 @@ test('the render deadline is inside the server timeout, with room to spare', () 
     `the render polls for ${deadline}ms against a requestTimeout of ${requestTimeout}ms — the socket closes first`);
   assert.ok(requestTimeout - deadline >= 15_000,
     'too little headroom left to store the image and answer after the last poll');
+});
+
+test('a render we cannot take a copy of is an error, not a provider URL', async () => {
+  /* The privacy trade, exercised end to end rather than asserted on the
+     source. When the copy fails the homeowner gets an error and a suggestion
+     to try again — what they must NOT get is Replicate's own URL, which would
+     leave a photorealistic image of an identified home at an unauthenticated
+     address we cannot delete, under a notice saying we delete it with the
+     lead.
+
+     Driven through the output URL rather than through the store, because that
+     is the failure a network has any say over. */
+  pollCount = 0;
+  onPoll = async () => ({ ok: true, status: 200,
+    json: async () => ({ id: 'pred-test', status: 'succeeded', output: 'https://replicate.delivery/gone.jpg' }) });
+
+  const previously = renderOutput.isRenderOutput;
+  renderOutput.isRenderOutput = () => false;   // let it fall through to a host that does not resolve
+  try {
+    const res = await render();
+    assert.strictEqual(res.status, 502, 'a render we could not keep was reported as a success');
+    const body = await res.json().catch(() => ({}));
+    assert.ok(!JSON.stringify(body).includes('replicate.delivery'),
+      'the provider URL was handed to the browser');
+    assert.match(body.error || '', /try again/i, 'the error does not tell the homeowner what to do');
+  } finally {
+    renderOutput.isRenderOutput = previously;
+  }
 });
