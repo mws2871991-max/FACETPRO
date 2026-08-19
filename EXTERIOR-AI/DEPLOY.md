@@ -85,7 +85,7 @@ way to get this deployment wrong.
 
 | Variable | Required | Notes |
 | --- | --- | --- |
-| `INSTALLER_PASSWORD` | **yes** | Without it `/api/leads` returns 503 and the installer area is unusable. `openssl rand -base64 24`. |
+| `INSTALLER_PASSWORD` | **yes** | The shared operator password for the read-only ops endpoints: `/api/ops`, `/api/funnel`, `/api/deliveries` and `/api/measurements`. Unset means all four return 503 — the measurement observations keep being written and nothing can read them back. Not what gates `/api/leads`; that is per-installer, see `INSTALLER_TOKEN_SECRET`. Send it as `Authorization: Bearer <password>`. `openssl rand -hex 24` — base64 emits `/`, `+` and `=`, which mangle easily in a header. |
 | `INSTALLER_TOKEN_SECRET` | with installer accounts | Signs the short-lived tokens `/api/installer/login` issues. Unset means one is generated at startup, which signs every installer out on each deploy — the right failure, because a predictable default would let anyone who read the source mint a token for any installer. `openssl rand -base64 32`. |
 | `INVESTOR_PASSWORD` | to serve `/investors` | Gates the investor page, which describes a pre-revenue company and what money would be spent on. s.21 FSMA restricts inducements to invest to people who have certified themselves beforehand, which a public URL cannot do — so **unset means the page 404s**, deliberately, rather than serving open. Share the link as `/investors?k=<password>` or with an `Authorization: Bearer` header. `openssl rand -base64 24`. |
 | `ANTHROPIC_API_KEY` | for detection | Without it uploads return a clear error. |
@@ -98,35 +98,10 @@ way to get this deployment wrong.
 | `DAILY_DETECT_LIMIT` | no | Default 50. |
 | `DETECT_RATE_LIMIT` | no | Detection requests per minute per IP. Default 10, which is right for a homeowner. Exists so the test suite can send one photograph fifteen times on purpose; leave it unset in production. |
 | `INSTALLER_RATE_LIMIT` | no | Installer sign-in attempts per 15 minutes per IP. Default 20. Exists for the test suite; leave it unset in production. |
-
-### The funnel
-
-`GET /api/funnel` (installer password, `?days=30`) returns each stage of the
-journey and what share of the previous step it kept — the table the conversion
-plan asks for. `POST /api/funnel` records a stage and is what the page calls.
-
-It counts stages, not people. A row is a day, a stage and a number: no session,
-no visitor id, no IP, no user agent, no referrer. Two visitors who upload look
-identical to one visitor uploading twice. That is deliberate — it answers "what
-share of visitors upload" without being able to answer "did this person upload",
-which is the question that would need consent, a processor agreement and a
-transfer mechanism. Do not add a column that would change that.
-
-
-> **Do not edit an image or a font in place.** Everything matching
-> `.woff2 .jpg .jpeg .png .gif .webp .avif .svg .ico` is served
-> `Cache-Control: public, max-age=31536000, immutable`, so a returning visitor
-> will not re-fetch it for a year. Re-cropping `assets/work/hero-after.jpg`
-> under the same name means people who have been here before keep seeing the
-> old crop until 2027. Add a new file and point the markup at it, or put a
-> content hash in the filename. `assets/app.css` and the HTML are deliberately
-> excluded and revalidate on every request, because they *do* change under the
-> same name on every deploy.
-
 | `DAILY_RENDER_LIMIT` | no | Default 50. The only thing bounding render spend. |
 | `PORT` | no | The host sets this. |
-| `LEAD_CAPTURE` | no | Code defaults to `on`; `.env.example` ships `off`. With `off` the form is replaced by an honest explanation and nothing personal is read, parsed or stored. Turn it on when the legal pages have no `[PLACEHOLDERS]` left, the ICO registration is done and `DATABASE_URL` is set — under `SITE_MODE=live` the server refuses to start until the first two are true. |
-| `DATABASE_URL` | **for live** | Postgres. Without it everything lands in JSONL on the container: unencrypted, and gone on the next deploy unless a volume is mounted, while the privacy notice promises encrypted and backed up. Requires `npm install pg`. |
+| `LEAD_CAPTURE` | no | Defaults to **`off`** — `server.js:1246` reads `(process.env.LEAD_CAPTURE || 'off') !== 'off'`, and `.env.example` ships `off` to match. Unset takes no details at all, which is the safe way round but does mean a deployment captures nothing until you say so. With `off` the form is replaced by an honest explanation and nothing personal is read, parsed or stored. Turn it on when the legal pages have no `[PLACEHOLDERS]` left, the ICO registration is done and `DATABASE_URL` is set — under `SITE_MODE=live` the server refuses to start until the first two are true. |
+| `DATABASE_URL` | **for live** | Postgres. Without it everything lands in JSONL on the container: unencrypted, and gone on the next deploy unless a volume is mounted, while the privacy notice promises encrypted and backed up. `pg` is already a dependency in `package.json` — nothing extra to install. |
 | `DATABASE_CA_CERT` | with a database | The provider's CA certificate, PEM inline. Verification is **on** — this used to be `rejectUnauthorized: false`, which encrypts the connection carrying every homeowner's contact details without authenticating the far end. Without a CA we fall back to the system trust store, which may simply refuse. |
 | `PGSSLMODE` | rarely | `disable` turns TLS off on the database connection — as does `?sslmode=disable` in `DATABASE_URL`, the usual spelling. For a Postgres with no TLS at all: a CI container, a local instance. Against a non-local host the server says loudly that every homeowner's contact details are crossing that link in clear, because they are. |
 | `PGSSLROOTCERT` | alternative | A path to the same certificate, if that suits your platform better. |
@@ -141,16 +116,50 @@ transfer mechanism. Do not add a column that would change that.
 | `RENDER_SAFETY_TOLERANCE` | no | Default 2, Replicate's own default and their maximum for image-to-image. 0 is strictest, 6 most permissive. Members of the public upload photographs of their homes, which contain their children and their neighbours. |
 | `FACETPRO_DATA_DIR` | tests only | Where the JSONL files go. The suite points it at a temp directory — without it `npm test` writes into the same directory a deployment mounts its volume on. |
 
+### The funnel
+
+`GET /api/funnel` (installer password, `?days=30`) returns each stage of the
+journey and what share of the previous step it kept — the table the conversion
+plan asks for. `POST /api/funnel` records a stage and is what the page calls.
+
+It counts stages, not people. A row is a day, a stage and a number: no session,
+no visitor id, no IP, no user agent, no referrer. Two visitors who upload look
+identical to one visitor uploading twice. That is deliberate — it answers "what
+share of visitors upload" without being able to answer "did this person upload",
+which is the question that would need consent, a processor agreement and a
+transfer mechanism. Do not add a column that would change that.
+
+Because the counts are per stage and the instrumentation has changed under
+them, a window wider than the last deploy mixes old and new. `analysis_completed`
+and `visualisation_started` only began emitting on 12 August 2026, so a
+30-day read shows `design_created` without them and it is not a lost event.
+
+### Caching of images and fonts
+
+> **Do not edit an image or a font in place.** Everything matching
+> `.woff2 .jpg .jpeg .png .gif .webp .avif .svg .ico` is served
+> `Cache-Control: public, max-age=31536000, immutable`, so a returning visitor
+> will not re-fetch it for a year. Re-cropping `assets/work/hero-after.jpg`
+> under the same name means people who have been here before keep seeing the
+> old crop until 2027. Add a new file and point the markup at it, or put a
+> content hash in the filename. `assets/app.css` and the HTML are deliberately
+> excluded and revalidate on every request, because they *do* change under the
+> same name on every deploy.
+
 ## Before pointing a domain at it
 
 1. **The legal pages are unreviewed templates.** `/privacy` and `/terms` still
-   display a "Template — not yet live-ready" banner and 33 placeholder fields.
+   display a "Template — not yet live-ready" banner. Run `npm run check-legal`
+   for the live count rather than trusting a number written here — as of
+   19 August 2026 it reports 18 distinct placeholders across 45 places.
    UK GDPR and consumer law apply to a beta exactly as to a launch. Complete
    them and have them reviewed, then delete the banners.
 2. **Rotate the API keys** that were found loose on the Desktop — Anthropic,
    Resend, Replicate, OpenAI — before any of them reach a deployment.
-3. **`www.facetpro.co.uk` currently serves a different application** on Vercel.
-   Confirm what happens to it before repointing DNS.
+3. ~~**`www.facetpro.co.uk` currently serves a different application** on
+   Vercel.~~ **Done.** Since 11 August 2026 `www.facetpro.co.uk` resolves to
+   this app on Railway — project `facetpro-backend`, service
+   `facetpro-visualiser`. Kept because the step is worth knowing happened.
 4. Run `npm run set-domain -- https://www.facetpro.co.uk` so the canonical
    tags, Open Graph URLs, `robots.txt` and `sitemap.xml` all agree with where
    the site actually lives.
@@ -197,7 +206,8 @@ it is red, the JSONL job being green means very little.
 | `/api/coverage` | "Do you have installers near me?" — a count, never names. |
 | `/api/resume`, `/api/resume/:code` | Carrying a design to a phone. Choices only: no photograph, nothing identifying. |
 | `/api/lead` | The only endpoint that stores personal data. Off entirely with `LEAD_CAPTURE=off`. |
-| `/api/leads`, `/api/deliveries` | Installer area. Password, rate limit, access log, `no-store`. |
+| `/api/leads`, `/api/installer/lead-response` | Installer area. A **per-installer bearer token** from `/api/installer/login` (`requireInstaller`), rate limit, access log, `no-store`. Not `INSTALLER_PASSWORD`. |
+| `/api/ops`, `/api/funnel`, `/api/deliveries`, `/api/measurements` | Read-only operator views. The **shared `INSTALLER_PASSWORD`** (`requireInstallerPassword`), rate limit. All four 503 together when it is unset. |
 | `/withdraw`, `/api/withdraw` | Article 7(3). The GET only shows a page; the POST does the work, because mail scanners open every link in an email. |
 | `/r/:id` | Stored renders. |
 | `/healthz` | Deliberately outside the rate limiters — a platform health check must never be throttled. |
@@ -210,9 +220,19 @@ BASE=https://your-deployment-url
 curl -s $BASE/healthz                  # {"ok":true,...,"storageWritable":true}
 curl -s -o /dev/null -w '%{http_code}' $BASE/            # 200
 curl -s -o /dev/null -w '%{http_code}' $BASE/server.js   # 404 — source is not served
-curl -s -o /dev/null -w '%{http_code}' $BASE/api/leads   # 401 — not 503, or the password is unset
+curl -s -o /dev/null -w '%{http_code}' $BASE/api/leads   # 401 — the per-installer token guard
+curl -s -o /dev/null -w '%{http_code}' $BASE/api/ops     # 401 — 503 means INSTALLER_PASSWORD is unset
 curl -s $BASE/api/catalogue | grep -c trimRates          # 0 — the cost model is not public
 ```
+
+**The `/api/ops` line is the one that checks the password, and it used to say
+`/api/leads`.** That was wrong, and wrong in the direction that hides the fault:
+`/api/leads` is guarded by `requireInstaller`, which reads a per-installer
+bearer token and answers 401 whether or not `INSTALLER_PASSWORD` is set. The
+check therefore passed for as long as the variable was missing. It was missing
+on Railway until 19 August 2026, and `/api/ops`, `/api/funnel`, `/api/deliveries`
+and `/api/measurements` had all been returning 503 in production the whole time.
+Only the four endpoints behind `requireInstallerPassword` can detect it.
 
 Then submit a test lead through the site and confirm it survives a redeploy.
 That is the check that actually proves the volume is mounted, and it's the one
