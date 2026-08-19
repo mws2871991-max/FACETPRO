@@ -1547,11 +1547,24 @@ async function fileToBase64(file) {
    the normal case — and broken every render that stored correctly. The shape
    has to be checked against what the server actually returns. */
 const RENDER_ID = /^\/r\/[A-Za-z0-9_-]{8,}$/;
+/* One shape, because the server can now only return one.
+ *
+ * There used to be a second branch here, `/^https:\/\//`, for the provider URL
+ * the server handed over when it could not take a copy of the render. That
+ * fallback is gone — an image we cannot store is an error now — so the branch
+ * had nothing left to admit, and what it did admit was far wider than its
+ * purpose: ANY https host, not Replicate's. A function whose whole job is
+ * validation was accepting most of the web.
+ *
+ * Not reachable today: both callers pass a value that came from our own
+ * server. But one of them puts the result in an <a href target="_blank">, and
+ * the CSP's img-src has no say over where a link goes. "Not currently
+ * reachable" is a worse reason to keep a hole than "one line" is to close it —
+ * which is the same sentence that was written above the branch being removed.
+ */
 function safeRenderUrl(u) {
   const s = typeof u === 'string' ? u.trim() : '';
-  if (RENDER_ID.test(s)) return s;
-  if (/^https:\/\//i.test(s)) return s;
-  return null;
+  return RENDER_ID.test(s) ? s : null;
 }
 
 function h(tag, attrs = {}, children = []) {

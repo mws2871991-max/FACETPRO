@@ -222,7 +222,19 @@ const SCHEMA = [
     door_height_pct REAL,
     door_boxes INT,
     method TEXT,
-    m2 REAL
+    m2 REAL,
+    /* What the measurer computed before the house-type band refused it, and
+       which side of the band it fell on. Null when the band did not fire.
+
+       Without these the table records only the measurements that passed, which
+       is the wrong half: the band's bounds are five judgements about five kinds
+       of house, and nothing that could revise them was being kept. The side
+       matters as much as the value — above the band usually means the scale
+       reference was too small, below it usually means too large, and they want
+       opposite fixes. */
+    rejected_m2 REAL,
+    rejected_side TEXT,
+    rejected_method TEXT
   )`,
 
   `CREATE TABLE IF NOT EXISTS detection_cache (
@@ -296,6 +308,13 @@ async function ensureSchema() {
      Added separately from the CREATE TABLE because that only runs on a fresh
      database, and the tables this needs to reach already exist. */
   await pool.query(`ALTER TABLE ${SCHEMA_NAME}.leads ADD COLUMN IF NOT EXISTS lead_id TEXT`);
+  /* Same reason: the CREATE TABLE above only runs against a fresh database,
+     and the deployment already has this table with the old shape. Rows written
+     before this simply have nulls, which is the truthful record — nobody kept
+     the rejected figure at the time. */
+  for (const col of ['rejected_m2 REAL', 'rejected_side TEXT', 'rejected_method TEXT']) {
+    await pool.query(`ALTER TABLE ${SCHEMA_NAME}.measurement_observations ADD COLUMN IF NOT EXISTS ${col}`);
+  }
   try {
     await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS leads_lead_id_key ON ${SCHEMA_NAME}.leads (lead_id)`);
   } catch (err) {
@@ -659,13 +678,22 @@ async function recordMeasurement(row) {
     doorBoxes: Number.isFinite(row?.doorBoxes) ? row.doorBoxes : 0,
     method: row?.method ?? null,
     m2: Number.isFinite(row?.m2) ? row.m2 : null,
+    /* The figure the house-type band refused, and which side it fell on. Null
+       on the common path where the band did not fire — see the columns. */
+    rejectedM2: Number.isFinite(row?.rejected?.m2) ? row.rejected.m2 : null,
+    rejectedSide: row?.rejected?.side ?? null,
+    /* Which method produced the rejected figure, which is not the method that
+       ended up answering — that one is always 'prior' once the band fires. */
+    rejectedMethod: row?.rejected?.method ?? null,
   };
   if (pool) {
     await pool.query(
       `INSERT INTO ${SCHEMA_NAME}.measurement_observations
-         (ts, house_type, door_ratio, door_height_pct, door_boxes, method, m2)
-       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-      [r.ts, r.houseType, r.doorRatio, r.doorHeightPct, r.doorBoxes, r.method, r.m2]);
+         (ts, house_type, door_ratio, door_height_pct, door_boxes, method, m2,
+          rejected_m2, rejected_side, rejected_method)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+      [r.ts, r.houseType, r.doorRatio, r.doorHeightPct, r.doorBoxes, r.method, r.m2,
+       r.rejectedM2, r.rejectedSide, r.rejectedMethod]);
     return;
   }
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -676,7 +704,9 @@ async function readMeasurements(limit = 1000) {
   if (pool) {
     const { rows } = await pool.query(
       `SELECT ts, house_type AS "houseType", door_ratio AS "doorRatio",
-              door_height_pct AS "doorHeightPct", door_boxes AS "doorBoxes", method, m2
+              door_height_pct AS "doorHeightPct", door_boxes AS "doorBoxes", method, m2,
+              rejected_m2 AS "rejectedM2", rejected_side AS "rejectedSide",
+              rejected_method AS "rejectedMethod"
          FROM ${SCHEMA_NAME}.measurement_observations
         ORDER BY id DESC LIMIT $1`, [limit]);
     return rows;

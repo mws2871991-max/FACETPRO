@@ -441,12 +441,30 @@ function estimateWallArea({ detections, aspectRatio, houseType, tuning } = {}) {
     }
   }
 
-  // Sanity clamp: anything outside the band for this house type is treated as
-  // a detection failure, not a genuinely unusual house.
+  /* Sanity clamp: anything outside the band for this house type is treated as
+     a detection failure, not a genuinely unusual house.
+
+     What the measurer computed before the band refused it, kept for the
+     calibration record. Every one of these was thrown away — the observation
+     written afterwards said method 'prior' and the prior's own m², so the one
+     table built to answer "where should this band sit?" only ever saw the
+     cases where it did not fire.
+
+     Same mistake observedDoorShape exists to avoid, made one file along: the
+     rejects are the interesting half. A band nobody can revise from evidence
+     is a band that stays a judgement forever, and these bounds are currently
+     five guesses about five kinds of house. */
+  let rejected = null;
   if (m2 !== null) {
     const [lo, hi] = prior.band;
     if (m2 < lo || m2 > hi) {
       notes.push(`${Math.round(m2)} m² is outside the ${lo}–${hi} m² range expected for a ${prior.label.toLowerCase()}, so we've used the typical figure instead.`);
+      /* Which side, not only that it failed. The two mean opposite things: over
+         the top usually means the scale reference was too small — a door leaf
+         read without its frame — and under the bottom usually means it was too
+         large, which is the garage-door and sidelight case. They want different
+         fixes, and a single "rejected" flag cannot tell them apart. */
+      rejected = { m2: Math.round(m2), method, side: m2 < lo ? 'below' : 'above', lo, hi };
       m2 = null;
     }
   }
@@ -488,7 +506,12 @@ function estimateWallArea({ detections, aspectRatio, houseType, tuning } = {}) {
       /* The shape offered, not only the shape used — a rejected garage door is
          the evidence MIN_DOOR_RATIO needs most. */
       const seen = observedDoorShape(list, aspectRatio);
-      return { doorBoxes: seen.count, doorRatio: seen.ratio, doorHeightPct: seen.heightPct };
+      return {
+        doorBoxes: seen.count, doorRatio: seen.ratio, doorHeightPct: seen.heightPct,
+        /* And the figure the band refused, for the same reason. Null when the
+           band did not fire, which is the common case. */
+        rejected,
+      };
     })(),
   };
 }

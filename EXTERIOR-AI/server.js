@@ -2525,6 +2525,10 @@ app.post('/api/measure', async (req, res) => {
       doorRatio: result.observed?.doorRatio,
       doorHeightPct: result.observed?.doorHeightPct,
       doorBoxes: result.observed?.doorBoxes,
+      /* The figure the house-type band refused, when it refused one. Recorded
+         because the band's bounds are judgements and this is the only thing
+         that could ever revise them — see measure.js. */
+      rejected: result.observed?.rejected,
     });
   } catch (err) {
     obs.record('storage', 'could not record a measurement observation', { reason: err.message });
@@ -3751,6 +3755,33 @@ app.get('/api/measurements', installerLimiter, requireInstallerPassword, async (
     if (r.method === 'door') buckets[key].usedAsScale += 1;
   }
 
+  /* What the band refused, which is the half that could revise it.
+
+     Grouped by house type and by side, because those are the two things a
+     bound is set from. A run of detached photographs computing 210–230 m² and
+     being refused against a ceiling of 200 says the ceiling is too low; a run
+     computing 45 m² says the scale reference is being read off something that
+     is not a door, and the fix is in geometry.js rather than here.
+
+     The extremes are carried rather than a mean. A mean of the rejects is a
+     number about a distribution nobody has looked at yet; the nearest miss is
+     the one that tells you where the bound actually wants to be. */
+  const band = {};
+  for (const r of rows) {
+    if (!Number.isFinite(Number(r.rejectedM2)) || !r.rejectedSide) continue;
+    const type = r.houseType || 'unknown';
+    const side = r.rejectedSide;
+    const b = (band[type] ||= { below: null, above: null });
+    const entry = (b[side] ||= { count: 0, nearest: null, furthest: null, byMethod: {} });
+    const v = Number(r.rejectedM2);
+    entry.count += 1;
+    entry.byMethod[r.rejectedMethod || 'unknown'] = (entry.byMethod[r.rejectedMethod || 'unknown'] || 0) + 1;
+    /* "Nearest" means nearest to the bound it failed, which is the largest
+       value below the floor and the smallest above the ceiling. */
+    entry.nearest = entry.nearest === null ? v : (side === 'below' ? Math.max(entry.nearest, v) : Math.min(entry.nearest, v));
+    entry.furthest = entry.furthest === null ? v : (side === 'below' ? Math.min(entry.furthest, v) : Math.max(entry.furthest, v));
+  }
+
   res.setHeader('Cache-Control', 'no-store');
   res.json({
     samples: rows.length,
@@ -3758,8 +3789,14 @@ app.get('/api/measurements', installerLimiter, requireInstallerPassword, async (
     currentThreshold: geometry.MIN_DOOR_RATIO,
     doorLeafRatio: Number(geometry.DOOR_LEAF_RATIO.toFixed(2)),
     ratioBuckets: Object.values(buckets).sort((a, b) => a.doorRatioFrom - b.doorRatioFrom),
-    note: 'Shape of the most door-like box each photograph offered, including boxes the measurer refused. '
-        + 'MIN_DOOR_RATIO and the band in measure.js are currently set from a synthetic terrace; this is what would replace that.',
+    bandRejections: band,
+    /* The bounds themselves, beside what they refused — a rejection list you
+       have to go and look up the band for is a rejection list nobody reads. */
+    bands: Object.fromEntries(Object.entries(measure.HOUSE_TYPE_PRIORS || {}).map(([k, p]) => [k, p.band])),
+    note: 'Shape of the most door-like box each photograph offered, including boxes the measurer refused, '
+        + 'and the figures the house-type band threw out. MIN_DOOR_RATIO and the bands in measure.js are '
+        + 'currently set from a synthetic terrace and a prototype survey table; this is what would replace that. '
+        + 'bandRejections is empty until the band fires, and rows recorded before 18 August 2026 have no rejected figure.',
   });
 });
 

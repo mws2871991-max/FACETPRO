@@ -100,20 +100,24 @@ const { join } = require('path');
 
 function loadSafeRenderUrl() {
   const html = readFileSync(join(__dirname, '..', 'index.html'), 'utf8');
-  const m = html.match(/const RENDER_ID = [^\n]+\nfunction safeRenderUrl\(u\) \{[\s\S]*?\n\}/);
-  assert.ok(m, 'safeRenderUrl has been renamed or removed from index.html');
-  return new Function(m[0].replace('const RENDER_ID', 'var RENDER_ID') + '; return safeRenderUrl;')();
+  /* The two pieces separately, rather than one pattern spanning both.
+     Requiring the function to sit on the line immediately after the constant
+     meant that explaining the function in a comment above it broke the test —
+     which punishes exactly the thing this codebase asks for everywhere else. */
+  const constant = html.match(/const RENDER_ID = [^\n]+/);
+  const fn = html.match(/function safeRenderUrl\(u\) \{[\s\S]*?\n\}/);
+  assert.ok(constant, 'RENDER_ID has been renamed or removed from index.html');
+  assert.ok(fn, 'safeRenderUrl has been renamed or removed from index.html');
+  return new Function(constant[0].replace('const RENDER_ID', 'var RENDER_ID') + '\n' + fn[0] + '; return safeRenderUrl;')();
 }
 
 test('the render URL the browser is given is validated before it reaches the DOM', () => {
   const safe = loadSafeRenderUrl();
 
-  /* Both shapes /api/render actually returns: a stored render served from
-     here, and the provider URL we fall back to when storage failed. A
-     reviewer proposed testing for https only, which would have refused the
-     first — the normal case — and broken every render that worked. */
+  /* The one shape /api/render can return. A reviewer once proposed testing
+     for https only, which would have refused this — the normal case — and
+     broken every render that stored correctly. */
   assert.strictEqual(safe('/r/abc123def456'), '/r/abc123def456', 'a stored render was refused');
-  assert.strictEqual(safe('https://replicate.delivery/x.jpg'), 'https://replicate.delivery/x.jpg');
 
   for (const bad of [
     'javascript:alert(1)',
@@ -122,6 +126,15 @@ test('the render URL the browser is given is validated before it reaches the DOM
     'http://insecure.example/x.jpg', // a render of somebody's home over plain http
     '/r/short',                      // too little entropy to be one of ours
     '/etc/passwd',
+    /* The provider's own host, which this used to wave through. The fallback
+       that produced such a URL is gone: an image we cannot copy is an error,
+       because handing one over leaves a photorealistic picture of an
+       identified home at an address we cannot delete. */
+    'https://replicate.delivery/x.jpg',
+    /* And the reason it mattered that the branch said "any https". It was
+       written for one host and admitted every one — including into an
+       <a href target="_blank">, which img-src does not govern. */
+    'https://evil.example/x.jpg',
     null, undefined, '', 42, {},
   ]) {
     assert.strictEqual(safe(bad), null, `accepted a hostile render URL: ${String(bad)}`);
