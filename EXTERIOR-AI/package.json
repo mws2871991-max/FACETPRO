@@ -8,6 +8,7 @@
     "test": "eslint . && node test/run.js",
     "validate": "node scripts/validate-measurements.js",
     "backup": "node scripts/backup-and-verify.js",
+    "count-personal-data": "node scripts/count-personal-data.js",
     "set-domain": "node scripts/set-domain.js",
     "build:css": "node scripts/prestart-css.js",
     "prestart": "node scripts/prestart-css.js",
