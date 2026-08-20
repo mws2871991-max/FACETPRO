@@ -69,14 +69,39 @@ the UK or EEA, and a transfer mechanism to name if you do not. On `sfo` you
 cannot delete it, and the three-line UK Extension block stops being boilerplate
 and becomes a live claim you have to be able to stand behind.
 
+**And it is not hypothetical any more.** Counted against the production
+database on 20 August 2026:
+
+    renders=1   render_bytes=505140   oldest_render=2026-08-10 15:15:49+00
+    leads=0     detections=8          detection_cache=4   measurements=0
+
+One AI render — half a megabyte of image of somebody's house — has been sitting
+in `sfo` since 10 August, and `orphanRenderDays: 183` keeps it there until
+about 9 February 2027 unless something removes it.
+
+`LEAD_CAPTURE=off` was never what stood between this database and personal
+data. `server.js:2191` calls `putRender` unconditionally on every completed
+render, with no `leadId` and no reference to the capture switch. The renders
+table is the one place in an otherwise careful schema where actual imagery is
+retained: `detection_cache` holds a SHA-256 and never the photograph,
+`detections` holds a session id and a count, and `funnel` and
+`measurement_observations` hold nothing personal by construction.
+
+That render dates from the day before DNS pointed here, so it is most likely a
+test of your own rather than a member of the public — but "most likely" is the
+wrong standard for the question it settles, and it is worth establishing which
+before deciding anything else.
+
 There are two ways out and they are not equal:
 
 - **Move the service and database to a UK or EU region.** Railway offers
   European regions; confirm which in the dashboard, as the CLI cannot list
   them. This deletes one placeholder outright, makes `[REGION]` trivially
-  answerable, and removes the transfer question rather than documenting it. Do
-  it before there is data to migrate — which is now, while capture is off and
-  the tables are empty.
+  answerable, and removes the transfer question rather than documenting it.
+  The move is cheapest while the only thing to migrate is that single render —
+  and cheaper still if it turns out to be a test that can simply be deleted
+  first. It stops being cheap the moment real renders accumulate, which needs
+  no switch thrown and no permission given.
 - **Stay in `sfo` and paper it.** Then somebody has to establish what Railway
   is certified under and whether an IDTA or the UK Addendum is required. That
   is a solicitor's question and a recurring obligation, not a one-off edit.
@@ -141,6 +166,9 @@ So the sequence is: placeholders, then ICO, then these five, then
 stored leads and silence, which is the worst of both — the data protection
 obligations of holding personal data with none of the revenue that justifies
 taking it.
+
+Note that this sequence governs *leads* only. It does not govern renders, which
+are already being written; see group 3.
 
 `NODE_ENV` is also unset, which `DEPLOY.md` warns leaks stack traces through
 Express's default error page. It does not here: the handler at
