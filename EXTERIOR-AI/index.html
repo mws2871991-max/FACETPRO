@@ -362,7 +362,14 @@
              rather than promised in copy. -->
         <h1 id="hero-heading" class="mt-4 serif text-[34px] sm:text-[42px] md:text-[52px] leading-[0.98] tracking-[-0.03em]">See your house. See the price. Before anyone comes&nbsp;round.</h1>
         <p class="mt-5 text-[16px] md:text-[18px] leading-7 text-white/75 max-w-[46ch]">Upload one photo of your home. Facet Pro shows you what it could look like &mdash; then gives you an itemised estimate for the work. Windows, doors, cladding, roof, fascias. Five trades. One photograph.</p>
-        <p class="mt-4 serif text-[17px] md:text-[19px] text-white/90">No survey. No salesman. No guesswork.</p>
+        <!-- "No guesswork" was the third item here, and it contradicted the
+             rest of the page. The methodology section says the photograph
+             measurement is still being calibrated against surveyed properties,
+             and the estimate is presented as a range. A hero promising no
+             guesswork is a claim this system cannot stand behind, on the one
+             part of the page everybody reads. "No pressure" is the thing we
+             can actually promise: nobody is sent round unless they ask. -->
+        <p class="mt-4 serif text-[17px] md:text-[19px] text-white/90">No survey. No salesman. No pressure.</p>
 
         <div class="mt-7 flex flex-col sm:flex-row gap-3">
           <!-- The id stays: the handler bound to it scrolls to the upload
@@ -373,6 +380,22 @@
         </div>
 
         <p class="mt-5 text-[13px] text-white/60">Free to try &nbsp;&bull;&nbsp; One photo &nbsp;&bull;&nbsp; No sales call unless you ask</p>
+
+        <!-- Beside the button, because that is where the hesitation is: the
+             review's point was that "is my photo kept?" is the question a
+             homeowner asks with their thumb over the upload control, and the
+             answer was five screens away in the FAQ.
+
+             Says only what is true. The suggested wording promised measurements
+             were kept "for 30 days, then deleted" — there is no 30-day period
+             anywhere in this system. The detection cache expires after seven
+             (DETECTION_CACHE_DAYS), and measurement_observations has no expiry
+             at all, deliberately: it holds shape numbers that are unlinkable to
+             anybody by construction, which is why it can be kept. Printing a
+             retention promise we do not implement is the exact failure this
+             line is meant to reassure people about, so it makes the claim
+             privacy.html already makes and links to the detail. -->
+        <p class="mt-2 text-[12px] text-white/45">Your original photo isn&rsquo;t saved &mdash; we keep the image we generate, not your photograph. <a href="#tech-heading" class="underline underline-offset-2 hover:text-white/70">How your photo is used</a></p>
 
         <!-- The fairness line stays in the hero as a hook; the full section
              lives further down the page.
@@ -386,7 +409,13 @@
              is not wrong so much as unanchored, and the browser is never sent
              the rates to compute it with: /api/catalogue strips the cost model
              deliberately. So it is said without a figure. -->
-        <p class="mt-6 pt-6 border-t border-white/10 serif text-[19px] md:text-[21px] leading-snug text-white/90">The same house gets the same number.</p>
+        <!-- "the same number" overstated it: the estimate is a range, and the
+             final price is confirmed at survey. The fairness claim does not
+             need the overstatement — what is actually true is that the
+             starting point is identical for everybody, and that is the part
+             haggling normally decides. Kept short because the sentence under
+             it does the explaining. -->
+        <p class="mt-6 pt-6 border-t border-white/10 serif text-[19px] md:text-[21px] leading-snug text-white/90">The same house gets the same starting point.</p>
         <p class="mt-2 text-[13px] leading-6 text-white/55 max-w-[52ch]">Two neighbours can buy the same windows and pay thousands apart, because one of them sat in the room longer on a Wednesday evening. Priced from the photograph, the number does not move on how hard you are willing to push.</p>
       </div>
 
@@ -719,7 +748,7 @@
           <li>Your home, your choices, your evening</li>
           <li>An itemised estimate before anybody visits</li>
           <li>Five trades off the same photograph</li>
-          <li>The same house gets the same number</li>
+          <li>The same house gets the same starting point</li>
         </ul>
       </div>
     </div>
