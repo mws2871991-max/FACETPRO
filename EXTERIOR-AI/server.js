@@ -742,7 +742,28 @@ async function deliverAndRecord(lead, plan) {
     console.log(`Lead ${lead.id}: not shared — no installer consent.`);
     return;
   }
-  if (!LEAD_RECIPIENTS.length) return;
+  /* Recorded, not returned on silently.
+
+     This was a bare `return`, two lines under a comment promising "a positive
+     record of the decision rather than an absence" — and an unconfigured
+     LEAD_RECIPIENTS is exactly the absence it warns about. Every other way a
+     lead reaches nobody writes a row: no consent, no coverage, no usable
+     postcode, a crash mid-delivery. Only the one that happens before anybody
+     has finished setting the service up wrote nothing at all.
+
+     Which is the case most likely to be read back later, and the hardest to
+     reconstruct: a homeowner asked for quotes, agreed to it, and nothing
+     happened. Without a row, /api/deliveries cannot distinguish that from a
+     lead that was never submitted. */
+  if (!LEAD_RECIPIENTS.length) {
+    await record('deliveries', {
+      ts: new Date().toISOString(), leadId: lead.id, postcode: lead.postcode || null,
+      total: 0, delivered: 0, failed: 0, results: [],
+      withheld: 'no recipients configured',
+    });
+    console.warn(`Lead ${lead.id}: consented to sharing, but LEAD_RECIPIENTS is not set — stored and sent to nobody.`);
+    return;
+  }
 
   /* "up to three vetted installers covering my area" — the consent is
      specific, so the routing has to be. Everything about the decision is
