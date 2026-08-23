@@ -2694,7 +2694,31 @@ app.post('/api/render', renderLimiter, async (req, res) => {
          further 90 seconds, so a render slower than the wait is picked up
          there exactly as it always was. */
         headers: { 'Authorization': `Bearer ${replicateKey}`, 'Content-Type': 'application/json', 'Prefer': 'wait=60' },
-        body: JSON.stringify({ input: { prompt, input_image: inputImage, output_format: 'jpg', safety_tolerance: RENDER_SAFETY_TOLERANCE } })
+        /* output_format: png, which is also the model's own default — 'jpg'
+           was an override, and it cost the one thing this render is for.
+
+           The photograph is already re-encoded once before it gets here: the
+           client downscales to 1600px and writes JPEG at 0.85. Asking for JPEG
+           back put a second lossy pass on top, and this model has no
+           output_quality input — the whole schema is prompt, input_image,
+           aspect_ratio, seed, safety_tolerance, prompt_upsampling and this —
+           so there was no quality dial to raise instead. PNG or artefacts.
+
+           They land on exactly the surfaces being sold: mortar lines, render
+           grain, roof tile edges. A homeowner deciding between anthracite and
+           sage is looking at texture, and JPEG spends its bit budget on the
+           smooth sky above it.
+
+           Costs storage. Roughly 500KB becomes a few MB per render, in a table
+           holding renders for 183 days (retention.PERIODS.orphanRenderDays)
+           with DAILY_RENDER_LIMIT at 50. Worth watching rather than worth
+           refusing — and the render is the product.
+
+           aspect_ratio stays unset because its default is match_input_image,
+           which is what a before-and-after needs. prompt_upsampling stays off:
+           it lets the model rewrite the prompt, and this prompt's whole job is
+           telling it what not to change. */
+        body: JSON.stringify({ input: { prompt, input_image: inputImage, output_format: 'png', safety_tolerance: RENDER_SAFETY_TOLERANCE } })
       });
     } finally {
       clearTimeout(renderTimeout);
