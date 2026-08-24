@@ -19,7 +19,10 @@ npm test                                    # JSONL backend only — see DEPLOY.
                                             # for how to run it against Postgres,
                                             # which is the backend production uses
 railway variables --service facetpro-visualiser --json   # names AND values — do not paste output anywhere
-curl -sI https://facetpro-visualiser-production.up.railway.app/
+curl -sI https://www.facetpro.co.uk/                      # the live site
+curl -s  https://www.facetpro.co.uk/healthz               # storageWritable, mode
+curl -s -H "Authorization: Bearer $INSTALLER_PASSWORD" \
+        https://www.facetpro.co.uk/api/ops                # 503 = password unset
 ```
 
 ---
@@ -54,7 +57,7 @@ Until somebody does that, anyone who pushes and walks away will believe they
 have shipped something they have not. That mistake already cost a day and a
 half once.
 
-### The project has three services and only one of them serves anything
+### The project has two resources and only one of them serves anything
 
 | Service | What it is |
 |---|---|
@@ -92,19 +95,20 @@ providers until somebody revokes them.
 
 ## What is actually configured on the live service
 
-Checked 2026-08-04, and again on 2026-08-06 — the Anthropic key and INSTALLER_TOKEN_SECRET rows are from the later check.
+Checked 2026-08-04, again on 2026-08-06, and again on 2026-08-24 against the
+live service. Five rows moved on the last check; the dates below say which.
 
 | Variable | State | Consequence |
 |---|---|---|
 | `REPLICATE_API_TOKEN` | **set** | Renders work. Verified with a real photograph |
-| `ANTHROPIC_API_KEY` | **set** | The key authenticates. **The account has no credit**, so detection returns a 502 and the journey still stops at the first step. Top up at console.anthropic.com/settings/billing |
+| `ANTHROPIC_API_KEY` | **set** | Works. The no-credit problem recorded here was fixed on 7 August; re-verified 24 August with a live call, and detection returns sixteen correctly-labelled elements on a real photograph. This row said "the account has no credit" for seventeen days after it stopped being true, while the section below already recorded the fix — a contradiction inside one document, which is worse than either version alone |
 | `RESEND_API_KEY` | missing | No email at all |
 | `LEAD_FROM_EMAIL` | missing | Needs a domain verified at resend.com |
 | `LEAD_RECIPIENTS` | missing | `/api/coverage` reports `installers: 0` |
-| `DATABASE_URL` | missing | See storage, below |
-| `INSTALLER_PASSWORD` | missing | The shared credential, from before accounts existed. Unauthenticated installer requests get 401 either way. Once any installer account is configured this is refused on a deployment, so it cannot reopen the whole estate behind the privacy notice |
+| `DATABASE_URL` | **set** (24 Aug) | Postgres, in this project. Storage is no longer the ephemeral container filesystem — see storage, below |
+| `INSTALLER_PASSWORD` | **set** (19 Aug) | The shared operator credential for the read-only ops endpoints — `/api/ops`, `/api/funnel`, `/api/deliveries`, `/api/measurements`. It was unset on the deployment, so all four returned 503 in production and nothing said so: `/api/leads` uses a different guard and answers 401 either way, which is exactly what the old post-deploy check told you to look for. See `DEPLOY.md` |
 | `INVESTOR_PASSWORD` | **set** | Gates `/investors`. Unset means that page 404s, deliberately — see below |
-| `INSTALLER_TOKEN_SECRET` | missing | Signs installer sign-in tokens. Unset means one is generated at boot, so every installer is signed out on each deploy |
+| `INSTALLER_TOKEN_SECRET` | **set** (24 Aug) | Signs installer sign-in tokens. Unset would mean one is generated at boot, signing every installer out on each deploy |
 | `LEAD_CAPTURE` | set (`off`) | Correct. Must stay off until the legal pages are finished |
 | `SITE_MODE` | `beta` | Shows the calibration honesty badge. Keep until measurements are validated |
 
@@ -112,28 +116,29 @@ The Replicate token was copied from `facetpro-backend` and has **not been
 rotated**, despite having sat in plaintext on the owner's Desktop. It works,
 so nothing is broken — but it should be replaced before this is shown widely.
 
-### Storage: there is no volume on the live service
+### Storage: Postgres, as of 24 August
 
-The only volume in the project is `postgres-volume`, attached to Postgres.
-`facetpro-visualiser` has none, and `FACETPRO_DATA_DIR` is unset, so the app
-writes to `./data` inside the container. **Everything written there is lost on
-every deploy and every restart.**
+**This section used to say there was no volume on the live service and that
+everything written to `./data` was lost on every deploy. That is no longer
+true** — `DATABASE_URL` is set, `/healthz` reports `"storageWritable": true`,
+and `/api/ops` reports `"storage": "postgres"`. `facetpro-visualiser` still has
+no volume of its own; it no longer needs one, because the rows are in Postgres
+rather than on the container filesystem.
 
-Today that costs little — lead capture is off, so no personal data is
-involved. Two things it does cost:
+The old warning left one casualty worth knowing about. The 391 KB render this
+document records as proof that renders work was written to `./data` before the
+database was connected, and is gone. The renders table holds one row today —
+505 KB, 10 August — which is the oldest surviving render, not the first one
+ever made.
 
-- **Saved designs and resume codes** do not survive a restart.
-- **`data/usage.json`**, the daily counter that bounds Anthropic and Replicate
-  spend, resets. The cap is meant to survive restarts precisely so a crash
-  loop cannot hand out a fresh allowance each time. With a live paid key on a
-  public URL, that is the one worth caring about — set a billing limit at both
-  providers as well.
+`data/usage.json`, the daily counter bounding Anthropic and Replicate spend,
+is still a file: the cap is meant to survive restarts precisely so a crash loop
+cannot hand out a fresh allowance each time. With a live paid key on a public
+URL, set a billing limit at both providers as well rather than relying on it.
 
-Before lead capture is switched on you need **either** a persistent volume
-mounted at the data directory **or** `DATABASE_URL` pointing at the Postgres
-that already exists in this project. The app refuses to start with lead
-capture on and neither in place, so you will get a hard failure rather than
-silent data loss.
+The startup guard still applies and is still the right one: the app refuses to
+start with lead capture on and no `DATABASE_URL`, so you get a hard failure
+rather than silent data loss.
 
 Run **one replica**. Detection records and the usage counter are in memory.
 
@@ -145,7 +150,11 @@ Run **one replica**. Detection records and the usage counter are in memory.
 - `/api/glazing` prices a house, including the market-spread comparison
 - `/api/coverage` answers postcode queries (POST only; a GET correctly 404s)
 - **Renders work.** A real photograph was rendered end to end and served back
-  through the capability URL at `/r/:id` as a 391 KB JPEG
+  through the capability URL at `/r/:id`. That first render was a 391 KB JPEG
+  and no longer exists — see storage above. Renders are now requested as PNG:
+  the client already re-encodes the photograph once before upload, and asking
+  for JPEG back put a second lossy pass on the one image the product exists to
+  show. Expect a few MB each rather than ~500 KB
 
 ## What does not work
 
@@ -453,16 +462,31 @@ it.
 
 ## Legal
 
-`legal/privacy.html` and `legal/terms.html` contain **19 distinct placeholders
-across 37 occurrences** — count them with the snippet below rather than
-trusting any figure in a document, including this one:
+**Three counters in this repository answer this question differently, and only
+one of them decides whether the site starts.** Checked 24 August:
 
-```
-grep -o 'class="ph"[^>]*>\[[^]]*\]' legal/*.html | wc -l
-```
+| Method | Distinct | Occurrences | Scope |
+|---|---|---|---|
+| `npm run check-legal` | 18 | 45 | privacy + terms + `gated/investors.html` |
+| The startup guard, `server.js` `PLACEHOLDER` | **16** | **43** | privacy + terms |
+| The `class="ph"` snippet this section used to recommend | 19 | 37 | privacy + terms |
 
-Earlier handovers said "~13/11". They were wrong. A solicitor brief exists and
-the copies sent to the solicitor are byte-identical to these files.
+The first two agree: `check-legal` is the guard's regex plus the investor page,
+so 16 + 2 investor placeholders = 18, and 43 + 2 = 45. **The guard is the
+authority** — it is what refuses to start a deployment with `LEAD_CAPTURE=on`,
+and it matches on brackets (`/\[[A-Z][^\]]{2,200}\]/`), not on markup.
+
+The odd one out is the `class="ph"` snippet, and it is wrong in the dangerous
+direction: it finds *more* distinct values (19) but *fewer* occurrences (37)
+than the guard. Some bracketed placeholders are not wrapped in `class="ph"` at
+all, so the snippet never shows them. Clear all nineteen things it lists and
+the deployment can still refuse to start, with no indication of what is left.
+
+So: run `npm run check-legal`, and treat the two investor placeholders it adds
+as separate — they gate `/investors` only, never the site (see the proportion
+argument in `server.js`). Earlier handovers said "~13/11"; they were wrong too,
+which is the pattern this table exists to end. A solicitor brief exists and the
+copies sent to the solicitor are byte-identical to these files.
 
 Also outstanding: ICO registration (£52/year), and a decision on the
 international-transfer mechanism — photos go to Anthropic and Replicate, both
