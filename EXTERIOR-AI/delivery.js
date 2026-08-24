@@ -154,7 +154,29 @@ async function deliverTo(recipient, lead, { fetchImpl, attempts = DEFAULT_ATTEMP
       try {
         res = await fetchImpl(recipient.url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...recipient.headers },
+          /* Idempotency-Key is set before the recipient's own headers so a
+             recipient cannot accidentally overwrite it, and is constant across
+             the retries of one delivery — that is the whole point.
+
+             From the August 2026 code audit: a buyer whose endpoint accepts a
+             lead and then times out before answering gets the same lead again
+             on our retry. Every attempt is recorded here, so our own log shows
+             one delivery; theirs shows two, and at £100 a lead that is an
+             invoice dispute where our evidence quietly disagrees with theirs.
+
+             One key per recipient per lead, not per lead: the same lead going
+             to three buyers is three distinct deliveries, and collapsing them
+             under one key would let a buyer's deduplication drop a lead they
+             were supposed to receive.
+
+             This is a header a recipient may ignore. It costs nothing if they
+             do, and it is the only thing that lets a careful one get it right
+             — which is why it is sent rather than negotiated. */
+          headers: {
+            'Content-Type': 'application/json',
+            'Idempotency-Key': `${lead.id}:${recipient.id}`,
+            ...recipient.headers,
+          },
           body: JSON.stringify(lead),
           signal: controller.signal,
         });

@@ -110,3 +110,50 @@ test('every remedy the refusal suggests actually lets it start', async () => {
       `the message tells you to set ${name}=${value}, and it still refuses`);
   }
 });
+
+/* ── the deployment configuration block ──
+
+   From the August 2026 code audit: "create a production startup validation
+   function that fails deployment if required live-mode variables are missing".
+
+   It reports rather than refusing, and the test below is why. The first
+   version did fail the deployment when INSTALLER_TOKEN_SECRET was missing,
+   and immediately broke "the same deployment with lead capture off is fine" —
+   correctly, because a missing token secret signs installers out while
+   refusing to start denies every homeowner the site. Reporting is the
+   proportionate half of that recommendation; the two refusals above are the
+   cases where there is no safe half-measure. */
+
+test('a deployment missing configuration says so, in one block, and still serves', async () => {
+  const { code, out } = await run({
+    ...DEPLOYED,
+    LEAD_CAPTURE: 'off',
+    INSTALLER_TOKEN_SECRET: '',
+    INSTALLER_PASSWORD: '',
+  });
+  assert.strictEqual(code, 'started', `it must still serve homeowners:\n${out.slice(0, 400)}`);
+  assert.match(out, /CONFIGURATION: \d+ thing\(s\) missing/,
+    'one block, because a line lost among two hundred is a line nobody reads');
+  assert.match(out, /INSTALLER_TOKEN_SECRET/);
+  assert.match(out, /INSTALLER_PASSWORD/);
+});
+
+test('the configuration block never prints a value', async () => {
+  /* These logs are readable by anyone with dashboard access. Naming what is
+     missing is the whole job; echoing what is present is a leak. */
+  const secret = 'sk-thismustneverappearinalog';
+  const { out } = await run({
+    ...DEPLOYED,
+    LEAD_CAPTURE: 'off',
+    INSTALLER_TOKEN_SECRET: secret,
+    INSTALLER_PASSWORD: secret,
+  });
+  assert.ok(!out.includes(secret), 'a configured value reached the log');
+  assert.match(out, /Config: deployment checks passed/);
+});
+
+test('nothing is reported on a laptop — the guard is about deployments', async () => {
+  const { out } = await run({ LEAD_CAPTURE: 'off', INSTALLER_TOKEN_SECRET: '', INSTALLER_PASSWORD: '' });
+  assert.ok(!/CONFIGURATION: /.test(out),
+    'a developer with no platform secrets is not misconfigured');
+});

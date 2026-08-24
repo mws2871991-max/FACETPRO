@@ -976,7 +976,7 @@ function requireInvestorPassword(req, res, next) {
    signing in again is an inconvenience. */
 const INSTALLER_TOKEN_SECRET = process.env.INSTALLER_TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
 if (!process.env.INSTALLER_TOKEN_SECRET) {
-  console.warn('INSTALLER_TOKEN_SECRET is not set — installer sessions will end on every deploy. Set it to keep them signed in.');
+  console.warn('INSTALLER_TOKEN_SECRET is not set — installer sessions will end on every deploy. Set it to keep them signed in. Reported again in the startup config block on a deployment, see checkProductionConfig.');
 }
 
 /* Who is asking, or nobody.
@@ -4179,9 +4179,102 @@ function refuseToStartIfTheNoticeIsUnfinished() {
   process.exit(1);
 }
 
+/* What a deployment must have configured, checked once at startup.
+
+   From the August 2026 code audit: "create a production startup validation
+   function that fails deployment if required live-mode variables are missing,
+   weak or contradictory. Log only safe configuration status, never values."
+
+   The case for it is already in this repository's history. INSTALLER_PASSWORD
+   was unset on the deployment for weeks. Four operator endpoints answered 503
+   the whole time, the post-deploy check in DEPLOY.md pointed at an endpoint
+   guarded by something else entirely and so read 401 either way, and nothing
+   anywhere said the words. A guard that runs on every boot is the only kind
+   that cannot be forgotten.
+
+   It reports; it does not refuse. The audit asked for a function that "fails
+   deployment if required live-mode variables are missing", and taking that
+   literally was wrong — the first version of this refused to start without
+   INSTALLER_TOKEN_SECRET and immediately broke the test asserting that a
+   deployment with lead capture off must serve.
+
+   That test is right. A missing token secret signs installers out; refusing to
+   start denies every homeowner the homepage, the visualiser and the estimate.
+   This file already learned that lesson once, in as many words, about the
+   investor page: "a guard that takes down more than the thing it is guarding
+   gets deleted by whoever is on the end of the outage." The two guards above
+   refuse because the alternative is collecting personal data behind an
+   unfinished notice or storage that contradicts it — there is no safe
+   half-measure there. Here there is, and it is this.
+
+   Nothing below is a contradiction the site should die on:
+     · No token secret — installers are signed out on each deploy.
+     · No installer password — four operator endpoints 503, homeowners unaffected.
+     · Capture on with no recipients or no email — the lead route already
+       degrades safely, hiding the installer-quotes box when it cannot send a
+       withdrawal link, so no promise is made that cannot be kept.
+
+   Names only. Never a value, never a prefix, never a length — this runs on a
+   platform whose logs are readable by anyone with dashboard access. */
+function checkProductionConfig() {
+  if (!IS_DEPLOYED) return;
+
+  const warn = [];
+
+  if (!process.env.INSTALLER_TOKEN_SECRET) {
+    warn.push('INSTALLER_TOKEN_SECRET is not set — a secret is generated at boot, so every installer is signed out on each deploy. openssl rand -base64 32');
+  }
+
+  /* Operator visibility. Not fatal — the site serves homeowners perfectly well
+     without it — but unset means /api/ops, /api/funnel, /api/deliveries and
+     /api/measurements all return 503 together, which is exactly the failure
+     that went unnoticed. */
+  if (!process.env.INSTALLER_PASSWORD) {
+    warn.push('INSTALLER_PASSWORD is not set — /api/ops, /api/funnel, /api/deliveries and /api/measurements all return 503.');
+  }
+
+  if (LEAD_CAPTURE) {
+    /* Past this point a homeowner can hand over their details, so anything
+       that silently drops what they were promised is a fault, not a choice. */
+    if (!LEAD_RECIPIENTS.length) {
+      warn.push('LEAD_CAPTURE is on but no LEAD_RECIPIENTS are configured — leads will be stored and delivered to nobody.');
+    }
+    if (!process.env.RESEND_API_KEY) {
+      warn.push('LEAD_CAPTURE is on but RESEND_API_KEY is not set — no email is sent to anybody, including the homeowner’s withdrawal link.');
+    }
+    if (!process.env.LEAD_NOTIFY_EMAIL) {
+      warn.push('LEAD_CAPTURE is on but LEAD_NOTIFY_EMAIL is not set — nobody is told a lead arrived.');
+    }
+    if (!process.env.LEAD_FROM_EMAIL) {
+      warn.push('LEAD_CAPTURE is on but LEAD_FROM_EMAIL is not set — the design pack refuses to send.');
+    }
+  }
+
+  if (!warn.length) {
+    console.log('Config: deployment checks passed — nothing missing.');
+    return;
+  }
+
+  /* One block rather than scattered lines. The failure this exists to catch is
+     nobody noticing, and a warning between two hundred other startup lines is
+     a warning nobody notices. */
+  console.warn([
+    '',
+    `CONFIGURATION: ${warn.length} thing(s) missing on this deployment.`,
+    '',
+    ...warn.map(w => `  · ${w}`),
+    '',
+    'None of these stop the site serving homeowners, which is why this is a',
+    'warning. Set them in the platform dashboard — never in a file, and never',
+    'in this repository, which is public.',
+    '',
+  ].join('\n'));
+}
+
 async function start() {
   refuseToStartIfStorageContradictsTheNotice();
   refuseToStartIfTheNoticeIsUnfinished();
+  checkProductionConfig();
   if (store.hasDb) {
     await store.ensureSchema();
     console.log('Storage: Postgres (encrypted at rest by the provider), schema ensured.');

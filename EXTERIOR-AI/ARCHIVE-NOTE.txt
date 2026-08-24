@@ -15,5 +15,18 @@ reviewers a finding:
   that looks wrong against the archive root is usually right against the
   repository root.
 
+  .github/ is NOT here either, for the same reason: it sits at the
+  repository root. There are three workflows — test.yml runs the suite
+  against both JSONL and Postgres, deploy.yml ships a green main to
+  Railway, backup.yml runs the restore test. None of them are visible
+  from this archive.
+
+  This one has already cost something. The August 2026 code audit was
+  given this folder, found no CI, and made "add automated CI" a HIGH
+  finding and a P0 in its ninety-day plan — a fortnight of work
+  recommended against a gap that does not exist. If you are reviewing
+  from a zip and about to report something missing, check whether it is
+  a root-level file first.
+
 Everything runs standalone: node_modules is included, so `npm test` and
 `npm start` work without installing anything.

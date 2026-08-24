@@ -252,3 +252,59 @@ test('no priced recipient means null, not zero', () => {
   assert.strictEqual(s.feeTotal, null,
     '"nobody was charged" and "we do not know what this was worth" must not look the same');
 });
+
+/* ── idempotency ──
+
+   From the August 2026 code audit. A buyer that accepts a lead and then times
+   out before answering receives it again on our retry: our log shows one
+   delivery, theirs shows two, and at £100 a lead the invoice is disputed with
+   our own evidence contradicting theirs. The key is what lets a careful buyer
+   collapse the duplicate. */
+
+test('every attempt at one delivery carries the same Idempotency-Key', async () => {
+  const keys = [];
+  let calls = 0;
+  const flaky = async (_url, opts) => {
+    keys.push(opts.headers['Idempotency-Key']);
+    calls += 1;
+    if (calls < 3) throw Object.assign(new Error('aborted'), { name: 'AbortError' });
+    return ok();
+  };
+
+  const r = await deliverTo({ id: 'anglian', name: 'Anglian', url: 'https://a.example/h', headers: {} },
+    LEAD, { fetchImpl: flaky, onSleep: noSleep });
+
+  assert.ok(r.ok, 'the third attempt succeeded');
+  assert.strictEqual(keys.length, 3, 'three attempts were made');
+  assert.strictEqual(new Set(keys).size, 1,
+    'a retry is the same delivery, so it must not present a new key');
+  assert.strictEqual(keys[0], 'LD-4821:anglian');
+});
+
+test('each buyer gets its own key — the same lead to three buyers is three deliveries', async () => {
+  const keys = [];
+  const capture = async (_url, opts) => { keys.push(opts.headers['Idempotency-Key']); return ok(); };
+
+  const { recipients } = parseRecipients(JSON.stringify([
+    { id: 'anglian', url: 'https://a.example/h' },
+    { id: 'zenith', url: 'https://z.example/h' },
+  ]));
+  await deliverLead(LEAD, recipients, { fetchImpl: capture, onSleep: noSleep });
+
+  assert.deepStrictEqual(keys.sort(), ['LD-4821:anglian', 'LD-4821:zenith'],
+    'collapsing these under one key would let a buyer drop a lead it was owed');
+});
+
+test('a recipient cannot overwrite the idempotency key with its own headers', async () => {
+  let sent = null;
+  const capture = async (_url, opts) => { sent = opts.headers; return ok(); };
+
+  /* A buyer supplying its own Idempotency-Key would break deduplication for
+     everybody, most likely by accident while copying an auth header block. */
+  await deliverTo(
+    { id: 'zenith', name: 'Zenith', url: 'https://z.example/h', headers: { 'X-Key': 'abc' } },
+    LEAD, { fetchImpl: capture, onSleep: noSleep });
+
+  assert.strictEqual(sent['Idempotency-Key'], 'LD-4821:zenith');
+  assert.strictEqual(sent['X-Key'], 'abc', 'their own headers still arrive');
+});
