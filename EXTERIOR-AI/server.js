@@ -723,6 +723,35 @@ async function record(table, row) {
   }
 }
 
+/* One entry in the append-only account of what happened to a lead.
+
+   From the August 2026 code audit: prove "who was eligible, who received it,
+   when they received it and whether the homeowner consented".
+
+   Why this exists next to tables that already record most of it: every one of
+   those is about the lead's current state, and the lead's current state is
+   deliberately mutable — withdrawal redacts it, and should. Redaction rewrites
+   what a lead IS and leaves no account of what was DONE, which is the half a
+   buyer disputing an invoice, or the ICO asking what somebody agreed to, needs.
+
+   Never contact details. Ids, decisions, counts and reasons — the things you
+   would need to answer "why did this happen", not "who was it". That keeps the
+   log outside the erasure path: there is nothing here to erase, so withdrawal
+   does not have to choose between honouring a request and keeping its own
+   evidence that it honoured it.
+
+   Failures are logged and swallowed. An audit trail that can fail a lead is
+   worse than one with a gap in it — the lead is the thing somebody paid for. */
+async function leadEvent(type, leadId, detail = {}) {
+  return record('leadEvents', {
+    ts: new Date().toISOString(),
+    eventId: crypto.randomUUID(),
+    leadId: leadId || null,
+    type,
+    detail,
+  });
+}
+
 const planDelivery = (lead) => routing.chooseRecipients(LEAD_RECIPIENTS, lead, { max: MAX_INSTALLERS_PER_LEAD });
 
 /* Deliveries that are still in flight after their response has gone. Drained
@@ -739,6 +768,7 @@ async function deliverAndRecord(lead, plan) {
       total: 0, delivered: 0, failed: 0, results: [],
       withheld: 'no consent to share with installers',
     });
+    await leadEvent('routing.withheld', lead.id, { reason: 'no consent to share with installers' });
     console.log(`Lead ${lead.id}: not shared — no installer consent.`);
     return;
   }
@@ -761,6 +791,7 @@ async function deliverAndRecord(lead, plan) {
       total: 0, delivered: 0, failed: 0, results: [],
       withheld: 'no recipients configured',
     });
+    await leadEvent('routing.withheld', lead.id, { reason: 'no recipients configured' });
     console.warn(`Lead ${lead.id}: consented to sharing, but LEAD_RECIPIENTS is not set — stored and sent to nobody.`);
     return;
   }
@@ -772,6 +803,19 @@ async function deliverAndRecord(lead, plan) {
   /* Reuses the plan from the request rather than recomputing it: the
      homeowner has already been told, by name, who is getting their details. */
   const { chosen, routing: routingRecord } = plan || planDelivery(lead);
+
+  /* The decision, before its outcome. A buyer asking "why didn't I get that
+     one" is asking about this event, not about the delivery — they were either
+     not eligible, or eligible and not selected, and those are different
+     conversations. routingRecord already carries who was skipped and why; this
+     pins it to a point in time that redaction will not rewrite. */
+  await leadEvent('routing.decided', lead.id, {
+    considered: LEAD_RECIPIENTS.length,
+    cap: MAX_INSTALLERS_PER_LEAD,
+    chosen: chosen.map(r => r.id),
+    routing: routingRecord,
+  });
+
   if (!chosen.length) {
     await record('deliveries', {
       ts: new Date().toISOString(), leadId: lead.id, postcode: lead.postcode || null,
@@ -794,6 +838,22 @@ async function deliverAndRecord(lead, plan) {
     console.error(`Lead ${lead.id}: delivery crashed:`, err.message);
     await record('deliveries', { ts: new Date().toISOString(), leadId: lead.id, delivered: 0, failed: chosen.length, results: [], routing: routingRecord, crashed: err.message });
     return;
+  }
+
+  /* One event per recipient, not one per lead. The invoice is per recipient,
+     the dispute is per recipient, and "delivered to 2 of 3" cannot answer
+     which two. leadPrice is what that buyer pays, recorded at the moment of
+     delivery rather than read back from a contract months later. */
+  for (const r of results) {
+    await leadEvent(r.ok ? 'delivery.succeeded' : 'delivery.failed', lead.id, {
+      recipientId: r.id,
+      leadPrice: r.leadPrice ?? null,
+      status: r.status ?? null,
+      attempts: r.attempts,
+      startedAt: r.startedAt,
+      at: r.at,
+      ...(r.ok ? {} : { error: r.error }),
+    });
   }
 
   const s = delivery.summarise(results);
@@ -2985,6 +3045,19 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
   // Stored first, unconditionally — a notification problem must never cost a lead.
   await store.append('leads', lead);
 
+  /* What they agreed to, and when. The lead row carries the consent record
+     too, and is redacted on withdrawal — deliberately, because that is what
+     withdrawal means. Article 7(1) then asks us to demonstrate that consent
+     was given, about a row we have just rewritten. This is the demonstration:
+     the wording version and which boxes were ticked, with no name attached. */
+  await leadEvent('consent.recorded', lead.id, {
+    version: lead.consent?.version ?? null,
+    installerQuotes: lead.consent?.installerQuotes === true,
+    emailPack: lead.consent?.emailPack === true,
+    terms: lead.consent?.terms === true,
+    leadScore: lead.leadScore?.score ?? null,
+  });
+
   /* A lead is stored and scored: that is what "qualified" means here, and it
      is a thing only the server witnesses. Counted before the emails, because
      a mail provider being down does not un-qualify anybody. */
@@ -3359,6 +3432,9 @@ app.post('/api/installer/lead-response', installerLimiter, requireInstaller, log
     action,
   };
   await store.append('leadResponses', record);
+  await leadEvent(`installer.${action === 'accept' ? 'accepted' : 'passed'}`, leadId, {
+    installerId: req.installer.id,
+  });
 
   if (action === 'accept') {
     store.countStage('installer_accepted').catch(() => { /* a counter never fails a decision */ });
@@ -3536,6 +3612,16 @@ app.post('/api/withdraw', withdrawLimiter, async (req, res) => {
     ts: at, leadId: lead.id, scope, ipHash,
     recipientsNotified: notified.map(n => ({ id: n.id, name: n.name, ok: n.ok, status: n.status ?? null, error: n.error ?? null })),
   });
+  /* The one event that must outlive the thing it describes. The lead row is
+     redacted or gone by now; without this there is no record that the request
+     was made, honoured, and passed on to the installers who already had a
+     copy — which is precisely what Article 17(2) asks us to be able to show. */
+  await leadEvent('withdrawal.completed', lead.id, {
+    scope,
+    recipientsNotified: notified.length,
+    recipientsAcknowledged: notified.filter(n => n.ok).length,
+  });
+
   console.log(`Lead ${lead.id}: consent withdrawn (${scope}); ${notified.filter(n => n.ok).length}/${notified.length} recipient(s) notified.`);
 
   const message = scope === 'all'

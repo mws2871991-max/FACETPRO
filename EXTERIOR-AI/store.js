@@ -278,6 +278,29 @@ const SCHEMA = [
      redacted the row references a reference and nothing more, and deleting it
      would destroy the delivery and billing history for a lead somebody was
      charged for. */
+  /* The append-only record of what happened to a lead.
+
+     From the August 2026 code audit: "when multiple installers can receive a
+     lead, you need to prove exactly who was eligible, who received it, when
+     they received it and whether the homeowner consented... keep the event IDs
+     separate from mutable lead records."
+
+     Everything else about a lead is mutable by design — the lead row is
+     redacted on withdrawal, and it should be. That is exactly why this table
+     exists beside it: redaction rewrites what a lead IS, and leaves no account
+     of what was DONE. A buyer asking why they did not receive a lead, or an
+     installer disputing an invoice, or the ICO asking what a person consented
+     to and when, all need the second thing.
+
+     Append-only is a discipline, not a constraint the database enforces here:
+     there is no update or delete path in this file, and `event_id` is unique so
+     a replayed write cannot quietly become a second event. `detail` never holds
+     contact details — it holds decisions, ids and reasons. The lead row holds
+     the person; this holds the story. */
+  `CREATE TABLE IF NOT EXISTS lead_events (
+    id SERIAL PRIMARY KEY, ts TIMESTAMPTZ NOT NULL, event_id TEXT UNIQUE NOT NULL,
+    lead_id TEXT, type TEXT NOT NULL, detail JSONB
+  )`,
   `CREATE TABLE IF NOT EXISTS lead_responses (
     id SERIAL PRIMARY KEY, ts TIMESTAMPTZ NOT NULL, lead_id TEXT, installer_id TEXT,
     action TEXT, record JSONB
@@ -378,7 +401,7 @@ async function ensureSchema() {
 
 const TABLE_NAMES = { leads: 'leads', leadResponses: 'lead_responses', deliveries: 'deliveries', notificationFailures: 'notification_failures', accessLog: 'access_log', resumes: 'resumes', withdrawals: 'withdrawals', retentionRuns: 'retention_runs', quotes: 'quotes', waitlist: 'waitlist', feedback: 'feedback', detections: 'detections' };
 
-const FILE_NAMES = { quotes: 'quotes.jsonl', waitlist: 'waitlist.jsonl', feedback: 'feedback.jsonl', detections: 'detections.jsonl', leads: 'leads.jsonl', deliveries: 'deliveries.jsonl', notificationFailures: 'notification-failures.jsonl', accessLog: 'access-log.jsonl', resumes: 'resumes.jsonl', withdrawals: 'withdrawals.jsonl', retentionRuns: 'retention-runs.jsonl', leadResponses: 'lead-responses.jsonl' };
+const FILE_NAMES = { quotes: 'quotes.jsonl', waitlist: 'waitlist.jsonl', feedback: 'feedback.jsonl', detections: 'detections.jsonl', leads: 'leads.jsonl', deliveries: 'deliveries.jsonl', notificationFailures: 'notification-failures.jsonl', accessLog: 'access-log.jsonl', resumes: 'resumes.jsonl', withdrawals: 'withdrawals.jsonl', retentionRuns: 'retention-runs.jsonl', leadResponses: 'lead-responses.jsonl', leadEvents: 'lead-events.jsonl' };
 
 function appendLine(file, obj) {
   fs.appendFileSync(path.join(DATA_DIR, file), JSON.stringify(obj) + '\n');
@@ -403,7 +426,10 @@ const INSERT_SQL = {
   accessLog: `INSERT INTO ${SCHEMA_NAME}.access_log (ts, endpoint, ip_hash, record) VALUES ($1,$2,$3,$4)`,
   deliveries: `INSERT INTO ${SCHEMA_NAME}.deliveries (ts, lead_id, delivered, failed, record) VALUES ($1,$2,$3,$4,$5)`,
   notificationFailures: `INSERT INTO ${SCHEMA_NAME}.notification_failures (ts, lead_id, kind, record) VALUES ($1,$2,$3,$4)`,
-  leadResponses: `INSERT INTO ${SCHEMA_NAME}.lead_responses (ts, lead_id, installer_id, action, record) VALUES ($1,$2,$3,$4,$5)`
+  leadResponses: `INSERT INTO ${SCHEMA_NAME}.lead_responses (ts, lead_id, installer_id, action, record) VALUES ($1,$2,$3,$4,$5)`,
+  /* ON CONFLICT DO NOTHING, not an upsert: a replayed write is the same
+     event arriving twice, and the second one must not overwrite the first. */
+  leadEvents: `INSERT INTO ${SCHEMA_NAME}.lead_events (ts, event_id, lead_id, type, detail) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (event_id) DO NOTHING`
 };
 
 const INSERT_PARAMS = {
@@ -449,7 +475,8 @@ const SELECT_SQL = {
   accessLog: `SELECT record FROM ${SCHEMA_NAME}.access_log ORDER BY id ASC`,
   deliveries: `SELECT record FROM ${SCHEMA_NAME}.deliveries ORDER BY id ASC`,
   notificationFailures: `SELECT record FROM ${SCHEMA_NAME}.notification_failures ORDER BY id ASC`,
-  leadResponses: `SELECT record FROM ${SCHEMA_NAME}.lead_responses ORDER BY id ASC`
+  leadResponses: `SELECT record FROM ${SCHEMA_NAME}.lead_responses ORDER BY id ASC`,
+  leadEvents: `SELECT ts, event_id AS "eventId", lead_id AS "leadId", type, detail FROM ${SCHEMA_NAME}.lead_events ORDER BY id ASC`
 };
 
 async function append(table, obj) {
