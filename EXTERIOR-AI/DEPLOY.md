@@ -109,7 +109,7 @@ way to get this deployment wrong.
 | `RAILWAY_ENVIRONMENT`, `RENDER`, `FLY_APP_NAME`, `DYNO`, `KUBERNETES_SERVICE_HOST` | set by the platform | Any of these, or `NODE_ENV=production`, tells the server it is deployed rather than on somebody's laptop. That is what decides whether an unfinished notice or a missing database is a warning or a refusal to start — not `SITE_MODE`, because what actually went wrong went wrong in `beta`. |
 | `NODE_ENV` | **for live** | `production`. Express serves its default error page otherwise — stack traces, absolute paths, dependency versions. |
 | `PRIVACY_EMAIL` | **for live** | Must match `[PRIVACY EMAIL]` in the privacy notice. Shown to anyone whose withdrawal link has expired. Falls back to `LEAD_NOTIFY_EMAIL`, then to `privacy@facetpro.co.uk`. |
-| `LEAD_RECIPIENTS` | for revenue | JSON array of the installers who buy leads: `id`, `name`, https `url`, optional `headers`, `areas`, `trades` and `leadPrice`. No `areas` means national; no `trades` means all of them. `leadPrice` is what that buyer pays per lead, in pounds — it is written into the delivery record as billing evidence, so it must be what was agreed at the time. Absent means unpriced, which is recorded as such rather than as zero. **Carries auth tokens — set it in the platform dashboard, never in a file.** |
+| `LEAD_RECIPIENTS` | for revenue | JSON array of the installers who buy leads: `id`, `name`, https `url`, optional `headers`, `areas`, `trades` and `leadPrice`. **Every delivery POST carries `Idempotency-Key: <leadId>:<recipientId>`, constant across our retries** — tell each buyer, because a buyer who ignores it can be billed twice for one lead when their endpoint accepts and then times out. It is set before their own `headers`, so they cannot overwrite it by accident. No `areas` means national; no `trades` means all of them. `leadPrice` is what that buyer pays per lead, in pounds — it is written into the delivery record as billing evidence, so it must be what was agreed at the time. Absent means unpriced, which is recorded as such rather than as zero. **Carries auth tokens — set it in the platform dashboard, never in a file.** |
 | `CRM_WEBHOOK_URL` | no | The old single-webhook setting. Still honoured when `LEAD_RECIPIENTS` is empty. |
 | `MAX_INSTALLERS_PER_LEAD` | no | Default 3. Can lower the cap, never raise it — the consent wording on the form says "up to three", and that sentence is the limit. `0` stops sharing entirely without unconfiguring the buyers. |
 | `DESIGN_PACK_EMAIL` | no | `off` stops the homeowner's design pack. It does **not** stop the withdrawal link: someone who asked for quotes still gets a confirmation carrying it. |
@@ -133,6 +133,47 @@ Because the counts are per stage and the instrumentation has changed under
 them, a window wider than the last deploy mixes old and new. `analysis_completed`
 and `visualisation_started` only began emitting on 12 August 2026, so a
 30-day read shows `design_created` without them and it is not a lost event.
+
+### The scripts
+
+| Command | What it is for |
+| --- | --- |
+| `npm test` | eslint, then the suite. Never run `node --test` directly — see the note in `test/run.js`. |
+| `npm run lint` | eslint alone. |
+| `npm run validate` | Checks measurements against `data/survey-samples.json`. |
+| `npm run count-personal-data` | Live row counts per table — see below. |
+| `npm run backup` | Export every table, restore into a scratch schema, compare by checksum. The privacy notice promises this is tested. |
+| `npm run check-legal` | The authoritative placeholder count. Do not trust a figure written in any document, including this one. |
+| `npm run check-pair` | Is a before-and-after gallery pair publishable — legible addresses, mismatched houses, and the other ways a marketing image leaks something. |
+| `npm run installer-password -- "the password"` | Prints a `passwordHash` for a `LEAD_RECIPIENTS` entry. Prints the hash and nothing else, so it can be piped; the password is never echoed or stored. |
+| `npm run set-domain -- <url>` | Rewrites canonical tags, Open Graph URLs, `robots.txt` and `sitemap.xml`. |
+| `npm run build:css` | Compiles `assets/app.css`. `npm start` runs it first. |
+
+### What the deployment tells you at startup
+
+On a deployment (not on a laptop) the server prints one configuration block
+naming anything missing — `INSTALLER_TOKEN_SECRET`, `INSTALLER_PASSWORD`, and
+the email and recipient variables once `LEAD_CAPTURE` is on. It reports and
+carries on; it never refuses. `checkProductionConfig` in `server.js` explains
+why that line is drawn where it is, and the two guards that *do* refuse are
+above it.
+
+It names variables and never prints a value, because these logs are readable
+by anyone with dashboard access. Its whole purpose is that
+`INSTALLER_PASSWORD` was once unset for weeks with nothing saying so.
+
+### What is stored, and what deletes it
+
+`npm run count-personal-data` prints live row counts per table, marks which
+hold personal data, and names any table it has not been told about — so a new
+table cannot appear without the count visibly going stale. It reads
+`DATABASE_PUBLIC_URL` from a laptop or `DATABASE_URL` inside Railway, prints
+counts only and never contents, and shares its TLS rules with
+`scripts/backup-and-verify.js` via `scripts/db-tls.js`.
+
+`notes/data-inventory.md` is the map: every table, whether it holds personal
+data, what removes it, and the gap between the time-based retention sweep
+(four tables) and person-initiated withdrawal (which reaches further).
 
 ### Caching of images and fonts
 
