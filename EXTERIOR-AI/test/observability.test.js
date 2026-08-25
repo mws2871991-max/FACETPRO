@@ -98,15 +98,21 @@ test('the summary says out loud that it does not survive a restart', () => {
   assert.match(obs.summary().retention, /in memory only/i);
 });
 
-test('the ops endpoint is behind the installer password', () => {
-  const fs = require('fs');
-  const path = require('path');
-  const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
-  /* Middleware may sit in front of the guard — a rate limiter now does — so
-     this checks the guard is on the route, not that it comes first. */
-  assert.match(server, /app\.get\('\/api\/ops'[^)]*requireInstallerPassword/,
-    'the ops endpoint is open — its counts alone describe the traffic and what is failing');
-});
+/* "The ops endpoint is behind the installer password" used to be asserted here
+   by reading server.js and matching a regex against its source. It is gone, not
+   moved, and the property is not less covered for it.
+
+   It broke the moment /api/ops was extracted to routes/ops.js — the route was
+   still guarded, still refused, still rate limited, and the test failed anyway,
+   because what it actually asserted was which file a string lives in. This
+   codebase already knows the pattern; store.js says of the same trick that
+   "scraping these out of the source with a regex broke the moment another table
+   was added".
+
+   test/ops-endpoint.test.js asserts the same property the way it is worth
+   asserting: against a running server, with a wrong password, with no password,
+   and sixty times in a row to prove the limiter bites. A 401 from a real
+   request cannot be satisfied by a file that merely looks right. */
 
 test('a render that could not be kept is recorded, not just logged', () => {
   /* Both halves of it. The fetch failing is the provider or the network; the
