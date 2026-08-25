@@ -4233,6 +4233,25 @@ function checkProductionConfig() {
     warn.push('INSTALLER_PASSWORD is not set — /api/ops, /api/funnel, /api/deliveries and /api/measurements all return 503.');
   }
 
+  /* The gap the storage guard above cannot see.
+
+     It returns early when LEAD_CAPTURE is off, on the premise that capture off
+     means no personal data is handled. That premise is false, and this
+     repository already proved it: /api/render calls putRender unconditionally,
+     with no leadId and no reference to the capture switch, so a visitor puts an
+     image of their house into storage by finishing a render, having typed
+     nothing. With no DATABASE_URL that image goes to ./data on the container —
+     unencrypted, and gone on the next deploy.
+
+     A warning rather than a refusal, deliberately and narrowly: the notice's
+     encryption promise is scoped to enquiries ("enquiries are stored
+     encrypted"), and a standalone render is not an enquiry, so this is not the
+     notice-contradicting case the guard above exists for. It is still a
+     photograph of somebody's home on an ephemeral disk. */
+  if (!store.hasDb) {
+    warn.push('DATABASE_URL is not set — renders are images of identifiable homes and go to ./data on this container, unencrypted and lost on the next deploy. The storage guard does not catch this while LEAD_CAPTURE is off.');
+  }
+
   if (LEAD_CAPTURE) {
     /* Past this point a homeowner can hand over their details, so anything
        that silently drops what they were promised is a fault, not a choice. */

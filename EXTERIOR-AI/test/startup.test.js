@@ -149,7 +149,26 @@ test('the configuration block never prints a value', async () => {
     INSTALLER_PASSWORD: secret,
   });
   assert.ok(!out.includes(secret), 'a configured value reached the log');
-  assert.match(out, /Config: deployment checks passed/);
+
+  /* Not "checks passed" — this harness always runs without DATABASE_URL, so
+     the render warning fires. What matters is that the two variables which ARE
+     set are not named as missing, and that neither value appears. */
+  assert.ok(!/INSTALLER_TOKEN_SECRET is not set/.test(out),
+    'a variable that is set was reported missing');
+  assert.ok(!/INSTALLER_PASSWORD is not set/.test(out),
+    'a variable that is set was reported missing');
+});
+
+test('a deployment with no database is warned that renders are images of homes', () => {
+  /* The storage guard returns early when LEAD_CAPTURE is off, on the premise
+     that capture off means no personal data. /api/render calls putRender
+     unconditionally, so that premise is false and this is the only thing that
+     says so. */
+  return run({ ...DEPLOYED, LEAD_CAPTURE: 'off' }).then(({ code, out }) => {
+    assert.strictEqual(code, 'started', out.slice(0, 300));
+    assert.match(out, /DATABASE_URL is not set/);
+    assert.match(out, /identifiable homes/);
+  });
 });
 
 test('nothing is reported on a laptop — the guard is about deployments', async () => {
