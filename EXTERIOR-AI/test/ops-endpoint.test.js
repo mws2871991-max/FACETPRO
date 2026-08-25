@@ -8,8 +8,8 @@
 
    The rule this file states is deliberately not "/api/ops is limited". It is
    "no route behind this password is unlimited", checked by reading the routes
-   out of server.js — because the next endpoint added here will be added by
-   somebody who has never read this comment. */
+   out of server.js and everything in routes/ — because the next endpoint added
+   here will be added by somebody who has never read this comment. */
 
 'use strict';
 
@@ -33,22 +33,36 @@ before(async () => { await require('./helpers/server-ready')(BASE); });
 const get = (p, headers = {}) => realFetch(BASE + p, { headers });
 
 test('every password-gated route carries a rate limiter', () => {
-  /* Read the routes rather than list them. A new gated endpoint with no
-     limiter fails here on the day it is written. */
-  const src = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  /* Read the routes rather than list them, from every file that can define
+     one. A new gated endpoint with no limiter fails here on the day it is
+     written.
+
+     This used to read server.js alone, and started finding one gated route
+     instead of four the moment the installer area moved to routes/. It did not
+     fail because anything was unguarded — it failed because it was looking in
+     one place while the routes moved to another, and a sweep that silently
+     narrows its own scope is worse than no sweep: it goes green while covering
+     less. Read the directory, so the next extraction is covered before it
+     happens rather than after somebody notices. */
+  const routesDir = path.join(__dirname, '..', 'routes');
+  const files = [path.join(__dirname, '..', 'server.js')].concat(
+    fs.existsSync(routesDir)
+      ? fs.readdirSync(routesDir).filter(f => f.endsWith('.js')).map(f => path.join(routesDir, f))
+      : []);
+  const src = files.map(f => fs.readFileSync(f, 'utf8')).join('\n');
   /* Everything between the route string and the handler's own (req is the
      middleware chain. Matching up to the handler signature rather than to a
      closing bracket, because middleware like logAccess('/api/leads') has
      brackets of its own and a lazy [^)] stops inside them — which quietly
      found one route out of three. */
   const gated = [];
-  for (const m of src.matchAll(/app\.(get|post)\(\s*'([^']+)'\s*,([\s\S]*?)(?:async\s+)?\(\s*req\b/g)) {
+  for (const m of src.matchAll(/(?:app|router)\.(get|post)\(\s*'([^']+)'\s*,([\s\S]*?)(?:async\s+)?\(\s*req\b/g)) {
     const [, , route, middleware] = m;
     if (/requireInstaller\b|requireInstallerPassword/.test(middleware)) {
       gated.push({ route, limited: /Limiter/.test(middleware) });
     }
   }
-  assert.ok(gated.length >= 3, `expected to find the gated routes, found ${gated.length}`);
+  assert.ok(gated.length >= 4, `expected to find the gated routes, found ${gated.length}`);
   const unlimited = gated.filter(g => !g.limited).map(g => g.route);
   assert.deepStrictEqual(unlimited, [],
     `password-gated with no rate limiter: ${unlimited.join(', ')} — the same credential opens every homeowner's contact details`);
