@@ -2081,6 +2081,19 @@ function buildUploadDetect() {
       h('div', { className: 'rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-4' }, [
         fileInput,
         dropArea,
+        /* The answer to the question being asked at this exact moment.
+
+           From the user-journey review, stage 4: this is the biggest drop in
+           the funnel — 50 landings to 2 uploads — and it is the one step that
+           requires a physical act and trusting a stranger with a picture of
+           your home. The reassurance existed, five screens down in the FAQ,
+           which is no use to somebody deciding here. It says only what is
+           true: privacy.html promises the photograph is used and then deleted,
+           and what is kept is the image we generate. */
+        h('p', { className: 'mt-3 text-[11px] leading-5 text-zinc-500' }, [
+          'Your original photo isn’t saved — we keep the image we generate, not your photograph. ',
+          h('a', { href: '#tech-heading', className: 'underline underline-offset-2' }, 'How your photo is used'),
+        ]),
         h('div', { className: 'mt-3 flex gap-2' }, [
           h('button', { type: 'button', className: 'cta flex-1 px-3 rounded-full text-xs min-h-[44px]', onClick: () => sharedRefs.fileInput?.click() }, 'Choose a photo'),
           h('button', {
@@ -2092,6 +2105,24 @@ function buildUploadDetect() {
                entered" — true, and materially misleading. */
             onClick: () => { state.uploadedImg = null; state.uploadedBase64 = null; state.detections = []; state.stage = 'landing'; state.detectionStatus = 'idle'; state.renderUrl = null; state.windowCount = null; state.glazing = null; U('Photo removed — add another whenever you like'); render(); }
           }, 'Start again'),
+        ]),
+        /* The bail-out, next to the ask rather than below it.
+
+           "One finish, whole house" already exists and prices a job from house
+           type and a wall-area slider, with no photograph at all. It sat three
+           sections down, which meant the visitor who would not upload — the
+           overwhelming majority — had to scroll past the thing they had just
+           declined to find the version they might accept. Offering it here
+           costs the upload nothing: somebody willing to drop a photo in has
+           already done it by the time they read this line. */
+        h('p', { className: 'mt-4 pt-3 border-t border-zinc-200 text-[11px] leading-5 text-zinc-500' }, [
+          'Not ready to upload? ',
+          h('a', {
+            href: '#whole-house',
+            className: 'underline underline-offset-2',
+            onClick: (e) => { e.preventDefault(); document.getElementById('mount-wholehouse')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); },
+          }, 'Get a rough figure from your house type instead'),
+          ' — no photo needed.',
         ]),
       ]),
       h('div', { className: 'rounded-2xl bg-zinc-900 text-white p-5 flex flex-col gap-4' }, [
