@@ -3,7 +3,9 @@
 The complete Home Exterior Journey build (Phases 1-5 done + gaps fixed).
 
 ## Quick Start
-Run `npm install && npm start`, then open http://localhost:3020.
+Run `npm install && npm start`, then open http://localhost:3000.
+(3000 is the default; `PORT` overrides it. This said 3020 for a long time,
+which is a dead port — the first instruction in the file named START HERE.)
 `index.html` is the homeowner-facing site; it needs `server.js` running for
 detection, pricing, renders and lead capture.
 
@@ -14,11 +16,15 @@ Features:
 - Save framing: "Where should we send your design?" creates lead with full payload
 - Installer: homeowner designs and their estimates, measurement_source flag, CRM push
 
-## Demo Video (Option C)
+## The demo page is gone
 
-- Chapters at 0s/12s/28s/45s/68s/82s, captions, voiceover speak, speed 1x/1.5x/2x, CC toggle
-- Not linked from the site and marked noindex: it's a sales/demo tool, reachable
-  by direct URL only
+There was a `guided-demo.html` here, described in this file down to its chapter
+timings. It was deleted, and the reasoning is in `server.js` around the
+`PUBLIC_FILES` set: it was an unmaintained fork of the product UI that asked for
+a real email address and posted it to `/api/lead` with no consent object,
+derived a name by splitting the address on "@", and linked to neither the
+privacy notice nor the terms. It is in the git history if the walkthrough copy
+is ever wanted back.
 
 ## Deploy
 This is a single Node service — `server.js` serves both the API and the site.

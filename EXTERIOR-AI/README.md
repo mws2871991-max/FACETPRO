@@ -48,7 +48,7 @@ cp .env.example .env
 npm start
 ```
 
-Open http://localhost:3020 (or whatever `PORT` you set).
+Open http://localhost:3000 (or whatever `PORT` you set).
 
 ## Files
 
@@ -226,8 +226,11 @@ image aspect ratio is read from the uploaded bytes for the same reason.
 Detection records are in-memory, 2-hour TTL, capped at 500; a restart just
 means re-uploading before measuring.
 
-`npm test` runs 43 tests, offline and at no API cost — the Anthropic and
-Replicate calls are stubbed:
+`npm test` runs the whole suite offline and at no API cost — the Anthropic and
+Replicate calls are stubbed. It said "43 tests" here for a long time and the
+figure is now several hundred out; a hardcoded count is a number nobody updates
+and everybody eventually trusts, the same trap as the placeholder count in
+HANDOVER.md. Run it and read the total it prints:
 
 - `test/measure.test.js` — the geometry, calibration and fallbacks.
 - `test/api.test.js` — the detect → measure → quote chain end to end.

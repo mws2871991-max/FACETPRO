@@ -340,9 +340,13 @@ test('the pages need no scripts, so they can serve under the strict CSP', () => 
 /* ── PLUMBING ── */
 
 test('every landing page is routed, and every route is a real page', () => {
-  const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
-  assert.match(server, /app\.get\('\/cost\/:slug'/, 'cost pages are not routed');
-  assert.match(server, /app\.get\('\/:slug'/, 'area pages are not routed');
+  /* Read every file that can declare a route, not just server.js — these pages
+     moved to routes/pages.js and the assertion should not care which file they
+     live in. See test/helpers/route-source.js. */
+  const { routeSource, routeDeclaration } = require('./helpers/route-source');
+  const src = routeSource();
+  assert.match(src, routeDeclaration('/cost/:slug'), 'cost pages are not routed');
+  assert.match(src, routeDeclaration('/:slug'), 'area pages are not routed');
   /* allPaths is the single source for the sitemap, so a page cannot exist
      unlisted or be listed without existing. */
   const paths = landing.allPaths();
@@ -357,8 +361,13 @@ test('the sitemap is generated and the static file is gone', () => {
      the bugs HANDOVER.md documents. */
   assert.ok(!fs.existsSync(path.join(__dirname, '..', 'sitemap.xml')),
     'a static sitemap.xml is back, and it will shadow the generated one');
+  const { routeSource, routeDeclaration } = require('./helpers/route-source');
+  assert.match(routeSource(), routeDeclaration('/sitemap.xml'),
+    'nothing generates the sitemap');
+  /* PUBLIC_FILES genuinely lives in server.js — it is the static allowlist, not
+     a route — so this one reads that file specifically rather than the whole
+     route surface. */
   const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
-  assert.match(server, /app\.get\('\/sitemap\.xml'/, 'nothing generates the sitemap');
   const publicFiles = server.slice(server.indexOf('const PUBLIC_FILES'), server.indexOf('const PUBLIC_DIRS'));
   assert.ok(!/'\/sitemap\.xml'/.test(publicFiles),
     "sitemap.xml is listed in PUBLIC_FILES again, which shadows the route");

@@ -17,8 +17,6 @@ require('./helpers/data-dir');   // never write to the real data/ — see the fi
 
 const { test, before } = require('node:test');
 const assert = require('node:assert');
-const fs = require('fs');
-const path = require('path');
 
 const PORT = 3124;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -33,23 +31,12 @@ before(async () => { await require('./helpers/server-ready')(BASE); });
 const get = (p, headers = {}) => realFetch(BASE + p, { headers });
 
 test('every password-gated route carries a rate limiter', () => {
-  /* Read the routes rather than list them, from every file that can define
+  /* Read the routes rather than list them, from every file that can declare
      one. A new gated endpoint with no limiter fails here on the day it is
-     written.
-
-     This used to read server.js alone, and started finding one gated route
-     instead of four the moment the installer area moved to routes/. It did not
-     fail because anything was unguarded — it failed because it was looking in
-     one place while the routes moved to another, and a sweep that silently
-     narrows its own scope is worse than no sweep: it goes green while covering
-     less. Read the directory, so the next extraction is covered before it
-     happens rather than after somebody notices. */
-  const routesDir = path.join(__dirname, '..', 'routes');
-  const files = [path.join(__dirname, '..', 'server.js')].concat(
-    fs.existsSync(routesDir)
-      ? fs.readdirSync(routesDir).filter(f => f.endsWith('.js')).map(f => path.join(routesDir, f))
-      : []);
-  const src = files.map(f => fs.readFileSync(f, 'utf8')).join('\n');
+     written. See test/helpers/route-source.js for why the source comes from a
+     helper rather than from server.js directly. */
+  const { routeSource } = require('./helpers/route-source');
+  const src = routeSource();
   /* Everything between the route string and the handler's own (req is the
      middleware chain. Matching up to the handler signature rather than to a
      closing bracket, because middleware like logAccess('/api/leads') has
