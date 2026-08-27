@@ -17,8 +17,44 @@
 'use strict';
 
 const express = require('express');
+const fs = require('fs');
 const path = require('path');
 const landing = require('../landing');
+
+/* ── AN UNFINISHED LEGAL PAGE MUST NOT BE INDEXED ──
+ *
+ * /privacy and /terms are served to anybody, carry `<meta name="robots"
+ * content="index, follow">`, and were listed in the sitemap — while holding
+ * thirteen and nine unfilled placeholders respectively. Facet Pro was asking
+ * Google to index two legal documents that say [COMPANY LEGAL NAME].
+ *
+ * Nothing caught it. refuseToStartIfTheNoticeIsUnfinished() in server.js
+ * inspects exactly these two files, and it is the right guard for the thing it
+ * guards — taking someone's details behind an unfinished Article 13 notice —
+ * so it only looks when LEAD_CAPTURE is on. Capture is off, so it never looked,
+ * and the pages went out anyway. Publishing an unfinished notice and
+ * collecting behind one are different failures; only the second had a guard.
+ *
+ * So this is deliberately not another switch to remember. The page tells us
+ * whether it is finished by whether it still has brackets in it, and it is
+ * read per request — no restart needed, and no cache to go stale when the
+ * brackets are filled. Same shape as the /investors gate, which un-404s itself
+ * the moment its two placeholders are replaced.
+ *
+ * What it does NOT do is refuse to serve the page. A site that processes
+ * photographs of people's homes and offers no privacy notice at all is worse
+ * than one offering a visibly draft notice — the draft is honest about being a
+ * draft, and it is what a visitor asking the question is entitled to see. It
+ * comes out of the sitemap and out of the index; it stays reachable.
+ *
+ * The same bracket pattern as server.js PLACEHOLDER, kept in step deliberately:
+ * a placeholder is defined by its brackets. */
+const PLACEHOLDER = /\[[A-Z][^\]]{2,200}\]/g;
+
+function placeholdersIn(file) {
+  try { return (fs.readFileSync(file, 'utf8').match(PLACEHOLDER) || []).length; }
+  catch (_) { return 0; }        // unreadable is not the same as unfinished
+}
 
 /**
  * @param {object} deps
@@ -53,11 +89,17 @@ module.exports = function pageRoutes({
   router.get('/sitemap.xml', (req, res) => {
     const base = SITE_URL.replace(/\/$/, '');
     const today = new Date().toISOString().slice(0, 10);
+    /* A page still full of brackets is not offered to search. It reappears
+       here by itself once they are filled — see the note at the top. */
+    const legal = [
+      { loc: '/privacy', file: 'privacy.html', priority: '0.3', changefreq: 'yearly' },
+      { loc: '/terms', file: 'terms.html', priority: '0.3', changefreq: 'yearly' },
+    ].filter(p => !placeholdersIn(path.join(__dirname, 'legal', p.file)));
+
     const urls = [
       { loc: '/', priority: '1.0', changefreq: 'weekly' },
       ...landing.allPaths().map(p => ({ loc: p, priority: '0.8', changefreq: 'monthly' })),
-      { loc: '/privacy', priority: '0.3', changefreq: 'yearly' },
-      { loc: '/terms', priority: '0.3', changefreq: 'yearly' },
+      ...legal,
     ];
     res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>
   <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -120,8 +162,18 @@ module.exports = function pageRoutes({
     res.type('html').send(html);
   });
 
-  router.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, 'legal', 'privacy.html')));
-  router.get('/terms', (req, res) => res.sendFile(path.join(__dirname, 'legal', 'terms.html')));
+  /* Served either way; indexed only when finished. X-Robots-Tag rather than
+     editing the meta tag in the file, because the header is an instruction to
+     every crawler including ones that never parse the HTML, and because the
+     day somebody fills the brackets in they should not also have to remember
+     to change a meta tag back. */
+  const legalPage = (file) => (req, res) => {
+    const full = path.join(__dirname, 'legal', file);
+    if (placeholdersIn(full)) res.set('X-Robots-Tag', 'noindex, nofollow');
+    res.sendFile(full);
+  };
+  router.get('/privacy', legalPage('privacy.html'));
+  router.get('/terms', legalPage('terms.html'));
   /* Gated — see requireInvestorPassword. noindex and robots.txt remain, but
      they were never the control; they only keep it out of search results.
      Served from gated/, which is not in PUBLIC_DIRS, so there is no static path

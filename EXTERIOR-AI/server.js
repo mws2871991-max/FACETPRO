@@ -3425,6 +3425,30 @@ function investorPageUnfinished() {
 }
 
 function refuseToStartIfTheNoticeIsUnfinished() {
+  /* Say it either way, and only refuse when capture is on.
+
+     The refusal is right to be conditional: taking somebody's details behind an
+     unfinished Article 13 notice is the serious failure, and refusing to serve
+     the whole site over a draft notice nobody is being asked to agree to yet
+     would deny every homeowner the product to fix a page.
+
+     But silence was wrong. This printed nothing at all with capture off, and
+     meanwhile /privacy and /terms were being served to the public — indexable,
+     in the sitemap, twenty-two unfilled placeholders between them — for long
+     enough that an external review found them before anything here did.
+     Publishing an unfinished notice and collecting behind one are different
+     failures and only the second was watched. The pages now carry noindex
+     while they have brackets in them (see routes/pages.js); this is the line
+     that says so out loud at boot. */
+  const left = PAGES_WITH_PLACEHOLDERS.reduce((n, page) => n + countPlaceholders(page), 0);
+  if (left && !LEAD_CAPTURE) {
+    console.warn(
+      `${left} placeholder(s) still in ${PAGES_WITH_PLACEHOLDERS.join(' and ')}. ` +
+      'Those pages are public. They are served with noindex and kept out of the ' +
+      'sitemap until the brackets are filled, and lead capture cannot be turned ' +
+      'on while they remain.');
+  }
+
   /* The legal pages only, and only when LEAD_CAPTURE is on — that is when
      somebody's details are taken behind them. */
   const pages = LEAD_CAPTURE ? PAGES_WITH_PLACEHOLDERS : [];
