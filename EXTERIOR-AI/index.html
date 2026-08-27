@@ -325,7 +325,11 @@
            the whole-exterior story told once, properly, further down. -->
       <a href="#our-work" class="hidden sm:block text-xs px-3 py-2 rounded-full hover:bg-white transition">Our work</a>
       <a href="#how-it-works" class="hidden sm:inline-grid place-items-center text-xs px-3 rounded-full hover:bg-white transition min-h-[44px]">How it works</a>
-      <a href="#your-photo" class="text-xs px-4 rounded-full bg-zinc-900 text-white hover:bg-zinc-800 transition min-h-[44px] inline-grid place-items-center">Start with a photo</a>
+      <!-- Brief §8: one primary action, worded the same everywhere. This said
+           "Start with a photo", the hero said "See what my house could look
+           like" and the close said the same again — three labels for one
+           action, which is the list the brief asks to stop rotating between. -->
+      <a href="#your-photo" class="text-xs px-4 rounded-full bg-zinc-900 text-white hover:bg-zinc-800 transition min-h-[44px] inline-grid place-items-center">Upload a photo</a>
     </nav>
   </div>
 </header>
@@ -369,7 +373,12 @@
              keeps "No sales call unless you ask", which is enforced in code
              rather than promised in copy. -->
         <h1 id="hero-heading" class="mt-4 serif text-[34px] sm:text-[42px] md:text-[52px] leading-[0.98] tracking-[-0.03em]">See your house. See the price. Before anyone comes&nbsp;round.</h1>
-        <p class="mt-5 text-[16px] md:text-[18px] leading-7 text-white/75 max-w-[46ch]">Upload one photo of your home. Facet Pro shows you what it could look like &mdash; then gives you an itemised estimate for the work. Windows, doors, cladding, roof, fascias. Five trades. One photograph.</p>
+        <!-- Brief §1, verbatim. The line it replaces ended "Windows, doors,
+             cladding, roof, fascias. Five trades. One photograph." — accurate,
+             and three sentences of specification before the reader has agreed
+             they want the thing. The trades are still named, in How it works
+             and in the estimate breakdown, where somebody is looking for them. -->
+        <p class="mt-5 text-[16px] md:text-[18px] leading-7 text-white/75 max-w-[46ch]">Upload one photo. See new windows, doors and exterior improvements on your actual home, then get a realistic itemised estimate &mdash; before speaking to a salesperson.</p>
         <!-- "No guesswork" was the third item here, and it contradicted the
              rest of the page. The methodology section says the photograph
              measurement is still being calibrated against surveyed properties,
@@ -382,12 +391,26 @@
         <div class="mt-7 flex flex-col sm:flex-row gap-3">
           <!-- The id stays: the handler bound to it scrolls to the upload
                block, which now sits directly underneath rather than five
-               screens down. -->
-          <button id="hero-upload" type="button" class="cta w-full sm:w-auto px-7 py-4 rounded-full text-[15px] font-semibold transition min-h-[52px]">See what my house could look like &rarr;</button>
+               screens down.
+
+               Label from the brief §8, which asks for one primary action used
+               everywhere and names the old label — "See what my house could
+               look like" — as one of the five to stop rotating between. The
+               behaviour deliberately does not change to match: the button
+               scrolls, it does not open the file picker. That was decided
+               once already (see the handler at the foot of this file) on the
+               grounds that demanding a photograph of somebody's house on the
+               first tap is the highest-friction opening move available. The
+               upload panel it lands on has its own "Choose a photo". -->
+          <button id="hero-upload" type="button" class="cta w-full sm:w-auto px-7 py-4 rounded-full text-[15px] font-semibold transition min-h-[52px]">Upload a photo</button>
           <a href="#our-work" class="w-full sm:w-auto px-6 py-4 rounded-full border border-white/20 text-[15px] font-medium hover:bg-white/10 transition text-center min-h-[52px] grid place-items-center">See real homes</a>
         </div>
 
-        <p class="mt-5 text-[13px] text-white/60">Free to try &nbsp;&bull;&nbsp; One photo &nbsp;&bull;&nbsp; No sales call unless you ask</p>
+        <!-- Brief §1. "One photo" became "No measurements": the photo is
+             already the headline and the subhead, whereas "do I need to
+             measure my house?" is a live objection — it has its own FAQ
+             entry — and it was answered nowhere near the button. -->
+        <p class="mt-5 text-[13px] text-white/60">Free to try &nbsp;&bull;&nbsp; No measurements &nbsp;&bull;&nbsp; No sales call unless you ask</p>
 
         <!-- Beside the button, because that is where the hesitation is: the
              review's point was that "is my photo kept?" is the question a
@@ -571,57 +594,48 @@
        before it is saved is a design nobody can come back to. -->
   <div id="mount-share"></div>
 
-  <!-- P2: restyled to four steps and moved directly under the hero, per the
-       investor pack. The step copy is unchanged in substance — it was already
-       accurate — but the sequence now names the analysis explicitly, because
-       "AI analyses your home" is the step a reader is being asked to believe. -->
+  <!-- Brief §3: three steps, minimal text, and explicitly no computer-vision
+       explanation, no measurement algorithm, no pipeline.
+
+       This was four steps, and the one that went was "The photo is analysed —
+       computer vision finds every window, door, wall and roof, and measures
+       the elevation". It was added on the reasoning that "AI analyses your
+       home" is the step a reader is being asked to believe, which is an
+       investor's question rather than a homeowner's: the homeowner finds out
+       whether it worked by looking at the detection panel on their own house
+       thirty seconds later. The brief's §10 keeps the answer available, in
+       one compact section, phrased as "how can one photo be enough?".
+
+       Also gone: the pipeline diagram that followed this section — Input →
+       Component detection → Measurement → Visualisation → Pricing engine →
+       Output. Brief §3 names technical pipelines as a thing not to include
+       and §6 names detailed technology architecture as content to remove. It
+       described the software to somebody who came to price their windows. -->
   <section id="how-it-works" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24" aria-labelledby="how-heading">
     <h2 id="how-heading" class="serif text-[26px] md:text-[32px] tracking-tight">How it works</h2>
-    <p class="mt-2 text-sm text-zinc-600 max-w-[62ch]">Four steps, start to finish, without anybody coming to your house.</p>
-    <ol class="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <p class="mt-2 text-sm text-zinc-600 max-w-[62ch]">Three steps, start to finish, without anybody coming to your house.</p>
+    <ol class="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
       <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
         <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">1</span>
-        <h3 class="mt-4 text-[15px] font-medium">Upload a photo</h3>
-        <p class="mt-2 text-[13px] leading-6 text-zinc-600">One picture of the front of your home, taken from the pavement. No measurements, no visit.</p>
+        <h3 class="mt-4 text-[15px] font-medium">Upload your home</h3>
+        <p class="mt-2 text-[13px] leading-6 text-zinc-600">One picture of the front of your house, taken from the pavement. No measurements, no visit.</p>
       </li>
       <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
         <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">2</span>
-        <h3 class="mt-4 text-[15px] font-medium">The photo is analysed</h3>
-        <p class="mt-2 text-[13px] leading-6 text-zinc-600">Computer vision finds every window, door, wall and roof, and measures the elevation &mdash; your front door gives it the scale.</p>
+        <h3 class="mt-4 text-[15px] font-medium">Try different looks</h3>
+        <p class="mt-2 text-[13px] leading-6 text-zinc-600">Windows, doors, walls, roof and roofline &mdash; try them on your own house and watch the price move with every choice.</p>
       </li>
       <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
         <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">3</span>
-        <h3 class="mt-4 text-[15px] font-medium">See it on your house</h3>
-        <p class="mt-2 text-[13px] leading-6 text-zinc-600">Frames, front door, walls, roof and roofline &mdash; try them and watch the price move with every choice. Conservatories are guide ranges to compare styles, not priced from your photo.</p>
-      </li>
-      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
-        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">4</span>
-        <h3 class="mt-4 text-[15px] font-medium">Get an itemised estimate</h3>
-        <p class="mt-2 text-[13px] leading-6 text-zinc-600">A costed, broken-down planning estimate in seconds. Keep it, and installers quote from what you already chose.</p>
+        <h3 class="mt-4 text-[15px] font-medium">See the likely cost</h3>
+        <p class="mt-2 text-[13px] leading-6 text-zinc-600">An itemised planning estimate, before you decide whether you want to speak to an installer at all.</p>
       </li>
     </ol>
-    <p class="mt-6 text-sm leading-6 text-zinc-600 max-w-[68ch]">That one photo covers <strong>windows</strong>, <strong>doors</strong>, <strong>walls &mdash; cladding or render</strong>, <strong>fascias, soffits and guttering</strong>, and <strong>the roof</strong>. Five trades. Five companies you would otherwise be booking, waiting in for, and chasing. Priced here together, so you see what the job really costs instead of five figures that never add up to one. A conservatory can travel with your enquiry too, as a guide range rather than a price from your photo.</p>
-  </section>
-
-  
-
-  <!-- P4: the signature graphic. Plain markup rather than SVG so it reflows on
-       a phone and inherits the palette. -->
-  <section class="rounded-2xl bg-zinc-900 text-[#FBF8F3] p-6 md:p-10" aria-label="From photograph to price">
-    <h2 class="serif text-[24px] md:text-[30px] tracking-tight">From photo to price in one pipeline</h2>
-    <ol class="mt-6 flex flex-col md:flex-row md:items-stretch gap-3 md:gap-2">
-      <li class="flex-1 rounded-xl bg-white/5 border border-white/10 p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-white/40">Input</div><div class="mt-1 text-[15px] font-medium">Home photo</div></li>
-      <li class="hidden md:flex items-center text-white/30" aria-hidden="true">&rarr;</li>
-      <li class="flex-1 rounded-xl bg-white/5 border border-white/10 p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-white/40">Step</div><div class="mt-1 text-[15px] font-medium">Component detection</div></li>
-      <li class="hidden md:flex items-center text-white/30" aria-hidden="true">&rarr;</li>
-      <li class="flex-1 rounded-xl bg-white/5 border border-white/10 p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-white/40">Step</div><div class="mt-1 text-[15px] font-medium">Measurement</div></li>
-      <li class="hidden md:flex items-center text-white/30" aria-hidden="true">&rarr;</li>
-      <li class="flex-1 rounded-xl bg-white/5 border border-white/10 p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-white/40">Step</div><div class="mt-1 text-[15px] font-medium">Visualisation</div></li>
-      <li class="hidden md:flex items-center text-white/30" aria-hidden="true">&rarr;</li>
-      <li class="flex-1 rounded-xl bg-white/5 border border-white/10 p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-white/40">Step</div><div class="mt-1 text-[15px] font-medium">Pricing engine</div></li>
-      <li class="hidden md:flex items-center text-white/30" aria-hidden="true">&rarr;</li>
-      <li class="flex-1 rounded-xl bg-white/10 border border-white/20 p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-white/40">Output</div><div class="mt-1 text-[15px] font-medium">Itemised estimate</div></li>
-    </ol>
+    <!-- Kept from the long paragraph this replaces, because five appointments
+         is the reader's actual problem and the trades are what they came to
+         price. The rest of it — what never adds up to one figure, the
+         conservatory caveat — is said again where it applies. -->
+    <p class="mt-6 text-sm leading-6 text-zinc-600 max-w-[68ch]">One photo covers <strong>windows</strong>, <strong>doors</strong>, <strong>walls</strong>, <strong>fascias, soffits and guttering</strong> and <strong>the roof</strong> &mdash; five companies you would otherwise be booking, waiting in for and chasing, priced together.</p>
   </section>
 
 
@@ -658,16 +672,38 @@
       <div class="rounded-xl border border-zinc-200 p-5 text-center"><div class="serif text-[28px] measured">3</div><div class="mt-1 text-[12px] uppercase tracking-widest text-zinc-500">Installers per lead, capped</div></div>
       <div class="rounded-xl border border-zinc-200 p-5 text-center"><div class="serif text-[28px] measured">24</div><div class="mt-1 text-[12px] uppercase tracking-widest text-zinc-500">Years in the trade behind the pricing</div></div>
     </div>
-    <p class="mt-4 text-[11px] leading-5 text-zinc-500 max-w-[72ch]">Facet Pro is in beta and pre-revenue. Usage figures are not shown because there are not yet enough of them to mean anything &mdash; when there are, they will appear here and they will be real.</p>
+    <!-- Brief §11: say what affects the customer, not what affects the
+         company. This read "Facet Pro is in beta and pre-revenue" — the second
+         half is investor vocabulary, it tells a homeowner nothing about
+         whether the estimate is any good, and on a page asking for a
+         photograph of their house it mostly reads as "will these people still
+         be here next month". The beta status stays, because that one does
+         affect them, and so does the reason usage figures are absent. -->
+    <p class="mt-4 text-[11px] leading-5 text-zinc-500 max-w-[72ch]">Facet Pro is in beta. We&rsquo;re still improving the visualisations and estimates as more homes and real projects are tested &mdash; if something doesn&rsquo;t look right, tell us. Usage figures are not shown because there are not yet enough of them to mean anything; when there are, they will appear here and they will be real.</p>
   </section>
 
-  <!-- P6: who pays. The pack was right that this was nowhere on the page. -->
+  <!-- Brief §4, which calls this the strategically important section: the
+       point is not the commercial arrangement, it is that the visitor can
+       research the job without becoming a lead by accident.
+
+       That is what this section already demonstrated — it carries the four-step
+       journey ending "you ask to be quoted" — but it was filed under the
+       eyebrow "Business model" and headed "Who pays for this", which is the
+       investor's framing of the same facts. Same content, the homeowner's
+       question on the front of it. The "you do not pay" answer follows
+       immediately, because it is the first thing anybody wonders next. -->
   <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="model-heading">
-    <p class="text-[11px] tracking-[0.25em] uppercase text-zinc-400">Business model</p>
-    <h2 id="model-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">Who pays for this</h2>
+    <p class="text-[11px] tracking-[0.25em] uppercase text-zinc-400">You stay in control</p>
+    <h2 id="model-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">Research your project before you become a lead</h2>
+    <!-- This opened "You do not." — the answer to the heading that used to sit
+         above it, "Who pays for this". With the brief's heading in its place
+         the reply had no question, so it states the thing directly. -->
     <p class="mt-3 max-w-[72ch] text-[14px] leading-7 text-zinc-600">
-      <strong>You do not.</strong> Facet Pro is free for homeowners, with no account required and
-      nothing to cancel. Installers pay for a lead &mdash; and only when you have asked to be quoted.
+      Most home-improvement journeys start with a form, then a phone call, then an appointment, then a
+      sales conversation. This one works the other way round: look, price it, and decide afterwards
+      whether you want to speak to anybody. Facet Pro is <strong>free for homeowners</strong>, with no
+      account required and nothing to cancel. Installers pay for a lead &mdash; and only when you have
+      asked to be quoted.
     </p>
     <ol class="mt-6 flex flex-col md:flex-row md:items-stretch gap-3 md:gap-2">
       <li class="flex-1 rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-zinc-400">1</div><div class="mt-1 text-[14px] font-medium">You upload a photo</div></li>
@@ -718,7 +754,11 @@
              firms quote for identical work is the thing this section is about,
              so the range is evidence for the argument rather than a caveat. -->
         <p class="mt-4 text-[13px] leading-6 text-white/55">It is why your estimate arrives as a range rather than one number. The lower end is close to what the keener of the two national installers settles at; the higher end is what the same job goes out at elsewhere. Same windows, same house, same work.</p>
-        <button type="button" class="mt-6 cta px-6 py-3.5 rounded-full text-[14px] font-semibold transition min-h-[48px]" onclick="document.getElementById('your-photo')?.scrollIntoView({behavior:'smooth'})">See what my house should cost &rarr;</button>
+        <!-- Brief §8 again. This was a fourth wording — "See what my house
+             should cost" — and it survived the sweep of the other three
+             because it is the only one phrased around price rather than
+             appearance. Same action, same words as everywhere else. -->
+        <button type="button" class="mt-6 cta px-6 py-3.5 rounded-full text-[14px] font-semibold transition min-h-[48px]" onclick="document.getElementById('your-photo')?.scrollIntoView({behavior:'smooth'})">Upload a photo</button>
         <p class="mt-3 text-[12px] text-white/50">Free to try &nbsp;&bull;&nbsp; No sales call unless you ask</p>
       </div>
     </div>
@@ -726,7 +766,9 @@
 
   <!-- P7: comparison cards, straight from the pack. -->
   <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="diff-heading">
-    <h2 id="diff-heading" class="serif text-[26px] md:text-[32px] tracking-tight">Why this is different</h2>
+    <!-- Brief §9's headline. "Why this is different" made the reader supply
+         the subject; this one names it. -->
+    <h2 id="diff-heading" class="serif text-[26px] md:text-[32px] tracking-tight">A different way to start a home improvement project</h2>
     <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
       <!-- Section 07 of the copy handoff: the right column mirrored the
            negatives on the left, so it read as a list of things that do not
@@ -767,15 +809,21 @@
        catalogue, so they are separated below rather than mixed in — a reader
        can see at a glance which is which, which is the only version of this
        section that survives somebody clicking through to check. -->
+  <!-- Brief §5: show what can be done now, and keep the roadmap to a line.
+
+       Two things went. The opening paragraph — "the marginal cost of pricing
+       another trade against it is close to nothing, that is what makes this a
+       platform rather than a calculator" — is a unit-economics argument aimed
+       at an investor, and §6 lists both marginal cost calculations and
+       platform economics as content to remove. And the three dashed chips for
+       driveways, solar and landscaping: honest labelling, but §5 asks not to
+       confuse the visitor with a roadmap, and a homeowner who wants solar now
+       knows only that they cannot have it here. The line says that in nine
+       words instead of three chips and a heading. -->
   <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="vision-heading">
-    <p class="text-[11px] tracking-[0.25em] uppercase text-zinc-400">Platform roadmap</p>
-    <h2 id="vision-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">Beyond windows</h2>
-    <p class="mt-3 max-w-[72ch] text-[14px] leading-7 text-zinc-600">
-      Once a house has been measured, the marginal cost of pricing another trade against it is close to
-      nothing. That is what makes this a platform rather than a calculator.
-    </p>
-    <p class="mt-5 text-[12px] uppercase tracking-widest text-zinc-500">Priced today</p>
-    <div class="mt-2 flex flex-wrap gap-2 text-[13px]">
+    <p class="text-[11px] tracking-[0.25em] uppercase text-zinc-400">What you can improve</p>
+    <h2 id="vision-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">Priced from your photo today</h2>
+    <div class="mt-5 flex flex-wrap gap-2 text-[13px]">
       <span class="px-3 py-1.5 rounded-full bg-zinc-900 text-white">Windows</span>
       <span class="px-3 py-1.5 rounded-full bg-zinc-900 text-white">Doors</span>
       <span class="px-3 py-1.5 rounded-full bg-zinc-900 text-white">Cladding &amp; render</span>
@@ -783,12 +831,7 @@
       <span class="px-3 py-1.5 rounded-full bg-zinc-900 text-white">Roofs</span>
       <span class="px-3 py-1.5 rounded-full bg-zinc-900 text-white">Conservatories</span>
     </div>
-    <p class="mt-5 text-[12px] uppercase tracking-widest text-zinc-500">On the roadmap &mdash; not built yet</p>
-    <div class="mt-2 flex flex-wrap gap-2 text-[13px]">
-      <span class="px-3 py-1.5 rounded-full border border-dashed border-zinc-300 text-zinc-500">Driveways</span>
-      <span class="px-3 py-1.5 rounded-full border border-dashed border-zinc-300 text-zinc-500">Solar</span>
-      <span class="px-3 py-1.5 rounded-full border border-dashed border-zinc-300 text-zinc-500">Landscaping</span>
-    </div>
+    <p class="mt-4 text-[12px] leading-5 text-zinc-500">Conservatories are guide ranges to compare styles, not priced from your photo. More home improvements coming soon.</p>
   </section>
 
   <!-- P9: the founder section. The pack's markup carried {{FOUNDER_NAME}} and
@@ -800,14 +843,16 @@
   <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="founder-heading">
     <p class="text-[11px] tracking-[0.25em] uppercase text-zinc-400">Why this exists</p>
     <h2 id="founder-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">Built by somebody who sold these for twenty-four years</h2>
+    <!-- Brief §6 sends the founder story to an About page. There is no About
+         page — index.html is the only consumer page on this site — so it is
+         shortened here rather than moved, which is what the alternative
+         actually amounts to today. Three paragraphs to three sentences,
+         keeping the part that earns the estimate its credibility: the rooms,
+         why identical houses pay different amounts, and that this is that
+         knowledge written down. What went was the middle paragraph, which
+         restated the fairness section a screen further up. -->
     <div class="mt-5 max-w-[72ch] text-[14px] leading-7 text-zinc-600">
-      <!-- Final review, point 3: "twenty-four years" was in the heading above
-           and again in this first line. Kept in the heading, where it carries
-           weight, and dropped here — the paragraph says the same thing better
-           by describing the rooms rather than counting them. -->
-      <p>Front rooms, on weeknights, for a national installer. Long enough to know exactly what a job settles at &mdash; and exactly why two identical houses on the same street end up paying wildly different amounts for the same work.</p>
-      <p class="mt-3">It is not the product that varies. It is how long somebody is willing to sit there. Plenty of people do not want that evening, and should not have to have it in order to be charged a fair price.</p>
-      <p class="mt-3">Facet Pro is that knowledge written down: what these jobs actually cost, offered to everybody at the same number, from one photograph, without anybody coming to the house.</p>
+      <p>Front rooms, on weeknights, for a national installer. Long enough to know what a job settles at &mdash; and why two identical houses on the same street pay wildly different amounts for the same work, which is not the product varying but how long somebody was willing to sit there. Facet Pro is that knowledge written down: offered to everybody at the same number, from one photograph, without anybody coming to the house.</p>
     </div>
   </section>
 
@@ -948,67 +993,52 @@
        it to the count borrowed credibility the pricing engine had earned and
        the conservatory guide had not. -->
   <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="tech-heading">
-    <p class="text-[11px] tracking-[0.25em] uppercase text-zinc-400">Proprietary technology</p>
-    <h2 id="tech-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">What happens to your photograph</h2>
+    <!-- Brief §10: keep this compact, and head it with the question a
+         homeowner actually has — "how can one photo be enough?" — rather than
+         "Proprietary technology", which is the eyebrow this carried and is the
+         investor's framing of the same material.
+
+         Trimmed from six cards to three. Component detection, the pricing
+         engine and visualisation each described a stage of the software; the
+         homeowner watches all three happen to their own house a minute later,
+         and §3 asks for no computer-vision or server-side explanation. What is
+         left is the three things that are not visible from using it: where the
+         scale comes from, that one elevation is being extrapolated to a whole
+         house, and that the number carries a stated range.
+
+         The id stays `tech-heading` because the hero and the upload panel both
+         link here for "How your photo is used", so the privacy answer stays in
+         this section too, at the foot, with the link out. -->
+    <p class="text-[11px] tracking-[0.25em] uppercase text-zinc-400">Accuracy</p>
+    <h2 id="tech-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">How can one photo be enough?</h2>
     <p class="mt-3 max-w-[72ch] text-[14px] leading-7 text-zinc-600">
-      A photograph is not a measurement. Turning one into a price means working out how big the building
-      actually is, and there is only one object of known size in almost every picture of a British home:
-      the front door. It is 1.98&nbsp;m. Everything else follows from it.
+      Facet Pro uses visible features and proportions in your photograph to build an initial
+      understanding of your home&rsquo;s exterior. There is one object of known size in almost every
+      picture of a British home: the front door. It is 1.98&nbsp;m, and everything else follows from
+      it. You can check and correct the important details before your estimate is calculated.
     </p>
-    <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Component detection</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">Every window, door, wall and roof located as a distinct element, with a confidence score attached to each.</p></div>
+    <div class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Scale from the door</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">A UK front door is a known height. The elevation is measured against it &mdash; no reference object, no tape measure, no visit.</p></div>
       <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Whole-house inference</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">One elevation is visible; a quote covers the house. Front measurements scale to the whole property by house type.</p></div>
-      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Pricing engine</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">Areas and counts become itemised costs across five trades, computed on the server so the figure cannot be tampered with.</p></div>
-      <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Visualisation</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">Your actual house re-finished photorealistically &mdash; the perspective, shadows and openings held exactly as they were.</p></div>
       <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Stated uncertainty</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">Every estimate carries a range and says which method produced it. A number without its error bars is a guess.</p></div>
     </div>
-    <!-- Final review, point 4: put the emphasis on what is owned rather than
-         on what is rented. The fact itself is unchanged and still stated — a
-         technical reader establishes it in a minute either way, and a page
-         that volunteered it first is trusted on everything else it says. What
-         changes is which half of the sentence leads. -->
     <p class="mt-5 text-[12px] leading-6 text-zinc-500 max-w-[72ch]">
-      The vision and image-generation models Facet Pro uses are licensed. The measurement method, the
-      whole-house inference, the pricing engine and the rate catalogue behind it are ours.
+      Your original photograph isn&rsquo;t saved &mdash; we keep the image we generate, not your
+      photograph. <a href="/privacy" class="underline underline-offset-2 hover:text-zinc-800">What happens to your photo</a>.
     </p>
-    <!-- The pack lists four questions an investor arrives with: what is
-         proprietary, how does it scale, what is the business model, and why
-         can't somebody else build this. Three are answered by sections. The
-         fourth was answered nowhere, and it is the one that decides a meeting.
+    <!-- "Why this is hard to copy" stood here — the defensibility argument,
+         written for the fourth question an investor arrives with. Removed per
+         brief §6, which names competitive moat and defensibility first on the
+         list of content to take off the homepage.
 
-         It sits here rather than in a section of its own because the honest
-         answer is not a feature — it is that the models are cheap and the
-         pricing knowledge is not. That lands hardest immediately after a
-         reader has been told exactly what the models are. -->
-    <div class="mt-6 rounded-xl bg-[#FDFCF9] border border-zinc-200 p-5">
-      <h3 class="text-[15px] font-medium">Why this is hard to copy</h3>
-      <p class="mt-2 max-w-[72ch] text-[13px] leading-6 text-zinc-600">
-        The models can be rented by anybody. What cannot be rented is knowing what a job settles at
-        &mdash; not the list price, but the number it actually goes out at once the discounting is
-        done. That came from twenty-four years of selling these in people&rsquo;s houses, and it is what
-        the whole estimate rests on. A competitor with the same models and a published rate card
-        produces confident figures that are wrong, and finds out at survey.
-      </p>
-      <p class="mt-3 max-w-[72ch] text-[13px] leading-6 text-zinc-600">
-        The second half is supply. Installers who will pay for leads have to be signed, and they sign
-        with somebody they already know. Both of ours were.
-      </p>
-      <!-- Final review, point 5: the scaling story. Written as what the system
-           is built to do rather than what it already does, because it does not
-           do it yet — there is no feedback loop wired in, and the calibration
-           set is data/survey-samples.json with seventeen rows and no known
-           wall areas in them. "Every property analysed strengthens…" as a
-           present-tense claim is the kind a technically curious investor asks
-           to see, and there would be nothing to show. Stated as design, it is
-           true today and becomes truer with every completed job. -->
-      <p class="mt-3 max-w-[72ch] text-[13px] leading-6 text-zinc-600">
-        And it compounds. The system is built so that every property analysed and every job completed
-        feeds back into the pricing intelligence, the measurement accuracy and the picture of what
-        people are actually renovating &mdash; so the estimates get sharper as the platform grows,
-        and the gap in front of anybody starting from scratch widens.
-      </p>
-    </div>
+         It was the single worst thing on the page for the person it was being
+         shown to. Its argument ran: a competitor with the same models and a
+         published rate card produces confident figures that are wrong, and
+         finds out at survey. A homeowner deciding whether to trust an estimate
+         reads that and asks the obvious next question about ours — on a page
+         that has just explained the estimate is a planning figure confirmed at
+         survey. The moat argument belongs on /investors, where the reader is
+         the one it was written for. -->
   </section>
 
   <!-- Section 10 of the copy handoff: a close.
@@ -1022,14 +1052,19 @@
        the same low-risk restatement of what it costs them to try. The
        installer accordion follows, smaller, where it belongs. -->
   <section class="rounded-2xl bg-zinc-900 text-[#FBF8F3] p-6 md:p-10 text-center" aria-labelledby="close-heading">
-    <h2 id="close-heading" class="serif text-[26px] md:text-[36px] leading-[1.08] tracking-[-0.02em] max-w-[22ch] mx-auto">
-      You won't know what it could look like until you see it.
+    <!-- Brief §13, and the CTA rule in §8. The close read "You won't know what
+         it could look like until you see it" over the third distinct wording
+         of the same button. Headline, copy, button and trust line are the
+         brief's; the close is still not a repeat of the hero, which was the
+         point of the version it replaces. -->
+    <h2 id="close-heading" class="serif text-[26px] md:text-[36px] leading-[1.08] tracking-[-0.02em] max-w-[24ch] mx-auto">
+      See your house. See the likely cost. Then decide what to do next.
     </h2>
     <p class="mt-5 text-[15px] leading-7 text-white/75 max-w-[54ch] mx-auto">
-      Upload one photograph. See your home with new windows, a new door, render, cladding or a new roof &mdash; and get an itemised estimate before you speak to anybody.
+      Upload a photo and explore your home improvement project before speaking to anyone.
     </p>
-    <button type="button" class="mt-7 cta px-7 py-4 rounded-full text-[15px] font-semibold transition min-h-[52px]" onclick="document.getElementById('your-photo')?.scrollIntoView({behavior:'smooth'})">See what my house could look like &rarr;</button>
-    <p class="mt-4 text-[13px] text-white/60">Free to try &nbsp;&bull;&nbsp; One photo &nbsp;&bull;&nbsp; No sales call unless you ask</p>
+    <button type="button" class="mt-7 cta px-7 py-4 rounded-full text-[15px] font-semibold transition min-h-[52px]" onclick="document.getElementById('your-photo')?.scrollIntoView({behavior:'smooth'})">Upload my house</button>
+    <p class="mt-4 text-[13px] text-white/60">No measurements &nbsp;&bull;&nbsp; No obligation &nbsp;&bull;&nbsp; No sales call unless you ask</p>
   </section>
 
   <details id="trade" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8">
