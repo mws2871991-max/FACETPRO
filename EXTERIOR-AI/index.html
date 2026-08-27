@@ -112,6 +112,14 @@
   .cta{background-color:var(--brand-gold) !important;color:#111111 !important;border-color:var(--brand-gold) !important}
   .cta:hover{background-color:var(--brand-gold-hover) !important;border-color:var(--brand-gold-hover) !important}
   .measured{font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-0.01em}
+  /* The estimate has been sitting in the panel the whole time the render was
+     being made, so when the picture finally lands there is nothing to say
+     "and this is what it costs". One beat on the total, once, when the render
+     arrives. The UX handoff called for this and said the class already
+     existed; it did not, anywhere. The reduced-motion rule above neutralises
+     it, which is the right outcome — the number is legible either way. */
+  @keyframes bump{0%{transform:scale(1)}35%{transform:scale(1.09)}100%{transform:scale(1)}}
+  .bump{animation:bump .42s ease-out;display:inline-block}
   /* Room for the fixed total bar, so it never covers the last thing on the
      page — which would be the consent boxes. */
   body:has(#total-bar > div){padding-bottom:74px}
@@ -1869,7 +1877,15 @@ function buildUploadDetect() {
 
     order.forEach(d => {
       const x = d.x_pct ?? 0, y = d.y_pct ?? 0, w = d.w_pct ?? 0;
-      const text = `${d.label}${Number.isFinite(d.confidence) ? ' ' + Math.round(d.confidence * 100) + '%' : ''}`;
+      /* Label only. The percentage came off both here and the panel below:
+         it is the vision model's own estimate of itself, not a measurement,
+         and it clusters at 90–95 on everything it returns — so it varies too
+         little to help anybody spot a wrong box, while reading as though it
+         had been checked. This file already took the same decision once, when
+         "takes about a minute" came out of the hero because nothing timed it.
+         What the homeowner needs here is the name of the thing we found, and
+         the window count below is the control for correcting us. */
+      const text = d.label;
       const widthPct = Math.min(46, 2 + text.length * 1.15);   // ~9px glyphs on a 640-ish box
       /* Anchor right when the label would otherwise leave the picture. */
       const flip = x + widthPct > 97;
@@ -1904,9 +1920,9 @@ function buildUploadDetect() {
          seeing their own house understood.
 
          Nothing is lost by dropping them there. The panel directly below
-         lists every element by name, with its category and confidence, in
-         type that is comfortable to read. The boxes stay, so the analysis is
-         still visible on the photograph itself. */
+         lists every element by name and category, in type that is comfortable
+         to read. The boxes stay, so the analysis is still visible on the
+         photograph itself. */
       overlay.appendChild(h('span', {
         className: `hidden sm:block absolute text-[9px] px-1.5 py-0.5 rounded whitespace-nowrap ${inside ? 'bg-zinc-900/90' : 'bg-zinc-900'} text-white`,
         style: { left: leftEdge + '%', top: top + '%' },
@@ -1997,12 +2013,63 @@ function buildUploadDetect() {
       ]);
     });
 
+    /* One sentence saying what we read off the photograph, in the words the
+       homeowner would use. The five rows above answer "did you look?"; this
+       answers "what did you get?", which is the thing that either earns the
+       next click or doesn't.
+
+       Two rules.
+
+       It counts what is in `state.detections`, except for windows, where
+       `state.windowCount` wins — that is the number the homeowner corrected us
+       to, and it is the figure that goes on to price the glazing. Showing our
+       count next to a control they have already used to overrule it would be
+       arguing with them.
+
+       The wall area is only claimed when the wall area was actually measured
+       from the photo. `footprintM2` is populated whatever happens — from the
+       front door where one was found, from coverage, from a house-type prior,
+       or from a default UK footprint — and only the first two came off this
+       picture. Saying "we found ... about 95 m² of wall" over a house-type
+       average is inventing a measurement, on the panel whose entire job is to
+       prove we looked. buildRefineEstimate already reads `footprintSource`
+       back for exactly this reason.
+
+       Named in full rather than matched on a `photo_` prefix, which is the
+       trap: `photo_prior` starts with it and is not a measurement — it is the
+       typical figure for the house type, and buildRefineEstimate labels it
+       "a typical figure for your house type" three hundred lines down. A
+       prefix test reads as correct and quietly claims the one case it must
+       not. Only these two are measured off the picture. */
+    const MEASURED_FROM_PHOTO = ['photo_door', 'photo_coverage'];
+    const summaryLine = () => {
+      const real = state.detections.filter(d => d.type !== 'analysis');
+      const hits = (re) => real.filter(d => re.test(String(d.type || '')) || re.test(String(d.label || '')));
+
+      const windows = state.windowCount || hits(/window/i).length;
+      const measured = MEASURED_FROM_PHOTO.includes(String(state.price?.footprintSource || ''));
+
+      const parts = [];
+      if (windows) parts.push(`${windows} window${windows === 1 ? '' : 's'}`);
+      if (hits(/door/i).length) parts.push('a front door');
+      if (measured && state.price?.footprintM2) parts.push(`about ${state.price.footprintM2} m² of wall`);
+      if (!parts.length) return null;
+
+      const list = parts.length === 1
+        ? parts[0]
+        : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
+
+      return h('p', { className: 'mt-3 pt-3 border-t border-white/10 text-[11px] leading-5 text-white/65' },
+        `We found ${list}. If that isn’t right, correct it below — your number is the one we price.`);
+    };
+
     return h('div', { className: 'rounded-xl bg-white/5 border border-white/10 p-3' }, [
       h('p', {
         className: 'text-[11px] tracking-widest uppercase text-white/50 mb-2',
         role: 'status', 'aria-live': 'polite',
       }, detecting ? 'Analysing your house…' : 'Your house, as we read it'),
       h('div', { className: 'grid gap-1.5' }, rows),
+      answered ? summaryLine() : null,
     ]);
   }
 
@@ -2081,6 +2148,39 @@ function buildUploadDetect() {
       h('div', { className: 'rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-4' }, [
         fileInput,
         dropArea,
+        /* What "the whole front, with the front door visible" actually looks
+           like. The dashed guide above says it in words; a person holding a
+           phone at their gate is comparing against a picture, not a sentence.
+
+           The handoff nominated hero-before.jpg for this. That photograph is a
+           close crop of a bay window with the roofline cut off and no front
+           door in the frame — it is a demonstration of the mistake this panel
+           exists to prevent. semi-before-sm.jpg frames it correctly but
+           PROVENANCE.md records it as generated imagery, and captioning a
+           render "a photo like this" on the panel whose whole job is to be
+           believed is not a trade worth making.
+
+           So: newbuild-before, which is framed right, and a caption that
+           claims composition rather than provenance. The gallery's
+           "photographs, not renders" claim is still unsubstantiated for this
+           file (PROVENANCE.md is titled NOT YET COMPLETED) and nothing here
+           adds a second claim on top of it.
+
+           Gone once they have uploaded — an example of a good photo sitting
+           under the photo they just chose reads as a correction. */
+        state.uploadedImg ? null : h('div', { className: 'mt-3 flex items-center gap-3' }, [
+          h('img', {
+            src: '/assets/work/newbuild-before-sm.jpg',
+            alt: 'A well-framed example: the whole front of a house from the drive, roofline to ground, with the front door in shot',
+            width: 600, height: 450, loading: 'lazy', decoding: 'async',
+            className: 'w-[92px] shrink-0 rounded-lg border border-zinc-200 object-cover aspect-[4/3]',
+          }),
+          h('div', {}, [
+            h('p', { className: 'text-[10px] tracking-widest uppercase text-zinc-400' }, 'Framed like this'),
+            h('p', { className: 'mt-1 text-[11px] leading-5 text-zinc-500' },
+              'Roofline down to the ground, front door in shot. It doesn’t have to be a good photo — it has to be a whole one.'),
+          ]),
+        ]),
         /* The answer to the question being asked at this exact moment.
 
            From the user-journey review, stage 4: this is the biggest drop in
@@ -2141,7 +2241,6 @@ function buildUploadDetect() {
                 h('span', { className: 'text-xs' }, d.label),
                 h('span', { className: 'text-[10px] text-white/55 uppercase' }, d.type),
               ]),
-              h('span', { className: 'text-[10px] text-white/60' }, `${Math.round((d.confidence || 0) * 100)}% sure`),
             ]))
         ),
       ]),
@@ -2476,9 +2575,35 @@ function buildVisualizer() {
                 disabled: !state.uploadedBase64 || state.rendering,
                 onClick: generateRealRender,
               }, renderButtonLabel),
+              /* Something has to move. The picture takes up to a minute and
+                 the only feedback was a disabled button and a static line
+                 reading "Takes up to a minute" — after fifteen seconds of a
+                 page that has not changed, the reasonable conclusion is that
+                 it has broken, and the reasonable response is to leave.
+
+                 The counter is the honest version of the reassurance: it is
+                 measured rather than promised. The handoff also wanted the
+                 idle line changed to "Usually 30–45 seconds", and that is the
+                 hero's "takes about a minute" all over again — a timing claim
+                 with nothing behind it, swapping a ceiling we can stand behind
+                 for an average nobody has recorded. The ceiling stays.
+
+                 Updated by id rather than by re-rendering. renderVisualizerOnly
+                 replaces this whole section, so ticking it that way would
+                 rebuild the before/after slider once a second for a minute and
+                 throw away the drag position each time. */
               !state.uploadedBase64
                 ? h('div', { className: 'mt-2 text-[10px] text-zinc-500 text-center' }, 'Add a photo above first')
-                : h('div', { className: 'mt-2 text-[10px] text-zinc-500 text-center' }, 'Takes up to a minute'),
+                : state.rendering
+                  ? h('div', {
+                      className: 'mt-2 text-[10px] text-zinc-500 text-center',
+                      role: 'status', 'aria-live': 'polite',
+                    }, [
+                      'Working on your picture — ',
+                      h('span', { id: 'render-elapsed', className: 'measured' }, elapsedRenderLabel()),
+                      '. It can take up to a minute.',
+                    ])
+                  : h('div', { className: 'mt-2 text-[10px] text-zinc-500 text-center' }, 'Takes up to a minute'),
             ]),
       ]),
       h('div', { className: 'flex flex-col gap-6' }, [buildPricePanel(price, priceRow)]),
@@ -2585,7 +2710,7 @@ function buildPricePanel(price, priceRow) {
       priceRow('Waste allowance', price.waste, true),
       priceRow('VAT (20%)', price.vat, true),
       h('div', { className: 'h-px bg-white/10 my-1' }),
-      h('div', { className: 'flex justify-between gap-4 font-medium' }, [h('span', {}, 'Estimated total'), h('span', { className: 'measured' }, fmtMoney(price.total))]),
+      h('div', { className: 'flex justify-between gap-4 font-medium' }, [h('span', {}, 'Estimated total'), h('span', { id: 'estimate-total', className: 'measured' }, fmtMoney(price.total))]),
     ]),
     h('p', { className: 'mt-3 text-[10px] leading-4 text-white/50' }, ['Based on ', h('span', { className: 'measured' }, `${price.footprintM2} m²`), ' of wall.']),
     h('p', { className: 'mt-3 text-[10px] leading-4 text-white/50' }, catalogue_note()),
@@ -3358,11 +3483,43 @@ function glazingChoice() {
   return out;
 }
 
+/* The elapsed counter under the render button. Declared here rather than in
+   `state` on purpose: it is display only, it must not survive a re-render as a
+   stale number, and nothing else on the page reads it.
+
+   `function` rather than `const` — buildVisualizer calls it and is defined
+   above this line, so a const arrow would be in its temporal dead zone on the
+   first paint. That has bitten this codebase before. */
+let renderStartedAt = null;
+let renderTimer = null;
+
+function elapsedRenderLabel() {
+  if (!renderStartedAt) return '0s';
+  return `${Math.max(0, Math.round((Date.now() - renderStartedAt) / 1000))}s`;
+}
+
+function stopRenderTimer() {
+  if (renderTimer) { clearInterval(renderTimer); renderTimer = null; }
+  renderStartedAt = null;
+}
+
 async function generateRealRender() {
   if (!state.uploadedBase64) return;
+  let landed = false;
   state.rendering = true;
+  stopRenderTimer();              // a second run must not leave the first ticking
+  renderStartedAt = Date.now();
   U('Creating a picture of your home — this can take up to a minute…');
   renderVisualizerOnly();
+  /* Touch one text node a second. If the element is gone — the section was
+     re-rendered by a swatch tap, or the tab was backgrounded and never
+     repainted — there is nothing to update and nothing breaks; the next paint
+     reads the same clock through elapsedRenderLabel(). */
+  renderTimer = setInterval(() => {
+    if (!state.rendering) { stopRenderTimer(); return; }
+    const node = document.getElementById('render-elapsed');
+    if (node) node.textContent = elapsedRenderLabel();
+  }, 1000);
   try {
     const res = await fetch('/api/render', {
       method: 'POST',
@@ -3389,12 +3546,33 @@ async function generateRealRender() {
     state.renderUnavailable = false;
     state.renderUrl = safeRenderUrl(data.url);
     state.renderId = data.renderId || null;
+    landed = true;
     U('Your new look is ready — drag the slider to compare');
   } catch (err) {
     U(err.plain ? err.message : `We couldn’t create that picture: ${err.message}`);
   } finally {
     state.rendering = false;
+    stopRenderTimer();
     render();
+    /* The two things the homeowner came for arrive at different moments: the
+       picture lands here, and the price has been sitting in the panel beside
+       it, unchanged, for the last minute. One beat on the total ties them
+       together — "here is your house, and here is what it costs".
+
+       After render(), because render() has just replaced the node this is
+       looking for. The handoff asked for an auto-scroll to #save-moment on top
+       of this; not done, twice over. buildSaveMoment returns an empty div
+       while LEAD_CAPTURE is off, which is now, so it would scroll to nothing
+       on the live site — and moving the page off a picture somebody waited a
+       minute to see is the wrong instinct even when the target exists. */
+    if (landed) requestAnimationFrame(() => {
+      const total = document.getElementById('estimate-total');
+      if (!total) return;
+      total.classList.remove('bump');
+      void total.offsetWidth;                      // restart the animation
+      total.classList.add('bump');
+      setTimeout(() => total.classList.remove('bump'), 600);
+    });
   }
 }
 
@@ -3900,16 +4078,71 @@ function buildSaveFraming() {
      invites someone to type their details in, and the whole point of the
      switch is that nothing personal is entered — let alone sent. */
   if (!state.leadCapture) {
+    const hasRender = Boolean(state.renderId && state.renderUrl);
     return h('section', { id: 'save-design', className: 'rounded-2xl bg-[#111111] text-white p-6 md:p-8 scroll-mt-24' }, [
       h('p', { className: 'text-[11px] tracking-widest uppercase text-white/55' }, 'Step 4'),
       h('h2', { className: 'mt-1 serif text-[26px] md:text-[32px] tracking-tight' }, 'Saving your design is coming shortly'),
       h('p', { className: 'mt-3 text-sm leading-6 text-white/60 max-w-[60ch]' },
         'We’re not taking anyone’s details just yet — we’re finishing our privacy policy first, and we’d rather do that properly than collect your information before it’s ready.'),
-      h('p', { className: 'mt-3 text-sm leading-6 text-white/60 max-w-[60ch]' },
-        'Everything else on this page works, so do try the colours and the estimate. Come back shortly and you’ll be able to save what you’ve designed.'),
+
+      /* Somewhere to go, for the person who got all the way here and wants to
+         keep what they made.
+
+         The UX handoff rated this the critical change on the list and asked
+         for an email field wired to a new POST /api/notify — and that is the
+         one thing on the page that must not be built right now. An email
+         address is personal data. LEAD_CAPTURE is off precisely because the
+         privacy notice and terms still carry unfilled placeholders, and
+         refuseToStartIfTheNoticeIsUnfinished() only inspects those pages when
+         LEAD_CAPTURE is on. A second collection route would therefore sit
+         entirely outside the guard written to prevent exactly this, take
+         details behind an unfinished Article 13 notice, and do it on the card
+         that promises we are not doing that. Nothing in the endpoint would
+         look wrong; the guard simply would not be watching it.
+
+         The design already has a way to survive that costs nobody anything:
+         the render has a permanent link and a download, buildShare renders
+         both with capture off, and neither carries a name, an address or a
+         price. So point at it rather than at a form. */
+      hasRender
+        ? h('div', { className: 'mt-6 rounded-2xl bg-white/5 border border-white/10 p-4' }, [
+            h('p', { className: 'text-[13px] leading-6 text-white/80' },
+              'Your design isn’t lost, though — it already has a link of its own.'),
+            h('p', { className: 'mt-1 text-[12px] leading-5 text-white/55 max-w-[58ch]' },
+              'Send it to yourself, or save the picture to your phone, and you’ll have it when quotes open. The link carries the visualisation and nothing else — no name, no address, no price.'),
+            h('button', {
+              type: 'button',
+              className: 'cta mt-4 px-5 rounded-full text-[13px] font-semibold min-h-[48px]',
+              onClick: () => document.getElementById('share-design')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+            }, 'Keep my design →'),
+          ])
+        : h('p', { className: 'mt-3 text-sm leading-6 text-white/60 max-w-[60ch]' },
+            'Everything else on this page works, so do try the colours and the estimate. Come back shortly and you’ll be able to save what you’ve designed.'),
+
+      /* This read "Nothing you do on this page is stored or sent anywhere
+         while this notice is up." It is the strongest sentence on the card and
+         it was not true: every render is fetched back from the provider and
+         written by store.putRender(), unconditionally — LEAD_CAPTURE is not
+         consulted anywhere on that path, and it cannot be, because /r/:id and
+         the share link exist. A picture of somebody's house is stored the
+         moment they press the button.
+
+         What is true is the distinction the hero already draws, so it says
+         that instead: no details about them, and the image we generated
+         rather than the photograph they sent. Overstating this by one word on
+         the card whose subject is the unfinished privacy notice is the exact
+         failure the card is apologising for. */
       h('div', { className: 'mt-6 rounded-2xl bg-white/5 border border-white/10 p-4' }, [
-        h('p', { className: 'text-[12px] leading-5 text-white/60' },
-          'Nothing you do on this page is stored or sent anywhere while this notice is up.'),
+        h('p', { className: 'text-[12px] leading-5 text-white/60' }, [
+          'No details are taken or sent anywhere while this notice is up — no name, no address, no phone number. ',
+          /* Only claim the kept picture once there is one. Before a render
+             there is no stored image and no link, and describing one is the
+             same overstatement in the other direction. */
+          hasRender
+            ? 'We keep the picture we generated, so your link keeps working; your original photograph isn’t saved. '
+            : 'Your original photograph isn’t saved. ',
+          h('a', { href: '/privacy', className: 'underline underline-offset-2 hover:text-white/80' }, 'How your photo is used'),
+        ]),
       ]),
     ]);
   }
