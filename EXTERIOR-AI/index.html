@@ -562,6 +562,26 @@
     </p>
   </section>
 
+  <!-- UX/UI Optimisation handoff §2: a second CTA immediately after the first
+       strong visual proof.
+
+       Its argument is that this is one of the highest-intent points on the
+       page — somebody has just watched a real house change and has to scroll
+       past nothing to act on it. That is the whole of the reason, and it is a
+       good one.
+
+       Its suggested label is "See what my house could look like →". Not used:
+       the homepage brief's one-primary-action rule came first and is already
+       shipped in five places, and reintroducing a second wording here is the
+       exact rotation that rule exists to stop. The copy above the button is
+       the handoff's. -->
+  <section class="rounded-2xl bg-zinc-900 text-[#FBF8F3] p-6 md:p-8 text-center" aria-labelledby="proof-cta-heading">
+    <h2 id="proof-cta-heading" class="serif text-[24px] md:text-[30px] tracking-tight">That could be your house.</h2>
+    <p class="mt-3 text-[14px] leading-7 text-white/70 max-w-[46ch] mx-auto">Upload one photo and start exploring what your home could look like.</p>
+    <button type="button" class="mt-6 cta px-7 py-4 rounded-full text-[15px] font-semibold transition min-h-[52px]" onclick="document.getElementById('your-photo')?.scrollIntoView({behavior:'smooth',block:'start'})">Upload a photo</button>
+    <p class="mt-4 text-[12px] text-white/50">Free to try &nbsp;&bull;&nbsp; No measurements &nbsp;&bull;&nbsp; No sales call unless you ask</p>
+  </section>
+
   <div id="mount-triage"></div>
   <div id="mount-upload"></div>
   <div id="mount-visualizer"></div>
@@ -1367,7 +1387,10 @@ const state = {
   measurementSource: "default_footprint",
   catalogue: null,
   price: null,        // last computed price breakdown
-  renderUrl: null,    // AI-generated render, once produced
+  renderUrl: null,
+  // Set the first time they change anything, so the "now make it yours"
+  // prompt appears once and then gets out of the way. See buildVisualizer.
+  hasCustomised: false,    // AI-generated render, once produced
   renderId: null,     // our id for it — the lead sends this, never a URL
   rendering: false,
   sendingLead: false,
@@ -2238,7 +2261,13 @@ function buildUploadDetect() {
                detached, starting again and uploading a terrace would otherwise
                price 18 windows and label it "the number of windows you
                entered" — true, and materially misleading. */
-            onClick: () => { state.uploadedImg = null; state.uploadedBase64 = null; state.detections = []; state.stage = 'landing'; state.detectionStatus = 'idle'; state.renderUrl = null; state.windowCount = null; state.glazing = null; U('Photo removed — add another whenever you like'); render(); }
+            /* autoRenderDone and hasCustomised reset too: "Start again" is a
+               deliberate act, usually a better photograph, and the person who
+               takes it should get the same automatic before-and-after the
+               first one got rather than an empty frame and a button. It is one
+               more render against the daily cap, spent on somebody who has
+               demonstrably not given up. */
+            onClick: () => { state.uploadedImg = null; state.uploadedBase64 = null; state.detections = []; state.stage = 'landing'; state.detectionStatus = 'idle'; state.renderUrl = null; state.renderId = null; state.windowCount = null; state.glazing = null; state.hasCustomised = false; autoRenderDone = false; U('Photo removed — add another whenever you like'); render(); }
           }, 'Start again'),
         ]),
         /* The bail-out, next to the ask rather than below it.
@@ -2475,6 +2504,7 @@ function buildVisualizer() {
             if (group === 'Cladding') state.cladding = sw;
             if (group === 'Trim') state.trim = sw;
             if (group === 'Roof') state.roof = sw;
+            state.hasCustomised = true;   // they have found the controls; stop offering to show them
             state.renderUrl = null; state.renderId = null; // choice changed — the old render no longer matches
             /* Once per visit, not once per tap. The question this answers is
                "what share of visitors actually design something", and a
@@ -2534,6 +2564,38 @@ function buildVisualizer() {
       'An idea of how it might look, not a second photograph — try any time of day, it costs nothing and uses no extra renders.'),
   ]) : null;
 
+  /* "Now make it yours" — §6's second half, and the reason the automatic
+     render is not simply a free picture.
+
+     The handoff's sequence is: show the transformation, let them react, then
+     offer control. Without this the reaction has nowhere to go — the picture
+     arrives, and the next thing on screen is the same swatch row that was
+     there before, which reads as the end of the experience rather than the
+     start of it. This names the next step, once, at the moment the render
+     lands.
+
+     Only over a finished render, and only before they have started changing
+     things: once a swatch has been touched they have found the controls and
+     an invitation to find them is noise. */
+  const makeItYours = (state.renderUrl && !state.hasCustomised)
+    ? h('div', { className: 'mx-4 mb-4 rounded-xl bg-zinc-900 text-white p-4 flex items-center justify-between gap-3 flex-wrap' }, [
+        h('div', {}, [
+          h('p', { className: 'text-[13px] font-medium' }, 'Now make it yours'),
+          h('p', { className: 'mt-0.5 text-[11px] leading-5 text-white/60 max-w-[42ch]' },
+            'That is one look, chosen for you. Change the walls, the roof, the windows and the doors — the estimate moves with every choice.'),
+        ]),
+        h('button', {
+          type: 'button',
+          className: 'cta px-5 rounded-full text-[13px] font-semibold min-h-[44px] shrink-0',
+          onClick: () => {
+            state.hasCustomised = true;
+            document.getElementById('windows-doors')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            renderVisualizerOnly();
+          },
+        }, 'Start customising'),
+      ])
+    : null;
+
   return h('section', { id: 'visualizer-section', className: 'rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24' }, [
     h('div', { className: 'flex items-center justify-between gap-3 flex-wrap' }, [
       h('div', {}, [
@@ -2584,6 +2646,7 @@ function buildVisualizer() {
           slider,
           h('div', { className: 'absolute bottom-3 right-3 text-[10px] px-2 py-1 rounded-full bg-white border border-zinc-200' }, `${state.afterPct}% after`),
         ]),
+        makeItYours,
         lightingControls,
         h('div', { className: 'p-4 grid gap-4' }, groupsRow),
         h('div', { className: 'px-4 pb-4' }, state.renderUnavailable
@@ -2731,27 +2794,65 @@ function buildPricePanel(price, priceRow) {
     ]);
   }
 
+  /* ── THE PRICE REVEAL ──
+     UX/UI Optimisation handoff §8: the estimate should be a distinct moment,
+     not a sidebar that quietly updates and hopes to be noticed.
+
+     So the total leads. It was the last line of a six-row table, in the same
+     type as the scaffolding allowance above it — the number the whole product
+     exists to produce, formatted like a line item. Now it is the first thing
+     in the panel, at display size, with the plain-English summary of what is
+     in it underneath, and the itemisation one tap away.
+
+     The breakdown is disclosed, not removed. §8 asks for "See what's included
+     ↓ → then show the itemised breakdown", and this page's own argument
+     against calculators is that they give you one number with nothing behind
+     it. Open it and every row is there, unchanged. It stays open once opened,
+     because somebody who wanted the detail once wants it after the next swatch
+     too.
+
+     §9 is the other half: do not repeat uncertainty at every step. Three
+     separate disclaimers sat under this panel — the planning-estimate line,
+     the catalogue note, and the same-number-for-everybody paragraph. One short
+     line stays at the price, the rest moved inside the breakdown, which is
+     where somebody asking "what can change?" is already looking. Transparent
+     rather than uncertain: nothing is gone, it is ordered. */
   return h('div', { className: 'rounded-2xl bg-zinc-900 text-white p-5' }, [
     h('div', { className: 'flex items-center justify-between gap-2 flex-wrap' }, [
-      h('h3', { className: 'text-[11px] tracking-widest uppercase text-white/50' }, 'Your estimate'),
+      h('h3', { className: 'text-[11px] tracking-widest uppercase text-white/50' }, 'Your estimated project cost'),
       h('span', { className: 'text-[10px] px-2 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-200' },
         state.price?.footprintSource === 'manual_entry' ? 'Your measurements' : 'Sized to your home'),
     ]),
-    h('div', { className: 'mt-4 grid gap-2 text-sm' }, [
-      priceRow('Walls & cladding, fitted', price.cladding),
-      priceRow('Roof, fitted', price.roof),
-      priceRow('Fascia, soffit & guttering', price.trim),
-      priceRow('Scaffolding', price.scaffolding, true),
-      priceRow('Waste allowance', price.waste, true),
-      priceRow('VAT (20%)', price.vat, true),
-      h('div', { className: 'h-px bg-white/10 my-1' }),
-      h('div', { className: 'flex justify-between gap-4 font-medium' }, [h('span', {}, 'Estimated total'), h('span', { id: 'estimate-total', className: 'measured' }, fmtMoney(price.total))]),
+    h('div', { id: 'estimate-total', className: 'mt-2 serif text-[34px] md:text-[40px] leading-none measured' }, fmtMoney(price.total)),
+    h('p', { className: 'mt-2 text-[12px] leading-5 text-white/70' },
+      'Including materials, labour, scaffolding, waste and VAT.'),
+    h('p', { className: 'mt-2 text-[11px] leading-5 text-white/55' },
+      'A planning estimate, shown for the choices you have made. An installer confirms it after a survey.'),
+
+    h('details', { className: 'mt-4 border-t border-white/10 pt-3' }, [
+      /* An explicit marker, because this file sets `details > summary
+         { list-style: none }` globally and strips the webkit marker too — so
+         without one this reads as a dead grey sentence, which is how the
+         breakdown would get lost. Same chevron the other accordions use. */
+      h('summary', { className: 'cursor-pointer text-[12px] text-white/70 hover:text-white select-none flex items-center gap-1.5' }, [
+        h('span', {}, 'See what’s included'),
+        h('span', { className: 'chev transition-transform text-white/50', 'aria-hidden': 'true' }, '⌄'),
+      ]),
+      h('div', { className: 'mt-3 grid gap-2 text-sm' }, [
+        priceRow('Walls & cladding, fitted', price.cladding),
+        priceRow('Roof, fitted', price.roof),
+        priceRow('Fascia, soffit & guttering', price.trim),
+        priceRow('Scaffolding', price.scaffolding, true),
+        priceRow('Waste allowance', price.waste, true),
+        priceRow('VAT (20%)', price.vat, true),
+        h('div', { className: 'h-px bg-white/10 my-1' }),
+        h('div', { className: 'flex justify-between gap-4 font-medium' }, [h('span', {}, 'Estimated total'), h('span', { className: 'measured' }, fmtMoney(price.total))]),
+      ]),
+      h('p', { className: 'mt-3 text-[10px] leading-4 text-white/50' }, ['Based on ', h('span', { className: 'measured' }, `${price.footprintM2} m²`), ' of wall.']),
+      h('p', { className: 'mt-3 text-[10px] leading-4 text-white/50' }, catalogue_note()),
+      h('p', { className: 'mt-2 text-[10px] leading-4 text-white/50' },
+        'It is the same number for everybody with your house and your choices. Where it moves, it moves on what we could measure and which installer quotes — never on how hard you push.'),
     ]),
-    h('p', { className: 'mt-3 text-[10px] leading-4 text-white/50' }, ['Based on ', h('span', { className: 'measured' }, `${price.footprintM2} m²`), ' of wall.']),
-    h('p', { className: 'mt-3 text-[10px] leading-4 text-white/50' }, catalogue_note()),
-    h('p', { className: 'mt-2 text-[10px] leading-4 text-white/50' }, 'A planning estimate, not a fixed quote — an installer will confirm the price after a survey.'),
-    h('p', { className: 'mt-2 text-[10px] leading-4 text-white/50' },
-      'It is the same number for everybody with your house and your choices. Where it moves, it moves on what we could measure and which installer quotes — never on how hard you push.'),
   ]);
 }
 
@@ -4983,6 +5084,64 @@ async function handleUpload(file) {
   await Promise.all([refreshPrice(), refreshGlazing()]);
   render();
   document.getElementById('visualizer-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  maybeAutoRender();
+}
+
+/* ── THE INSTANT WOW ──
+   UX/UI Optimisation handoff §6, its highest-priority item: after analysis,
+   do not drop somebody into a configurator. Show them their own house already
+   changed, and only then offer the controls.
+
+   The reasoning is the strongest in that document. Until now the sequence was
+   upload → read a detection list → pick a cladding, a trim and a roof from
+   swatches → press a button → wait a minute. Every one of those steps is
+   asked of a person who has not yet seen the thing they came for, and the
+   funnel says they mostly do not get there. The transformation is the hook;
+   it should not be the reward for completing a form.
+
+   So the render fires on its own, with the defaults the page already carries
+   (alabaster walls, ink trim, slate roof — set in the state literal, and
+   already what the swatch preview is showing behind the picture).
+
+   This spends a Replicate render per upload rather than per request, which is
+   a real change and was taken as a decision rather than assumed: the daily
+   cap now covers uploads, so a quiet day of curious visitors can exhaust it
+   where before only deliberate render requests could. Everything below is
+   about not wasting them.
+
+   Five conditions, each one a way to burn a render for nothing:
+
+   - detection actually found something. A photo we could not read gives the
+     model nothing to work from, and the wow moment lands on a stranger's
+     house.
+   - the cap is not already spent. `renderUnavailable` is set by the 429 from
+     a previous attempt; firing anyway produces one more failed request and a
+     minute of "working on your picture" ending in an error.
+   - nothing has been rendered yet. A resumed session or a second upload in
+     the same visit already has a picture; replacing it silently costs money
+     and throws away what they were looking at.
+   - a render is not already running.
+   - the finishes are not all "none". The journey picker can exclude every
+     trade — somebody who came through a windows-only landing page — and a
+     render instructed to change nothing returns the photograph back. */
+let autoRenderDone = false;
+
+function maybeAutoRender() {
+  if (autoRenderDone || state.rendering || state.renderUrl) return;
+  if (!state.uploadedBase64) return;
+  if (state.renderUnavailable || state.detectUnavailable) return;
+  if (!state.detections.filter(d => d.type !== 'analysis').length) return;
+
+  const changesSomething = [state.cladding, state.trim, state.roof]
+    .some(s => s && s.name && s.name.toLowerCase() !== 'none');
+  if (!changesSomething) return;
+
+  autoRenderDone = true;
+  /* Not awaited. The visualiser is already on screen with the elapsed counter
+     running, and the person can scroll, read their estimate or change a
+     swatch while it works. Errors are handled inside generateRealRender, which
+     leaves the colour preview and the estimate untouched on failure. */
+  generateRealRender();
 }
 
 // Shape only — a real check belongs to the Post Office, not to a form.
