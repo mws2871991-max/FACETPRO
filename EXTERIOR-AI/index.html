@@ -745,59 +745,40 @@
     <p class="mt-4 text-[11px] leading-5 text-zinc-500 max-w-[72ch]">Usage figures are not shown because there are not yet enough of them to mean anything &mdash; when there are, they will appear here and they will be real. If something doesn&rsquo;t look right on your house, tell us; that is how the estimates get sharper.</p>
   </section>
 
-  <!-- Brief §4, which calls this the strategically important section: the
-       point is not the commercial arrangement, it is that the visitor can
-       research the job without becoming a lead by accident.
+  <!-- ── ONE ARGUMENT, MADE ONCE ──
 
-       That is what this section already demonstrated — it carries the four-step
-       journey ending "you ask to be quoted" — but it was filed under the
-       eyebrow "Business model" and headed "Who pays for this", which is the
-       investor's framing of the same facts. Same content, the homeowner's
-       question on the front of it. The "you do not pay" answer follows
-       immediately, because it is the first thing anybody wonders next. -->
-  <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="model-heading">
-    <p class="text-[11px] tracking-[0.25em] uppercase text-zinc-400">You stay in control</p>
-    <h2 id="model-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">Research your project before you become a lead</h2>
-    <!-- This opened "You do not." — the answer to the heading that used to sit
-         above it, "Who pays for this". With the brief's heading in its place
-         the reply had no question, so it states the thing directly. -->
-    <p class="mt-3 max-w-[72ch] text-[14px] leading-7 text-zinc-600">
-      Most home-improvement journeys start with a form, then a phone call, then an appointment, then a
-      sales conversation. This one works the other way round: look, price it, and decide afterwards
-      whether you want to speak to anybody. Facet Pro is <strong>free for homeowners</strong>, with no
-      account required and nothing to cancel. Installers pay for a lead &mdash; and only when you have
-      asked to be quoted.
-    </p>
-    <ol class="mt-6 flex flex-col md:flex-row md:items-stretch gap-3 md:gap-2">
-      <li class="flex-1 rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-zinc-400">1</div><div class="mt-1 text-[14px] font-medium">You upload a photo</div></li>
-      <li class="hidden md:flex items-center text-zinc-300" aria-hidden="true">&rarr;</li>
-      <li class="flex-1 rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-zinc-400">2</div><div class="mt-1 text-[14px] font-medium">You choose and see the price</div></li>
-      <li class="hidden md:flex items-center text-zinc-300" aria-hidden="true">&rarr;</li>
-      <li class="flex-1 rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-zinc-400">3</div><div class="mt-1 text-[14px] font-medium">You ask to be quoted</div></li>
-      <li class="hidden md:flex items-center text-zinc-300" aria-hidden="true">&rarr;</li>
-      <li class="flex-1 rounded-xl border border-zinc-900 bg-zinc-900 text-[#FBF8F3] p-4 text-center"><div class="text-[11px] tracking-widest uppercase text-white/50">4</div><div class="mt-1 text-[14px] font-medium">Installers pay for the lead</div></li>
-    </ol>
-    <p class="mt-5 max-w-[72ch] text-[14px] leading-7 text-zinc-600">
-      An installer receives somebody who has already chosen a specification and seen a price, which is
-      worth more to them than a name from a call centre. <strong>Three installers at most</strong>, ever
-      &mdash; a limit enforced in the code, not a promise in the copy.
-    </p>
-  </section>
+       Product Flow sprint: four sections were making the same case in
+       different words — "You stay in control / Research your project before
+       you become a lead", "Two neighbours", "A different way to start a home
+       improvement project", and "Built by somebody who sold these for
+       twenty-four years". Each was written deliberately and each was fine.
+       Together they restated one idea four times after the hero had already
+       won it, and the repetition read as insecurity rather than emphasis.
 
-  <!-- The fairness story, given its own moment.
+       Three things were being said three times over. "Twenty-four years"
+       appeared in the fairness copy, in the founder heading and again in the
+       founder paragraph. "The same house gets the same number" appeared here,
+       in the comparison table and in the hero. And the usual-way-versus-this-
+       way argument was made once as prose in the who-pays opening and once as
+       the table — the table does it better, so the prose went.
 
-       Section 06 of the homepage copy handoff, and its best idea: this was a
-       subheading in the hero, which is the wrong weight for the thing the
-       whole product exists to fix. It comes before the comparison because the
-       comparison is the answer and this is the question.
+       What is kept, and why:
 
-       Written without the handoff's "£8,000 apart". No price is typed into
-       prose anywhere in this codebase — landing.js states the rule and the
-       reason: somebody updates the rate card and nobody greps the marketing.
-       The engine puts the real gap at roughly £6,400 on a semi and £8,100 on a
-       detached, and the browser is deliberately never sent the rates to
-       compute it, so the claim is made in the one currency the page can
-       always back: the estimate range every visitor is shown IS that spread. -->
+       - the fairness headline and the negotiation-tax argument, which is the
+         reason the product exists
+       - one short paragraph of the twenty-four years, because it is what earns
+         the estimate its credibility and it is now said once
+       - the comparison table, unchanged — the handoff says it works and it does
+       - the range explanation, because the price panel points at this idea and
+         a homeowner asking "why a range?" is asking it here
+       - who pays. That is not narrative, it is a fact somebody needs before
+         they hand over a photograph, so it survives as one line rather than a
+         four-step diagram restating the table above it.
+
+       What went entirely: the four-step "you upload → you choose → you ask →
+       installers pay" strip, which was the table's argument drawn as boxes;
+       the roadmap chips section, whose one live line moved into the trades
+       list; and two of the three tellings of the founder story. -->
   <section class="rounded-2xl bg-zinc-900 text-[#FBF8F3] p-6 md:p-10" aria-labelledby="fairness-heading">
     <p class="text-[11px] tracking-[0.25em] uppercase text-white/50">The pricing problem</p>
     <h2 id="fairness-heading" class="mt-3 serif text-[28px] md:text-[38px] leading-[1.05] tracking-[-0.02em]">
@@ -807,46 +788,43 @@
       <div class="space-y-4 text-[15px] leading-7 text-white/75">
         <p>One of them sat in the room longer on a Wednesday evening. That is the only difference. The product is identical. The price is not.</p>
         <p>That is not a market price. It is a negotiation tax on people who have no way of knowing what the job should cost before somebody is sitting in their front room.</p>
-        <p>Facet Pro was built by somebody who sold these jobs from front rooms for twenty-four years. Not to explain the problem &mdash; to end it.</p>
+        <!-- The twenty-four years, told once. It was here, in a section
+             heading, and again in that section's only paragraph. -->
+        <p>Facet Pro was built by somebody who sold these jobs from front rooms, on weeknights, for twenty-four years &mdash; long enough to know what a job settles at, and why two identical houses on one street pay wildly different amounts for the same work. It is that knowledge written down, and offered to everybody at the same number.</p>
       </div>
       <div class="md:border-l md:border-white/10 md:pl-10">
-        <p class="serif text-[24px] md:text-[30px] leading-tight">The same house gets<br>the same number.</p>
+        <!-- "the same number" was corrected to "the same starting point" in
+             the hero on 23 August, because the estimate is a range confirmed
+             at survey and "the same number" overstates what this system can
+             promise. The correction never reached here, and carrying the copy
+             into the merge would have preserved a contradiction between two
+             blocks that now sit two screens apart. -->
+        <p class="serif text-[24px] md:text-[30px] leading-tight">The same house gets<br>the same starting point.</p>
         <p class="mt-4 text-[15px] leading-7 text-white/75">Priced from the photograph. The number does not move on how long you are willing to sit there, how hard you push, or what day of the week it is.</p>
         <!-- Why the estimate is a range, answered here rather than left to be
              wondered about beside the figure. The spread between what two
              firms quote for identical work is the thing this section is about,
              so the range is evidence for the argument rather than a caveat. -->
         <p class="mt-4 text-[13px] leading-6 text-white/55">It is why your estimate arrives as a range rather than one number. The lower end is close to what the keener of the two national installers settles at; the higher end is what the same job goes out at elsewhere. Same windows, same house, same work.</p>
-        <!-- Brief §8 again. This was a fourth wording — "See what my house
-             should cost" — and it survived the sweep of the other three
-             because it is the only one phrased around price rather than
-             appearance. Same action, same words as everywhere else. -->
         <button type="button" class="mt-6 cta px-6 py-3.5 rounded-full text-[14px] font-semibold transition min-h-[48px]" onclick="goToUpload()">Upload a photo</button>
         <p class="mt-3 text-[12px] text-white/50">Free to try &nbsp;&bull;&nbsp; No sales call unless you ask</p>
       </div>
     </div>
-  </section>
 
-  <!-- P7: comparison cards, straight from the pack. -->
-  <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="diff-heading">
-    <!-- Brief §9's headline. "Why this is different" made the reader supply
-         the subject; this one names it. -->
-    <h2 id="diff-heading" class="serif text-[26px] md:text-[32px] tracking-tight">A different way to start a home improvement project</h2>
-    <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-      <!-- Section 07 of the copy handoff: the right column mirrored the
-           negatives on the left, so it read as a list of things that do not
-           happen rather than a list of things you get. Each line now names the
-           relief.
+    <!-- The comparison table, kept exactly as it was. The handoff says it
+         works, and it is the one place the argument is made as a comparison
+         rather than as prose.
 
-           Two corrections that came out of rewriting it rather than from the
-           document. "Six trades off the same photo" survived Saturday's sweep
-           that made the count five everywhere else — the sweep grepped for
-           "six trades" and this one is capitalised. And "An estimate in about
-           a minute" is the timing claim that came off the numbers block for
-           having nothing behind it; it had a second home here. -->
-      <div class="rounded-xl border border-zinc-200 p-5">
-        <div class="text-[12px] uppercase tracking-widest text-zinc-500">The usual way</div>
-        <ul class="mt-3 space-y-2 text-[14px] text-zinc-600">
+         Two corrections that came out of an earlier rewrite rather than from
+         any document, preserved here: "Six trades off the same photo" survived
+         a sweep that made the count five everywhere else because the sweep
+         grepped lowercase; and "An estimate in about a minute" was the timing
+         claim removed from the numbers block for having nothing behind it,
+         which had a second home in this list. -->
+    <div class="mt-10 pt-8 border-t border-white/10 grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="rounded-xl border border-white/15 p-5">
+        <div class="text-[12px] uppercase tracking-widest text-white/50">The usual way</div>
+        <ul class="mt-3 space-y-2 text-[14px] text-white/70">
           <li>Five companies, five appointments in your house</li>
           <li>A salesman in your living room</li>
           <li>Days of waiting before you see a number</li>
@@ -854,35 +832,38 @@
           <li>A price that moves on how hard you push</li>
         </ul>
       </div>
-      <div class="rounded-xl border border-zinc-900 bg-zinc-900 text-[#FBF8F3] p-5">
-        <div class="text-[12px] uppercase tracking-widest text-white/50">Facet Pro</div>
+      <div class="rounded-xl border border-white/25 bg-white/[0.07] p-5">
+        <div class="text-[12px] uppercase tracking-widest text-white/60">Facet Pro</div>
         <ul class="mt-3 space-y-2 text-[14px] text-white/90">
           <li>One photograph, taken from your own pavement</li>
           <li>Your home, your choices, your evening</li>
           <li>An itemised estimate before anybody visits</li>
           <li>Five trades off the same photograph</li>
-          <li>The same house gets the same starting point</li>
+          <!-- Was "The same house gets the same starting point", which is now
+               said in the block directly above this table and in the hero. The
+               other four rows each rebut the line opposite them; this one now
+               does too. -->
+          <li>A price that does not move on how hard you push</li>
         </ul>
       </div>
     </div>
+
+    <!-- Who pays, in one line. This was a section of its own with a four-step
+         diagram; the diagram drew the table above it, and the fact underneath
+         it is what a homeowner actually needs before handing over a
+         photograph. The three-installer cap is enforced in
+         MAX_INSTALLERS_PER_LEAD, which is why it can be stated flatly. -->
+    <p class="mt-8 pt-6 border-t border-white/10 text-[13px] leading-6 text-white/60 max-w-[78ch]">
+      <strong class="text-white/85">Free for homeowners.</strong> No account, nothing to cancel, and no
+      installer hears from you unless you ask to be quoted. Installers pay us for a lead at that point,
+      and never more than three of them &mdash; a limit in the code rather than a promise in the copy.
+    </p>
   </section>
 
-  <!-- P8: roadmap. The pack listed driveways, solar and landscaping alongside
-       the live trades. Those three are not built, not priced and not in the
-       catalogue, so they are separated below rather than mixed in — a reader
-       can see at a glance which is which, which is the only version of this
-       section that survives somebody clicking through to check. -->
-  <!-- Brief §5: show what can be done now, and keep the roadmap to a line.
-
-       Two things went. The opening paragraph — "the marginal cost of pricing
-       another trade against it is close to nothing, that is what makes this a
-       platform rather than a calculator" — is a unit-economics argument aimed
-       at an investor, and §6 lists both marginal cost calculations and
-       platform economics as content to remove. And the three dashed chips for
-       driveways, solar and landscaping: honest labelling, but §5 asks not to
-       confuse the visitor with a roadmap, and a homeowner who wants solar now
-       knows only that they cannot have it here. The line says that in nine
-       words instead of three chips and a heading. -->
+  <!-- What can be priced today. The roadmap chips and the "platform" framing
+       came out on an earlier brief; this is what remains of that section,
+       folded in here because a list of six trades is not an argument and does
+       not need a section to itself. -->
   <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="vision-heading">
     <p class="text-[11px] tracking-[0.25em] uppercase text-zinc-400">What you can improve</p>
     <h2 id="vision-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">Priced from your photo today</h2>
@@ -896,30 +877,6 @@
     </div>
     <p class="mt-4 text-[12px] leading-5 text-zinc-500">Conservatories are guide ranges to compare styles, not priced from your photo. More home improvements coming soon.</p>
   </section>
-
-  <!-- P9: the founder section. The pack's markup carried {{FOUNDER_NAME}} and
-       {{FOUNDER_PHOTO_URL}}; a broken image and a visible template token would
-       be worse than neither, and putting somebody's name and face on a public
-       page is their decision rather than a developer's. The story is here and
-       it is the part that matters. Add the name and photograph when you want
-       them. -->
-  <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="founder-heading">
-    <p class="text-[11px] tracking-[0.25em] uppercase text-zinc-400">Why this exists</p>
-    <h2 id="founder-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">Built by somebody who sold these for twenty-four years</h2>
-    <!-- Brief §6 sends the founder story to an About page. There is no About
-         page — index.html is the only consumer page on this site — so it is
-         shortened here rather than moved, which is what the alternative
-         actually amounts to today. Three paragraphs to three sentences,
-         keeping the part that earns the estimate its credibility: the rooms,
-         why identical houses pay different amounts, and that this is that
-         knowledge written down. What went was the middle paragraph, which
-         restated the fairness section a screen further up. -->
-    <div class="mt-5 max-w-[72ch] text-[14px] leading-7 text-zinc-600">
-      <p>Front rooms, on weeknights, for a national installer. Long enough to know what a job settles at &mdash; and why two identical houses on the same street pay wildly different amounts for the same work, which is not the product varying but how long somebody was willing to sit there. Facet Pro is that knowledge written down: offered to everybody at the same number, from one photograph, without anybody coming to the house.</p>
-    </div>
-  </section>
-
-
 
   <!-- Real completed work. Static markup, not JS-mounted: it's the strongest
        thing on the page and crawlers should see it. Each card shows the after
