@@ -710,8 +710,18 @@
            slowest. When there are enough real runs to mean anything, this tile
            comes back with an observed number — which is exactly what the note
            under this block already promises about usage figures. -->
-      <div class="rounded-xl border border-zinc-200 p-5 text-center"><div class="serif text-[28px] measured">2</div><div class="mt-1 text-[12px] uppercase tracking-widest text-zinc-500">National installers contracted</div></div>
-      <div class="rounded-xl border border-zinc-200 p-5 text-center"><div class="serif text-[28px] measured">3</div><div class="mt-1 text-[12px] uppercase tracking-widest text-zinc-500">Installers per lead, capped</div></div>
+      <!-- "2 national installers contracted" and "3 installers per lead,
+           capped" stood here and have gone to the quotes flow, per the Product
+           Flow sprint. They are business metrics wearing homeowner clothes,
+           and the first one actively backfires: somebody in Cumbria reads
+           "2 installers" on a national site and concludes there is nobody near
+           them, which is a question this page cannot answer and the postcode
+           coverage check can.
+
+           Both facts still get said, at the point they mean something. The cap
+           is in the consent wording and in the quotes explanation — where it
+           is a reassurance rather than a scarcity signal — and it is enforced
+           in MAX_INSTALLERS_PER_LEAD either way. -->
       <div class="rounded-xl border border-zinc-200 p-5 text-center"><div class="serif text-[28px] measured">24</div><div class="mt-1 text-[12px] uppercase tracking-widest text-zinc-500">Years in the trade behind the pricing</div></div>
     </div>
     <!-- Brief §11: say what affects the customer, not what affects the
@@ -721,7 +731,18 @@
          photograph of their house it mostly reads as "will these people still
          be here next month". The beta status stays, because that one does
          affect them, and so does the reason usage figures are absent. -->
-    <p class="mt-4 text-[11px] leading-5 text-zinc-500 max-w-[72ch]">Facet Pro is in beta. We&rsquo;re still improving the visualisations and estimates as more homes and real projects are tested &mdash; if something doesn&rsquo;t look right, tell us. Usage figures are not shown because there are not yet enough of them to mean anything; when there are, they will appear here and they will be real.</p>
+    <!-- Product Flow sprint: one honest sentence about uncertainty at the
+         price, and everything else available when the reader goes looking.
+
+         "Beta" was appearing in the banner, here, in the accuracy section, in
+         the FAQ and in the footer. Each instance was written honestly and
+         individually defensible; the effect of five is a homeowner wondering
+         whether the tool works at all. The banner lost it first, this is the
+         second, and what remains is the true and specific part — why there are
+         no usage figures, which is a question this block invites by existing.
+         The full statement still sits under the estimate it qualifies, and the
+         methodology section still says the measurement is being calibrated. -->
+    <p class="mt-4 text-[11px] leading-5 text-zinc-500 max-w-[72ch]">Usage figures are not shown because there are not yet enough of them to mean anything &mdash; when there are, they will appear here and they will be real. If something doesn&rsquo;t look right on your house, tell us; that is how the estimates get sharper.</p>
   </section>
 
   <!-- Brief §4, which calls this the strategically important section: the
@@ -5232,11 +5253,65 @@ function maybeAutoRender() {
   if (state.renderUnavailable || state.detectUnavailable) return;
   if (!state.detections.filter(d => d.type !== 'analysis').length) return;
 
+  /* A first look chosen for the house, not one finish for every house.
+
+     Product Flow sprint step 4 supplies a default per house type, on the
+     reasoning that the automatic render only earns its cost if the result is
+     plausible — cream render on a 1930s semi reads as a suggestion, the same
+     white on a terrace reads as a mistake, and a homeowner who dislikes their
+     free first look does not go looking for the controls.
+
+     Mapped onto the swatches that exist rather than the names in the document,
+     which is a lossy step worth being explicit about: it asks for "stone
+     cladding" and "grey render", and the catalogue has Clay Stone and Sage
+     Slate. The nearest honest match is used and nothing is invented.
+
+     Frame colour is deliberately not set here. The handoff lists anthracite
+     frames in every default, but glazingChoice() sends a colour only with a
+     style, and choosing a window style on somebody's behalf changes what they
+     are quoted rather than only what they see. The frames stay as they are
+     until the homeowner picks — which is also what the upload panel promises.
+
+     Only applied where the visitor has not already chosen: a journey landing
+     page, or a resumed session, arrives with real preferences and they win. */
+  const AUTO_DEFAULTS = {
+    detached:   { cladding: 'alabaster',  trim: 'ink-trim',    roof: 'slate-roof' },
+    semi:       { cladding: 'clay-stone', trim: 'ink-trim',    roof: 'slate-roof' },
+    terrace:    { cladding: 'clay-stone', trim: 'coastal-fog', roof: 'charcoal-roof' },
+    endTerrace: { cladding: 'clay-stone', trim: 'coastal-fog', roof: 'charcoal-roof' },
+    bungalow:   { cladding: 'sage-slate', trim: 'ink-trim',    roof: 'terracotta' },
+  };
+  let presetApplied = false;
+  if (!state.hasCustomised) {          // somebody who has already chosen keeps their choice
+    const preset = AUTO_DEFAULTS[state.houseType] || AUTO_DEFAULTS.semi;
+    for (const group of ['cladding', 'trim', 'roof']) {
+      // Never override a journey exclusion — "leave it as it is" is a choice.
+      if (state[group] && state[group].id === 'none') continue;
+      const sw = SWATCHES.find(s => s.id === preset[group]);
+      if (sw && state[group]?.id !== sw.id) { state[group] = sw; presetApplied = true; }
+    }
+  }
+
   const changesSomething = [state.cladding, state.trim, state.roof]
     .some(s => s && s.name && s.name.toLowerCase() !== 'none');
   if (!changesSomething) return;
 
   autoRenderDone = true;
+  autoRenderStart(presetApplied);
+}
+
+/* Split out so maybeAutoRender itself stays synchronous and readable — its job
+   is the decision, this is the consequence. */
+async function autoRenderStart(presetApplied) {
+  /* The preset moved the finishes, so the estimate beside the picture has to
+     move with them. Without this the panel would show the price of the
+     swatches the page happened to load with, next to a render of different
+     ones — the exact mismatch the visualiser exists to prevent. */
+  if (presetApplied) {
+    await refreshPrice();
+    render();
+    document.getElementById('visualizer-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
   /* Not awaited. The visualiser is already on screen with the elapsed counter
      running, and the person can scroll, read their estimate or change a
      swatch while it works. Errors are handled inside generateRealRender, which
