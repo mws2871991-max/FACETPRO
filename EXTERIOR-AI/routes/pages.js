@@ -49,7 +49,7 @@ const landing = require('../landing');
  *
  * The same bracket pattern as server.js PLACEHOLDER, kept in step deliberately:
  * a placeholder is defined by its brackets. */
-const PLACEHOLDER = /\[[A-Z][^\]]{2,200}\]/g;
+const PLACEHOLDER = /\[[A-Z][^\]]{2,}\]/g;
 
 function placeholdersIn(file) {
   try { return (fs.readFileSync(file, 'utf8').match(PLACEHOLDER) || []).length; }

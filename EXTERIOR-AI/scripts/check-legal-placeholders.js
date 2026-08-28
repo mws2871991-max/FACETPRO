@@ -30,9 +30,14 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 
 /* Anchored on the brackets, not on an enumeration of the characters inside
-   them. Kept byte-identical to server.js — see the note above, and the test
-   that holds the two together. */
-const PLACEHOLDER = /\[[A-Z][^\]]{2,200}\]/g;
+   them, and with no upper bound on the length. Kept byte-identical to
+   server.js — see the note above, and the test that holds the two together.
+
+   The 200-character cap came off on 28 August 2026: two placeholders in
+   terms.html were longer than that and invisible to all three counters, one
+   of them a drafting instruction to list the installer vetting checks, which
+   is a claim about the service printed on a public page. */
+const PLACEHOLDER = /\[[A-Z][^\]]{2,}\]/g;
 
 /* The legal pages are the ones that gate a deployment. The investor page is
    here too because it also carries placeholders — an exemption being relied on

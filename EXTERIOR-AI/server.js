@@ -3406,8 +3406,24 @@ function refuseToStartIfStorageContradictsTheNotice() {
    reaches a company in the United States. Not a field to ship blank, and it
    was invisible to the guard written to prevent exactly that.
 
-   A placeholder is defined by its brackets. Match those. */
-const PLACEHOLDER = /\[[A-Z][^\]]{2,200}\]/g;
+   A placeholder is defined by its brackets. Match those.
+
+   And match them however long they are. The bracket rewrite above dropped the
+   character class but kept an upper bound of 200, which is the same mistake
+   one size smaller: on 28 August 2026 two placeholders in terms.html were
+   found sitting outside it — an instruction to list the actual installer
+   vetting checks (349 characters) and one to name the ADR or trade scheme
+   (295). Both are drafting instructions addressed to us, printed on a public
+   page, and the guard could not see either. The longest a placeholder may be
+   is not a fact anybody knows in advance; the whole point of anchoring on the
+   brackets was to stop guessing at the contents, and a length cap is a guess
+   about the contents.
+
+   `[^\]]` cannot run past the closing bracket, so there is no runaway match to
+   protect against — an unclosed bracket simply does not match. The floor of 2
+   stays, so that "[1]" or an array index in a code sample is not a
+   placeholder. */
+const PLACEHOLDER = /\[[A-Z][^\]]{2,}\]/g;
 
 /* The pages the guard reads. investors.html is here because a financial
    promotion carrying [FCA-PRESCRIBED RISK WARNING] is a problem in the same

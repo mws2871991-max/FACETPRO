@@ -132,14 +132,39 @@ test('the reporting script covers every page the guard does', () => {
 test('the pages on disk match what the guard reports', () => {
   /* The count is what somebody reads before deciding the pages are done. If
      the pattern regresses, this is the assertion that notices — it fails when
-     the guard sees fewer than a plain bracket-scan does. */
+     the guard sees fewer than a plain bracket-scan does.
+
+     The scan below carried the guard's own 200-character cap, which made it
+     blind in exactly the same place: two placeholders in terms.html were
+     longer than that and neither counter could see either. A reference
+     implementation that shares the bug it is checking for is not a reference.
+     No cap here, and the comparison is >= rather than strict equality —
+     the guard is allowed to be more suspicious than a bare bracket scan, and
+     must never be less. */
   const P = livePattern();
-  const plain = /\[[A-Z][^\]]{2,200}\]/g;
+  const plain = /\[[A-Z][^\]]{2,}\]/g;
   for (const page of ['legal/privacy.html', 'legal/terms.html', 'gated/investors.html']) {
     const html = fs.readFileSync(path.join(__dirname, '..', page), 'utf8');
     const byGuard = (html.match(new RegExp(P.source, 'g')) || []).length;
     const byScan = (html.match(plain) || []).length;
-    assert.strictEqual(byGuard, byScan,
+    assert.ok(byGuard >= byScan,
       `${page}: the guard sees ${byGuard} placeholders, a plain bracket scan sees ${byScan}`);
+  }
+});
+
+test('no placeholder is too long for the guard to see', () => {
+  /* The specific regression, pinned. Found 28 August 2026: the bracket
+     rewrite had dropped the character class but kept an upper bound of 200,
+     and two real placeholders sat outside it — an instruction to list the
+     installer vetting checks (349 characters) and one to name an ADR body
+     (295). Both were drafting notes to ourselves, printed on a public page,
+     invisible to all three counters. */
+  const P = livePattern();
+  for (const page of ['legal/privacy.html', 'legal/terms.html', 'gated/investors.html']) {
+    const html = fs.readFileSync(path.join(__dirname, '..', page), 'utf8');
+    for (const found of html.match(/\[[A-Z][^\]]{2,}\]/g) || []) {
+      assert.match(found, new RegExp(P.source),
+        `${page}: a ${found.length}-character placeholder the guard cannot see — ${found.slice(0, 60)}…`);
+    }
   }
 });
