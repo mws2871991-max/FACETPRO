@@ -3131,10 +3131,31 @@ app.get('/api/version', perMinute(120, 'Too many requests — please wait a mome
    Two of these are recorded by the server rather than the browser, because
    only the server knows: lead_qualified (the lead saved and scored) and
    installer_received / installer_accepted (what a buyer did with it). */
+/* The UX Sprint handoff asks for ten events and names the four gaps between
+   them worth watching: CTA → upload, analysis → first reveal, customisation →
+   price, price → save. Nine of the ten already existed. Three did not, and
+   they are the ones that bracket the two gaps nobody can currently see:
+
+   - cta_clicked      the homepage button, before any upload begins. Without
+                      it `landing → upload_started` conflates "never pressed
+                      the button" with "pressed it and then would not hand
+                      over a photograph", which are different problems with
+                      different fixes.
+   - reveal_viewed    the homeowner has actually looked at their own
+                      before-and-after — dragged the slider, or the automatic
+                      render landed. analysis_completed only says the server
+                      answered.
+   - breakdown_viewed the itemised estimate was opened. estimate_viewed says a
+                      figure was on screen; this says somebody wanted to know
+                      what was in it.
+
+   Appended rather than inserted: /ops renders these in array order and the
+   sequence below is roughly chronological, but nothing keys off the index. */
 const FUNNEL_STAGES = [
-  'landing', 'upload_started', 'upload_completed',
-  'analysis_completed', 'visualisation_started', 'design_created', 'design_changed',
-  'estimate_viewed', 'design_saved',
+  'landing', 'cta_clicked', 'upload_started', 'upload_completed',
+  'analysis_completed', 'visualisation_started', 'reveal_viewed',
+  'design_created', 'design_changed',
+  'estimate_viewed', 'breakdown_viewed', 'design_saved',
   'quote_started', 'quote_requested', 'quote_completed',
   'lead_qualified', 'lead_sent', 'installer_received', 'installer_accepted',
 ];

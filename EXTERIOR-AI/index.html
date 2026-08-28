@@ -121,8 +121,13 @@
   @keyframes bump{0%{transform:scale(1)}35%{transform:scale(1.09)}100%{transform:scale(1)}}
   .bump{animation:bump .42s ease-out;display:inline-block}
   /* Room for the fixed total bar, so it never covers the last thing on the
-     page — which would be the consent boxes. */
-  body:has(#total-bar > div){padding-bottom:74px}
+     page — which would be the consent boxes.
+
+     Matched on the button rather than on a child div: the bar collapsed to a
+     single line for the sprint handoff's mobile requirements, so its only
+     guaranteed child is now the toggle. `#total-bar > div` went false the
+     moment the breakdown was closed, and the reserved space went with it. */
+  body:has(#total-bar button){padding-bottom:70px}
   /* Someone who has asked their machine for less movement has usually asked
      for a reason. The daylight transitions are .7s on filter, background and
      shadow; the reveal slider animates too. Nothing here needs to move to
@@ -351,8 +356,25 @@
            where it always belonged: a caveat at the top of a page is read
            before there is anything to apply it to, and forgotten by the time
            there is. -->
-      <strong>Facet Pro is in beta.</strong>
-      Costed from real supplier and labour rates, and honest about what it doesn&rsquo;t know yet &mdash;
+      <!-- UX Sprint handoff P0-D. This opened "Facet Pro is in beta." — the
+           first four words anybody read, above the headline, and an apology
+           before they had seen anything to apply it to. The tool works and the
+           rates are real; leading with a caveat asks the visitor to doubt
+           something they have not been shown.
+
+           The word is not suppressed, it is relocated to where it means
+           something: the stats block says it plainly ("Facet Pro is in beta,
+           we're still improving the visualisations and estimates…"), and the
+           full statement — planning estimate not quotation, window rates
+           indicative, measurement still being calibrated — sits in "What your
+           estimate actually includes", directly under the number it qualifies.
+           Removing it from both would be hiding it. Removing it from here is
+           putting it where it is read.
+
+           The banner keeps its id, its amber styling and its SITE_MODE gate,
+           so one env var still controls whether it appears at all. -->
+      <strong>Priced from real UK supplier and labour rates.</strong>
+      And honest about what the estimate covers &mdash;
       <a href="#honest-heading" class="underline">what your estimate includes</a>.
     </p>
   </aside>
@@ -578,7 +600,7 @@
   <section class="rounded-2xl bg-zinc-900 text-[#FBF8F3] p-6 md:p-8 text-center" aria-labelledby="proof-cta-heading">
     <h2 id="proof-cta-heading" class="serif text-[24px] md:text-[30px] tracking-tight">That could be your house.</h2>
     <p class="mt-3 text-[14px] leading-7 text-white/70 max-w-[46ch] mx-auto">Upload one photo and start exploring what your home could look like.</p>
-    <button type="button" class="mt-6 cta px-7 py-4 rounded-full text-[15px] font-semibold transition min-h-[52px]" onclick="document.getElementById('your-photo')?.scrollIntoView({behavior:'smooth',block:'start'})">Upload a photo</button>
+    <button type="button" class="mt-6 cta px-7 py-4 rounded-full text-[15px] font-semibold transition min-h-[52px]" onclick="goToUpload()">Upload a photo</button>
     <p class="mt-4 text-[12px] text-white/50">Free to try &nbsp;&bull;&nbsp; No measurements &nbsp;&bull;&nbsp; No sales call unless you ask</p>
   </section>
 
@@ -778,7 +800,7 @@
              should cost" — and it survived the sweep of the other three
              because it is the only one phrased around price rather than
              appearance. Same action, same words as everywhere else. -->
-        <button type="button" class="mt-6 cta px-6 py-3.5 rounded-full text-[14px] font-semibold transition min-h-[48px]" onclick="document.getElementById('your-photo')?.scrollIntoView({behavior:'smooth'})">Upload a photo</button>
+        <button type="button" class="mt-6 cta px-6 py-3.5 rounded-full text-[14px] font-semibold transition min-h-[48px]" onclick="goToUpload()">Upload a photo</button>
         <p class="mt-3 text-[12px] text-white/50">Free to try &nbsp;&bull;&nbsp; No sales call unless you ask</p>
       </div>
     </div>
@@ -1083,7 +1105,7 @@
     <p class="mt-5 text-[15px] leading-7 text-white/75 max-w-[54ch] mx-auto">
       Upload a photo and explore your home improvement project before speaking to anyone.
     </p>
-    <button type="button" class="mt-7 cta px-7 py-4 rounded-full text-[15px] font-semibold transition min-h-[52px]" onclick="document.getElementById('your-photo')?.scrollIntoView({behavior:'smooth'})">Upload my house</button>
+    <button type="button" class="mt-7 cta px-7 py-4 rounded-full text-[15px] font-semibold transition min-h-[52px]" onclick="goToUpload()">Upload my house</button>
     <p class="mt-4 text-[13px] text-white/60">No measurements &nbsp;&bull;&nbsp; No obligation &nbsp;&bull;&nbsp; No sales call unless you ask</p>
   </section>
 
@@ -2481,7 +2503,15 @@ function buildVisualizer() {
     type: 'range', min: 0, max: 100, value: state.afterPct, 'aria-label': 'Slide between before and after', style: { minHeight: '44px' },
     className: 'absolute bottom-3 left-1/2 -translate-x-1/2 w-[60%] accent-zinc-900',
   });
-  slider.addEventListener('input', (e) => { state.afterPct = parseInt(e.target.value); renderVisualizerOnly(); });
+  slider.addEventListener('input', (e) => {
+    state.afterPct = parseInt(e.target.value);
+    /* Funnel event 5. Only over a real render: dragging the slider across the
+       swatch schematic is playing with a colour preview, not looking at your
+       own house, and counting it would report a reveal to everybody who
+       touched the control before uploading anything. reachedStage de-dupes. */
+    if (state.renderUrl) reachedStage('reveal_viewed');
+    renderVisualizerOnly();
+  });
 
   const groupLabels = { Cladding: 'Walls & cladding', Trim: 'Fascia, soffit & guttering', Roof: 'Roof' };
   /* Roofs and rendering are product lines in the header, so they need
@@ -2973,50 +3003,114 @@ function buildTotalBar() {
   const glazing = glaz?.price ? `${fmtMoney(glaz.range.low)}–${fmtMoney(glaz.range.high)}` : null;
   if (!cladding && !glazing) return h('div', { id: 'total-bar' });
 
+  /* Say whose house this is.
+
+     A price is on screen from the moment the page loads, so a colour tap moves
+     a number straight away — which is right. But until a photograph has been
+     measured it describes a typical home of the chosen type, and the bar said
+     nothing about that. On a desktop it is a footnote in a wide strip. On a
+     phone it is fixed to the bottom of the screen, it is the largest number in
+     view, and a first-time visitor has no way to know it is not about their
+     house. */
+  const typicalTag = (state.useMeasurement && state.detectionId)
+    ? null
+    : h('span', { className: 'text-[10px] uppercase tracking-[0.14em] text-zinc-500 whitespace-nowrap' }, 'Typical home');
+
+  /* The label names what the number covers. It read "walls, roof & trim"
+     always, which stopped being true the moment a trade could be left out —
+     £8,100 sat under a label promising three trades when it had been asked to
+     price one. */
+  const cladLabel = (state.price?.priced || [])
+    .map(t => ({ cladding: 'walls', roof: 'roof', trim: 'trim' })[t])
+    .filter(Boolean)
+    .join(', ')
+    .replace(/, ([^,]*)$/, ' & $1') || 'nothing selected';
+
+  const composition = parts.length ? `inc VAT · ${parts.join(' · ')}` : 'inc VAT';
+
+  /* ── COLLAPSED TO ONE LINE, TAP TO EXPAND ──
+     UX Sprint handoff P0-C's second half and its mobile table: "sticky
+     collapsed bar at bottom: Estimated: £XX,XXX · Tap to expand".
+
+     It was a single flex row with `flex-wrap`, which on a 393px screen wrapped
+     to three lines — figure, composition, then the button — roughly a fifth of
+     the viewport permanently occupied by a strip whose whole job is to be
+     glanceable while the homeowner looks at something else. Now one line
+     always, with the detail expanding upward on demand.
+
+     State rather than a native <details>, because this element is rebuilt on
+     every price change and a DOM open-state would be lost on each rebuild. */
+  const expanded = state.barOpen ? h('div', { className: 'max-w-6xl mx-auto px-6 pt-3 pb-1 grid gap-1.5' }, [
+    cladding ? h('div', { className: 'flex items-baseline justify-between gap-4 text-[12px]' }, [
+      h('span', { className: 'text-zinc-600' }, cladLabel.charAt(0).toUpperCase() + cladLabel.slice(1)),
+      h('span', { className: 'measured' }, cladding),
+    ]) : null,
+    glazing ? h('div', { className: 'flex items-baseline justify-between gap-4 text-[12px]' }, [
+      h('span', { className: 'text-zinc-600' }, state.glazing?.price?.windowsIncluded === false ? 'Doors' : 'Windows & doors'),
+      h('span', { className: 'measured' }, glazing),
+    ]) : null,
+    h('p', { className: 'text-[10px] leading-4 text-zinc-500' }, composition),
+    h('a', {
+      href: '#visualizer-section',
+      className: 'mt-1 text-[12px] px-4 rounded-full border border-zinc-300 hover:border-zinc-900 transition text-center min-h-[44px] inline-grid place-items-center',
+      onClick: () => { state.barOpen = false; reachedStage('estimate_viewed'); },
+    }, 'See breakdown'),
+  ]) : null;
+
   return h('div', {
     id: 'total-bar',
     className: 'fixed bottom-0 inset-x-0 z-40 border-t border-zinc-200 bg-[#FBF8F3]/95 backdrop-blur-xl',
   }, [
-    h('div', { className: 'max-w-6xl mx-auto px-6 py-3 flex items-center justify-between gap-4 flex-wrap' }, [
-      h('div', { className: 'flex items-baseline gap-3 flex-wrap' }, [
-        /* Say whose house this is.
+    expanded,
+    h('button', {
+      type: 'button',
+      'aria-expanded': state.barOpen ? 'true' : 'false',
+      className: 'w-full max-w-6xl mx-auto px-6 py-2.5 flex items-center justify-between gap-3 text-left min-h-[52px]',
+      onClick: () => {
+        state.barOpen = !state.barOpen;
+        // Funnel event 8 — see the analytics note on FUNNEL_STAGES.
+        if (state.barOpen) reachedStage('breakdown_viewed');
+        renderTotalBarOnly();
+      },
+    }, [
+      /* Separated, never joined with a plus.
 
-           A price is on screen from the moment the page loads, so a colour tap
-           moves a number straight away — which is right. But until a
-           photograph has been measured it describes a typical home of the
-           chosen type, and the bar said nothing about that. On a desktop it is
-           a footnote in a wide strip. On a phone it is fixed to the bottom of
-           the screen, it is the largest number in view, and a first-time
-           visitor has no way to know it is not about their house. */
-        (state.useMeasurement && state.detectionId)
-          ? null
-          : h('span', { className: 'text-[10px] uppercase tracking-[0.14em] text-zinc-500 whitespace-nowrap' }, 'Typical home'),
-        /* The label names what the number covers. It read "walls, roof & trim"
-           always, which stopped being true the moment a trade could be left
-           out — £8,100 sat under a label promising three trades when it had
-           been asked to price one. */
-        cladding ? h('span', {}, [
-          h('span', { className: 'measured text-[20px]' }, cladding),
-          h('span', { className: 'text-[11px] text-zinc-500' }, ' ' + ((state.price?.priced || [])
-            .map(t => ({ cladding: 'walls', roof: 'roof', trim: 'trim' })[t])
-            .filter(Boolean)
-            .join(', ')
-            .replace(/, ([^,]*)$/, ' & $1') || 'nothing selected')),
+         The first version of this line read `${cladding} + ${glazing}`, which
+         is not an addition but reads as one — and the whole reason these two
+         figures sit side by side is that they cannot be added: the cladding
+         total is a single number and the glazing is a range across two
+         installers. A middot says "and also", which is what is meant. The
+         labels come with them so the two figures are never a bare pair of
+         numbers, and drop out only where there is genuinely no room. */
+      h('span', { className: 'flex items-baseline gap-2 min-w-0' }, [
+        typicalTag,
+        cladding ? h('span', { className: 'whitespace-nowrap' }, [
+          h('span', { className: 'measured text-[18px]' }, cladding),
+          h('span', { className: 'hidden sm:inline text-[11px] text-zinc-500' }, ' ' + cladLabel),
         ]) : null,
-        glazing ? h('span', {}, [
+        cladding && glazing ? h('span', { className: 'text-zinc-300' }, '·') : null,
+        glazing ? h('span', { className: 'whitespace-nowrap' }, [
           h('span', { className: 'measured text-[15px]' }, glazing),
-          h('span', { className: 'text-[11px] text-zinc-500' },
+          h('span', { className: 'hidden sm:inline text-[11px] text-zinc-500' },
             state.glazing?.price?.windowsIncluded === false ? ' doors' : ' windows & doors'),
         ]) : null,
-        h('span', { className: 'text-[11px] text-zinc-500' },
-          parts.length ? `inc VAT · ${parts.join(' · ')}` : 'inc VAT'),
+        h('span', { className: 'hidden lg:inline text-[11px] text-zinc-500 truncate' }, composition),
       ]),
-      h('a', {
-        href: '#visualizer-section',
-        className: 'text-[12px] px-4 rounded-full border border-zinc-200 hover:border-zinc-900 transition whitespace-nowrap min-h-[44px] inline-grid place-items-center',
-      }, 'See breakdown'),
+      h('span', { className: 'text-[11px] text-zinc-500 whitespace-nowrap flex items-center gap-1.5 shrink-0' }, [
+        h('span', {}, state.barOpen ? 'Hide' : 'Breakdown'),
+        h('span', { className: `chev transition-transform ${state.barOpen ? 'rotate-180' : ''}`, 'aria-hidden': 'true' }, '⌄'),
+      ]),
     ]),
   ]);
+}
+
+/* The bar rebuilds itself rather than the page: expanding it is a display
+   choice, and a full render would rebuild the visualiser underneath and lose
+   the before/after slider position. */
+function renderTotalBarOnly() {
+  const old = document.getElementById('total-bar');
+  if (!old) { render(); return; }
+  old.replaceWith(buildTotalBar());
 }
 
 function buildDetailOptions() {
@@ -3683,6 +3777,12 @@ async function generateRealRender() {
     state.renderUrl = safeRenderUrl(data.url);
     state.renderId = data.renderId || null;
     landed = true;
+    /* Funnel event 5, the other way in. The slider records a deliberate drag;
+       this records the picture arriving on screen at all, which for the
+       automatic render is the moment the handoff calls "the first reveal" —
+       nobody has to touch anything for it to have happened. reachedStage
+       de-dupes, so whichever comes first is the one that counts. */
+    reachedStage('reveal_viewed');
     U('Your new look is ready — drag the slider to compare');
   } catch (err) {
     U(err.plain ? err.message : `We couldn’t create that picture: ${err.message}`);
@@ -5405,12 +5505,28 @@ document.querySelectorAll('.work-reveal').forEach(card => {
   show(0);
 })();
 
+/* Every "upload a photo" button on the page goes through here.
+
+   Funnel event 1 from the UX Sprint handoff. It matters because of what it
+   separates: `landing → upload_started` currently conflates somebody who never
+   pressed the button with somebody who pressed it and then would not hand over
+   a photograph of their house. Those are different problems — the first is the
+   page, the second is the ask — and they have opposite fixes.
+
+   A global function rather than four copies, because the static buttons in the
+   markup call it from inline onclick attributes, which run in global scope.
+   Declared with `function` so it is hoisted above them. */
+function goToUpload() {
+  reachedStage('cta_clicked');
+  document.getElementById('your-photo')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 document.getElementById('hero-upload')?.addEventListener('click', () => {
   /* Scroll, and stop there. This used to open the file picker on the same tap:
      the highest-friction opening move available, asking a stranger for a
      photograph of their house before they have seen anything. The upload
      section has its own button for people who have decided. */
-  document.getElementById('your-photo')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  goToUpload();
 });
 
 (async function init() {

@@ -79,10 +79,16 @@ test('conversion is measured against the step before, not the top', async () => 
   /* "Where do we lose them" is always a question about the previous step. */
   const body = await (await read()).json();
   const stages = body.funnel.map(f => f.stage);
+  /* cta_clicked, reveal_viewed and breakdown_viewed were added for the UX
+     Sprint handoff's ten events. They are inserted, not appended, because this
+     list is read as a journey and each sits where it happens — and the sibling
+     test below is the one that guards the original eight against being
+     renamed or reordered by an edit like this. */
   assert.deepStrictEqual(stages, [
-    'landing', 'upload_started', 'upload_completed',
-    'analysis_completed', 'visualisation_started', 'design_created', 'design_changed',
-    'estimate_viewed', 'design_saved',
+    'landing', 'cta_clicked', 'upload_started', 'upload_completed',
+    'analysis_completed', 'visualisation_started', 'reveal_viewed',
+    'design_created', 'design_changed',
+    'estimate_viewed', 'breakdown_viewed', 'design_saved',
     'quote_started', 'quote_requested', 'quote_completed',
     'lead_qualified', 'lead_sent', 'installer_received', 'installer_accepted',
   ], 'the funnel order no longer matches the journey');
