@@ -468,7 +468,7 @@
              starting point is identical for everybody, and that is the part
              haggling normally decides. Kept short because the sentence under
              it does the explaining. -->
-        <p class="mt-6 pt-6 border-t border-white/10 serif text-[19px] md:text-[21px] leading-snug text-white/90">The same house gets the same starting point.</p>
+        <p class="mt-6 pt-6 border-t border-white/10 serif text-[19px] md:text-[21px] leading-snug text-white/90">Your estimate is based on your home and your choices &mdash; not how well you negotiate.</p>
         <p class="mt-2 text-[13px] leading-6 text-white/55 max-w-[52ch]">Two neighbours can buy the same windows and pay thousands apart, because one of them sat in the room longer on a Wednesday evening. Priced from the photograph, the number does not move on how hard you are willing to push.</p>
       </div>
 
@@ -698,7 +698,7 @@
     <h2 id="stats-heading" class="serif text-[26px] md:text-[32px] tracking-tight">By the numbers</h2>
     <div class="mt-6 grid grid-cols-2 md:grid-cols-3 gap-4">
       <div class="rounded-xl border border-zinc-200 p-5 text-center"><div class="serif text-[28px] measured">5</div><div class="mt-1 text-[12px] uppercase tracking-widest text-zinc-500">Trades priced from one photo</div></div>
-      <div class="rounded-xl border border-zinc-200 p-5 text-center"><div class="serif text-[28px] measured">1</div><div class="mt-1 text-[12px] uppercase tracking-widest text-zinc-500">Photograph required</div></div>
+      <div class="rounded-xl border border-zinc-200 p-5 text-center"><div class="serif text-[28px] measured">1</div><div class="mt-1 text-[12px] uppercase tracking-widest text-zinc-500">Photo to get started</div></div>
       <!-- "<60s photo to itemised estimate" stood here. Every other figure in
            this block is computed from the catalogue or enforced in code and can
            be pointed at: five trades priced, one photograph, three installers
@@ -722,6 +722,16 @@
            is in the consent wording and in the quotes explanation — where it
            is a reassurance rather than a scarcity signal — and it is enforced
            in MAX_INSTALLERS_PER_LEAD either way. -->
+      <!-- The installer cap comes back, and this is not a reversal of
+           yesterday's removal even though it looks like one. What went was
+           "2 national installers contracted" — a count of who has signed,
+           which reads as a coverage warning to anybody outside a city, and
+           that one stays gone. This is the cap, which answers a different and
+           much more common question: how many people are about to ring me.
+           Reframed from "3 installers per lead" — a supply-side unit — to the
+           limit and the condition, which is what a homeowner is actually
+           being reassured about. Enforced in MAX_INSTALLERS_PER_LEAD. -->
+      <div class="rounded-xl border border-zinc-200 p-5 text-center"><div class="serif text-[28px] measured">3</div><div class="mt-1 text-[12px] uppercase tracking-widest text-zinc-500">Installers at most, ever</div><div class="mt-1.5 text-[11px] leading-4 text-zinc-500 normal-case tracking-normal">And only if you ask for quotes</div></div>
       <div class="rounded-xl border border-zinc-200 p-5 text-center"><div class="serif text-[28px] measured">24</div><div class="mt-1 text-[12px] uppercase tracking-widest text-zinc-500">Years in the trade behind the pricing</div></div>
     </div>
     <!-- Brief §11: say what affects the customer, not what affects the
@@ -785,12 +795,28 @@
       Two neighbours. Same street.<br>Same windows. Thousands apart.
     </h2>
     <div class="mt-6 grid md:grid-cols-2 gap-6 md:gap-10">
+      <!-- Copy-edit handoff §4: shorter, and the same point made once.
+
+           This carried three tellings of one idea — the Wednesday evening, the
+           negotiation tax, and the front rooms — each a version of "the price
+           moves on how long you sit there". The handoff's replacement is
+           flatter than what it replaces, and that is the trade being made
+           deliberately: "sat in the room longer on a Wednesday evening" is the
+           better sentence, and it is the third time a reader meets the
+           scenario by the time they reach it.
+
+           §7's founder copy is folded in here rather than restored to a
+           section of its own, which is what that item asks for. It was merged
+           away yesterday on the Product Flow sprint's instruction and the two
+           documents disagree; a heading that appears, disappears and reappears
+           inside two days is worse than either version. Kept in the third
+           person because the founder is not named on the page — the handoff's
+           first-person "I spent twenty-four years" reads oddly above no
+           byline, and whose face and name go on a public page is not a
+           developer's decision to make. -->
       <div class="space-y-4 text-[15px] leading-7 text-white/75">
-        <p>One of them sat in the room longer on a Wednesday evening. That is the only difference. The product is identical. The price is not.</p>
-        <p>That is not a market price. It is a negotiation tax on people who have no way of knowing what the job should cost before somebody is sitting in their front room.</p>
-        <!-- The twenty-four years, told once. It was here, in a section
-             heading, and again in that section's only paragraph. -->
-        <p>Facet Pro was built by somebody who sold these jobs from front rooms, on weeknights, for twenty-four years &mdash; long enough to know what a job settles at, and why two identical houses on one street pay wildly different amounts for the same work. It is that knowledge written down, and offered to everybody at the same number.</p>
+        <p>Two similar homes can end up paying very different prices for similar work. Sometimes that is timing. Sometimes it is negotiation. Mostly it is how the sales process unfolds &mdash; and none of it is anything to do with the windows.</p>
+        <p>Facet Pro was built by somebody who sold these jobs out of people&rsquo;s front rooms for twenty-four years. Long enough to know what the work really costs, and how often two similar houses end up paying very different amounts for it. This puts that in the homeowner&rsquo;s hands before the sales process starts.</p>
       </div>
       <div class="md:border-l md:border-white/10 md:pl-10">
         <!-- "the same number" was corrected to "the same starting point" in
@@ -836,7 +862,7 @@
         <div class="text-[12px] uppercase tracking-widest text-white/60">Facet Pro</div>
         <ul class="mt-3 space-y-2 text-[14px] text-white/90">
           <li>One photograph, taken from your own pavement</li>
-          <li>Your home, your choices, your evening</li>
+          <li>Your home. Your choices. In your own time.</li>
           <li>An itemised estimate before anybody visits</li>
           <li>Five trades off the same photograph</li>
           <!-- Was "The same house gets the same starting point", which is now
@@ -848,16 +874,37 @@
       </div>
     </div>
 
-    <!-- Who pays, in one line. This was a section of its own with a four-step
-         diagram; the diagram drew the table above it, and the fact underneath
-         it is what a homeowner actually needs before handing over a
-         photograph. The three-installer cap is enforced in
-         MAX_INSTALLERS_PER_LEAD, which is why it can be stated flatly. -->
-    <p class="mt-8 pt-6 border-t border-white/10 text-[13px] leading-6 text-white/60 max-w-[78ch]">
-      <strong class="text-white/85">Free for homeowners.</strong> No account, nothing to cancel, and no
-      installer hears from you unless you ask to be quoted. Installers pay us for a lead at that point,
-      and never more than three of them &mdash; a limit in the code rather than a promise in the copy.
-    </p>
+    <!-- Copy-edit handoff §3, in the place the merge left for it.
+
+         What was here said "Installers pay us for a lead at that point" — the
+         lead economics §3 asks to delete, and it is right to. It answers a
+         question the homeowner did not ask, on the section that is meant to
+         reassure them that nothing is being sold. The commercial arrangement
+         is in the Terms, where somebody looking for it will look.
+
+         What replaces it is the ordering, which is the actual promise: look,
+         then price, then decide whether to speak to anyone. The three steps
+         are the handoff's; the free/no-account line survives from what was
+         here because "what will this cost me" is the next question after
+         "will somebody ring me", and it is a fact rather than a narrative. -->
+    <div class="mt-8 pt-6 border-t border-white/10">
+      <p class="text-[11px] tracking-[0.25em] uppercase text-white/40">Research your project before you become a lead</p>
+      <div class="mt-4 grid sm:grid-cols-3 gap-4">
+        <div>
+          <p class="text-[14px] font-medium text-white/90">See your options first.</p>
+          <p class="mt-1 text-[13px] leading-6 text-white/55">See what your home could look like before making any decisions.</p>
+        </div>
+        <div>
+          <p class="text-[14px] font-medium text-white/90">See the likely cost second.</p>
+          <p class="mt-1 text-[13px] leading-6 text-white/55">Understand the estimated price and what is included in it.</p>
+        </div>
+        <div>
+          <p class="text-[14px] font-medium text-white/90">Speak to someone last &mdash; if you want to.</p>
+          <p class="mt-1 text-[13px] leading-6 text-white/55">You decide when you are ready to ask for quotes. At most three installers, ever.</p>
+        </div>
+      </div>
+      <p class="mt-5 text-[13px] leading-6 text-white/50">Free for homeowners. No account, nothing to cancel, and no installer hears from you unless you ask.</p>
+    </div>
   </section>
 
   <!-- What can be priced today. The roadmap chips and the "platform" framing
@@ -865,17 +912,30 @@
        folded in here because a list of six trades is not an argument and does
        not need a section to itself. -->
   <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="vision-heading">
+    <!-- Copy-edit handoff §6. Conservatories were a chip in this row with a
+         footnote underneath explaining that they are not, in fact, priced from
+         the photo — a caveat cancelling the heading directly above it. They
+         are a different kind of thing: guide bands by style, because a
+         conservatory turns on size, groundworks and access rather than on
+         anything the front elevation shows. Own block, own promise. -->
     <p class="text-[11px] tracking-[0.25em] uppercase text-zinc-400">What you can improve</p>
-    <h2 id="vision-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">Priced from your photo today</h2>
+    <h2 id="vision-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">Priced from your photo</h2>
     <div class="mt-5 flex flex-wrap gap-2 text-[13px]">
       <span class="px-3 py-1.5 rounded-full bg-zinc-900 text-white">Windows</span>
       <span class="px-3 py-1.5 rounded-full bg-zinc-900 text-white">Doors</span>
       <span class="px-3 py-1.5 rounded-full bg-zinc-900 text-white">Cladding &amp; render</span>
       <span class="px-3 py-1.5 rounded-full bg-zinc-900 text-white">Fascias, soffits &amp; guttering</span>
       <span class="px-3 py-1.5 rounded-full bg-zinc-900 text-white">Roofs</span>
-      <span class="px-3 py-1.5 rounded-full bg-zinc-900 text-white">Conservatories</span>
     </div>
-    <p class="mt-4 text-[12px] leading-5 text-zinc-500">Conservatories are guide ranges to compare styles, not priced from your photo. More home improvements coming soon.</p>
+    <p class="mt-4 text-[12px] leading-5 text-zinc-500">More home improvements coming soon.</p>
+
+    <div class="mt-6 pt-5 border-t border-zinc-200 flex items-start justify-between gap-4 flex-wrap">
+      <div>
+        <p class="text-[14px] font-medium">Also exploring conservatories?</p>
+        <p class="mt-1 text-[12px] leading-5 text-zinc-600 max-w-[52ch]">Compare guide price ranges for different styles before you start collecting quotes.</p>
+      </div>
+      <a href="#conservatory" class="shrink-0 text-[12px] px-4 rounded-full border border-zinc-300 hover:border-zinc-900 transition min-h-[44px] inline-grid place-items-center">Explore conservatory costs</a>
+    </div>
   </section>
 
   <!-- Real completed work. Static markup, not JS-mounted: it's the strongest
@@ -883,8 +943,15 @@
        by default, so if the toggle script never runs you still see the result. -->
 
   <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="honest-heading">
-    <h2 id="honest-heading" class="serif text-[26px] md:text-[32px] tracking-tight">What your estimate actually includes</h2>
-    <p class="mt-2 text-sm text-zinc-600 max-w-[62ch]">Most online calculators give you one number with nothing behind it. Facet Pro shows the whole build-up, the way an installer would price it.</p>
+    <!-- §8. Headline and intro are the handoff's. The six cards are not: it
+         asks to replace them with five generic labels (materials, labour,
+         access, waste, VAT), and those are already the words in the intro. The
+         cards say what is included *per trade*, which is the itemisation the
+         whole "most calculators give you one number" argument rests on, and
+         they are six short scannable lines rather than the long paragraphs the
+         handoff is asking to delete. -->
+    <h2 id="honest-heading" class="serif text-[26px] md:text-[32px] tracking-tight">See what&rsquo;s behind the number</h2>
+    <p class="mt-2 text-sm text-zinc-600 max-w-[62ch]">Most online calculators give you one number and leave you guessing what it includes. Facet Pro breaks the estimate down &mdash; materials, labour, access, waste and VAT &mdash; so you can see what the project should actually cost.</p>
     <div class="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-3 text-[13px]">
       <div class="rounded-xl border border-zinc-200 p-4"><strong class="font-medium">Cladding</strong><p class="mt-1 text-zinc-600">Material and the labour to fit it, priced per square metre.</p></div>
       <div class="rounded-xl border border-zinc-200 p-4"><strong class="font-medium">Roof</strong><p class="mt-1 text-zinc-600">Tiles or slate plus fitting, sized from your roof area.</p></div>
@@ -902,9 +969,44 @@
          accurate about what it is, and the alternative to saying them is a
          homeowner who feels misled at survey. -->
     <div class="mt-6 rounded-xl border border-zinc-200 bg-[#FDFCF9] p-5">
-      <h3 class="text-[14px] font-medium">What it doesn&rsquo;t know yet</h3>
-      <p class="mt-2 text-[12px] leading-6 text-zinc-600 max-w-[70ch]">This is a planning estimate, not a fixed quote &mdash; built to give you a realistic cost while you are still deciding. Your final price depends on the condition of your walls and roof, access, and what an installer finds on survey.</p>
-      <p class="mt-2 text-[12px] leading-6 text-zinc-600 max-w-[70ch]">Two things we are still sharpening, and would rather say than not: window rates are indicative until our supplier rate card lands, and we are still calibrating how we measure a house from a photograph against surveyed properties. If a figure looks wrong for your home, tell us when you save your design &mdash; that is exactly what we are trying to get right.</p>
+      <!-- Copy-edit handoff §9, its only CRITICAL item, and it turned out to
+           be a correction rather than a rewrite.
+
+           The line it asks to delete — "window rates are indicative until our
+           supplier rate card lands" — is stale. catalogue.glazing.sourced is
+           true: the rates are what these jobs settle at, checked against a
+           national installer's list prices less the discount routinely
+           available, and the startup log reports them as sourced. The page was
+           still apologising for a condition that no longer holds, which is its
+           own kind of inaccuracy.
+
+           (That check named the installer here on first writing. It is a
+           company that buys leads on this site, the comment ships to every
+           browser, and test/security.test.js caught it — which is what that
+           test exists for. See catalogue.glazing.source for the private note.)
+
+           Reframed as the handoff asks: not a list of our shortcomings, but a
+           list of what a survey can find that a photograph cannot. Same
+           honesty, addressed to the homeowner's question rather than ours.
+
+           One thing kept against the handoff's instruction. It drops the
+           measurement-calibration admission entirely, and that one is still
+           true — data/survey-samples.json holds seventeen rows and none of
+           them has a known wall area, so the photo-to-area step has never been
+           checked against a measured house. "Final measurements" in its list
+           covers it obliquely; the clause below says it. A live accuracy
+           caveat is not repetition, and this is the last place on the page
+           that carries it. -->
+      <h3 class="text-[14px] font-medium">What can change your final price?</h3>
+      <p class="mt-2 text-[12px] leading-6 text-zinc-600 max-w-[70ch]">Facet Pro gives you a planning estimate, not a fixed contract quote. The final price can change after a survey, because of things a photograph cannot always show:</p>
+      <ul class="mt-2 grid gap-1 text-[12px] leading-6 text-zinc-600">
+        <li>&bull; The condition of the property</li>
+        <li>&bull; Access and installation requirements</li>
+        <li>&bull; Hidden or unexpected work</li>
+        <li>&bull; Final measurements &mdash; we are still calibrating how we size a house from a photograph against surveyed properties</li>
+        <li>&bull; Your final product specification</li>
+      </ul>
+      <p class="mt-3 text-[12px] leading-6 text-zinc-600 max-w-[70ch]">That is why we show a realistic range rather than pretending one number is guaranteed. If a figure looks wrong for your home, tell us when you save your design.</p>
     </div>
   </section>
 
@@ -924,7 +1026,7 @@
            consent is even accepted. -->
       <details class="group border-b border-zinc-200">
         <summary class="flex items-center justify-between gap-4 py-4"><h3 class="text-[15px] font-medium">Will someone call me?</h3><span class="chev text-zinc-400 transition-transform" aria-hidden="true">&#8964;</span></summary>
-        <p class="pb-4 text-[13px] leading-6 text-zinc-600 max-w-[72ch]">Only if you ask. You can upload a photo, design your whole exterior and read the itemised estimate without giving us a name, a number or an email. If you do want quotes, you choose when &mdash; and at most three installers ever receive your details, which is a limit in the code rather than a promise in this paragraph. No call centres, and no follow-up if you never asked.</p>
+        <p class="pb-4 text-[13px] leading-6 text-zinc-600 max-w-[72ch]">Not unless you ask to be contacted. You can upload a photo, design your whole exterior and read the estimate without giving us a name, a number or an email. If you do want quotes, you choose when &mdash; and at most three installers ever receive your details.</p>
       </details>
 
 <details class="group">
@@ -934,7 +1036,7 @@
 
       <details class="group">
         <summary class="flex items-center justify-between gap-4 py-4"><h3 class="text-[15px] font-medium">Do I need to measure my house first?</h3><span class="chev text-zinc-400 transition-transform" aria-hidden="true">⌄</span></summary>
-        <p class="pb-4 text-[13px] leading-6 text-zinc-600 max-w-[72ch]">No. We measure your windows from the photo, using your front door as the reference — a UK front door is a standard height, so it tells us the scale of everything else. If we've counted wrong, correct it with one tap and the estimate updates. You can also type in your wall area or your guttering run if you happen to know them.</p>
+        <p class="pb-4 text-[13px] leading-6 text-zinc-600 max-w-[72ch]">No. Start with a clear photo of the front of your home &mdash; Facet Pro uses the visible features and proportions in it to size the job. If anything looks wrong, correct it with one tap and the estimate updates.</p>
       </details>
 
       <details class="group">
@@ -969,7 +1071,7 @@
 
       <details class="group">
         <summary class="flex items-center justify-between gap-4 py-4"><h3 class="text-[15px] font-medium">Does Facet Pro do the work?</h3><span class="chev text-zinc-400 transition-transform" aria-hidden="true">⌄</span></summary>
-        <p class="pb-4 text-[13px] leading-6 text-zinc-600 max-w-[72ch]">Facet Pro creates the design and the estimate. When you save your design it goes to installers who can quote for the job properly and arrange a survey. There's no obligation to go ahead.</p>
+        <p class="pb-4 text-[13px] leading-6 text-zinc-600 max-w-[72ch]">No. Facet Pro creates the design and the estimate. If you ask for quotes, it goes to installers who arrange a survey and quote properly. There is no obligation to go ahead.</p>
       </details>
 
     </div>
@@ -1031,11 +1133,27 @@
          this section too, at the foot, with the link out. -->
     <p class="text-[11px] tracking-[0.25em] uppercase text-zinc-400">Accuracy</p>
     <h2 id="tech-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">How can one photo be enough?</h2>
+    <!-- Copy-edit handoff §11. Its opening is used; its instruction to drop
+         the door measurement is not, and this is the one place the document is
+         asked to be overruled.
+
+         It says avoid "the front door is 1.98 m" in favour of "features such
+         as doors and windows can help provide useful reference points for
+         estimating scale". That sentence could describe any product, commits
+         to nothing, and is the vaguer of the two on the section whose entire
+         job is to answer "how can one photo possibly be enough?". The specific
+         number is what makes the method sound like a method rather than a
+         claim — a reader who has ever hung a door knows it is true, and it is
+         the difference between "trust us" and "here is how".
+
+         So: the handoff's framing, which is warmer and leads with what the
+         homeowner gets, and the fact kept at the end of it. -->
     <p class="mt-3 max-w-[72ch] text-[14px] leading-7 text-zinc-600">
-      Facet Pro uses visible features and proportions in your photograph to build an initial
-      understanding of your home&rsquo;s exterior. There is one object of known size in almost every
-      picture of a British home: the front door. It is 1.98&nbsp;m, and everything else follows from
-      it. You can check and correct the important details before your estimate is calculated.
+      A photo contains more information than you might think. Facet Pro uses visible features,
+      proportions and familiar dimensions to build an initial understanding of your home&rsquo;s
+      exterior &mdash; a standard UK front door is very close to 1.98&nbsp;m, and it is in almost every
+      photograph of a British home, so it gives us the scale of everything around it. Where more detail
+      is needed, you can check or correct it before your estimate is calculated.
     </p>
     <div class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Scale from the door</div><p class="mt-1 text-[13px] leading-6 text-zinc-600">A UK front door is a known height. The elevation is measured against it &mdash; no reference object, no tape measure, no visit.</p></div>
@@ -1083,7 +1201,7 @@
     <p class="mt-5 text-[15px] leading-7 text-white/75 max-w-[54ch] mx-auto">
       Upload a photo and explore your home improvement project before speaking to anyone.
     </p>
-    <button type="button" class="mt-7 cta px-7 py-4 rounded-full text-[15px] font-semibold transition min-h-[52px]" onclick="goToUpload()">Upload my house</button>
+    <button type="button" class="mt-7 cta px-7 py-4 rounded-full text-[15px] font-semibold transition min-h-[52px]" onclick="goToUpload()">Upload a photo</button>
     <p class="mt-4 text-[13px] text-white/60">No measurements &nbsp;&bull;&nbsp; No obligation &nbsp;&bull;&nbsp; No sales call unless you ask</p>
   </section>
 
@@ -1336,6 +1454,9 @@ const state = {
   // Server tells us whether it can email the homeowner their design, so the
   // form only promises it when it's true.
   resumeCode: null,         // a code we've issued, so they can type it on a phone
+  // Read back from the server rather than restated here, so the copy that says
+  // how long a code lasts cannot drift from resume.TTL_MS.
+  resumeExpiresAt: null,
   resumeBusy: false,
   resumeError: null,
   designPackEmail: false,
@@ -1728,8 +1849,26 @@ function designChoices() {
   };
 }
 
-async function getResumeCode() {
-  state.resumeBusy = true; state.resumeError = null; renderUploadOnly();
+/* How long a code has left, in the words somebody would use.
+
+   Derived from the expiry the server sent rather than from a number typed
+   into the copy, because the two would part company the first time the TTL
+   moved and nobody would notice — the wrong one is still a plausible
+   sentence. */
+function resumeLifetimeLabel() {
+  const until = Date.parse(state.resumeExpiresAt || '');
+  if (!Number.isFinite(until)) return null;
+  const days = Math.round((until - Date.now()) / 86400000);
+  if (days >= 2) return `Works for ${days} days.`;
+  const hours = Math.max(1, Math.round((until - Date.now()) / 3600000));
+  return `Works for ${hours} hour${hours === 1 ? '' : 's'}.`;
+}
+
+/* Two callers now, and they repaint different parts of the page: the phone
+   handoff lives in the upload panel, the keep-this-design card lives in step
+   4. Whichever asked says how to redraw itself. */
+async function getResumeCode(repaint = renderUploadOnly) {
+  state.resumeBusy = true; state.resumeError = null; repaint();
   try {
     const res = await fetch('/api/resume', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1738,10 +1877,11 @@ async function getResumeCode() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'We couldn’t make you a code just now.');
     state.resumeCode = data.code;
+    state.resumeExpiresAt = data.expiresAt || null;
   } catch (err) {
     state.resumeError = err.message;
   } finally {
-    state.resumeBusy = false; renderUploadOnly();
+    state.resumeBusy = false; repaint();
   }
 }
 
@@ -1764,10 +1904,17 @@ async function redeemResumeCode(code) {
 /* Ids are resolved against the catalogue we were served, so a code carrying
    something we no longer sell leaves that choice alone rather than breaking. */
 function applyDesign(d) {
-  const swatch = (id) => id && SWATCHES.find(s => s.id === id);
-  if (swatch(d.claddingId)) state.cladding = swatch(d.claddingId);
-  if (swatch(d.trimId)) state.trim = swatch(d.trimId);
-  if (swatch(d.roofId)) state.roof = swatch(d.roofId);
+  /* "Leave as it is" is a choice, and it was the one choice a code could not
+     carry back. noneSwatch is built per group rather than kept in SWATCHES, so
+     looking 'none' up in SWATCHES found nothing and the exclusion was silently
+     dropped — somebody who saved a windows-only design got walls and a roof
+     priced back into it on their phone, at a different number from the one
+     they saved. The group matters: a none swatch carries the group it is
+     standing in for. */
+  const swatch = (id, group) => id === 'none' ? noneSwatch(group) : (id && SWATCHES.find(s => s.id === id));
+  if (swatch(d.claddingId, 'Cladding')) state.cladding = swatch(d.claddingId, 'Cladding');
+  if (swatch(d.trimId, 'Trim')) state.trim = swatch(d.trimId, 'Trim');
+  if (swatch(d.roofId, 'Roof')) state.roof = swatch(d.roofId, 'Roof');
   if (d.houseType && HOUSE_TYPES.some(t => t.id === d.houseType)) state.houseType = d.houseType;
   for (const key of ['windowStyleId', 'doorStyleId', 'windowDoorColourId', 'fasciaId', 'soffitId', 'gutteringId', 'rooflineCladdingId']) {
     if (d[key]) state.prefs[key] = d[key];
@@ -2159,7 +2306,7 @@ function buildUploadDetect() {
     return h('div', { className: 'mt-4 rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4' }, [
       h('p', { className: 'text-[13px] font-medium' }, 'Not next to your house?'),
       h('p', { className: 'mt-1 text-[12px] leading-5 text-zinc-600 max-w-[62ch]' },
-        'Carry what you’ve chosen over to your phone and take the photo there. We keep your colours and choices for a day — no photograph, and nothing about you.'),
+        'Carry what you’ve chosen over to your phone and take the photo there. We keep your colours and choices, and nothing else — no photograph, and nothing about you.'),
 
       state.resumeCode
         ? h('div', { className: 'mt-3 rounded-lg bg-white border border-zinc-200 p-3' }, [
@@ -2169,7 +2316,7 @@ function buildUploadDetect() {
               ' and enter:',
             ]),
             h('p', { className: 'mt-1 serif text-[28px] tracking-[0.2em]' }, state.resumeCode),
-            h('p', { className: 'mt-1 text-[11px] text-zinc-500' }, 'Works for 24 hours.'),
+            h('p', { className: 'mt-1 text-[11px] text-zinc-500' }, resumeLifetimeLabel()),
           ])
         : h('div', { className: 'mt-3 flex flex-wrap items-center gap-2' }, [
             h('button', {
@@ -2538,12 +2685,6 @@ function buildVisualizer() {
     ])
   );
 
-  function priceRow(label, value, muted) {
-    return h('div', { className: `flex justify-between gap-4 ${muted ? 'text-white/60' : 'text-white'}` }, [
-      h('span', {}, label), h('span', { className: 'measured' }, fmtMoney(value)),
-    ]);
-  }
-
   const renderButtonLabel = state.rendering ? 'Creating your picture…' : (state.renderUrl ? 'Try this look again' : 'Show me this on my home');
 
   /* Only over a real render — there is nothing to light up on a swatch
@@ -2712,7 +2853,11 @@ function buildVisualizer() {
                   : h('div', { className: 'mt-2 text-[10px] text-zinc-500 text-center' }, 'Takes up to a minute'),
             ]),
       ]),
-      h('div', { className: 'flex flex-col gap-6' }, [buildPricePanel(price, priceRow)]),
+      /* Its own mount, so a window choice can update the estimate without
+         rebuilding the visualiser around it. renderVisualizerOnly replaces the
+         before/after slider too, and throws away the drag position with it —
+         the same reason the total bar has had its own mount since it existed. */
+      h('div', { id: 'estimate-panel', className: 'flex flex-col gap-6' }, [buildPricePanel(price, priceRow)]),
     ]),
   ]);
 }
@@ -2755,6 +2900,132 @@ function buildHouseTypePicker({ short } = {}) {
   ));
 }
 
+/* Lived inside buildVisualizer until the estimate panel got its own mount.
+   It reads nothing but its arguments, so module scope costs nothing and means
+   renderEstimatePanelOnly does not have to carry a copy of it. */
+function priceRow(label, value, muted) {
+  return h('div', { className: `flex justify-between gap-4 ${muted ? 'text-white/60' : 'text-white'}` }, [
+    h('span', {}, label), h('span', { className: 'measured' }, fmtMoney(value)),
+  ]);
+}
+
+function renderEstimatePanelOnly() {
+  const old = document.getElementById('estimate-panel');
+  /* No mount, nothing to do. Not a full render: this is called on every
+     glazing response, including ones that land before the visualiser has been
+     built, and escalating to render() there would rebuild the page underneath
+     a request that had not finished arriving. The next full render draws the
+     panel from the same state anyway. */
+  if (!old) return;
+  const price = state.price || { cladding: 0, roof: 0, trim: 0, labour: 0, total: 0 };
+  old.replaceWith(h('div', { id: 'estimate-panel', className: 'flex flex-col gap-6' }, [buildPricePanel(price, priceRow)]));
+}
+
+/* What this panel is allowed to say it covers.
+
+   It listed all three trades whatever had been priced, so somebody who came
+   for a roof read "walls & cladding, fitted" in the includes list under a
+   roof-only figure. The engine already reports which trades it priced; this
+   reads that rather than restating the assumption. */
+const PRICED_TRADE_LINES = { cladding: 'Walls & cladding, fitted', roof: 'Roof, fitted', trim: 'Fascia, soffit & guttering' };
+const pricedIncludes = (priced) => [
+  ...priced.map(t => PRICED_TRADE_LINES[t]).filter(Boolean),
+  'Scaffolding',
+  'Waste allowance',
+  'VAT (20%)',
+];
+
+/* The estimate panel when windows and doors are the whole project.
+
+   Same panel, same place, same voice — the number in it comes from
+   /api/glazing instead of /api/quote, because that is where the work they
+   asked about is priced. The headline is the installer spread rather than our
+   own tighter figure, matching the windows section further down: two places
+   showing the same job must not show two different numbers.
+
+   The house type picker stays, and is doing real work here: with no photograph
+   the window count comes from the house type prior, so it is the one control
+   that moves this figure. */
+function buildGlazingLedPanel() {
+  const g = state.glazing;
+  const label = journeyLabel(state.journey);
+
+  const chooseFirst = h('div', { className: 'rounded-2xl bg-zinc-900 text-white p-5' }, [
+    h('h3', { className: 'text-[11px] tracking-widest uppercase text-white/50' }, 'Your estimate'),
+    h('p', { className: 'mt-4 text-[15px] leading-6' },
+      label === 'A front door'
+        ? 'Choose a door style and a colour and we’ll price it here.'
+        : 'Choose a window style and a frame colour and we’ll price them here.'),
+    h('p', { className: 'mt-2 text-[12px] leading-5 text-white/60' },
+      label === 'A front door'
+        ? 'Priced by the leaf, including fitting, taking the old door away, and VAT.'
+        : 'Priced by the size and style of each opening, with access for anything upstairs, taking the old frames away, and VAT.'),
+    h('button', {
+      type: 'button',
+      className: 'mt-4 px-5 rounded-full bg-white text-zinc-900 text-xs font-medium min-h-[44px] inline-grid place-items-center',
+      onClick: () => document.getElementById('detail-options')?.scrollIntoView({ behavior: 'smooth', block: 'center' }),
+    }, label === 'A front door' ? 'Choose a door' : 'Choose your windows'),
+    h('p', { className: 'mt-4 text-[11px] leading-5 text-white/55' },
+      'Walls, roof and roofline aren’t in this — you told us they’re staying as they are. Turn any of them back on above and they’ll be priced here too.'),
+  ]);
+
+  if (state.glazingLoading && !g?.price) {
+    return h('div', { className: 'rounded-2xl bg-zinc-900 text-white p-5' }, [
+      h('h3', { className: 'text-[11px] tracking-widest uppercase text-white/50' }, 'Your estimate'),
+      h('p', { className: 'mt-4 text-[15px] leading-6 text-white/70' }, 'Working out a guide price…'),
+    ]);
+  }
+  if (!g || !g.price) return chooseFirst;
+
+  const spread = g.marketRange || g.range;
+  const n = g.windowCount;
+  const doorOnly = g.price.windowsIncluded === false;
+
+  return h('div', { className: 'rounded-2xl bg-zinc-900 text-white p-5' }, [
+    h('h3', { className: 'text-[11px] tracking-widest uppercase text-white/50' }, 'Your estimate'),
+
+    // Light card so the dark-filled selected chip has something to read
+    // against inside the dark estimate panel.
+    h('div', { className: 'mt-4 rounded-xl bg-[#FDFCF9] border border-zinc-200 p-3' }, [
+      h('div', { className: 'text-[10px] tracking-widest uppercase text-zinc-500' }, 'What kind of home is it?'),
+      h('div', { className: 'mt-2' }, buildHouseTypePicker({ short: true })),
+    ]),
+
+    h('div', { className: 'mt-5' }, [
+      h('div', { id: 'estimate-total', className: 'serif text-[30px] leading-none measured' },
+        `${fmtMoney(spread.low)} – ${fmtMoney(spread.high)}`),
+      h('div', { className: 'mt-2 text-[11px] text-white/50' },
+        doorOnly
+          ? 'Your front door, supplied and fitted'
+          : [`${n} window${n === 1 ? '' : 's'}`, state.prefs.doorStyleId && state.prefs.doorStyleId !== 'none' ? ' and a door' : '', ', supplied and fitted'].join('')),
+    ]),
+
+    h('div', { className: 'mt-5 rounded-xl bg-white/5 border border-white/10 p-3' }, [
+      h('div', { className: 'text-[10px] tracking-widest uppercase text-white/55' }, 'Includes'),
+      h('div', { className: 'mt-2 grid gap-1 text-[11px] text-white/60' }, [
+        doorOnly ? 'The door, supplied and fitted' : 'Every window, supplied and fitted',
+        g.price.access ? 'Access for the upstairs windows' : null,
+        'Taking the old frames away',
+        'VAT (20%)',
+      ].filter(Boolean).map(item => h('div', {}, `• ${item}`))),
+    ]),
+
+    /* Why it is a range, said here rather than only two screens down. Same
+       explanation the windows section gives, shortened: the spread is which
+       company quotes you, not how roughly we measured. */
+    h('p', { className: 'mt-4 text-[11px] leading-5 text-white/70' },
+      'That range is which company quotes you — the lower end is close to what the keener of the two national installers settles at, the higher end what the same job goes out at elsewhere. Same windows, same house, same work.'),
+
+    h('p', { className: 'mt-3 text-[11px] leading-5 text-white/55' },
+      'Walls, roof and roofline aren’t in this — you told us they’re staying as they are. Turn any of them back on above and they’ll be priced here too.'),
+
+    g.ratesSourced === false
+      ? h('p', { className: 'mt-3 text-[10px] leading-4 text-white/55' },
+          'Window rates are our own estimate rather than a supplier rate card, so treat this as a guide and expect an installer’s quote to differ. Door prices come from real completed jobs.')
+      : null,
+  ]);
+}
+
 /* Before a photo we're pricing a typical home, not theirs, so the panel shows
    a range and says what it's assuming. Once we've measured or they've typed a
    figure, it switches to the itemised breakdown with a single total. The
@@ -2763,9 +3034,25 @@ function buildHouseTypePicker({ short } = {}) {
 function buildPricePanel(price, priceRow) {
   const exact = state.price?.exact;
   const range = state.price?.range;
+  const priced = state.price?.priced || [];
   const typeLabel = state.price?.houseTypeLabel
     || HOUSE_TYPES.find(t => t.id === state.houseType)?.label
     || 'typical home';
+
+  /* ── NOTHING THIS PANEL PRICES HAS BEEN ASKED FOR ──
+     Somebody who answers "Windows" — or arrives on ?journey=windows, which is
+     where eleven of the nineteen indexed pages send them — has every wall,
+     roof and roofline swatch set to "leave as it is", correctly. This panel
+     prices those three and nothing else, so it showed £0 – £0 above an
+     includes list naming the three trades they had just declined. The first
+     number the highest-intent visitor on the site ever saw was zero.
+
+     The total bar already refused to do this — "a price for nothing is not a
+     price" — and this is the same rule in the place it matters more. Windows
+     are priced by /api/glazing, so when there is a glazing figure it leads
+     here; when there is not yet one, the panel asks for the choice that would
+     produce it rather than printing a zero while it waits. */
+  if (!priced.length) return buildGlazingLedPanel();
 
   if (!exact && range) {
     return h('div', { className: 'rounded-2xl bg-zinc-900 text-white p-5' }, [
@@ -2786,14 +3073,8 @@ function buildPricePanel(price, priceRow) {
 
       h('div', { className: 'mt-5 rounded-xl bg-white/5 border border-white/10 p-3' }, [
         h('div', { className: 'text-[10px] tracking-widest uppercase text-white/55' }, 'Includes'),
-        h('div', { className: 'mt-2 grid gap-1 text-[11px] text-white/60' }, [
-          'Walls & cladding, fitted',
-          'Roof, fitted',
-          'Fascia, soffit & guttering',
-          'Scaffolding',
-          'Waste allowance',
-          'VAT (20%)',
-        ].map(item => h('div', {}, `• ${item}`))),
+        h('div', { className: 'mt-2 grid gap-1 text-[11px] text-white/60' },
+          pricedIncludes(priced).map(item => h('div', {}, `• ${item}`))),
       ]),
 
       h('p', { className: 'mt-4 text-[11px] leading-5 text-white/70' },
@@ -2905,10 +3186,10 @@ async function refreshGlazing() {
      not a price, it is a visitor being shown their own refusal. */
   const wantsWindows = state.prefs.windowStyleId && state.prefs.windowStyleId !== 'none';
   const wantsDoor = state.prefs.doorStyleId && state.prefs.doorStyleId !== 'none';
-  if (!wantsWindows && !wantsDoor) { state.glazing = null; renderDetailsOnly(); return; }
+  if (!wantsWindows && !wantsDoor) { state.glazing = null; renderGlazingConsumers(); return; }
   const ticket = ++glazingRequest;
   state.glazingLoading = true;
-  renderDetailsOnly();
+  renderGlazingConsumers();
   try {
     const res = await fetch('/api/glazing', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2932,8 +3213,21 @@ async function refreshGlazing() {
   } catch (_) {
     if (ticket === glazingRequest) state.glazing = null;
   } finally {
-    if (ticket === glazingRequest) { state.glazingLoading = false; renderDetailsOnly(); }
+    if (ticket === glazingRequest) { state.glazingLoading = false; renderGlazingConsumers(); }
   }
+}
+
+/* Everything that reads state.glazing, and nothing else.
+
+   This used to repaint only the windows section, so on a windows journey the
+   estimate panel and the total bar — the two places carrying the figure people
+   actually read — held whatever they had been built with until something else
+   forced a full render. Deliberately not renderVisualizerOnly: that rebuilds
+   the before/after slider and loses the drag position. */
+function renderGlazingConsumers() {
+  renderDetailsOnly();
+  renderEstimatePanelOnly();
+  renderTotalBarOnly();
 }
 
 /* ── WHAT IT COSTS, WITHOUT SCROLLING ──
@@ -2964,7 +3258,11 @@ function buildTotalBar() {
   if (glaz?.price) {
     const n = glaz.windowCount;
     if (glaz.price.windowsIncluded !== false) parts.push(`${n} window${n === 1 ? '' : 's'}`);
-    if (state.prefs.doorStyleId) parts.push('1 door');
+    /* 'none' is a string, and a truthy one. Declining the door — which the
+       windows journey does for everybody who arrives on it — still counted as
+       choosing one, so the bar read "8 windows · 1 door" under a figure that
+       correctly priced no door at all. */
+    if (state.prefs.doorStyleId && state.prefs.doorStyleId !== 'none') parts.push('1 door');
   }
   if (price?.footprintM2 && price.priced?.includes('cladding')) parts.push(`${price.footprintM2} m² of wall`);
   if (price?.priced?.includes('roof')) parts.push('roof');
@@ -2978,7 +3276,14 @@ function buildTotalBar() {
      pretending to be information. */
   const clad = price && (price.priced ? price.priced.length > 0 : true);
   const cladding = clad ? fmtMoney(price.total) : null;
-  const glazing = glaz?.price ? `${fmtMoney(glaz.range.low)}–${fmtMoney(glaz.range.high)}` : null;
+  /* The installer spread, the same figure the windows section and the estimate
+     panel lead with. The bar showed our own tighter range instead, so with the
+     estimate panel now carrying a windows figure the two sat on screen
+     together disagreeing by thousands about one job. The spread is also the
+     honest headline: it is the largest uncertainty in the number, and the one
+     nobody tells a homeowner about. */
+  const glazSpread = glaz?.marketRange || glaz?.range;
+  const glazing = glaz?.price ? `${fmtMoney(glazSpread.low)}–${fmtMoney(glazSpread.high)}` : null;
   if (!cladding && !glazing) return h('div', { id: 'total-bar' });
 
   /* Say whose house this is.
@@ -3006,6 +3311,13 @@ function buildTotalBar() {
 
   const composition = parts.length ? `inc VAT · ${parts.join(' · ')}` : 'inc VAT';
 
+  /* Names the two figures by what is in them. "Windows & doors" was printed
+     over a windows-only figure, which is the label version of the same
+     mistake the composition line above was fixed for. */
+  const hasDoor = state.prefs.doorStyleId && state.prefs.doorStyleId !== 'none';
+  const hasWindows = glaz?.price?.windowsIncluded !== false;
+  const glazLabel = hasWindows && hasDoor ? 'windows & doors' : hasWindows ? 'windows' : 'doors';
+
   /* ── COLLAPSED TO ONE LINE, TAP TO EXPAND ──
      UX Sprint handoff P0-C's second half and its mobile table: "sticky
      collapsed bar at bottom: Estimated: £XX,XXX · Tap to expand".
@@ -3024,7 +3336,7 @@ function buildTotalBar() {
       h('span', { className: 'measured' }, cladding),
     ]) : null,
     glazing ? h('div', { className: 'flex items-baseline justify-between gap-4 text-[12px]' }, [
-      h('span', { className: 'text-zinc-600' }, state.glazing?.price?.windowsIncluded === false ? 'Doors' : 'Windows & doors'),
+      h('span', { className: 'text-zinc-600' }, glazLabel.charAt(0).toUpperCase() + glazLabel.slice(1)),
       h('span', { className: 'measured' }, glazing),
     ]) : null,
     h('p', { className: 'text-[10px] leading-4 text-zinc-500' }, composition),
@@ -3069,8 +3381,7 @@ function buildTotalBar() {
         cladding && glazing ? h('span', { className: 'text-zinc-300' }, '·') : null,
         glazing ? h('span', { className: 'whitespace-nowrap' }, [
           h('span', { className: 'measured text-[15px]' }, glazing),
-          h('span', { className: 'hidden sm:inline text-[11px] text-zinc-500' },
-            state.glazing?.price?.windowsIncluded === false ? ' doors' : ' windows & doors'),
+          h('span', { className: 'hidden sm:inline text-[11px] text-zinc-500' }, ' ' + glazLabel),
         ]) : null,
         h('span', { className: 'hidden lg:inline text-[11px] text-zinc-500 truncate' }, composition),
       ]),
@@ -4238,6 +4549,55 @@ function leadSummary() {
   ]);
 }
 
+/* Repaints step 4 and nothing else, so asking for a code doesn't rebuild the
+   visualiser above it. */
+function renderSaveFramingOnly() {
+  const old = document.getElementById('save-design');
+  if (!old) return;
+  old.replaceWith(buildSaveFraming());
+}
+
+/* "Keep what you chose" — the resume code, asked the other question.
+
+   Rendered only when there is something to keep. A code carrying an empty
+   payload is refused by the endpoint anyway ("there's nothing to carry over
+   yet"), and offering one before anybody has chosen anything is a button that
+   exists to fail. */
+function buildKeepChoices(hasRender) {
+  /* House type is excluded from the test on purpose: it defaults to 'semi',
+     so counting it would make "you have a design worth keeping" true for
+     somebody who has not touched anything. Everything else here is a choice
+     somebody made, and 'none' is the choice to leave a trade alone. */
+  const { houseType, ...chosen } = designChoices();
+  const hasChoices = Object.values(chosen).some(v => v !== null && v !== undefined && v !== '' && v !== 'none');
+  if (!hasChoices) return null;
+
+  return h('div', { className: 'mt-4 rounded-2xl bg-white/5 border border-white/10 p-4' }, [
+    /* "And the choices behind it" only reads if a picture was offered above
+       it. Without a render there is no "it", and the sentence points at
+       nothing. */
+    h('p', { className: 'text-[13px] leading-6 text-white/80' },
+      hasRender ? 'And the choices behind it, so you don’t start again.' : 'Keep what you’ve chosen, so you don’t start again.'),
+    h('p', { className: 'mt-1 text-[12px] leading-5 text-white/55 max-w-[58ch]' },
+      'A six-character code that brings your colours, styles and house type back on any device. It holds those and nothing else — no photograph, no name, no email, nothing to unsubscribe from.'),
+
+    state.resumeCode
+      ? h('div', { className: 'mt-4 rounded-xl bg-white/10 border border-white/15 p-3' }, [
+          h('p', { className: 'text-[12px] text-white/70' }, ['Come back to ', h('strong', {}, location.host), ' and enter:']),
+          h('p', { className: 'mt-1 serif text-[28px] tracking-[0.2em]' }, state.resumeCode),
+          h('p', { className: 'mt-1 text-[11px] text-white/50' }, resumeLifetimeLabel()),
+        ])
+      : h('button', {
+          type: 'button',
+          className: 'cta mt-4 px-5 rounded-full text-[13px] font-semibold min-h-[48px] disabled:opacity-60',
+          disabled: state.resumeBusy,
+          onClick: () => getResumeCode(renderSaveFramingOnly),
+        }, state.resumeBusy ? 'One moment…' : 'Give me a code'),
+
+    state.resumeError ? h('p', { className: 'mt-2 text-[12px] text-red-300' }, state.resumeError) : null,
+  ]);
+}
+
 function buildSaveFraming() {
   /* A label that stays, an autocomplete the browser understands, and somewhere
      for an error to appear next to the thing that caused it.
@@ -4332,6 +4692,28 @@ function buildSaveFraming() {
           ])
         : h('p', { className: 'mt-3 text-sm leading-6 text-white/60 max-w-[60ch]' },
             'Everything else on this page works, so do try the colours and the estimate. Come back shortly and you’ll be able to save what you’ve designed.'),
+
+      /* And the choices, which the picture does not carry.
+
+         The share link is the visualisation: it is the right thing to send
+         somebody and the wrong thing to come back to, because it holds no
+         colours, no window style, no house type and no estimate. Somebody who
+         opens it next week is looking at their house in a colour they can no
+         longer name, on a page that has forgotten all of it.
+
+         The code already existed for the walk-outside-and-photograph handoff
+         and does exactly this job — an allowlisted set of catalogue ids, no
+         photograph, nothing about the person — so this is the same mechanism
+         asked the other question. It is offered to everybody, not only to
+         people who rendered: somebody who priced a roof and left has made a
+         design too.
+
+         Deliberately not an email field. That is personal data, and
+         LEAD_CAPTURE is off precisely because the notice behind it is
+         unfinished — a second collection route on the card that promises we
+         are not collecting anything would be the one thing on this page that
+         must not be built right now. */
+      buildKeepChoices(hasRender),
 
       /* This read "Nothing you do on this page is stored or sent anywhere
          while this notice is up." It is the strongest sentence on the card and
