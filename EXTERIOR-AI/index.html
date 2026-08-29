@@ -2268,12 +2268,35 @@ function buildUploadDetect() {
         `We found ${list}. If that isn’t right, correct it below — your number is the one we price.`);
     };
 
+    /* Product UX handoff §2 and §3.
+
+       §2 asks the narration to open on "Photo received ✓" and close on
+       "Almost there…". Both are real events rather than decoration, which is
+       the only reason they are here: by the time this panel exists the file
+       has been read and the request is in flight, so the tick is true when it
+       is drawn. And the closing line fills a gap that was genuinely dead —
+       the narration stops after five ticks, so on a slow detection every row
+       sat reading "looking…" with nothing moving until the server answered.
+
+       §3 asks the resolved state to say "We found your home", which is the
+       heading this panel should have had: "Your house, as we read it" is
+       accurate and slightly wary, and the moment it is describing is the one
+       the whole product turns on. The wariness belongs in the summary line
+       underneath, which invites a correction, not in the headline. */
+    const narrationSpent = detecting && state.analysisTick >= ANALYSIS_STEPS.length;
+
     return h('div', { className: 'rounded-xl bg-white/5 border border-white/10 p-3' }, [
       h('p', {
         className: 'text-[11px] tracking-widest uppercase text-white/50 mb-2',
         role: 'status', 'aria-live': 'polite',
-      }, detecting ? 'Analysing your house…' : 'Your house, as we read it'),
+      }, detecting ? 'Analysing your house…' : 'We found your home'),
+      detecting
+        ? h('p', { className: 'mb-2 text-[11px] text-emerald-300' }, '✓ Photo received')
+        : null,
       h('div', { className: 'grid gap-1.5' }, rows),
+      narrationSpent
+        ? h('p', { className: 'mt-2 text-[11px] leading-5 text-white/55' }, 'Almost there — preparing your starting design.')
+        : null,
       answered ? summaryLine() : null,
     ]);
   }
