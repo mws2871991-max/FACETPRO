@@ -1511,7 +1511,14 @@ const state = {
   renderUrl: null,
   // Set the first time they change anything, so the "now make it yours"
   // prompt appears once and then gets out of the way. See buildVisualizer.
-  hasCustomised: false,    // AI-generated render, once produced
+  hasCustomised: false,
+  // The last swatch choice and what it did to the total. Measured by diffing
+  // two totals, because the browser is never sent the rates — see the swatch
+  // handler in buildVisualizer.
+  lastPriceDelta: null,
+  // Whether the homeowner has pressed through the "We found your home" card to
+  // their own before-and-after. Gates the reveal, not the render.
+  revealed: false,
   renderId: null,     // our id for it — the lead sends this, never a URL
   rendering: false,
   sendingLead: false,
@@ -2437,7 +2444,7 @@ function buildUploadDetect() {
                first one got rather than an empty frame and a button. It is one
                more render against the daily cap, spent on somebody who has
                demonstrably not given up. */
-            onClick: () => { state.uploadedImg = null; state.uploadedBase64 = null; state.detections = []; state.stage = 'landing'; state.detectionStatus = 'idle'; state.renderUrl = null; state.renderId = null; state.windowCount = null; state.glazing = null; state.hasCustomised = false; autoRenderDone = false; U('Photo removed — add another whenever you like'); render(); }
+            onClick: () => { state.uploadedImg = null; state.uploadedBase64 = null; state.detections = []; state.stage = 'landing'; state.detectionStatus = 'idle'; state.renderUrl = null; state.renderId = null; state.windowCount = null; state.glazing = null; state.hasCustomised = false; state.revealed = false; state.lastPriceDelta = null; autoRenderDone = false; U('Photo removed — add another whenever you like'); render(); }
           }, 'Start again'),
         ]),
         /* The bail-out, next to the ask rather than below it.
@@ -2679,6 +2686,24 @@ function buildVisualizer() {
           'aria-pressed': active ? 'true' : 'false',
           className: `flex items-center gap-2 px-3 py-2 rounded-full border text-xs transition ${active ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-900'}`,
           onClick: async () => {
+            /* §5: what the choice cost, shown as a difference.
+
+               The brief calls the connection between the picture and the price
+               a major differentiator, and it is right that the connection was
+               invisible: the total re-rendered to a new number with nothing
+               saying which choice moved it or by how much.
+
+               It cannot be shown before the tap. /api/catalogue strips the
+               rate model deliberately, so the browser has no way to price a
+               swatch it has not chosen, and shipping the rate card to every
+               visitor to decorate a button would give away the one asset this
+               business has. Pricing every swatch server-side to label the row
+               would be fourteen requests to draw it.
+
+               So it is measured rather than looked up, from two totals we
+               already have either side of a call that was already being made.
+               Same information, no extra request, nothing disclosed. */
+            const before = state.price?.total ?? null;
             if (group === 'Cladding') state.cladding = sw;
             if (group === 'Trim') state.trim = sw;
             if (group === 'Roof') state.roof = sw;
@@ -2691,6 +2716,10 @@ function buildVisualizer() {
             reachedStage('design_changed');
             U(`${sw.name} selected — updating your estimate`);
             await refreshPrice();
+            const after = state.price?.total ?? null;
+            state.lastPriceDelta = (before !== null && after !== null && before !== after)
+              ? { label: sw.name, amount: after - before }
+              : null;
             render();
           }
         }, [
@@ -2749,7 +2778,7 @@ function buildVisualizer() {
      Only over a finished render, and only before they have started changing
      things: once a swatch has been touched they have found the controls and
      an invitation to find them is noise. */
-  const makeItYours = (state.renderUrl && !state.hasCustomised)
+  const makeItYours = (state.renderUrl && state.revealed && !state.hasCustomised)
     ? h('div', { className: 'mx-4 mb-4 rounded-xl bg-zinc-900 text-white p-4 flex items-center justify-between gap-3 flex-wrap' }, [
         h('div', {}, [
           h('p', { className: 'text-[13px] font-medium' }, 'Now make it yours'),
@@ -2817,6 +2846,44 @@ function buildVisualizer() {
             : null,
           slider,
           h('div', { className: 'absolute bottom-3 right-3 text-[10px] px-2 py-1 rounded-full bg-white border border-zinc-200' }, `${state.afterPct}% after`),
+
+          /* ── "THAT'S MY HOUSE" ──
+             Developer Brief §3, its stated most important change, and the
+             second document to ask for it.
+
+             It wants the transformation held back behind "We found your home →
+             Reveal my design" rather than simply appearing. The version below
+             gates the *reveal*, never the render: the picture is already made
+             and paid for by the time this card is on screen, so nothing is
+             wasted if they never press, and pressing is instant rather than a
+             minute of waiting for a promise to be kept.
+
+             That ordering matters. Gating the render behind the button would
+             have put a sixty-second wait immediately after a click that says
+             "reveal", which is the opposite of a reveal. The auto-render runs
+             during analysis, the card appears the moment it lands, and the
+             wait is filled by the progress narration that is already there.
+
+             It covers the image rather than replacing the block, so the
+             before-and-after underneath is fully built and one class change
+             away — no second render, no layout shift when it goes. */
+          (state.renderUrl && !state.revealed)
+            ? h('div', { className: 'absolute inset-0 z-20 grid place-items-center bg-zinc-900/85 backdrop-blur-sm text-center px-6' }, [
+                h('div', {}, [
+                  h('p', { className: 'serif text-[22px] md:text-[26px] text-white leading-tight' }, 'We found your home.'),
+                  h('p', { className: 'mt-1.5 text-[13px] text-white/70' }, 'Now see what it could look like.'),
+                  h('button', {
+                    type: 'button',
+                    className: 'cta mt-5 px-6 rounded-full text-[14px] font-semibold min-h-[48px]',
+                    onClick: () => {
+                      state.revealed = true;
+                      reachedStage('reveal_viewed');
+                      renderVisualizerOnly();
+                    },
+                  }, 'Reveal my design →'),
+                ]),
+              ])
+            : null,
         ]),
         makeItYours,
         lightingControls,
@@ -3136,6 +3203,15 @@ function buildPricePanel(price, priceRow) {
         state.price?.footprintSource === 'manual_entry' ? 'Your measurements' : 'Sized to your home'),
     ]),
     h('div', { id: 'estimate-total', className: 'mt-2 serif text-[34px] md:text-[40px] leading-none measured' }, fmtMoney(price.total)),
+    /* §5. The difference the last choice made, under the number it moved.
+       Subtle by instruction and by judgement — it is a footnote to the total,
+       not a running commentary, and it is replaced rather than accumulated so
+       the panel never becomes a ledger. Cleared whenever a choice makes no
+       difference, which is itself worth not announcing. */
+    state.lastPriceDelta
+      ? h('p', { className: `mt-1.5 text-[12px] leading-5 ${state.lastPriceDelta.amount > 0 ? 'text-amber-200/80' : 'text-emerald-300/90'}` },
+          `${state.lastPriceDelta.label}: ${state.lastPriceDelta.amount > 0 ? '+' : '−'}${fmtMoney(Math.abs(state.lastPriceDelta.amount))}`)
+      : null,
     h('p', { className: 'mt-2 text-[12px] leading-5 text-white/70' },
       'Including materials, labour, scaffolding, waste and VAT.'),
     h('p', { className: 'mt-2 text-[11px] leading-5 text-white/55' },
@@ -4089,12 +4165,11 @@ async function generateRealRender() {
     state.renderUrl = safeRenderUrl(data.url);
     state.renderId = data.renderId || null;
     landed = true;
-    /* Funnel event 5, the other way in. The slider records a deliberate drag;
-       this records the picture arriving on screen at all, which for the
-       automatic render is the moment the handoff calls "the first reveal" —
-       nobody has to touch anything for it to have happened. reachedStage
-       de-dupes, so whichever comes first is the one that counts. */
-    reachedStage('reveal_viewed');
+    /* Not reveal_viewed. That fired here while the picture appeared by
+       itself; there is now a card over it, so counting the render landing
+       would count every visitor who never pressed through — which is the
+       precise drop-off the event exists to measure. It is fired by the reveal
+       button and by a slider drag, both of which mean somebody looked. */
     U('Your new look is ready — drag the slider to compare');
   } catch (err) {
     U(err.plain ? err.message : `We couldn’t create that picture: ${err.message}`);
