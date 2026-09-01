@@ -141,18 +141,31 @@
   details[open] .chev{transform:rotate(180deg)}
 
   /* On a phone the photo and before/after panes are set by aspect ratio, which
-     at ~342px of usable width makes them 256px and 214px tall. Stacked, that
-     pushes the estimate off the bottom of the screen — the one thing the
-     homeowner came for. max-height overrides aspect-ratio, so the box shrinks
-     and the image crops rather than letterboxing.
+     at ~342px of usable width makes them 256px and 214px tall. max-height
+     overrides aspect-ratio, so the box shrinks and the image crops rather
+     than letterboxing.
 
      Applied only while the box is holding a photograph. Empty, it holds the
      framing guidance instead — stand back far enough, get the front door in —
-     and 220px cut that off mid-sentence. Cropping a photograph loses nothing;
-     cropping the instruction that decides whether the house can be measured
-     loses the measurement. */
+     and a hard cap cut that off mid-sentence. Cropping a photograph loses
+     nothing; cropping the instruction that decides whether the house can be
+     measured loses the measurement.
+
+     The cap was 220px, and the reason was written down: stacked, a full-height
+     image "pushes the estimate off the bottom of the screen — the one thing
+     the homeowner came for". That reason no longer holds. The sticky total bar
+     shipped on 28 August and is fixed to the bottom of the viewport at every
+     scroll position, so the estimate cannot be pushed anywhere. The constraint
+     that justified shrinking the house was removed by a later change, and
+     nothing went back to check.
+
+     So the house gets the room the 1 September handoff asks for — "the house
+     is the product", and 220px of it on a 780px screen was the tiny image
+     surrounded by controls that brief warns against. 56vh leaves the sticky
+     bar its 70px and still shows the top of the swatch row, which is what
+     tells somebody there is more below. */
   @media (max-width: 640px) {
-    .media-cap { max-height: 220px; }
+    .media-cap { max-height: 56vh; }
     .media-cap img { height: 100%; object-fit: cover; }
   }
 
@@ -2806,7 +2819,12 @@ function buildVisualizer() {
       h('span', { className: 'text-[10px] px-2 py-1 rounded-full bg-zinc-900 text-white' }, 'Price updates as you choose'),
     ]),
     h('p', { className: 'mt-2 text-sm text-zinc-600 max-w-[62ch]' }, 'Drag the slider to compare your home now with how it could look. Every colour and material moves the estimate, so there are no surprises later.'),
-    h('div', { className: 'mt-6 grid lg:grid-cols-[1.2fr_0.8fr] gap-6' }, [
+    /* 1 September handoff §7: "aim for approximately 65–70% visual, 30–35%
+       controls". This was 1.2fr / 0.8fr — exactly 60/40, and the estimate
+       panel beside it is now a headline figure with the itemisation folded
+       away, so it needs less room than it did when it was a six-row table.
+       1.35 / 0.65 is 67.5%, in the middle of the range asked for. */
+    h('div', { className: 'mt-6 grid lg:grid-cols-[1.35fr_0.65fr] gap-6' }, [
       h('div', { className: 'rounded-2xl overflow-hidden border border-zinc-200 bg-[#FDFCF9]' }, [
         /* The daylight filter goes on the frame holding both panes, not on the
            rendered image alone. Filtering only the "after" side meant dragging
@@ -4302,29 +4320,54 @@ function buildRefineEstimate() {
     ]);
   }
 
+  /* 1 September handoff §12: keep advanced measurements optional, because the
+     product's strongest promise is "one photo, no measurements required" and a
+     full section of measuring tools sitting in the main scroll quietly
+     contradicts it. Somebody who reads "Make your estimate sharper" as a step
+     they are expected to complete has been handed exactly the homework the
+     upload panel promised they would not have.
+
+     Everything here already said it was optional — twice, in the subtitle and
+     again beside each control. Saying "optional" is not the same as being
+     optional in the flow. So it collapses: the estimate is announced ready,
+     and the tools are one press away for anybody who wants them.
+
+     A <details> rather than a state flag, because this section is rebuilt on
+     every price change and a native open-state survives that without anything
+     to reset. Open by default once somebody has typed a figure — reopening it
+     to find their own entry hidden would be worse than the section being
+     there in the first place. */
+  const hasOwnFigures = Boolean(state.footprint || state.trimLengthM || state.postcode);
+
   return h('section', { id: 'refine-section', className: 'rounded-2xl bg-white border border-zinc-200 p-6 md:p-8' }, [
-    h('h2', { className: 'serif text-[22px] md:text-[26px] tracking-tight' }, 'Make your estimate sharper'),
-    h('p', { className: 'mt-2 text-sm text-zinc-600 max-w-[62ch]' }, 'All optional — your estimate already works without any of this. Measure your walls from the photo, or type in figures you already know.'),
-    buildMeasureBlock(),
-    h('h3', { className: 'mt-8 text-[13px] font-medium' }, 'Know your own measurements?'),
-    h('p', { className: 'mt-1 text-[13px] text-zinc-600 max-w-[62ch]' }, 'Anything you enter here takes priority over everything else.'),
-    h('div', { className: 'mt-5 flex flex-wrap gap-2' }, [
-      postcodeInput,
-      h('button', {
-        type: 'button',
-        className: 'px-4 py-2.5 rounded-full border border-zinc-200 text-xs font-medium hover:border-zinc-900 transition',
-        disabled: state.coverageChecking,
-        onClick: () => checkCoverage(),
-      }, state.coverageChecking ? 'Checking…' : 'Who covers my area?'),
-      areaInput, trimLengthInput,
-      h('button', {
-        type: 'button',
-        className: 'px-5 py-2.5 rounded-full bg-zinc-900 text-white text-xs font-medium',
-        onClick: async () => { await refreshPrice(); renderRefineOnly(); renderVisualizerOnly(); U('Estimate updated with your measurements'); }
-      }, 'Update my estimate'),
+    h('h2', { className: 'serif text-[22px] md:text-[26px] tracking-tight' }, 'Your estimate is ready'),
+    h('p', { className: 'mt-2 text-sm text-zinc-600 max-w-[62ch]' }, 'Priced from your photograph — no measuring required, and nothing else is needed from you.'),
+    h('details', { className: 'mt-5 border-t border-zinc-200 pt-4', open: hasOwnFigures || undefined }, [
+      h('summary', { className: 'cursor-pointer text-[13px] font-medium flex items-center gap-1.5 select-none' }, [
+        h('span', {}, 'Want to make it more precise?'),
+        h('span', { className: 'chev text-zinc-400 transition-transform', 'aria-hidden': 'true' }, '⌄'),
+      ]),
+      h('p', { className: 'mt-2 text-[13px] leading-6 text-zinc-600 max-w-[62ch]' }, 'Measure your walls from the photo, or type in figures you already know. Anything you enter takes priority over what we worked out.'),
+      buildMeasureBlock(),
+      h('h3', { className: 'mt-8 text-[13px] font-medium' }, 'Know your own measurements?'),
+      h('div', { className: 'mt-5 flex flex-wrap gap-2' }, [
+        postcodeInput,
+        h('button', {
+          type: 'button',
+          className: 'px-4 py-2.5 rounded-full border border-zinc-200 text-xs font-medium hover:border-zinc-900 transition',
+          disabled: state.coverageChecking,
+          onClick: () => checkCoverage(),
+        }, state.coverageChecking ? 'Checking…' : 'Who covers my area?'),
+        areaInput, trimLengthInput,
+        h('button', {
+          type: 'button',
+          className: 'px-5 py-2.5 rounded-full bg-zinc-900 text-white text-xs font-medium',
+          onClick: async () => { await refreshPrice(); renderRefineOnly(); renderVisualizerOnly(); U('Estimate updated with your measurements'); }
+        }, 'Update my estimate'),
+      ]),
+      coverageAnswer(),
+      h('div', { className: 'mt-4 rounded-xl bg-[#FDFCF9] border border-zinc-200 p-3 text-xs leading-5' }, summary),
     ]),
-    coverageAnswer(),
-    h('div', { className: 'mt-4 rounded-xl bg-[#FDFCF9] border border-zinc-200 p-3 text-xs leading-5' }, summary),
   ]);
 }
 
