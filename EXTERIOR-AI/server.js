@@ -1580,11 +1580,31 @@ function resolveFootprint({ footprintM2, detectionId, houseType }) {
   }
   const record = detectionId ? detectionRecords.get(String(detectionId)) : null;
   if (record && record.measurement) {
+    /* Measured is not exact, and calling it exact was the quiet mistake here.
+
+       measure.js returns low and high alongside m2 — its own spread on the
+       reading, wider when the door method and the coverage method disagree.
+       That band was computed, returned, and then thrown away by `exact: true`,
+       which collapsed the estimate to a single figure to the pound.
+
+       Every brief since 27 August has asked for "a realistic range rather than
+       false precision", and I kept reading that as already handled because a
+       range does appear — but only before the photograph is measured, which is
+       backwards. It vanishes at exactly the moment the page starts claiming to
+       have measured the house.
+
+       And this page says, three sections down, that the photo-to-area step has
+       never been checked against a surveyed property. £47,475 under that
+       admission is a precision nothing supports. The band measure.js already
+       calculated is the honest width. */
+    const m = record.measurement;
+    const hasBand = Number.isFinite(m.low) && Number.isFinite(m.high) && m.high > m.low;
     return {
-      m2: record.measurement.m2,
-      source: `photo_${record.measurement.method}`,
-      measurement: record.measurement,
-      exact: true,
+      m2: m.m2,
+      source: `photo_${m.method}`,
+      measurement: m,
+      exact: !hasBand,
+      areaBand: hasBand ? { low: m.low, high: m.high } : null,
     };
   }
   // Before we've seen the house, a house type is a far better basis than one
@@ -1612,6 +1632,25 @@ function resolveFootprint({ footprintM2, detectionId, houseType }) {
    rides on top — so recompute at each end rather than scaling the total.
    ±25% matches the uncertainty measure.js already attaches to a prior. */
 const PRIOR_AREA_UNCERTAINTY = 0.25;
+
+/* The same job for a band somebody else already computed.
+
+   priceRange() above widens a single area by a fixed percentage, which is
+   right for a house-type prior — the prior is one number and the uncertainty
+   is ours to state. A measured photograph is different: measure.js has already
+   worked out low and high for that reading, wider when its two methods
+   disagree, and inventing a second percentage on top of it would be widening a
+   band that already means something. Recomputed at each end rather than scaled,
+   for the same reason as priceRange: scaffolding is fixed and VAT rides on top,
+   so the total is not proportional to area. */
+function priceRangeFromArea(selections, band) {
+  const at = (a) => computePrice({ ...selections, footprintM2: a }).total;
+  const round500 = (n) => Math.round(n / 500) * 500;
+  const low = round500(at(band.low));
+  const high = round500(at(band.high));
+  // A band narrow enough to round to one figure is not a range worth showing.
+  return high > low ? { low, high } : null;
+}
 
 function priceRange(selections, m2) {
   const area = m2 && m2 > 0 ? m2 : catalogue.defaultFootprintM2;
@@ -1642,11 +1681,19 @@ app.post('/api/quote', (req, res) => {
     measurement: footprint.measurement,
     houseType: footprint.houseType || null,
     houseTypeLabel: footprint.houseTypeLabel || null,
-    // Only when the area is a typical figure rather than this house's. The
-    // front end shows this instead of the exact total, so a number that looks
-    // precise is never attached to a house we haven't seen.
+    /* A range wherever there is a width to report, which is nearly always.
+
+       Two different widths, and the caller does not need to know which it got:
+       a measured photograph carries measure.js's own band on the reading, and
+       an unmeasured house carries the ±25% around the house-type prior. Only a
+       figure the homeowner typed in themselves is exact, because that one is
+       theirs and the Terms say it overrides everything. */
     exact: footprint.exact,
-    range: footprint.exact ? null : priceRange({ claddingId, trimId, roofId, trimLengthM }, footprint.m2),
+    range: footprint.exact
+      ? null
+      : footprint.areaBand
+        ? priceRangeFromArea({ claddingId, trimId, roofId, trimLengthM }, footprint.areaBand)
+        : priceRange({ claddingId, trimId, roofId, trimLengthM }, footprint.m2),
     pricing: pricingVersion(),
   });
 });

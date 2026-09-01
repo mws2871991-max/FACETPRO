@@ -2062,8 +2062,11 @@ function buildUploadDetect() {
       h('div', { className: 'w-12 h-12 mx-auto rounded-full bg-zinc-900 text-white grid place-items-center' }, '↑'),
       h('div', { className: 'mt-3 text-sm font-medium' }, 'Drop a photo of the front of your house'),
       h('div', { className: 'mt-1 text-xs text-zinc-500' }, 'JPG or PNG — one picture from the pavement is enough'),
-      h('div', { className: 'mt-3 text-[11px] leading-5 text-zinc-500 max-w-[34ch] mx-auto' },
-        'Stand back far enough to get the whole front in, with the front door visible. That lets us estimate your wall area too.'),
+      h('ul', { className: 'mt-3 text-[11px] leading-5 text-zinc-500 max-w-[34ch] mx-auto text-left grid gap-1' }, [
+        h('li', {}, '• Show as much of the front as possible'),
+        h('li', {}, '• Keep the front door visible if you can'),
+        h('li', {}, '• Stand back far enough to get the whole house in'),
+      ]),
       /* The same instruction the render prompt gives the model — "do not add,
          remove, move or resize any window, door or other opening" — said to
          the person it reassures. It answers the thing that stops people
@@ -2195,12 +2198,20 @@ function buildUploadDetect() {
      category onto them, so a model that starts saying "gutter" instead of
      "guttering" widens a regex rather than breaking the panel. */
   const ANALYSIS_STEPS = [
-    { label: 'Windows',                    matches: /window/i },
-    { label: 'Doors',                      matches: /door/i },
-    { label: 'Roof',                       matches: /roof|tile|slate/i },
-    { label: 'Walls',                      matches: /wall|brick|render|cladding|elevation/i },
-    { label: 'Fascias, soffits, guttering', matches: /fascia|soffit|gutter|roofline|barge/i },
+    { label: 'Finding windows & doors',     matches: /window|door/i },
+    { label: 'Understanding the roofline',  matches: /fascia|soffit|gutter|roofline|barge/i },
+    { label: 'Reading the roof',            matches: /roof|tile|slate/i },
+    { label: 'Measuring visible surfaces',  matches: /wall|brick|render|cladding|elevation/i },
+    /* The fifth row the brief asks for, and the only one that is not a
+       detection category. It has no `matches` because it is not a thing to be
+       found in the photograph — it is what happens once the answer is back,
+       and it is true: the automatic render fires the moment detection
+       resolves. Rows with no matcher resolve to done rather than to "not in
+       this photo", because "we didn't find your starting design" is nonsense. */
+    { label: 'Preparing your starting design', matches: null },
   ];
+
+  ANALYSIS_STEP_COUNT = ANALYSIS_STEPS.length;   // the list is the authority
 
   function analysisPanel() {
     const detecting = state.detectionStatus === 'detecting';
@@ -2208,7 +2219,7 @@ function buildUploadDetect() {
     if (!detecting && !answered) return null;
     if (answered && !state.detections.length) return null;
 
-    const found = (step) => state.detections.some(d =>
+    const found = (step) => !step.matches || state.detections.some(d =>
       d.type !== 'analysis' && (step.matches.test(String(d.type || '')) || step.matches.test(String(d.label || ''))));
 
     const rows = ANALYSIS_STEPS.map((step, i) => {
@@ -2385,7 +2396,7 @@ function buildUploadDetect() {
     h('div', { className: 'flex items-center justify-between flex-wrap gap-3' }, [
       h('div', {}, [
         h('p', { className: 'text-[11px] tracking-widest uppercase text-zinc-400' }, 'Step 1'),
-        h('h2', { className: 'mt-1 serif text-[26px] md:text-[32px] tracking-tight' }, 'Start with a photo of your home'),
+        h('h2', { className: 'mt-1 serif text-[26px] md:text-[32px] tracking-tight' }, 'Let’s see what your home could become'),
       ]),
       h('span', { className: 'text-[10px] tracking-widest uppercase px-2.5 py-1 rounded-full bg-[#FFF7ED] border border-zinc-200' }, 'Takes a few seconds'),
     ]),
@@ -3162,7 +3173,18 @@ function buildPricePanel(price, priceRow) {
      produce it rather than printing a zero while it waits. */
   if (!priced.length) return buildGlazingLedPanel();
 
-  if (!exact && range) {
+  /* Which panel, decided by whether we have seen this house — not by whether
+     the figure is exact.
+
+     Those used to be the same question, because a measured photograph produced
+     an exact total and nothing else did. They stopped being the same when the
+     server started returning measure.js's own band on a measured reading, so
+     branching on `exact` would have sent somebody who had uploaded a photo
+     back to the pre-photo panel: house-type picker, "typical semi", and "not
+     yours yet — add a photo above", underneath the photo they had just added. */
+  const seenTheHouse = /^(photo_|manual_entry)/.test(String(state.price?.footprintSource || ''));
+
+  if (!seenTheHouse) {
     return h('div', { className: 'rounded-2xl bg-zinc-900 text-white p-5' }, [
       h('h3', { className: 'text-[11px] tracking-widest uppercase text-white/50' }, 'Your estimate'),
 
@@ -3174,7 +3196,7 @@ function buildPricePanel(price, priceRow) {
       ]),
 
       h('div', { className: 'mt-5' }, [
-        h('div', { className: 'serif text-[30px] leading-none' }, `${fmtMoney(range.low)} – ${fmtMoney(range.high)}`),
+        h('div', { className: 'serif text-[30px] leading-none' }, range ? `${fmtMoney(range.low)} – ${fmtMoney(range.high)}` : fmtMoney(price.total)),
         h('div', { className: 'mt-2 text-[11px] text-white/50' },
           [`Typical ${typeLabel.toLowerCase()} · about `, h('span', { className: 'measured' }, `${price.footprintM2} m²`), ' of wall']),
       ]),
@@ -3220,7 +3242,15 @@ function buildPricePanel(price, priceRow) {
       h('span', { className: 'text-[10px] px-2 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-200' },
         state.price?.footprintSource === 'manual_entry' ? 'Your measurements' : 'Sized to your home'),
     ]),
-    h('div', { id: 'estimate-total', className: 'mt-2 serif text-[34px] md:text-[40px] leading-none measured' }, fmtMoney(price.total)),
+    /* A range wherever there is one, which after 1 September is nearly
+       always. Every brief since 27 August asked for "a realistic range rather
+       than false precision" and I kept reading it as done, because a range did
+       appear — but only before the photograph was measured, which is exactly
+       backwards. £47,475 to the pound, three sections above an admission that
+       the photo-to-area step has never been checked against a surveyed house,
+       was the false precision they meant. */
+    h('div', { id: 'estimate-total', className: 'mt-2 serif text-[32px] md:text-[38px] leading-none measured' },
+      range ? `${fmtMoney(range.low)} – ${fmtMoney(range.high)}` : fmtMoney(price.total)),
     /* §5. The difference the last choice made, under the number it moved.
        Subtle by instruction and by judgement — it is a footnote to the total,
        not a running commentary, and it is replaced rather than accumulated so
@@ -3233,7 +3263,7 @@ function buildPricePanel(price, priceRow) {
     h('p', { className: 'mt-2 text-[12px] leading-5 text-white/70' },
       'Including materials, labour, scaffolding, waste and VAT.'),
     h('p', { className: 'mt-2 text-[11px] leading-5 text-white/55' },
-      'A planning estimate, shown for the choices you have made. An installer confirms it after a survey.'),
+      'Planning estimate. Realistic range. Final price confirmed after a survey.'),
 
     h('details', { className: 'mt-4 border-t border-white/10 pt-3' }, [
       /* An explicit marker, because this file sets `details > summary
@@ -5590,6 +5620,12 @@ function reachedStage(stage) {
    timer still ticking against a finished request would keep re-rendering the
    page for as long as the tab stays open. */
 let analysisTimer = null;
+/* How many rows the narration walks before it stops. Declared beside the
+   timer that uses it rather than inside buildUploadDetect, which the timer
+   cannot see — and asserted against the real list at first paint, so the two
+   cannot drift apart silently the way the old hardcoded 5 did. */
+let ANALYSIS_STEP_COUNT = 5;
+
 function startAnalysisNarration() {
   stopAnalysisNarration();
   state.analysisTick = 0;
@@ -5597,7 +5633,7 @@ function startAnalysisNarration() {
     /* Stops at the last row rather than wrapping. If detection is slower than
        the narration, the honest thing on screen is the last category still
        reading "looking…", not a loop implying more work than is happening. */
-    if (state.analysisTick >= 5 || state.detectionStatus !== 'detecting') return stopAnalysisNarration();
+    if (state.analysisTick >= ANALYSIS_STEP_COUNT || state.detectionStatus !== 'detecting') return stopAnalysisNarration();
     state.analysisTick += 1;
     render();
   }, 850);
@@ -5682,10 +5718,52 @@ async function handleUpload(file) {
      house while the glazing kept the prior figure and its "a typical figure
      for your house type" label. It only upgraded if you happened to touch a
      chip again. */
+  /* Size the house from the photograph, without being asked to.
+
+     This is the promise on the front of the site — "one photo, no measurements
+     required" — and it was not being kept. The measurement only ran when
+     somebody found "Estimate my wall area" inside the refine section and
+     pressed it, and it was only *used* once state.useMeasurement was set on
+     top of that. Two opt-ins, both below the fold, for the step the whole
+     product is named after. Every visitor who did not go looking was priced
+     from a house-type prior — a typical detached, not theirs — while the panel
+     beside their own photograph said the estimate was sized to their home.
+
+     Yesterday's collapse of that section behind "Want to make it more
+     precise?" made it harder still, which is what sent me looking.
+
+     So it runs on upload, silently, and only when the photograph can actually
+     carry it: canMeasure comes back from /api/detect and is false when there
+     is no door to scale from. A failure is not surfaced — the house-type prior
+     is a perfectly good fallback and is what the estimate used before — so
+     nothing is lost and no error is invented for something nobody asked for.
+
+     The manual controls are untouched. Somebody who opens the refine section
+     can still measure again, type their own figure, and override this. */
+  await autoMeasure();
   await Promise.all([refreshPrice(), refreshGlazing()]);
   render();
   document.getElementById('visualizer-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   maybeAutoRender();
+}
+
+async function autoMeasure() {
+  if (!state.detectionId || !state.canMeasure) return;
+  if (state.measurement) return;                 // already done for this photo
+  try {
+    const res = await fetch('/api/measure', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ detectionId: state.detectionId, houseType: state.houseType }),
+    });
+    if (!res.ok) return;                         // prior is a fine fallback
+    const data = await res.json();
+    if (!data || !Number.isFinite(data.m2)) return;
+    state.measurement = data;
+    /* The server looks the measurement up by detectionId; this is the flag
+       that tells refreshPrice it may send the id at all. */
+    state.useMeasurement = true;
+  } catch (_) { /* never block the journey on the optional step */ }
 }
 
 /* ── THE INSTANT WOW ──
