@@ -4213,11 +4213,13 @@ async function generateRealRender() {
     state.renderUrl = safeRenderUrl(data.url);
     state.renderId = data.renderId || null;
     landed = true;
-    /* Not reveal_viewed. That fired here while the picture appeared by
-       itself; there is now a card over it, so counting the render landing
-       would count every visitor who never pressed through — which is the
-       precise drop-off the event exists to measure. It is fired by the reveal
-       button and by a slider drag, both of which mean somebody looked. */
+    /* Not reveal_viewed — that one means somebody looked, and is fired by
+       the reveal button and by a slider drag. This one means the picture
+       exists and the card is on screen. Both are needed: without the pair,
+       "the render never arrived" and "the render arrived and they ignored the
+       card" are the same number, and they are the two halves of the drop-off
+       the reveal card creates. */
+    reachedStage('render_shown');
     U('Your new look is ready — drag the slider to compare');
   } catch (err) {
     U(err.plain ? err.message : `We couldn’t create that picture: ${err.message}`);
@@ -5667,6 +5669,12 @@ async function handleUpload(file) {
     const { base64, mimeType } = await fileToBase64(file);
     state.uploadedBase64 = base64;
     state.uploadedMimeType = mimeType;
+
+    /* The photograph is read and the request is about to go. upload_started to
+       upload_completed spanned both the file read and the whole detection
+       call, so a picture that failed to decode on the phone and one that died
+       in the model looked identical in the funnel. */
+    reachedStage('analysis_started');
 
     const res = await fetch('/api/detect', {
       method: 'POST',

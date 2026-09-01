@@ -80,13 +80,28 @@ test('conversion is measured against the step before, not the top', async () => 
   const body = await (await read()).json();
   const stages = body.funnel.map(f => f.stage);
   /* cta_clicked, reveal_viewed and breakdown_viewed were added for the UX
-     Sprint handoff's ten events. They are inserted, not appended, because this
+     Sprint handoff's ten events; analysis_started and render_shown followed on
+     1 September for the fifteen the developer brief names.
+
+     render_shown is the one that matters. reveal_viewed used to fire when the
+     picture landed, but the reveal card means it now fires only when somebody
+     presses through — so without an event at the landing itself, "the render
+     never arrived" and "the render arrived and they ignored the card" were the
+     same number. They are the two halves of the drop-off that card creates.
+
+     Two of the brief's fifteen were deliberately not added. home_detected is
+     analysis_completed, which already fires only when detections came back
+     non-empty. product_option_changed would count every swatch tap, and
+     design_changed de-dupes on purpose — "what share of visitors design
+     something" is the question, not "how many taps did our keenest visitor
+     make". They are inserted, not appended, because this
      list is read as a journey and each sits where it happens — and the sibling
      test below is the one that guards the original eight against being
      renamed or reordered by an edit like this. */
   assert.deepStrictEqual(stages, [
     'landing', 'cta_clicked', 'upload_started', 'upload_completed',
-    'analysis_completed', 'visualisation_started', 'reveal_viewed',
+    'analysis_started', 'analysis_completed', 'visualisation_started',
+    'render_shown', 'reveal_viewed',
     'design_created', 'design_changed',
     'estimate_viewed', 'breakdown_viewed', 'design_saved',
     'quote_started', 'quote_requested', 'quote_completed',

@@ -3200,7 +3200,8 @@ app.get('/api/version', perMinute(120, 'Too many requests — please wait a mome
    sequence below is roughly chronological, but nothing keys off the index. */
 const FUNNEL_STAGES = [
   'landing', 'cta_clicked', 'upload_started', 'upload_completed',
-  'analysis_completed', 'visualisation_started', 'reveal_viewed',
+  'analysis_started', 'analysis_completed', 'visualisation_started',
+  'render_shown', 'reveal_viewed',
   'design_created', 'design_changed',
   'estimate_viewed', 'breakdown_viewed', 'design_saved',
   'quote_started', 'quote_requested', 'quote_completed',
