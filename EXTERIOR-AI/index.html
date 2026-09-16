@@ -5778,7 +5778,20 @@ function startAnalysisNarration() {
     if (state.analysisTick >= ANALYSIS_STEP_COUNT || state.detectionStatus !== 'detecting') return stopAnalysisNarration();
     state.analysisTick += 1;
     render();
-  }, 850);
+    /* 1800ms, not 850.
+
+       Five rows at 850ms covers 4.25 seconds. Detection measured 12.1 seconds
+       against production, so for nearly eight of them every row sat reading
+       "looking…" and nothing on screen moved at all — on the one screen where
+       the product either becomes real to somebody or does not.
+
+       Pacing is not invention: no row ever claims to have found anything, and
+       a row still resolves only from the server's answer. What changes is that
+       the narration lasts roughly as long as the thing it is narrating. If
+       detection returns early — a cached photograph answers in 0.3s — every
+       row resolves at once and the pacing is irrelevant. If it runs long,
+       "Almost there" covers the tail. */
+  }, 1800);
 }
 function stopAnalysisNarration() {
   if (analysisTimer) { clearInterval(analysisTimer); analysisTimer = null; }
@@ -5809,6 +5822,34 @@ async function handleUpload(file) {
     const { base64, mimeType } = await fileToBase64(file);
     state.uploadedBase64 = base64;
     state.uploadedMimeType = mimeType;
+
+    /* ── THE PICTURE AND THE READING, AT THE SAME TIME ──
+
+       The handoff's item 2 has two sentences and I only implemented the first.
+       The second says: "if a useful first visualisation is ready, show it
+       rather than making the user wait for every calculation." It was not.
+
+       Detection took 12.1s measured against production, then the render began
+       and took another 12.7s — twenty-five seconds from choosing a photograph
+       to seeing their house changed, in strict sequence. And the render does
+       not need the detections: it needs the bytes and three finish names, all
+       of which exist here. It was waiting only because maybeAutoRender was
+       called at the end of the function.
+
+       Started here instead, the two run together and the wait is the longer of
+       the two rather than their sum — about thirteen seconds instead of
+       twenty-five.
+
+       What it costs: a photograph detection cannot read now gets a render
+       anyway, where before the empty result cancelled it. That is a small
+       share of uploads, the daily cap still bounds it, and the picture is
+       usually fine even when the reading is not — the model is being asked to
+       recolour a house, not to understand one. Twelve seconds off the wow
+       moment for every successful upload is worth that.
+
+       The preset needs state.houseType, which comes from the triage answer or
+       the default and is already set. It does not need detections either. */
+    startAutoRender();
 
     /* The photograph is read and the request is about to go. upload_started to
        upload_completed spanned both the file read and the whole detection
@@ -5953,57 +5994,78 @@ async function autoMeasure() {
      render instructed to change nothing returns the photograph back. */
 let autoRenderDone = false;
 
+/* Called from handleUpload the moment the bytes exist, before detection has
+   answered. Every guard maybeAutoRender applies still applies except the one
+   it cannot know yet — whether anything was found in the photograph. */
+function startAutoRender() {
+  if (autoRenderDone || state.rendering || state.renderUrl) return;
+  if (!state.uploadedBase64) return;
+  if (state.renderUnavailable || state.detectUnavailable) return;
+  applyHouseTypePreset();
+  const changesSomething = [state.cladding, state.trim, state.roof]
+    .some(sw => sw && sw.name && sw.name.toLowerCase() !== 'none');
+  if (!changesSomething) return;
+  autoRenderDone = true;
+  generateRealRender();
+}
+
 function maybeAutoRender() {
   if (autoRenderDone || state.rendering || state.renderUrl) return;
   if (!state.uploadedBase64) return;
   if (state.renderUnavailable || state.detectUnavailable) return;
   if (!state.detections.filter(d => d.type !== 'analysis').length) return;
 
-  /* A first look chosen for the house, not one finish for every house.
-
-     Product Flow sprint step 4 supplies a default per house type, on the
-     reasoning that the automatic render only earns its cost if the result is
-     plausible — cream render on a 1930s semi reads as a suggestion, the same
-     white on a terrace reads as a mistake, and a homeowner who dislikes their
-     free first look does not go looking for the controls.
-
-     Mapped onto the swatches that exist rather than the names in the document,
-     which is a lossy step worth being explicit about: it asks for "stone
-     cladding" and "grey render", and the catalogue has Clay Stone and Sage
-     Slate. The nearest honest match is used and nothing is invented.
-
-     Frame colour is deliberately not set here. The handoff lists anthracite
-     frames in every default, but glazingChoice() sends a colour only with a
-     style, and choosing a window style on somebody's behalf changes what they
-     are quoted rather than only what they see. The frames stay as they are
-     until the homeowner picks — which is also what the upload panel promises.
-
-     Only applied where the visitor has not already chosen: a journey landing
-     page, or a resumed session, arrives with real preferences and they win. */
-  const AUTO_DEFAULTS = {
-    detached:   { cladding: 'alabaster',  trim: 'ink-trim',    roof: 'slate-roof' },
-    semi:       { cladding: 'clay-stone', trim: 'ink-trim',    roof: 'slate-roof' },
-    terrace:    { cladding: 'clay-stone', trim: 'coastal-fog', roof: 'charcoal-roof' },
-    endTerrace: { cladding: 'clay-stone', trim: 'coastal-fog', roof: 'charcoal-roof' },
-    bungalow:   { cladding: 'sage-slate', trim: 'ink-trim',    roof: 'terracotta' },
-  };
-  let presetApplied = false;
-  if (!state.hasCustomised) {          // somebody who has already chosen keeps their choice
-    const preset = AUTO_DEFAULTS[state.houseType] || AUTO_DEFAULTS.semi;
-    for (const group of ['cladding', 'trim', 'roof']) {
-      // Never override a journey exclusion — "leave it as it is" is a choice.
-      if (state[group] && state[group].id === 'none') continue;
-      const sw = SWATCHES.find(s => s.id === preset[group]);
-      if (sw && state[group]?.id !== sw.id) { state[group] = sw; presetApplied = true; }
-    }
-  }
-
+  applyHouseTypePreset();
   const changesSomething = [state.cladding, state.trim, state.roof]
-    .some(s => s && s.name && s.name.toLowerCase() !== 'none');
+    .some(sw => sw && sw.name && sw.name.toLowerCase() !== 'none');
   if (!changesSomething) return;
-
   autoRenderDone = true;
-  autoRenderStart(presetApplied);
+  autoRenderStart(true);
+}
+
+/* A first look chosen for the house, not one finish for every house.
+
+   Product Flow sprint step 4 supplies a default per house type, on the
+   reasoning that the automatic render only earns its cost if the result is
+   plausible — cream render on a 1930s semi reads as a suggestion, the same
+   white on a terrace reads as a mistake, and a homeowner who dislikes their
+   free first look does not go looking for the controls.
+
+   Mapped onto the swatches that exist rather than the names in the document,
+   which is a lossy step worth being explicit about: it asks for "stone
+   cladding" and "grey render", and the catalogue has Clay Stone and Sage
+   Slate. The nearest honest match is used and nothing is invented.
+
+   Frame colour is deliberately not set. The handoff lists anthracite frames in
+   every default, but glazingChoice() sends a colour only with a style, and
+   choosing a window style on somebody's behalf changes what they are quoted
+   rather than only what they see.
+
+   Only applied where the visitor has not already chosen: a journey landing
+   page, or a resumed session, arrives with real preferences and they win.
+
+   Lifted out of maybeAutoRender because the render now starts before detection
+   answers, and both entry points need it. It depends on state.houseType, which
+   comes from the triage answer or the default — not on detections. */
+const AUTO_DEFAULTS = {
+  detached:   { cladding: 'alabaster',  trim: 'ink-trim',    roof: 'slate-roof' },
+  semi:       { cladding: 'clay-stone', trim: 'ink-trim',    roof: 'slate-roof' },
+  terrace:    { cladding: 'clay-stone', trim: 'coastal-fog', roof: 'charcoal-roof' },
+  endTerrace: { cladding: 'clay-stone', trim: 'coastal-fog', roof: 'charcoal-roof' },
+  bungalow:   { cladding: 'sage-slate', trim: 'ink-trim',    roof: 'terracotta' },
+};
+
+function applyHouseTypePreset() {
+  if (state.hasCustomised) return false;   // their own choice wins
+  const preset = AUTO_DEFAULTS[state.houseType] || AUTO_DEFAULTS.semi;
+  let applied = false;
+  for (const group of ['cladding', 'trim', 'roof']) {
+    // Never override a journey exclusion — "leave it as it is" is a choice.
+    if (state[group] && state[group].id === 'none') continue;
+    const sw = SWATCHES.find(x => x.id === preset[group]);
+    if (sw && state[group]?.id !== sw.id) { state[group] = sw; applied = true; }
+  }
+  return applied;
 }
 
 /* Split out so maybeAutoRender itself stays synchronous and readable — its job
