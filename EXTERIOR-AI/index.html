@@ -2047,8 +2047,14 @@ function buildTriage() {
 }
 
 function buildUploadDetect() {
+  /* While the photograph is being read, it is context and the narration is
+     the content — so the preview gives up height on a phone. A whole analysis
+     under a smaller picture beats half an analysis under a bigger one, and
+     the picture returns to full size the moment the answer lands. */
+  const analysing = state.detectionStatus === 'detecting';
   const dropArea = h('div', {
-    className: `rounded-xl border border-dashed border-zinc-300 bg-white grid place-items-center cursor-pointer hover:bg-zinc-50 transition relative overflow-hidden ${state.uploadedImg ? 'media-cap aspect-[4/3]' : 'sm:aspect-[4/3] py-6'}`,
+    className: `rounded-xl border border-dashed border-zinc-300 bg-white grid place-items-center cursor-pointer hover:bg-zinc-50 transition relative overflow-hidden ${
+      state.uploadedImg ? `media-cap aspect-[4/3] ${analysing ? 'max-h-[150px] sm:max-h-none' : ''}` : 'sm:aspect-[4/3] py-6'}`,
     onClick: () => sharedRefs.fileInput?.click(),
   });
 
@@ -2234,14 +2240,20 @@ function buildUploadDetect() {
         ? (reached ? '·' : '')
         : (hit ? '✓' : '—');
       return h('div', {
-        className: `flex items-center justify-between rounded-xl border px-3 py-2.5 transition ${
+        /* py-1.5 on a phone rather than py-2.5. Five rows at 44px is 220px
+           before the header and the receipt line, and on a 710px screen with
+           the photo above them that put the last rows — including "Preparing
+           your starting design" and the summary — below the fold for the whole
+           wait. The narration exists to be watched; one that has to be
+           scrolled to is not doing its job. */
+        className: `flex items-center justify-between rounded-xl border px-3 py-1.5 sm:py-2.5 transition ${
           answered
             ? (hit ? 'bg-emerald-500/10 border-emerald-400/30' : 'bg-white/5 border-white/10')
             : (reached ? 'bg-white/10 border-white/20' : 'bg-white/5 border-white/10 opacity-50')}`,
       }, [
         h('div', { className: 'flex items-center gap-2.5' }, [
           h('span', {
-            className: `w-4 h-4 rounded-full grid place-items-center text-[9px] ${
+            className: `w-4 h-4 rounded-full grid place-items-center text-[9px] shrink-0 ${
               answered && hit ? 'bg-emerald-400 text-black' : 'bg-white/15 text-white/70'}`,
             'aria-hidden': 'true',
           }, mark),
@@ -2403,7 +2415,11 @@ function buildUploadDetect() {
       ]),
       h('span', { className: 'text-[10px] tracking-widest uppercase px-2.5 py-1 rounded-full bg-[#FFF7ED] border border-zinc-200' }, 'Takes a few seconds'),
     ]),
-    h('p', { className: 'mt-2 text-sm text-zinc-600 max-w-[62ch]' }, 'We’ll find your windows, doors, roof and walls automatically, so you don’t have to mark anything up or measure a thing.'),
+    /* Guidance for somebody deciding. Once the photograph is in and being
+       read, it is forty-four pixels explaining what is already happening. */
+    state.detectionStatus === 'detecting'
+      ? null
+      : h('p', { className: 'mt-2 text-sm text-zinc-600 max-w-[62ch]' }, 'We’ll find your windows, doors, roof and walls automatically, so you don’t have to mark anything up or measure a thing.'),
     capNotice,
     resumePanel(),
     h('div', { className: 'mt-6 grid md:grid-cols-[1.1fr_0.9fr] gap-6' }, [
@@ -2456,7 +2472,11 @@ function buildUploadDetect() {
           'Your original photo isn’t saved — we keep the image we generate, not your photograph. ',
           h('a', { href: '#tech-heading', className: 'underline underline-offset-2' }, 'How your photo is used'),
         ]),
-        h('div', { className: 'mt-3 flex gap-2' }, [
+        /* Hidden while the photo is being read. "Choose a photo" would throw
+           away a request already in flight and "Start again" is a decision
+           nobody makes four seconds in — and on a phone these forty-four
+           pixels are the difference between seeing the narration and not. */
+        state.detectionStatus === 'detecting' ? null : h('div', { className: 'mt-3 flex gap-2' }, [
           h('button', { type: 'button', className: 'cta flex-1 px-3 rounded-full text-xs min-h-[44px]', onClick: () => sharedRefs.fileInput?.click() }, 'Choose a photo'),
           h('button', {
             type: 'button',
@@ -2483,7 +2503,11 @@ function buildUploadDetect() {
            declined to find the version they might accept. Offering it here
            costs the upload nothing: somebody willing to drop a photo in has
            already done it by the time they read this line. */
-        h('p', { className: 'mt-4 pt-3 border-t border-zinc-200 text-[11px] leading-5 text-zinc-500' }, [
+        /* Gone once there is a photo. It exists for somebody deciding whether
+           to upload at all; after they have, it is forty pixels of irrelevance
+           between their own house and the analysis of it — which on a phone is
+           forty pixels that pushed the narration off the bottom. */
+        state.uploadedImg ? null : h('p', { className: 'mt-4 pt-3 border-t border-zinc-200 text-[11px] leading-5 text-zinc-500' }, [
           'Not ready to upload? ',
           h('a', {
             href: '#whole-house',
