@@ -2852,7 +2852,19 @@ function buildVisualizer() {
            the white readout along with the photograph — the control people
            use to compare before and after lost contrast exactly when the
            image was hardest to read. */
-        h('div', { className: 'media-cap relative aspect-[16/10] bg-zinc-100 overflow-hidden' }, [
+        /* 4:3 on a phone, 16:10 from sm up.
+
+           "Give the house the screen" changed max-height from 220px to 56vh
+           and achieved nothing, because max-height only caps: the box is sized
+           by its aspect ratio, and at 297px wide 16:10 is 185px tall. Neither
+           220px nor 437px was ever reached, so neither value did anything. The
+           cap was never the binding constraint.
+
+           The aspect ratio is. 4:3 at the same width is 222px, a fifth taller,
+           and it is the ratio most phone photographs are taken in — so it also
+           crops less of the house away. The cap stays as a real guard for short
+           viewports, where 56vh now genuinely binds. */
+        h('div', { className: 'media-cap relative aspect-[4/3] sm:aspect-[16/10] bg-zinc-100 overflow-hidden' }, [
           h('div', {
             className: 'absolute inset-0',
             style: { filter: (LIGHTING[state.timeOfDay] || LIGHTING.afternoon).filter, transition: 'filter .7s' },
@@ -3114,7 +3126,7 @@ function buildGlazingLedPanel() {
     ]),
 
     h('div', { className: 'mt-5' }, [
-      h('div', { id: 'estimate-total', className: 'serif text-[30px] leading-none measured' },
+      h('div', { id: 'estimate-total', className: 'serif text-[22px] sm:text-[26px] md:text-[30px] leading-tight measured' },
         `${fmtMoney(spread.low)} – ${fmtMoney(spread.high)}`),
       h('div', { className: 'mt-2 text-[11px] text-white/50' },
         doorOnly
@@ -3208,7 +3220,7 @@ function buildPricePanel(price, priceRow) {
       ]),
 
       h('div', { className: 'mt-5' }, [
-        h('div', { className: 'serif text-[30px] leading-none' }, range ? `${fmtMoney(range.low)} – ${fmtMoney(range.high)}` : fmtMoney(price.total)),
+        h('div', { className: 'serif text-[22px] sm:text-[26px] md:text-[30px] leading-tight' }, range ? `${fmtMoney(range.low)} – ${fmtMoney(range.high)}` : fmtMoney(price.total)),
         h('div', { className: 'mt-2 text-[11px] text-white/50' },
           [`Typical ${typeLabel.toLowerCase()} · about `, h('span', { className: 'measured' }, `${price.footprintM2} m²`), ' of wall']),
       ]),
@@ -3261,7 +3273,17 @@ function buildPricePanel(price, priceRow) {
        backwards. £47,475 to the pound, three sections above an admission that
        the photo-to-area step has never been checked against a surveyed house,
        was the false precision they meant. */
-    h('div', { id: 'estimate-total', className: 'mt-2 serif text-[32px] md:text-[38px] leading-none measured' },
+    /* Sized for the range, not for the single figure it replaced.
+
+       "£47,475" is 7 characters; "£37,000 – £58,000" is 17, and .measured is
+       JetBrains Mono at 0.6em per character. At 32px that wants 326px inside a
+       257px panel on a 393px phone, so it simply ran out of the dark box. The
+       range shipped on 1 September and the type size did not move with it.
+
+       leading-tight rather than leading-none, because at these sizes a long
+       range can still wrap on a narrow phone and leading-none makes two lines
+       collide. */
+    h('div', { id: 'estimate-total', className: 'mt-2 serif text-[22px] sm:text-[28px] md:text-[34px] leading-tight measured' },
       range ? `${fmtMoney(range.low)} – ${fmtMoney(range.high)}` : fmtMoney(price.total)),
     /* §5. The difference the last choice made, under the number it moved.
        Subtle by instruction and by judgement — it is a footnote to the total,
@@ -3560,17 +3582,33 @@ function buildTotalBar() {
          installers. A middot says "and also", which is what is meant. The
          labels come with them so the two figures are never a bare pair of
          numbers, and drop out only where there is genuinely no room. */
-      h('span', { className: 'flex items-baseline gap-2 min-w-0' }, [
+      /* One figure on a phone, both from `sm` up.
+
+         Each of these became a range rather than a single total on 1
+         September, so the two together are about 37 characters. At 18px in
+         JetBrains Mono that wants 400px on a 345px line, and every span here
+         carries whitespace-nowrap — so rather than wrapping it ran off the
+         side of the screen. That is most of what "all over the place" was.
+
+         The glazing figure is not lost: it is one line down in the expanded
+         panel, which is one tap away and labels both properly. A bar that
+         overflows tells you nothing; a bar showing the larger figure and
+         saying there is more tells you what to do about it. */
+      h('span', { className: 'flex items-baseline gap-2 min-w-0 overflow-hidden' }, [
         typicalTag,
         cladding ? h('span', { className: 'whitespace-nowrap' }, [
-          h('span', { className: 'measured text-[18px]' }, cladding),
-          h('span', { className: 'hidden sm:inline text-[11px] text-zinc-500' }, ' ' + cladLabel),
+          h('span', { className: 'measured text-[15px] sm:text-[18px]' }, cladding),
+          h('span', { className: 'hidden md:inline text-[11px] text-zinc-500' }, ' ' + cladLabel),
         ]) : null,
-        cladding && glazing ? h('span', { className: 'text-zinc-300' }, '·') : null,
-        glazing ? h('span', { className: 'whitespace-nowrap' }, [
+        cladding && glazing ? h('span', { className: 'hidden sm:inline text-zinc-300' }, '·') : null,
+        glazing ? h('span', { className: `whitespace-nowrap ${cladding ? 'hidden sm:inline' : ''}` }, [
           h('span', { className: 'measured text-[15px]' }, glazing),
-          h('span', { className: 'hidden sm:inline text-[11px] text-zinc-500' }, ' ' + glazLabel),
+          h('span', { className: 'hidden md:inline text-[11px] text-zinc-500' }, ' ' + glazLabel),
         ]) : null,
+        /* Says the bar is not showing everything, in the one place it isn't. */
+        cladding && glazing
+          ? h('span', { className: 'sm:hidden text-[11px] text-zinc-500 whitespace-nowrap' }, '+ windows')
+          : null,
         h('span', { className: 'hidden lg:inline text-[11px] text-zinc-500 truncate' }, composition),
       ]),
       h('span', { className: 'text-[11px] text-zinc-500 whitespace-nowrap flex items-center gap-1.5 shrink-0' }, [

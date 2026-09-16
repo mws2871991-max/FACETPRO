@@ -90,12 +90,18 @@ test('it does not claim to simulate light', () => {
   assert.match(body, /no extra renders/, 'free is worth saying, and it is true');
 });
 
+/* These three locate the image frame by its class string. The aspect ratio was
+   part of that anchor and moved on 16 September — 4:3 on a phone, 16:10 from sm
+   up — which failed all three for a reason that had nothing to do with
+   lighting. Anchored on `media-cap relative aspect-` now, so a ratio change
+   does not read as a filter regression. */
+
 test('the slider is not dimmed by the light it controls', () => {
   /* A CSS filter applies to every descendant. With the slider inside the
      filtered element, brightness(0.62) at evening dimmed the control people
      use to compare before and after — exactly when the image is hardest to
      read — and the white readout with it. */
-  const start = html.indexOf("className: 'media-cap relative aspect-[16/10]");
+  const start = html.indexOf("className: 'media-cap relative aspect-");
   const end = html.indexOf('groupsRow', start);
   const frame = html.slice(start, end);
   const filterAt = frame.indexOf('filter: (LIGHTING');
@@ -114,7 +120,7 @@ test('the glow is not dimmed by the darkness it is meant to shine through', () =
      dragging changed the hour and the frame colour at once; and the glow was
      38% dimmer than intended, when the whole point is that it stays bright
      while the house goes dark. */
-  const frameAt = html.indexOf("className: 'media-cap relative aspect-[16/10]");
+  const frameAt = html.indexOf("className: 'media-cap relative aspect-");
   const frame = html.slice(frameAt, html.indexOf('groupsRow', frameAt));
   const filterAt = frame.indexOf('filter: (LIGHTING');
   const layersAt = frame.indexOf('...lightingLayers()');
@@ -131,7 +137,7 @@ test('both panes are lit by the same hour', () => {
      on the rendered image alone. Filtering one side meant dragging the slider
      compared this evening's new frames with this afternoon's old ones — two
      changes at once, which is the one thing a before-and-after must not do. */
-  const start = html.indexOf("className: 'media-cap relative aspect-[16/10]");
+  const start = html.indexOf("className: 'media-cap relative aspect-");
   assert.ok(start > 0, 'the media frame should still be there');
   const frame = html.slice(start, start + 700);
   assert.match(frame, /filter: \(LIGHTING\[state\.timeOfDay\]/, 'the frame carries the filter');
