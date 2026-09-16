@@ -595,8 +595,19 @@ const cta = (siteUrl, slug) => `<div class="cta-block">
   <p>Every figure above is a typical house. Yours is not typical — nobody's is.
      Upload one photograph and we will find your windows, doors, roof and walls,
      estimate your wall area, and price your own elevation.</p>
-  <p><a class="cta" href="${escapeHtml(ctaHref(siteUrl, slug))}">Upload a photo of your house</a></p>
-  <p class="muted">Free to try &middot; One photo &middot; No sales call unless you ask</p>
+  <!-- "Upload a photo", the same words as every button on the homepage. This
+       said "Upload a photo of your house", which is the same action under a
+       different name — and it sat on the same page as a journey-specific CTA
+       ("Show me my windows"), so a landing page carried two wordings for one
+       thing. That is exactly what the one-primary-action rule exists to stop,
+       and I standardised the homepage in August and never looked here, on the
+       pages a search visitor actually lands on first.
+
+       The journey CTA above it keeps its own words on purpose: "Show me my
+       windows" on a page about window costs is a different and more specific
+       promise, not a second name for this one. -->
+  <p><a class="cta" href="${escapeHtml(ctaHref(siteUrl, slug))}">Upload a photo</a></p>
+  <p class="muted">Free to try &middot; No measurements &middot; No sales call unless you ask</p>
 </div>`;
 
 
@@ -743,7 +754,7 @@ const journeyHero = (siteUrl, slug) => {
   <h2>${escapeHtml(copy.h)}</h2>
   <p>${escapeHtml(copy.p)}</p>
   <p><a class="cta" href="${escapeHtml(ctaHref(siteUrl, slug))}">${escapeHtml(copy.cta)}</a></p>
-  <p class="muted">Free &middot; One photo &middot; No sales call unless you ask</p>
+  <p class="muted">Free &middot; No measurements &middot; No sales call unless you ask</p>
 </div>`;
 };
 

@@ -24,7 +24,18 @@
   th,td{text-align:left;padding:11px 14px;border-bottom:1px solid #f1f1f3}
   thead th{background:#F6F3EE;font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:#52525b}
   tbody th{font-weight:500}
-  td{font-variant-numeric:tabular-nums}
+  /* A price range must not break across two lines.
+
+     "£10,960 – £15,772" at 15px needs about 128px, and the value column on a
+     393px phone is narrower than that once the label column has taken its
+     share — so it wrapped at the en dash and read as two separate prices,
+     which on a page whose whole purpose is telling somebody what a job costs
+     is the one thing it must not do. These are the SEO pages: for a search
+     visitor they are the first and often only screen. */
+  td{font-variant-numeric:tabular-nums;white-space:nowrap}
+  /* The label column gives way instead, because a style name wrapping is
+     harmless and a price wrapping is not. */
+  tbody th{overflow-wrap:anywhere}
   tr:last-child th,tr:last-child td{border-bottom:0}
   .cta-block{margin:40px 0 0;padding:26px 22px;background:#0F1012;color:#fff;border-radius:18px}
   .cta-block h2{margin-top:0;color:#fff}
