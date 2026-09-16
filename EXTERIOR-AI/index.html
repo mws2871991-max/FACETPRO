@@ -1529,6 +1529,9 @@ const state = {
   // two totals, because the browser is never sent the rates — see the swatch
   // handler in buildVisualizer.
   lastPriceDelta: null,
+  // The same idea for the window-and-door range, which shifts at both ends —
+  // so its delta is itself a range. Set in refreshGlazing.
+  glazingDelta: null,
   // Whether the homeowner has pressed through the "We found your home" card to
   // their own before-and-after. Gates the reveal, not the render.
   revealed: false,
@@ -3117,6 +3120,15 @@ function buildGlazingLedPanel() {
         doorOnly
           ? 'Your front door, supplied and fitted'
           : [`${n} window${n === 1 ? '' : 's'}`, state.prefs.doorStyleId && state.prefs.doorStyleId !== 'none' ? ' and a door' : '', ', supplied and fitted'].join('')),
+      /* What the last choice cost, under the number it moved. Both ends of the
+         range shift, so both are shown — collapsing them to one figure would
+         invent a precision the range does not have. */
+      state.glazingDelta
+        ? h('p', { className: `mt-1.5 text-[12px] leading-5 ${state.glazingDelta.low > 0 ? 'text-amber-200/80' : 'text-emerald-300/90'}` },
+            state.glazingDelta.low === state.glazingDelta.high
+              ? `${state.glazingDelta.label}: ${state.glazingDelta.low > 0 ? '+' : '−'}${fmtMoney(Math.abs(state.glazingDelta.low))}`
+              : `${state.glazingDelta.label}: ${state.glazingDelta.low > 0 ? '+' : '−'}${fmtMoney(Math.abs(state.glazingDelta.low))} – ${fmtMoney(Math.abs(state.glazingDelta.high))}`)
+        : null,
     ]),
 
     h('div', { className: 'mt-5 rounded-xl bg-white/5 border border-white/10 p-3' }, [
@@ -3326,7 +3338,20 @@ function renderDetailsOnly() {
    Silent on failure by design: a missing window figure is a smaller problem
    than an error message next to somebody's house. */
 let glazingRequest = 0;
-async function refreshGlazing() {
+async function refreshGlazing({ label } = {}) {
+  /* What the last glazing choice did to the range, measured across this call.
+
+     Same reasoning as the swatch delta: the browser is never sent the rates,
+     so this cannot be worked out ahead of the tap — but both ends of the range
+     are already here before and after, and the difference between them is free.
+
+     A range shifts at both ends, so the delta is itself a range. The brief's
+     own example is "+£800–£900", which is exactly this. */
+  const beforeSpread = (() => {
+    const g = state.glazing;
+    const sp = g?.marketRange || g?.range;
+    return sp && Number.isFinite(sp.low) && Number.isFinite(sp.high) ? { low: sp.low, high: sp.high } : null;
+  })();
   /* Nothing chosen, or everything actively declined, are the same thing as far
      as a price is concerned. Without the second half, declining both windows
      and door still called the endpoint and rendered a £0–£0 range, which is
@@ -3356,6 +3381,22 @@ async function refreshGlazing() {
     if (state.glazing?.price) {
       reachedStage('estimate_viewed');
       reportJourneyTiming();
+      const after = state.glazing.marketRange || state.glazing.range;
+      if (label && beforeSpread && after && Number.isFinite(after.low) && Number.isFinite(after.high)) {
+        const dLow = after.low - beforeSpread.low;
+        const dHigh = after.high - beforeSpread.high;
+        /* Both ends moving the same way is a price change worth reporting. A
+           mixed or zero move is the range reshaping rather than the job
+           getting dearer, and announcing it as "+£0" would be noise. */
+        state.glazingDelta = (dLow === 0 && dHigh === 0) ? null
+          : (dLow >= 0 && dHigh >= 0) || (dLow <= 0 && dHigh <= 0)
+            ? { label, low: dLow, high: dHigh }
+            : null;
+      } else {
+        state.glazingDelta = null;
+      }
+    } else {
+      state.glazingDelta = null;
     }
   } catch (_) {
     if (ticket === glazingRequest) state.glazing = null;
@@ -3554,12 +3595,24 @@ function buildDetailOptions() {
   const fs = state.catalogue?.fsgc;
   if (!wd && !fs) return h('div', { id: 'detail-options' });
 
-  const setPref = (key, id) => {
+  const setPref = (key, id, label) => {
     state.prefs[key] = state.prefs[key] === id ? null : id;
     reachedStage('design_changed');
     renderDetailsOnly();
-    // Only the three that change the glazing price; roofline is a preference.
-    if (['windowStyleId', 'doorStyleId', 'windowDoorColourId'].includes(key)) refreshGlazing();
+    /* Only the three that change the glazing price; roofline is a preference.
+
+       The brief's P0 pricing item asks that every choice visibly moves the
+       number, and windows and doors were the ones where it did not. The swatch
+       rows have shown a delta since 31 August; these did not, and this is
+       where the larger money is — a bay window against a casement is hundreds
+       of pounds, and the figure simply re-rendered with nothing saying which
+       tap did it or by how much.
+
+       The spread is caught here rather than inside refreshGlazing because only
+       the caller knows which control was pressed and what it is called. */
+    if (['windowStyleId', 'doorStyleId', 'windowDoorColourId'].includes(key)) {
+      refreshGlazing({ label: label || 'That change' });
+    }
   };
 
   // Style/profile card: name, what it is, and — where we have them — the
@@ -3570,7 +3623,7 @@ function buildDetailOptions() {
       type: 'button',
       'aria-pressed': active ? 'true' : 'false',
       className: `text-left p-3 rounded-xl border transition ${active ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-400'}`,
-      onClick: () => setPref(key, item.id),
+      onClick: () => setPref(key, item.id, item.name),
     }, [
       h('div', { className: 'flex items-baseline justify-between gap-2' }, [
         h('span', { className: 'text-xs font-medium' }, item.name),
@@ -3636,7 +3689,7 @@ function buildDetailOptions() {
       return h('button', {
         type: 'button', title: c.name, 'aria-label': c.name, 'aria-pressed': active ? 'true' : 'false',
         className: `flex items-center gap-2 px-3 py-2 rounded-full border text-xs transition ${active ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-400'}`,
-        onClick: () => setPref(key, c.id),
+        onClick: () => setPref(key, c.id, c.name),
       }, [
         h('span', { className: 'w-4 h-4 rounded-full border border-black/20', style: { background: c.hex } }),
         c.name,
@@ -3864,8 +3917,18 @@ function buildDetailOptions() {
 
     fs ? h('div', { id: 'roofline', className: `scroll-mt-24 ${wd ? 'pt-8 border-t border-zinc-200' : ''}` }, [
       h('h3', { className: 'text-[15px] font-medium' }, 'Fascias, soffits & cladding'),
+      /* The brief's second pricing rule: "if an option is visual-only and not
+         priced, label it clearly". These are the only controls on the page
+         that do not move the estimate — the roofline is already costed at a
+         standard specification, and picking a different profile records a
+         preference for the installer rather than repricing anything.
+
+         The old sentence said the per-metre figures were "a guide for
+         comparing them", which is true and does not answer the question
+         somebody asks after tapping three of them and watching the total sit
+         still. Said plainly now, in the place where the tapping happens. */
       h('p', { className: 'mt-1 text-[12px] leading-5 text-zinc-600 max-w-[68ch]' },
-        'Your estimate already includes fascia, soffit and guttering at our standard specification. These are the profiles you can choose between — the per-metre figures are a guide for comparing them, not the sourced rates behind your quote.'),
+        'Your estimate already includes fascia, soffit and guttering at our standard specification, so choosing between these profiles does not change your figure — it tells your installer what you want. The per-metre prices are a guide for comparing them, not the sourced rates behind your quote.'),
       h('div', { className: 'mt-4 grid gap-5' }, [
         group('Fascia', fs.fascia, 'fasciaId'),
         group('Soffit', fs.soffit, 'soffitId', { bestseller: true }),
