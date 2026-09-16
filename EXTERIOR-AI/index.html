@@ -3285,7 +3285,18 @@ function buildPricePanel(price, priceRow) {
      where somebody asking "what can change?" is already looking. Transparent
      rather than uncertain: nothing is gone, it is ordered. */
   return h('div', { className: 'rounded-2xl bg-zinc-900 text-white p-5' }, [
-    h('div', { className: 'flex items-center justify-between gap-2 flex-wrap' }, [
+    /* "Your home. Your design." — the line the brief asks for above the cost,
+       and the one item I listed as missing three times without doing.
+
+       I hesitated because it is a line that earns nothing on its own: the
+       figure below it is already the focus. What it does earn is the sentence
+       after it. This panel is the end of a sequence — their house, their
+       choices, and then what it costs — and naming the first two is what makes
+       the third read as the answer to something rather than as a number that
+       was always going to be there. It is set small and quiet for that reason;
+       it is a preamble, not a headline competing with the price. */
+    h('p', { className: 'serif text-[15px] leading-tight text-white/80' }, 'Your home. Your design.'),
+    h('div', { className: 'mt-2 flex items-center justify-between gap-2 flex-wrap' }, [
       h('h3', { className: 'text-[11px] tracking-widest uppercase text-white/50' }, 'Your estimated project cost'),
       h('span', { className: 'text-[10px] px-2 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-200' },
         state.price?.footprintSource === 'manual_entry' ? 'Your measurements' : 'Sized to your home'),
