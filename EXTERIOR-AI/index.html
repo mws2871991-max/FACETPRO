@@ -2735,7 +2735,7 @@ function buildVisualizer() {
         return h('button', {
           type: 'button',
           'aria-pressed': active ? 'true' : 'false',
-          className: `flex items-center gap-2 px-3 py-2 rounded-full border text-xs transition ${active ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-900'}`,
+          className: `flex items-center gap-2 px-3.5 min-h-[44px] rounded-full border text-xs transition ${active ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-900'}`,
           onClick: async () => {
             /* §5: what the choice cost, shown as a difference.
 
@@ -2798,7 +2798,7 @@ function buildVisualizer() {
       options.map(o => h('button', {
         type: 'button',
         'aria-pressed': current === o.id ? 'true' : 'false',
-        className: `px-3 py-1.5 rounded-full text-[11px] font-medium transition ${current === o.id ? 'bg-zinc-900 text-white' : 'text-zinc-600 hover:text-zinc-900'}`,
+        className: `px-3.5 min-h-[44px] rounded-full text-[11px] font-medium transition ${current === o.id ? 'bg-zinc-900 text-white' : 'text-zinc-600 hover:text-zinc-900'}`,
         onClick: () => { onPick(o.id); renderVisualizerOnly(); },
       }, o.label)));
 
@@ -3750,7 +3750,7 @@ function buildDetailOptions() {
       const active = state.prefs[key] === c.id;
       return h('button', {
         type: 'button', title: c.name, 'aria-label': c.name, 'aria-pressed': active ? 'true' : 'false',
-        className: `flex items-center gap-2 px-3 py-2 rounded-full border text-xs transition ${active ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-400'}`,
+        className: `flex items-center gap-2 px-3.5 min-h-[44px] rounded-full border text-xs transition ${active ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-400'}`,
         onClick: () => setPref(key, c.id, c.name),
       }, [
         h('span', { className: 'w-4 h-4 rounded-full border border-black/20', style: { background: c.hex } }),
@@ -3934,7 +3934,11 @@ function buildDetailOptions() {
             var on = state.openerCount === n;
             return h('button', {
               type: 'button',
-              className: 'px-3 py-1.5 rounded-full border text-[12px] transition ' + (on ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-300 hover:border-zinc-900'),
+              /* min-h-[44px], like every other control on the page. These five
+                 were py-1.5 — about thirty pixels tall — which is under every
+                 published minimum for a thumb, on the one question a homeowner
+                 is most likely to answer wrongly by mis-tapping. */
+              className: 'px-4 min-h-[44px] rounded-full border text-[12px] transition ' + (on ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-300 hover:border-zinc-900'),
               onClick: function () { state.openerCount = n; refreshGlazing(); },
             }, label);
           })),
@@ -4004,7 +4008,7 @@ function buildDetailOptions() {
         chosen ? `${chosen} preference${chosen === 1 ? '' : 's'} noted — we’ll pass these on with your design.` : 'Nothing chosen yet. Anything you pick travels with your design.'),
       chosen ? h('button', {
         type: 'button',
-        className: 'text-[11px] px-3 py-1.5 rounded-full border border-zinc-200 hover:border-zinc-900 transition',
+        className: 'text-[11px] px-3 min-h-[44px] rounded-full border border-zinc-200 hover:border-zinc-900 transition',
         onClick: () => { Object.keys(state.prefs).forEach(k => state.prefs[k] = null); renderDetailsOnly(); },
       }, 'Clear all') : null,
     ]),
@@ -4069,7 +4073,7 @@ function buildConservatory() {
       h('button', {
         type: 'button',
         'aria-pressed': active ? 'true' : 'false',
-        className: `mt-4 w-full py-2 rounded-full text-xs font-medium border transition ${active ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-900'}`,
+        className: `mt-4 w-full min-h-[44px] rounded-full text-xs font-medium border transition ${active ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-900'}`,
         onClick: () => {
           state.conservatoryId = active ? null : s.id;
           renderConservatoryOnly();
@@ -4164,7 +4168,7 @@ function buildWholeHouse() {
         title: c.name,
         'aria-label': c.name,
         'aria-pressed': current === c.id ? 'true' : 'false',
-        className: `flex items-center gap-2 px-3 py-2 rounded-full border text-xs transition ${current === c.id ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-400'}`,
+        className: `flex items-center gap-2 px-3.5 min-h-[44px] rounded-full border text-xs transition ${current === c.id ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-400'}`,
         onClick: async () => { state.wh[key] = c.id; await refreshWholeHouse(); renderWholeHouseOnly(); },
       }, [
         h('span', { className: 'w-4 h-4 rounded-full border border-black/20', style: { background: c.hex } }),
@@ -4562,7 +4566,7 @@ function buildMeasureBlock() {
     h('div', { className: 'mt-4 flex flex-wrap gap-2' }, [
       h('button', {
         type: 'button',
-        className: `px-4 py-2 rounded-full text-xs font-medium ${state.useMeasurement ? 'bg-emerald-500 text-white' : 'bg-white text-zinc-900'}`,
+        className: `px-4 min-h-[44px] rounded-full text-xs font-medium ${state.useMeasurement ? 'bg-emerald-500 text-white' : 'bg-white text-zinc-900'}`,
         onClick: async () => {
           state.useMeasurement = !state.useMeasurement;
           if (state.useMeasurement) state.footprint = null;   // measurement takes over unless they type one
