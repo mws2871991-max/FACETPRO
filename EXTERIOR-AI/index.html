@@ -1452,7 +1452,22 @@ const state = {
      answered; closed once somebody has, so the page states their project
      instead of asking again. "Change" reopens it. */
   triageOpen: !readJourney(),
-  cladding: findSwatch(journeyExcludes('cladding') ? 'none' : 'alabaster'),
+  /* Walls start as they are, unless somebody came asking about walls.
+
+     This defaulted to Alabaster, so a first-time visitor with no stated intent
+     was shown their brick house rendered white — and the line directly above
+     the upload box promises "Your brickwork ... stay exactly as they are".
+     Leaving the walls out of the opening design is the only reading of that
+     promise the picture can honour, and for a lot of people the brick is why
+     they bought the house.
+
+     Every wall finish is one tap away and the estimate moves when they take
+     it, which is the interaction the whole product is built on — so this
+     trades a larger opening number for a truthful one, and demonstrates the
+     price responding rather than asserting it. A visitor from a rendering or
+     cladding page still arrives with a finish selected, because that is what
+     they came to see. */
+  cladding: findSwatch((journeyExcludes('cladding') || readJourney() !== 'cladding') ? 'none' : 'alabaster'),
   trim: findSwatch(journeyExcludes('trim') ? 'none' : 'ink-trim'),
   roof: findSwatch(journeyExcludes('roof') ? 'none' : 'slate-roof'),
   afterPct: 65,
@@ -1982,7 +1997,8 @@ async function applyJourney(id) {
   const j = JOURNEYS[id] || null;
   state.journey = j ? id : null;
 
-  state.cladding = findSwatch(j && j.swatches.includes('cladding') ? 'none' : 'alabaster');
+  // Same rule as the initial state: walls only when walls were asked about.
+  state.cladding = findSwatch(id === 'cladding' ? 'alabaster' : 'none');
   state.trim = findSwatch(j && j.swatches.includes('trim') ? 'none' : 'ink-trim');
   state.roof = findSwatch(j && j.swatches.includes('roof') ? 'none' : 'slate-roof');
 
@@ -6274,9 +6290,37 @@ const AUTO_DEFAULTS = {
 
 function applyHouseTypePreset() {
   if (state.hasCustomised) return false;   // their own choice wins
+
+  /* The walls are left alone unless somebody asked about the walls.
+
+     Directly above the upload box this page promises: "We only change the
+     finish. Your brickwork, your windows and the shape of your home stay
+     exactly as they are." Every Real Homes caption says the same — "Brick,
+     roof tiles and guttering untouched." Then the automatic first look put
+     render over the brick of a brick house, unasked, as the opening image of
+     the product.
+
+     A homeowner who chooses Clay Stone has asked for exactly that and should
+     get it. A homeowner who has asked for nothing should not have their brick
+     taken away in the first picture they see of their own home, at the moment
+     the product is asking to be trusted — and for a lot of people the brick is
+     the reason they bought the house.
+
+     So the automatic design changes the roofline and the roof, which are
+     finishes in the ordinary sense, and leaves the walls as they are unless
+     the visitor arrived from a rendering or cladding page, where re-cladding
+     is the thing they came to see. Every swatch stays available; this is only
+     about what we do without being asked. */
+  /* state.journey, not readJourney(): somebody who picks "Render or cladding"
+     from the triage on the page has asked about walls just as plainly as
+     somebody who arrived from /exterior-wall-rendering, and has no URL
+     parameter to show for it. */
+  const askedAboutWalls = state.journey === 'cladding';
+  const groups = askedAboutWalls ? ['cladding', 'trim', 'roof'] : ['trim', 'roof'];
+
   const preset = AUTO_DEFAULTS[state.houseType] || AUTO_DEFAULTS.semi;
   let applied = false;
-  for (const group of ['cladding', 'trim', 'roof']) {
+  for (const group of groups) {
     // Never override a journey exclusion — "leave it as it is" is a choice.
     if (state[group] && state[group].id === 'none') continue;
     const sw = SWATCHES.find(x => x.id === preset[group]);
