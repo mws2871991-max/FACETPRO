@@ -1542,6 +1542,9 @@ const state = {
   // two totals, because the browser is never sent the rates — see the swatch
   // handler in buildVisualizer.
   lastPriceDelta: null,
+  // The shape of the current render, read off the image. The reveal box adopts
+  // it so a portrait photo is not cover-cropped into a landscape frame.
+  renderAspect: null,
   // The same idea for the window-and-door range, which shifts at both ends —
   // so its delta is itself a range. Set in refreshGlazing.
   glazingDelta: null,
@@ -2674,6 +2677,15 @@ function buildVisualizer() {
       : h('span', { className: 'text-xs text-zinc-500' }, 'Add a photo to see your home here'),
   ]);
 
+  /* Read once per render, from the image itself rather than from anything
+     the server promises about it. */
+  const noteRenderAspect = (e) => {
+    const img = e.target;
+    if (!img.naturalWidth || !img.naturalHeight) return;
+    const ratio = `${img.naturalWidth} / ${img.naturalHeight}`;
+    if (state.renderAspect !== ratio) { state.renderAspect = ratio; renderVisualizerOnly(); }
+  };
+
   let afterPane;
   if (state.renderUrl) {
     /* The filter lives on the <img>, not on anything the server ever sees.
@@ -2682,6 +2694,7 @@ function buildVisualizer() {
     afterPane = h('div', { className: 'absolute inset-0', style: { clipPath: `inset(0 ${100 - state.afterPct}% 0 0)` } }, [
       h('img', {
         src: state.renderUrl,
+        onLoad: noteRenderAspect,
         /* Names only what is actually changing. "Alabaster cladding, Leave as
            it is trim" would be nonsense, and describing work nobody chose is
            the same mistake as pricing it. */
@@ -2793,7 +2806,7 @@ function buildVisualizer() {
             if (group === 'Trim') state.trim = sw;
             if (group === 'Roof') state.roof = sw;
             state.hasCustomised = true;   // they have found the controls; stop offering to show them
-            state.renderUrl = null; state.renderId = null; // choice changed — the old render no longer matches
+            state.renderUrl = null; state.renderId = null; state.renderAspect = null; // choice changed — the old render no longer matches
             /* Once per visit, not once per tap. The question this answers is
                "what share of visitors actually design something", and a
                counter that fires on every swatch would answer "how many taps
@@ -2888,7 +2901,12 @@ function buildVisualizer() {
   return h('section', { id: 'visualizer-section', className: 'rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24' }, [
     h('div', { className: 'flex items-center justify-between gap-3 flex-wrap' }, [
       h('div', {}, [
-        h('p', { className: 'text-[11px] tracking-widest uppercase text-zinc-400' }, 'Step 3'),
+        /* Step 2, not 3. "Step 2" used to label the windows-and-doors
+           accordion; renaming that to "See it on your home" earlier today left
+           the page counting 1, 3, 4. The detection panel is not a step the
+           homeowner takes — it is the machine answering — so the right fix is
+           to close the gap rather than to number the wait. */
+        h('p', { className: 'text-[11px] tracking-widest uppercase text-zinc-400' }, 'Step 2'),
         h('h2', { className: 'mt-1 serif text-[26px] md:text-[32px] tracking-tight' }, 'Try colours and see what it costs'),
       ]),
       h('span', { className: 'text-[10px] px-2 py-1 rounded-full bg-zinc-900 text-white' }, 'Price updates as you choose'),
@@ -2925,7 +2943,25 @@ function buildVisualizer() {
            and it is the ratio most phone photographs are taken in — so it also
            crops less of the house away. The cap stays as a real guard for short
            viewports, where 56vh now genuinely binds. */
-        h('div', { className: 'media-cap relative aspect-[4/3] sm:aspect-[16/10] bg-zinc-100 overflow-hidden' }, [
+        /* The render's own shape, once there is a render.
+
+           The box is 4:3 landscape and FLUX returns whatever shape it was
+           given — a portrait photograph of a house comes back portrait.
+           Measured live: an 880x1184 render displayed in a 293x220 box under
+           object-fit: cover, which throws away the top and the bottom. Those
+           are the roofline and the ground: the two things the estimate has
+           just priced, and the two things the upload guidance asks them to
+           include. The before pane kept its own shape, so the slider was
+           comparing two differently-cropped pictures.
+
+           `state.renderAspect` is read off the image when it loads, so the
+           container adopts it and both panes share one box. Falls back to the
+           class ratio before any render exists, which is when the box holds
+           the schematic and a fixed shape is right. */
+        h('div', {
+          className: 'media-cap relative aspect-[4/3] sm:aspect-[16/10] bg-zinc-100 overflow-hidden',
+          style: state.renderAspect ? { aspectRatio: state.renderAspect } : {},
+        }, [
           h('div', {
             className: 'absolute inset-0',
             style: { filter: (LIGHTING[state.timeOfDay] || LIGHTING.afternoon).filter, transition: 'filter .7s' },
@@ -2947,12 +2983,26 @@ function buildVisualizer() {
              two were missed, and dimmed with the photograph. */
           h('div', { className: 'absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-white border border-zinc-200' }, 'Before'),
           state.renderUrl
-            /* Clipped to the seam like the pane it labels, which read as a
-               broken sentence: at 65% it said "After • your home," with the
-               comma dangling. Short enough now to survive the clip at any
-               slider position, and the pane underneath still carries the
-               meaning. */
-            ? h('div', { className: 'absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-emerald-600 text-white whitespace-nowrap', style: { clipPath: `inset(0 ${100 - state.afterPct}% 0 0)` } }, 'After')
+            /* Opposite corner, no clip.
+
+               This sat on top of the Before pill and was wiped in with a
+               clipPath driven by afterPct. The mechanism never worked, and the
+               comment I left here yesterday claiming it was safe was wrong in
+               a way worth recording: clipPath percentages resolve against the
+               element's own box, not against the image seam. At 65% the seam
+               is ~190px across a 293px image while the clip lands at 0.65 of a
+               39px pill — about 25px. The label never tracked the thing it
+               labelled.
+
+               And the two pills are different widths — 48px and 39px measured
+               live — so the green one can never cover the white one. At the
+               default position they compose into "Aftore". Zero is the only
+               clean state and the slider does not start there.
+
+               The three Real Homes cards have always put their labels in
+               opposite corners with no clipping, and they read correctly at
+               every position. Same here. */
+            ? h('div', { className: 'absolute right-3 top-3 text-[10px] px-2 py-1 rounded-full bg-emerald-600 text-white whitespace-nowrap' }, 'After')
             : null,
           slider,
           h('div', { className: 'absolute bottom-3 right-3 text-[10px] px-2 py-1 rounded-full bg-white border border-zinc-200' }, `${state.afterPct}% after`),
@@ -3821,7 +3871,7 @@ function buildDetailOptions() {
          button offers the picture when they have settled. */
       state.hasCustomised = true;
       state.renderUrl = null;
-      state.renderId = null;
+      state.renderId = null; state.renderAspect = null;
       refreshGlazing({ label: label || 'That change' });
       renderVisualizerOnly();
     }
@@ -5106,7 +5156,7 @@ function buildSaveFraming() {
   if (!state.leadCapture) {
     const hasRender = Boolean(state.renderId && state.renderUrl);
     return h('section', { id: 'save-design', className: 'rounded-2xl bg-[#111111] text-white p-6 md:p-8 scroll-mt-24' }, [
-      h('p', { className: 'text-[11px] tracking-widest uppercase text-white/55' }, 'Step 4'),
+      h('p', { className: 'text-[11px] tracking-widest uppercase text-white/55' }, 'Step 3'),
       h('h2', { className: 'mt-1 serif text-[26px] md:text-[32px] tracking-tight' }, 'Saving your design is coming shortly'),
       h('p', { className: 'mt-3 text-sm leading-6 text-white/60 max-w-[60ch]' },
         'We’re not taking anyone’s details just yet — we’re finishing our privacy policy first, and we’d rather do that properly than collect your information before it’s ready.'),
