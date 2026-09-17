@@ -2695,17 +2695,31 @@ function buildVisualizer() {
     ]);
   } else {
     afterPane = h('div', { className: 'absolute inset-0', style: { clipPath: `inset(0 ${100 - state.afterPct}% 0 0)` } }, [
+      /* The colour, not the photograph.
+
+         These filled the schematic's wall and roof with the swatch's image at
+         background-size: cover. The swatch images are photographs of whole
+         houses in that colour — sage-slate is a clapboard house across a
+         canal, graphite is a dark house at the end of a lawn — which is
+         exactly right for the twenty-pixel dot on the pill, where it reads as
+         "this colour", and exactly wrong stretched across a wall panel, where
+         cover crops to whatever happens to be in the middle. Choosing Graphite
+         filled the wall with grass and trees.
+
+         A schematic should be schematic. The windows here are white
+         rectangles; the wall should be the colour, flatly. The photographs
+         stay where they work, on the pills.
+
+         Found by rendering the page and tapping a swatch, which is the only
+         way this was ever going to surface — the markup reads as a perfectly
+         sensible image-or-fallback. */
       h('div', {
         className: 'w-full h-full relative',
-        style: state.cladding.image
-          ? { backgroundImage: `url(${state.cladding.image})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-          : { background: state.cladding.hex }
+        style: { background: state.cladding.hex },
       }, [
         h('div', {
           className: 'absolute inset-x-0 top-0 h-[18%]',
-          style: state.roof.image
-            ? { backgroundImage: `url(${state.roof.image})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-            : { background: state.roof.hex }
+          style: { background: state.roof.hex },
         }),
         h('div', { className: 'absolute inset-y-0 left-0 right-0 top-[18%]' }, [
           h('div', { className: 'absolute left-[8%] top-[8%] w-[14%] h-[28%] bg-white/90 border-2', style: { borderColor: state.trim.hex } }),
@@ -2713,7 +2727,14 @@ function buildVisualizer() {
           h('div', { className: 'absolute left-[52%] top-[24%] w-[12%] h-[38%] bg-zinc-900 border-2', style: { borderColor: state.trim.hex } }),
           h('div', { className: 'absolute bottom-0 left-0 right-0 h-[3px]', style: { background: state.trim.hex } }),
         ]),
-        h('div', { className: 'absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-zinc-900 text-white' }, `After • ${state.cladding.name} colour preview`),
+        /* Bottom-left, because the "Before" pill owns top-left.
+
+           Both sat at left-3 top-3 — the outer Before pill and this one — so
+           in the schematic state they printed on top of each other and read as
+           "Before|abaster colour preview". The render state never showed it
+           because its own label is clipped to the seam, which is why this
+           survived: the bug only exists in the state nobody screenshots. */
+        h('div', { className: 'absolute left-3 bottom-3 text-[10px] px-2 py-1 rounded-full bg-zinc-900 text-white whitespace-nowrap' }, `${state.cladding.name} colour preview`),
       ]),
     ]);
   }
@@ -2926,7 +2947,12 @@ function buildVisualizer() {
              two were missed, and dimmed with the photograph. */
           h('div', { className: 'absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-white border border-zinc-200' }, 'Before'),
           state.renderUrl
-            ? h('div', { className: 'absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-emerald-600 text-white', style: { clipPath: `inset(0 ${100 - state.afterPct}% 0 0)` } }, 'After • your home, rendered')
+            /* Clipped to the seam like the pane it labels, which read as a
+               broken sentence: at 65% it said "After • your home," with the
+               comma dangling. Short enough now to survive the clip at any
+               slider position, and the pane underneath still carries the
+               meaning. */
+            ? h('div', { className: 'absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-emerald-600 text-white whitespace-nowrap', style: { clipPath: `inset(0 ${100 - state.afterPct}% 0 0)` } }, 'After')
             : null,
           slider,
           h('div', { className: 'absolute bottom-3 right-3 text-[10px] px-2 py-1 rounded-full bg-white border border-zinc-200' }, `${state.afterPct}% after`),
@@ -5746,7 +5772,17 @@ function renderInstallerOnly() {
 function ensureStatusPill() {
   if (document.getElementById('app-status')) return;
   document.body.appendChild(
-    h('div', { id: 'app-status', role: 'status', 'aria-live': 'polite', className: 'fixed bottom-3 left-3 z-[100] max-w-[calc(100vw-24px)] rounded-full bg-zinc-900 text-white text-[11px] px-4 py-2 shadow-[0_10px_30px_rgba(0,0,0,0.25)] border border-white/10 flex items-center gap-2 transition-opacity duration-500' }, [
+    h('div', { id: 'app-status', role: 'status', 'aria-live': 'polite', /* Above the sticky bar, not on top of it.
+
+       bottom-3 put this over the price. Every screenshot of the journey shows
+       it covering the figure and half the word "Breakdown" — the status pill
+       announcing "Graphite selected — updating your estimate" was hiding the
+       estimate it was talking about. bottom-[82px] clears the bar's 70px plus
+       its border and a gap.
+
+       Only a problem when the bar is there, and it always is once anything is
+       priced, which is from the first page load. */
+        className: 'fixed bottom-[82px] left-3 z-[100] max-w-[calc(100vw-24px)] rounded-full bg-zinc-900 text-white text-[11px] px-4 py-2 shadow-[0_10px_30px_rgba(0,0,0,0.25)] border border-white/10 flex items-center gap-2 transition-opacity duration-500' }, [
       h('span', { className: 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse' }),
       h('span', { id: 'status-text', className: 'truncate' }, state.status),
     ])
