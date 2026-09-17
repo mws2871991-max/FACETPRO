@@ -3198,6 +3198,21 @@ function buildGlazingLedPanel() {
    figure, it switches to the itemised breakdown with a single total. The
    estimate visibly sharpens as we learn more, which is also the argument for
    uploading a photo. */
+/* What each footprint source is, in the homeowner's words.
+
+   Three genuinely different things were being shown as one. A figure measured
+   from the photograph, a figure the homeowner typed, and a typical figure for
+   the house type after a measurement was rejected are not the same claim, and
+   only the first two are about their house at all. */
+const FOOTPRINT_BADGE = {
+  manual_entry:      { label: 'Your measurements', cls: 'bg-emerald-500/20 border-emerald-400/30 text-emerald-200' },
+  photo_door:        { label: 'Sized to your home', cls: 'bg-emerald-500/20 border-emerald-400/30 text-emerald-200' },
+  photo_coverage:    { label: 'Sized to your home', cls: 'bg-emerald-500/20 border-emerald-400/30 text-emerald-200' },
+  photo_prior:       { label: 'Typical for your house type', cls: 'bg-amber-400/15 border-amber-300/30 text-amber-200' },
+  house_type_prior:  { label: 'Typical for your house type', cls: 'bg-amber-400/15 border-amber-300/30 text-amber-200' },
+  default_footprint: { label: 'A typical UK home', cls: 'bg-amber-400/15 border-amber-300/30 text-amber-200' },
+};
+
 function buildPricePanel(price, priceRow) {
   const exact = state.price?.exact;
   const range = state.price?.range;
@@ -3298,8 +3313,23 @@ function buildPricePanel(price, priceRow) {
     h('p', { className: 'serif text-[15px] leading-tight text-white/80' }, 'Your home. Your design.'),
     h('div', { className: 'mt-2 flex items-center justify-between gap-2 flex-wrap' }, [
       h('h3', { className: 'text-[11px] tracking-widest uppercase text-white/50' }, 'Your estimated project cost'),
-      h('span', { className: 'text-[10px] px-2 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-200' },
-        state.price?.footprintSource === 'manual_entry' ? 'Your measurements' : 'Sized to your home'),
+      /* The badge has to say which of these it actually is.
+
+         It read "Sized to your home" for everything except a typed figure —
+         including photo_prior, which is the source the server returns when the
+         photograph WAS measured and the reading was then rejected as
+         implausible. That is the common case: the door method put this house
+         at 214 m², the plausible band for a detached tops out at 200, so the
+         estimate fell back to the typical 130 m² figure. The panel then told
+         the homeowner it had been sized to their home.
+
+         It had not. The measurement was attempted, discarded, and replaced by
+         an average — and the one claim on the page a homeowner would take on
+         trust was the one that was wrong. */
+      h('span', { className: `text-[10px] px-2 py-1 rounded-full border ${
+        FOOTPRINT_BADGE[state.price?.footprintSource]?.cls
+          || 'bg-zinc-500/20 border-zinc-400/30 text-zinc-200'}` },
+        FOOTPRINT_BADGE[state.price?.footprintSource]?.label || 'Typical figure'),
     ]),
     /* A range wherever there is one, which after 1 September is nearly
        always. Every brief since 27 August asked for "a realistic range rather
@@ -3333,6 +3363,38 @@ function buildPricePanel(price, priceRow) {
       'Including materials, labour, scaffolding, waste and VAT.'),
     h('p', { className: 'mt-2 text-[11px] leading-5 text-white/55' },
       'Planning estimate. Realistic range. Final price confirmed after a survey.'),
+
+    /* Said where it can be seen, with the one thing that fixes it.
+
+       When a photograph is measured and the reading falls outside the
+       plausible band for the house type, the estimate quietly falls back to a
+       typical figure. The reason was already written down — measure.js puts it
+       in `notes` — but the notes live behind "How we worked this out" inside a
+       collapsed section further down the page, which is no use to somebody
+       reading the number.
+
+       This is also the honest version of a limitation we cannot yet fix: the
+       band's ceiling for a detached is 200 m², which corresponds to a house of
+       about eight metres' frontage, while the plan geometry beside it puts a
+       typical detached at nine. Larger houses are rejected for being large.
+       Widening the band is not something to do on one photograph — it is what
+       the six surveyed properties are for — so until then the right response
+       is to say the figure is typical and offer the override. */
+    state.price?.footprintSource === 'photo_prior'
+      ? h('p', { className: 'mt-2 text-[11px] leading-5 text-amber-200/80' }, [
+          'We read your photo but the wall area it gave us looked wrong for this kind of house, so this uses a typical figure instead. ',
+          h('button', {
+            type: 'button',
+            className: 'underline underline-offset-2 hover:text-amber-100',
+            onClick: () => {
+              const el = document.getElementById('refine-section');
+              el?.querySelector('details')?.setAttribute('open', '');
+              el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            },
+          }, 'Type your own wall area'),
+          ' and we will use that.',
+        ])
+      : null,
 
     h('details', { className: 'mt-4 border-t border-white/10 pt-3' }, [
       /* An explicit marker, because this file sets `details > summary
