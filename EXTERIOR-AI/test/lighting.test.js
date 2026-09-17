@@ -147,8 +147,18 @@ test('both panes are lit by the same hour', () => {
   assert.ok(!/filter:/.test(after), 'the after image is filtered separately from the before');
 });
 
-test('the controls appear only once there is a render to light', () => {
+test('the controls appear only once there is a render to light, and it has been seen', () => {
+  /* The condition was `state.renderUrl ?` and the subject was "do not offer to
+     relight a picture that does not exist". That is still the subject; there
+     is now a second way for the picture to be unavailable. Since the reveal
+     card went in, a render can exist and still be covered — so these controls
+     were sitting under it offering to change the time of day of something the
+     homeowner had not yet been shown. Caught by rendering the page on a phone
+     viewport, not by reading the source. */
   const start = html.indexOf('const lightingControls =');
-  assert.match(html.slice(start, start + 80), /state\.renderUrl \?/,
+  const cond = html.slice(start, start + 120);
+  assert.match(cond, /state\.renderUrl/,
     'offering these before the picture exists promises something the page cannot do');
+  assert.match(cond, /state\.revealed/,
+    'and offering them over the reveal card promises it about a picture still hidden');
 });

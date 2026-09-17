@@ -2815,7 +2815,10 @@ function buildVisualizer() {
         onClick: () => { onPick(o.id); renderVisualizerOnly(); },
       }, o.label)));
 
-  const lightingControls = state.renderUrl ? h('div', { className: 'px-4 pb-4 grid gap-2' }, [
+  /* Not until they have seen it. These appeared as soon as the render
+     existed, which since the reveal card went in means they were sitting under
+     a covered picture offering to change its time of day. */
+  const lightingControls = (state.renderUrl && state.revealed) ? h('div', { className: 'px-4 pb-4 grid gap-2' }, [
     h('div', { className: 'flex items-center gap-2 flex-wrap' }, [
       segmented([{ id: 'outside', label: 'Outside' }, { id: 'inside', label: 'Inside glow' }],
         state.view, (v) => { state.view = v; }),
@@ -3595,7 +3598,20 @@ function buildTotalBar() {
      is no figure to show, and "£0 nothing selected inc VAT" is furniture
      pretending to be information. */
   const clad = price && (price.priced ? price.priced.length > 0 : true);
-  const cladding = clad ? fmtMoney(price.total) : null;
+  /* The same figure the panel shows, which until now it was not.
+
+     The bar printed fmtMoney(price.total) — a single exact number — while the
+     estimate panel three inches above it printed the range. On a phone both
+     are on screen at once, so the product was showing £32,914 and
+     "£28,000 – £38,000" for the same thing, at the same moment, and inviting
+     the reader to work out which one to believe.
+
+     Caught by rendering the page rather than by reading it: the two live in
+     different functions and neither looks wrong on its own. */
+  const clRange = state.price?.range;
+  const cladding = !clad ? null
+    : clRange ? `${fmtMoney(clRange.low)} – ${fmtMoney(clRange.high)}`
+    : fmtMoney(price.total);
   /* The installer spread, the same figure the windows section and the estimate
      panel lead with. The bar showed our own tighter range instead, so with the
      estimate panel now carrying a windows figure the two sat on screen
