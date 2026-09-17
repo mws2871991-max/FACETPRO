@@ -2175,6 +2175,12 @@ const REAR_OPENINGS = new Set(['bifold', 'bifold-3m', 'sliding', 'double']);
 
 const JOURNEY_SOURCES = ['windows', 'doors', 'cladding', 'roofline', 'roof'];
 
+/* Every landing page, by slug, built from the same list that generates the
+   routes and the sitemap — so a page cannot be attributed unless it exists,
+   and a new page is attributable the day it ships without anybody remembering
+   to add it here. */
+const LANDING_SLUGS = new Set(require('./landing').allPaths().map(p => p.replace(/^\/(cost\/)?/, '')));
+
 function resolveConservatory(styleId) {
   const styles = catalogue.conservatories?.styles;
   if (!styles || !styleId) return null;
@@ -3260,12 +3266,23 @@ app.post('/api/funnel', perMinute(120, 'Too many requests — please wait a mome
      every existing total keeps its meaning: `landing` is still every landing. */
   const journey = JOURNEY_SOURCES.includes(String(req.body?.journey || '')) ? String(req.body.journey) : null;
 
+  /* Which page sent them. Allowlisted against the real routes rather than
+     pattern-matched, for the same reason the stage name is: without it a
+     client could write arbitrary text into the counter table, which turns a
+     tally into free-text storage nobody is watching.
+
+     A third key rather than a third column, exactly as `journey` is, so no
+     schema moves and every existing total keeps its meaning. */
+  const fromRaw = String(req.body?.from || '');
+  const from = fromRaw && LANDING_SLUGS.has(fromRaw) ? fromRaw : null;
+
   /* Answered before the write. A counter that fails must never cost a visitor
      their journey, and the browser is not waiting for anything useful. */
   res.status(204).end();
   try {
     await store.countStage(stage);
     if (journey) await store.countStage(`${journey}:${stage}`);
+    if (from) await store.countStage(`from/${from}:${stage}`);
   }
   catch (err) { obs.record('funnel', 'could not record a stage', { stage, reason: err.message }); }
 });

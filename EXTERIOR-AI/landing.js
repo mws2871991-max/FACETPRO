@@ -585,9 +585,24 @@ function journeyForSlug(slug) {
    from "front door replacement cost" met the same generic uploader telling
    them to stand back and get the whole front of the house in. The pages
    existed; the thread between them and the engine did not. */
+/* Which page sent them, not just which trade they want.
+
+   The funnel already carries `journey` — windows, doors, cladding, roofline,
+   roof — and that answers "what were they after". It cannot answer "which page
+   earned this", because six different pages all report `journey=windows`:
+   the UK cost guide, the anthracite one, the uPVC one, ten-window, and the
+   Essex and Romford area pages. Eighteen pages collapse to five labels.
+
+   That is the question worth having, because it is the one that decides what
+   to write next. `from` carries the slug, and the server checks it against
+   landing.allPaths() before recording anything, so it is an allowlist rather
+   than free text — the same rule the stage name follows. */
 const ctaHref = (siteUrl, slug) => {
   const journey = slug ? journeyForSlug(slug) : null;
-  return `${siteUrl}/${journey ? `?journey=${journey}` : ''}#your-photo`;
+  const q = [];
+  if (journey) q.push(`journey=${journey}`);
+  if (slug) q.push(`from=${encodeURIComponent(slug)}`);
+  return `${siteUrl}/${q.length ? `?${q.join('&')}` : ''}#your-photo`;
 };
 
 const cta = (siteUrl, slug) => `<div class="cta-block">

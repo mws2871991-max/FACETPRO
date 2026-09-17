@@ -628,10 +628,18 @@
        carries an id so the nav can point at it. -->
   <details id="windows-doors" open class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24">
     <summary class="flex items-center justify-between gap-4">
+      <!-- "Step 2" was numbering a journey the reader has not started. It sat
+           above the visualiser on a page somebody may have landed on cold, so
+           the first thing they were told was that they had already missed step
+           one. The feedback is right that it reads as a leftover from an older
+           structure, and the fix it proposes is better than a renumbering: say
+           what the section does rather than where it sits.
+
+           The numbering belongs inside the visualiser, where a sequence
+           actually exists and the guided flow will carry it. -->
       <span>
-        <span class="text-[11px] tracking-widest uppercase text-zinc-400 block">Step 2</span>
-        <span class="serif text-[22px] md:text-[26px] tracking-tight">Windows, doors and roofline</span>
-        <span class="block mt-1 text-[13px] text-zinc-600">Pick a style and a colour and we'll show them on your home. Your installer prices these on survey.</span>
+        <span class="serif text-[22px] md:text-[26px] tracking-tight">See it on your home</span>
+        <span class="block mt-1 text-[13px] text-zinc-600">Choose a style and a colour and see the result on your own house. Your installer prices these on survey.</span>
       </span>
       <span class="chev text-zinc-400 transition-transform text-lg" aria-hidden="true">⌄</span>
     </summary>
@@ -690,7 +698,12 @@
          is the reader's actual problem and the trades are what they came to
          price. The rest of it — what never adds up to one figure, the
          conservatory caveat — is said again where it applies. -->
-    <p class="mt-6 text-sm leading-6 text-zinc-600 max-w-[68ch]">One photo covers <strong>windows</strong>, <strong>doors</strong>, <strong>walls</strong>, <strong>fascias, soffits and guttering</strong> and <strong>the roof</strong> &mdash; five companies you would otherwise be booking, waiting in for and chasing, priced together.</p>
+    <!-- The claim first, the detail under it. This was one sentence carrying
+         a five-item list, a count, and the whole booking-and-chasing argument
+         at once — commercially the best line on the page and too dense to land
+         at a glance. Same content, read in two beats. -->
+    <p class="mt-6 serif text-[18px] md:text-[20px] tracking-tight">One photo. Five trades. One starting point.</p>
+    <p class="mt-2 text-sm leading-6 text-zinc-600 max-w-[68ch]">Windows, doors, walls, fascias and soffits, and the roof &mdash; five companies you would otherwise be booking, waiting in for and chasing, priced together from the same photograph.</p>
   </section>
 
 
@@ -3746,7 +3759,29 @@ function buildDetailOptions() {
        The spread is caught here rather than inside refreshGlazing because only
        the caller knows which control was pressed and what it is called. */
     if (['windowStyleId', 'doorStyleId', 'windowDoorColourId'].includes(key)) {
+      /* And the picture has to stop showing the old frames.
+
+         This is the acceptance criterion from the feedback, in one line: a
+         priced option changes, the visual changes, the estimate changes, and
+         the homeowner can see what changed. Three of the four were happening.
+         The swatch rows have cleared the render since August — "choice
+         changed, the old render no longer matches" — and these never did, so
+         picking a bay window moved the price and left a picture of the
+         casements they had just replaced.
+
+         The render prompt does change frames: glazingChoice() sends the style
+         and colour by name, and server.js recolours them. So the stale picture
+         was not a limitation, it was an invalidation nobody wired up.
+
+         Cleared rather than regenerated, exactly as the swatches do. A render
+         costs money and a minute, and a homeowner trying four window styles
+         should not spend four of them — the colour preview stays live and the
+         button offers the picture when they have settled. */
+      state.hasCustomised = true;
+      state.renderUrl = null;
+      state.renderId = null;
       refreshGlazing({ label: label || 'That change' });
+      renderVisualizerOnly();
     }
   };
 
@@ -5802,6 +5837,19 @@ function reportJourneyTiming() {
   } catch (_) { /* a measurement must never cost somebody their journey */ }
 }
 
+/* The slug in ?from=, read once and remembered. Shape-checked here as well
+   as on the server — a page that posts obvious rubbish is a page with a bug,
+   and there is no reason to make the server say so. */
+let fromSlugCache;
+function readFromSlug() {
+  if (fromSlugCache !== undefined) return fromSlugCache;
+  try {
+    const v = new URLSearchParams(location.search).get('from') || '';
+    fromSlugCache = /^[a-z0-9-]{3,60}$/.test(v) ? v : null;
+  } catch (_) { fromSlugCache = null; }
+  return fromSlugCache;
+}
+
 function reachedStage(stage) {
   if (stagesSeen.has(stage)) return;
   stagesSeen.add(stage);
@@ -5812,7 +5860,12 @@ function reachedStage(stage) {
       /* The journey goes with the stage so the funnel can be read per intent.
          The server validates it against its own list and records a second,
          prefixed counter — the untagged totals are unchanged. */
-      body: JSON.stringify({ stage, journey: state.journey || undefined }),
+      /* `from` is the landing page that sent them. journey says what they
+         wanted; this says which page earned it, which is the one that decides
+         what to write next — six pages currently report journey=windows and
+         are otherwise indistinguishable. Server-side it is checked against
+         landing.allPaths() before anything is recorded. */
+      body: JSON.stringify({ stage, journey: state.journey || undefined, from: readFromSlug() || undefined }),
       keepalive: true,
     }).catch(() => {});
   } catch (_) { /* never in the way */ }

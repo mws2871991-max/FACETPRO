@@ -152,7 +152,7 @@ test('every page drives to the visualiser with the same call to action', () => {
     /* The link may now carry ?journey=, so match the destination rather than
        one literal spelling of it. Still asserts what it always did: every page
        lands on the site root at the upload step. */
-    assert.match(html, /href="[^"]*\/(\?journey=[a-z]+)?#your-photo"/,
+    assert.match(html, /href="[^"]*\/(\?[a-z]+=[^"#]*)?#your-photo"/,
       `${slug} does not link into the upload step`);
   }
 });
@@ -171,7 +171,14 @@ test('a page about one trade carries that trade to the visualiser', () => {
   };
   for (const [slug, journey] of Object.entries(expected)) {
     const html = landing.renderCostPage(slug, OPTS);
-    assert.match(html, new RegExp(`\\?journey=${journey}#your-photo`),
+/* These assertions matched `?journey=X#your-photo` as an exact adjacency,
+   which held while journey was the only query parameter. `from=<slug>` was
+   added on 17 September so the funnel can tell which of six window pages
+   earned an upload, and it sits between them. The subject of each test is that
+   the page carries the right journey into the visualiser — not that it is the
+   last thing before the fragment — so they match the parameter rather than the
+   whole string. */
+    assert.match(html, new RegExp(`[?&]journey=${journey}(&|#)`),
       `${slug} should carry journey=${journey}`);
   }
 });
@@ -186,7 +193,7 @@ test('a trade page leads with the action, not only with the guide', () => {
   assert.ok(hero > -1, 'the rendering page should lead with a rendering hero');
   assert.ok(hero < answer, 'the hero belongs above the guide, not below it');
   assert.match(html, /See what your house would look like rendered/);
-  assert.match(html, /\?journey=cladding#your-photo/);
+  assert.match(html, /[?&]journey=cladding(&|#)/);
 });
 
 test('no cost page is an orphan', () => {
@@ -216,7 +223,7 @@ test('the bifold page does not promise a visualisation it cannot give', () => {
   assert.match(html, /Price your bifolds/);
   assert.match(html, /do not draw them onto a photograph of your front/);
   /* It still feeds the doors journey — the estimate covers them. */
-  assert.match(html, /\?journey=doors#your-photo/);
+  assert.match(html, /[?&]journey=doors(&|#)/);
 });
 
 test('the bifold figures come from the catalogue, not from prose', () => {
@@ -246,7 +253,10 @@ test('the whole-exterior page carries no journey, because it is the default', ()
      the ordinary page: everything shown, nothing pre-declined. */
   const html = landing.renderCostPage('house-exterior-renovation-cost', OPTS);
   assert.ok(!/\?journey=/.test(html), 'the whole-exterior page should not pre-declare a trade');
-  assert.match(html, /href="[^"]*\/#your-photo"/);
+  /* The whole-exterior page has no journey — but it does carry `from`, so
+     the href is no longer bare. What matters is the absence of a journey. */
+  assert.match(html, /href="[^"]*\/\?from=[a-z0-9-]+#your-photo"/);
+  assert.ok(!/journey=/.test(html.slice(html.indexOf('cta-block'))), 'no journey on the default page');
 });
 
 test('the beta notice appears when the site says beta, and not when it does not', () => {
