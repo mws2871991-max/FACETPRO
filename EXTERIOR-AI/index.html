@@ -4468,11 +4468,24 @@ function buildWholeHouse() {
     return h('button', {
       type: 'button',
       'aria-pressed': active ? 'true' : 'false',
-      className: `flex items-center gap-3 p-3 rounded-xl border text-left transition ${active ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-400'}`,
+      /* min-w-0 on the button, not just on the label inside it.
+
+         The chip is a grid item, so its width floor is its own min-content —
+         and its min-content runs through a `truncate` label, whose nowrap text
+         ("£95/m² · Premium/large detached") measures about 250px. The floor
+         came out at 295px inside a 222px column, which pushed the section, the
+         page, and then the fixed bottom bar — a phone's layout viewport widens
+         to the overflow, so a bar with inset-x-0 stretches with it. That is
+         what made the estimate strip look broken at 320px while every element
+         in it fitted.
+
+         Clearing the floor here lets the flex row shrink and the truncation
+         inside actually happen, which is what it was written to do. */
+      className: `flex items-center gap-3 p-3 rounded-xl border text-left transition min-w-0 ${active ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-400'}`,
       onClick: async () => { state.wh.finishId = f.id; await refreshWholeHouse(); renderWholeHouseOnly(); },
     }, [
       h('span', { className: 'w-8 h-8 rounded-lg shrink-0 border border-black/10', style: { background: f.hex } }),
-      h('span', { className: 'min-w-0' }, [
+      h('span', { className: 'min-w-0 overflow-hidden' }, [
         h('span', { className: 'block text-xs font-medium truncate' }, [f.name, f.bestseller ? h('span', { className: `ml-1.5 ${active ? 'text-amber-300' : 'text-amber-500'}` }, '★') : null]),
         h('span', { className: `block text-[11px] truncate ${active ? 'text-white/60' : 'text-zinc-500'}` }, `£${f.pricePerM2}/m² · ${f.bestFor}`),
       ]),
