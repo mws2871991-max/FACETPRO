@@ -5823,6 +5823,18 @@ function buildSaveFraming() {
      invent a promise about response times: we have two contracted buyers and no
      data on how quickly either rings anybody, so "usually within 24 hours" would
      be a number somebody made up in a design review. */
+  /* How many installers to promise, said only as precisely as we know.
+
+     "Up to 3 installers" is the cap, not a count, and printing it to somebody
+     in a postcode with one buyer is a promise of two more than exist. The
+     coverage check already answers this for their outward code when they have
+     run it; when they have not, the cap with "up to" is the honest form. */
+  function installerCountLabel() {
+    const n = state.coverage && !state.coverage.error ? Number(state.coverage.installers) : null;
+    if (Number.isFinite(n) && n > 0) return `${n} local installer${n === 1 ? '' : 's'}`;
+    return 'up to three local installers';
+  }
+
   if (state.savedLead) {
     const lead = state.savedLead;
     const asked = lead.consent?.installerQuotes === true;
@@ -5837,6 +5849,35 @@ function buildSaveFraming() {
         asked
           ? 'They get your design, your measurements and everything you chose — so the first conversation is about your project rather than about what you might want.'
           : 'Everything you chose is kept with your estimate. If you decide you would like quotes later, you can ask us then.'),
+      /* What happens next, in order, for somebody who has just asked.
+
+         The card already avoided "thanks, we'll be in touch" — it names the
+         design, the reference and the right to change your mind. What it did
+         not say was what the next fortnight looks like, which is the thing
+         somebody who has just handed over their details is actually wondering.
+         The customer-journey audit asked for exactly these four steps.
+
+         Only when quotes were requested. Somebody who saved a design has no
+         installers in their future and telling them about surveys would
+         invent a process they declined. The count comes from the coverage
+         answer where we have one, so it says three only when three exist. */
+      asked
+        ? h('div', { className: 'mt-5 rounded-2xl bg-white/5 border border-white/10 p-4' }, [
+            h('p', { className: 'text-[11px] tracking-widest uppercase text-white/45' }, 'What happens next'),
+            h('ol', { className: 'mt-3 grid gap-2.5' }, [
+              `We send your project to ${installerCountLabel()}.`,
+              'They read your design and your estimate before they call.',
+              'One of them arranges a survey, at a time that suits you.',
+              'The survey turns the estimate into a firm quotation.',
+            ].map((line, i) => h('li', { className: 'flex gap-3 text-[12px] leading-5 text-white/70' }, [
+              h('span', { className: 'shrink-0 w-5 h-5 rounded-full bg-white/10 grid place-items-center text-[10px] text-white/60', 'aria-hidden': 'true' }, String(i + 1)),
+              h('span', {}, line),
+            ]))),
+            h('p', { className: 'mt-3 text-[11px] leading-5 text-white/45' },
+              'Nobody else gets your details, and you can stop this at any point.'),
+          ])
+        : null,
+
       h('div', { className: 'mt-5 rounded-2xl bg-white/5 border border-white/10 p-4' }, [
         h('p', { className: 'text-[11px] tracking-widest uppercase text-white/45' }, 'Your reference'),
         h('p', { className: 'mt-1 measured text-[20px]' }, lead.id),

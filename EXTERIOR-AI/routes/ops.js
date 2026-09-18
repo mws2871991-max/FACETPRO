@@ -93,8 +93,28 @@ module.exports = function opsRoutes({
       };
     });
 
+    /* The one number the customer-journey audit calls the key KPI: the share
+       of visitors who reach a personalised estimate.
+
+       Every figure needed was already in the table and nobody was going to
+       divide row nine by row one. "Personalised" is deliberately
+       estimate_viewed against landing rather than anything earlier — a price
+       appears from the moment the page loads, so counting that would score a
+       visitor who bounced. estimate_viewed fires when somebody opens what the
+       figure is made of, on their own house, which is the moment the promise
+       on the front of the site has actually been delivered. */
+    const landing = counts.landing || 0;
+    const reached = counts.estimate_viewed || 0;
+    const keyKpi = {
+      metric: 'reached a personalised estimate',
+      of: 'landing',
+      count: reached,
+      ofCount: landing,
+      pct: landing > 0 ? Math.round((reached / landing) * 1000) / 10 : null,
+    };
+
     res.setHeader('Cache-Control', 'no-store');
-    res.json({ days, funnel, branches, byJourney, note: 'Counts are per stage, not per person — see the funnel table in store.js. byJourney counts only visitors who arrived on a journey; the totals above include everyone.' });
+    res.json({ days, keyKpi, funnel, branches, byJourney, note: 'Counts are per stage, not per person — see the funnel table in store.js. byJourney counts only visitors who arrived on a journey; the totals above include everyone.' });
   });
 
   /* ── GET /api/measurements ──

@@ -415,6 +415,15 @@ const COST_PAGES = [
           { heading: 'What this does not include', paras: [
             'Structural work. If the timbers are gone, the felt has failed across the whole deck or the chimney needs rebuilding, that is a different job with a different number, and no photograph and no page can tell you whether you are in it.',
             'Everything here assumes a sound roof structure being re-covered. Treat it as the floor of what a re-roof costs, not the ceiling.',
+            /* Said because it is common and because we cannot do it. A flat
+               roof over an extension, a dormer or a garage is one of the most
+               frequently searched roofing jobs in the UK, and every figure on
+               this page is per square metre of pitched covering — so a visitor
+               with a flat roof would read a table that looks like it answers
+               them and does not. The review asked for it to be said out loud;
+               the alternative is a number that is wrong for their roof and
+               nothing to warn them. */
+            'Flat roofs. GRP fibreglass, EPDM rubber and felt are priced differently from a pitched covering, and the rates above do not apply to them. If your job is a flat roof over an extension, a dormer or a garage, treat this page as background and get a roofer to price the actual deck — we do not estimate flat roofs and will not pretend the figures here cover one.',
           ] },
         ],
       };
