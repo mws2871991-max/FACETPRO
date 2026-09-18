@@ -1506,7 +1506,32 @@ function computePrice({ claddingId, trimId, roofId, footprintM2, trimLengthM }) 
   const area = Number(footprintM2);
   const claddingArea = Number.isFinite(area) && area >= MANUAL_AREA_MIN_M2 && area <= MANUAL_AREA_MAX_M2
     ? area : catalogue.defaultFootprintM2;
-  const roofArea = claddingArea * 0.55; // roof area is typically smaller than wall footprint
+  /* Roof area, and the number nobody has checked.
+
+     ROOF_AREA_FROM_WALL has no stated source anywhere in this repository —
+     the comment here read "roof area is typically smaller than wall
+     footprint", which is a reason for it being below 1 and not a reason for
+     it being 0.55. It is the only figure in this function without a rate card
+     or a methodology behind it, and it decides a whole trade.
+
+     What it implies, so the next person does not have to work it out: the
+     default 85 m² of wall becomes 46.75 m² of roof. /cost/new-roof-cost
+     prices its worked example on 80 m². The same re-roof is therefore about
+     £9,600 in the visualiser and about £12,900 on the page that sent the
+     customer to it, and nothing explains the gap because until now the roof
+     area was never shown.
+
+     Both cannot be right. 46.75 m² is close to the *plan* area of a semi's
+     footprint, which is what you get if the pitch is ignored — a 35° roof is
+     about 1.22x its plan area, so the slope a roofer actually covers is
+     nearer 55-60 m². That is a guess too, which is the point: this needs the
+     same treatment as the measurement bands, which is a real number from real
+     roofs, not a better guess from me. Surfaced rather than quietly changed,
+     because changing it moves every roof price on the site.
+
+     See notes/roof-area-needs-a-source.md. */
+  const ROOF_AREA_FROM_WALL = 0.55;
+  const roofArea = claddingArea * ROOF_AREA_FROM_WALL;
   // Same reasoning as the wall area: the perimeter of a house is bounded too.
   const trimAsked = Number(trimLengthM);
   const trimLength = Number.isFinite(trimAsked) && trimAsked >= TRIM_LENGTH_MIN_M && trimAsked <= TRIM_LENGTH_MAX_M
@@ -1547,6 +1572,14 @@ function computePrice({ claddingId, trimId, roofId, footprintM2, trimLengthM }) 
     vat: Math.round(vat),
     total: Math.round(total),
     footprintM2: claddingArea,
+    /* The basis of the roof figure, so the breakdown can state it.
+
+       The breakdown said "Based on 85 m² of wall" under a £9,584 roof line
+       priced on 46.75 m² of roof — the only number in the panel that was
+       never shown was the one that number came from. A homeowner comparing
+       against a roofer's quote, which is always per m² of roof, had nothing
+       to compare. */
+    roofM2: roof ? Math.round(roofArea) : null,
     trimLengthM: trimLength,
     /* Excluded trades are absent rather than named, so nothing downstream —
        the lead, the installer portal, the homeowner's email — can print a

@@ -1342,6 +1342,11 @@ let SWATCHES = [
    Given a hex rather than left blank so the schematic preview and the swatch
    dot keep working without a null check at every use. The colour is a neutral
    stone: it reads as "unchanged", not as a finish anybody picked. */
+/* The covering /cost/new-roof-cost leads with, which is its cheapest.
+   Named here so the page and the visualiser cannot drift apart silently; the
+   test asserts it really is the cheapest in catalogue.json. */
+const ROOF_JOURNEY_DEFAULT = 'charcoal-roof';
+
 const NONE_HEX = '#D8D4CE';
 const noneSwatch = (group) => ({ id: 'none', name: 'Leave as it is', hex: NONE_HEX, group, excluded: true });
 const isNone = (sw) => sw?.id === 'none';
@@ -1469,7 +1474,20 @@ const state = {
      they came to see. */
   cladding: findSwatch((journeyExcludes('cladding') || readJourney() !== 'cladding') ? 'none' : 'alabaster'),
   trim: findSwatch(journeyExcludes('trim') ? 'none' : 'ink-trim'),
-  roof: findSwatch(journeyExcludes('roof') ? 'none' : 'slate-roof'),
+  /* Charcoal, not Slate, when the roof is what they came for.
+
+     /cost/new-roof-cost leads with "From about £138 per m²" and a £12,864
+     worked example, both of which are Charcoal — the cheapest of the three.
+     The visualiser then opened on Slate at £246 per m², so a customer who
+     clicked "Show me my roof" from that sentence met a number 78% higher than
+     the one that brought them, with nothing saying why. Leading with the
+     cheapest and letting them upgrade is the same order the page uses.
+
+     ROOF_JOURNEY_DEFAULT is asserted against the catalogue in
+     test/roof-default.test.js, so a price change that moves which covering is
+     cheapest cannot silently leave this pointing at the wrong one. */
+  roof: findSwatch(journeyExcludes('roof') ? 'none'
+    : readJourney() === 'roof' ? ROOF_JOURNEY_DEFAULT : 'slate-roof'),
   afterPct: 65,
   leads: [],
   leadsLoaded: false,
@@ -2085,7 +2103,9 @@ async function applyJourney(id) {
   // Same rule as the initial state: walls only when walls were asked about.
   state.cladding = findSwatch(id === 'cladding' ? 'alabaster' : 'none');
   state.trim = findSwatch(j && j.swatches.includes('trim') ? 'none' : 'ink-trim');
-  state.roof = findSwatch(j && j.swatches.includes('roof') ? 'none' : 'slate-roof');
+  // Same rule as the initial state — see ROOF_JOURNEY_DEFAULT.
+  state.roof = findSwatch(j && j.swatches.includes('roof') ? 'none'
+    : id === 'roof' ? ROOF_JOURNEY_DEFAULT : 'slate-roof');
 
   state.prefs.windowStyleId = j?.prefs?.windowStyleId ?? null;
   state.prefs.doorStyleId = j?.prefs?.doorStyleId ?? null;
@@ -3627,7 +3647,37 @@ function buildPricePanel(price, priceRow) {
         h('div', { className: 'h-px bg-white/10 my-1' }),
         h('div', { className: 'flex justify-between gap-4 font-medium' }, [h('span', {}, 'Estimated total'), h('span', { className: 'measured' }, fmtMoney(price.total))]),
       ]),
-      h('p', { className: 'mt-3 text-[10px] leading-4 text-white/50' }, ['Based on ', h('span', { className: 'measured' }, `${price.footprintM2} m²`), ' of wall.']),
+      /* Say what each priced trade was sized on.
+
+         This read "Based on 85 m² of wall" full stop, under a roof line of
+         £9,584 that was priced on 46.75 m² of roof. The one number the figure
+         actually came from was the one number never shown — and a roofer
+         quotes per m² of roof, so a homeowner had nothing to check us with.
+
+         The rear slope is said out loud because it is the first thing anyone
+         who knows roofs will ask, and the photograph only ever shows the
+         front. */
+      h('p', { className: 'mt-3 text-[10px] leading-4 text-white/50' }, [
+        'Based on ',
+        (price.priced || []).includes('cladding') || !price.roofM2
+          ? h('span', {}, [h('span', { className: 'measured' }, `${price.footprintM2} m²`), ' of wall'])
+          : null,
+        ((price.priced || []).includes('cladding') && price.roofM2) ? ' and ' : null,
+        price.roofM2
+          ? h('span', {}, [h('span', { className: 'measured' }, `${price.roofM2} m²`), ' of roof'])
+          : null,
+        '.',
+      ].filter(Boolean)),
+      /* The reviewer asked whether the roof figure includes the rear slope.
+         It is meant to — it is derived from the whole house, not from the
+         elevation in the photograph — but the ratio behind it has no source,
+         so saying more than that would be inventing precision. Better to be
+         plainly uncertain than confidently wrong; a roofer measures the roof
+         and this does not. */
+      price.roofM2
+        ? h('p', { className: 'mt-1 text-[10px] leading-4 text-white/50' },
+            'That roof area is the whole roof, front and back, worked out from the size of the house rather than measured — the photograph only shows the front. Treat it as a starting point and expect a roofer to measure it.')
+        : null,
       h('p', { className: 'mt-3 text-[10px] leading-4 text-white/50' }, catalogue_note()),
       h('p', { className: 'mt-2 text-[10px] leading-4 text-white/50' },
         'It is the same number for everybody with your house and your choices. Where it moves, it moves on what we could measure and which installer quotes — never on how hard you push.'),
