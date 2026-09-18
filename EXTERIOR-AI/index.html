@@ -1500,6 +1500,7 @@ const state = {
   resumeExpiresAt: null,
   resumeBusy: false,
   resumeError: null,
+  resumeCopied: false,
   designPackEmail: false,
   installerQuotesAvailable: false,
   beta: true,          // assume beta until the server says otherwise
@@ -1916,6 +1917,38 @@ function resumeLifetimeLabel() {
   if (days >= 2) return `Works for ${days} days.`;
   const hours = Math.max(1, Math.round((until - Date.now()) / 3600000));
   return `Works for ${hours} hour${hours === 1 ? '' : 's'}.`;
+}
+
+/* The same code as something you can send to yourself instead of memorising.
+
+   A code is the right thing to type when you are standing at the gate with
+   your own phone. It is the wrong thing to make somebody hold in their head
+   while they walk outside, which is what "enter this on your phone" asks of
+   them. The link carries the same capability the code does and nothing more —
+   there is nothing identifying behind either — so texting it to yourself is no
+   more of a disclosure than reading the six characters aloud.
+
+   Lands on the upload section, because that is where a code is redeemed and
+   where a photograph is wanted. */
+const resumeLink = () =>
+  state.resumeCode
+    ? `${location.origin}/?code=${encodeURIComponent(state.resumeCode)}#your-photo`
+    : null;
+
+/* Clipboard access is refused on plenty of ordinary configurations — an iOS
+   share-sheet browser, a locked-down work laptop — and a button that silently
+   does nothing is worse than no button. Falling back to showing the thing
+   keeps the user able to finish by hand. */
+async function copyResumeLink(repaint = renderUploadOnly) {
+  const link = resumeLink();
+  if (!link) return;
+  try {
+    await navigator.clipboard.writeText(link);
+    state.resumeCopied = true; repaint();
+    setTimeout(() => { state.resumeCopied = false; repaint(); }, 2500);
+  } catch (_) {
+    U('Copy this link and send it to your phone: ' + link);
+  }
 }
 
 /* Two callers now, and they repaint different parts of the page: the phone
@@ -2411,13 +2444,29 @@ function buildUploadDetect() {
 
       state.resumeCode
         ? h('div', { className: 'mt-3 rounded-lg bg-white border border-zinc-200 p-3' }, [
+            /* Where, not just what. The previous version named the site and
+               stopped, leaving somebody to find an unlabelled box called
+               "Code" on a long page while holding six characters in their
+               head. */
             h('p', { className: 'text-[12px] text-zinc-600' }, [
               'On your phone, open ',
               h('strong', {}, location.host),
-              ' and enter:',
+              ' and put this in the ',
+              h('strong', {}, 'Code'),
+              ' box under “Not next to your house?”, near the top:',
             ]),
-            h('p', { className: 'mt-1 serif text-[28px] tracking-[0.2em]' }, state.resumeCode),
+            h('p', { className: 'mt-1 serif text-[28px] tracking-[0.2em] select-all' }, state.resumeCode),
             h('p', { className: 'mt-1 text-[11px] text-zinc-500' }, resumeLifetimeLabel()),
+            /* Or skip the typing entirely. */
+            h('div', { className: 'mt-3 pt-3 border-t border-zinc-100' }, [
+              h('button', {
+                type: 'button',
+                className: 'px-4 rounded-full border border-zinc-300 hover:border-zinc-900 bg-white text-xs font-medium min-h-[44px] transition',
+                onClick: () => copyResumeLink(),
+              }, state.resumeCopied ? '✓ Link copied' : 'Copy a link instead'),
+              h('p', { className: 'mt-2 text-[11px] leading-4 text-zinc-500 max-w-[46ch]' },
+                'Send it to yourself and open it on your phone — it carries the same choices, and no typing.'),
+            ]),
           ])
         : h('div', { className: 'mt-3 flex flex-wrap items-center gap-2' }, [
             h('button', {
@@ -5101,9 +5150,23 @@ function buildKeepChoices(hasRender) {
 
     state.resumeCode
       ? h('div', { className: 'mt-4 rounded-xl bg-white/10 border border-white/15 p-3' }, [
-          h('p', { className: 'text-[12px] text-white/70' }, ['Come back to ', h('strong', {}, location.host), ' and enter:']),
-          h('p', { className: 'mt-1 serif text-[28px] tracking-[0.2em]' }, state.resumeCode),
+          /* Naming the site and stopping left somebody to hunt an unlabelled
+             box on a long page. Say which box, and where it is. */
+          h('p', { className: 'text-[12px] leading-5 text-white/70' }, [
+            'Come back to ', h('strong', {}, location.host), ' and put this in the ',
+            h('strong', {}, 'Code'), ' box under “Not next to your house?”, in Step 1:',
+          ]),
+          h('p', { className: 'mt-1 serif text-[28px] tracking-[0.2em] select-all' }, state.resumeCode),
           h('p', { className: 'mt-1 text-[11px] text-white/50' }, resumeLifetimeLabel()),
+          h('div', { className: 'mt-3 pt-3 border-t border-white/10' }, [
+            h('button', {
+              type: 'button',
+              className: 'px-4 rounded-full border border-white/25 hover:border-white/60 text-xs font-medium min-h-[44px] transition',
+              onClick: () => copyResumeLink(renderSaveFramingOnly),
+            }, state.resumeCopied ? '✓ Link copied' : 'Copy a link instead'),
+            h('p', { className: 'mt-2 text-[11px] leading-4 text-white/50 max-w-[46ch]' },
+              'Send it to yourself and open it anywhere — same choices, no typing.'),
+          ]),
         ])
       : h('button', {
           type: 'button',
@@ -6643,6 +6706,30 @@ document.getElementById('hero-upload')?.addEventListener('click', () => {
   }
   await Promise.all([refreshPrice(), refreshWholeHouse()]);
   render();
+
+  /* A code arriving in the address bar redeems itself.
+
+     This is the other half of "Copy a link instead": somebody texts themselves
+     the link, taps it at the gate, and their colours are simply back. Made to
+     wait for the catalogue above, because applyDesign resolves ids against it
+     and would otherwise drop every choice on the floor.
+
+     The parameter is then removed from the address bar. A resume code is
+     single-purpose but not single-use, and leaving it in the URL means it goes
+     wherever that URL goes — into a screenshot, a shared tab, a bookmark that
+     outlives the code. Taking it out costs nothing and the design is already
+     applied. */
+  try {
+    const url = new URL(location.href);
+    const incoming = url.searchParams.get('code');
+    if (incoming) {
+      url.searchParams.delete('code');
+      history.replaceState(null, '', url.pathname + url.search + url.hash);
+      await redeemResumeCode(incoming);
+      goToUpload();
+    }
+  } catch (_) { /* a malformed URL is not worth a broken page */ }
+
   // If this tab already signed in to the installer area, restore it quietly.
   if (state.installerToken) {
     await loadLeads(state.installerToken);
