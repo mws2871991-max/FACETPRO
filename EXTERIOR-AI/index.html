@@ -354,43 +354,6 @@
 
 <main id="main" tabindex="-1" class="max-w-6xl mx-auto px-6 py-8 flex flex-col gap-8">
 
-  <!-- Shown only when the server reports beta mode, so one env var controls it. -->
-  <aside id="beta-notice" hidden class="rounded-2xl border border-amber-300 bg-amber-50 p-5">
-    <p class="text-[13px] leading-6 text-amber-900">
-      <!-- Final review, point 1: the detail moves down to sit beside the
-           estimate it qualifies, and what stays up here is short.
-
-           The detail is not dropped, and this is the one refinement worth
-           being deliberate about. A price shown to a consumer has to be
-           accurate about what it is, and the full statement — planning
-           estimate not quotation, window rates indicative, measurement still
-           being calibrated — now sits in "What your estimate actually
-           includes", directly under the number. Beside the figure is arguably
-           where it always belonged: a caveat at the top of a page is read
-           before there is anything to apply it to, and forgotten by the time
-           there is. -->
-      <!-- UX Sprint handoff P0-D. This opened "Facet Pro is in beta." — the
-           first four words anybody read, above the headline, and an apology
-           before they had seen anything to apply it to. The tool works and the
-           rates are real; leading with a caveat asks the visitor to doubt
-           something they have not been shown.
-
-           The word is not suppressed, it is relocated to where it means
-           something: the stats block says it plainly ("Facet Pro is in beta,
-           we're still improving the visualisations and estimates…"), and the
-           full statement — planning estimate not quotation, window rates
-           indicative, measurement still being calibrated — sits in "What your
-           estimate actually includes", directly under the number it qualifies.
-           Removing it from both would be hiding it. Removing it from here is
-           putting it where it is read.
-
-           The banner keeps its id, its amber styling and its SITE_MODE gate,
-           so one env var still controls whether it appears at all. -->
-      <strong>Priced from real UK supplier and labour rates.</strong>
-      And honest about what the estimate covers &mdash;
-      <a href="#honest-heading" class="underline">what your estimate includes</a>.
-    </p>
-  </aside>
 
   <section class="rounded-2xl bg-zinc-900 text-[#FBF8F3] overflow-hidden p-6 sm:p-8 md:p-12" aria-labelledby="hero-heading">
     <div class="grid lg:grid-cols-[1.05fr_1fr] gap-8 lg:gap-12 items-center">
@@ -506,6 +469,59 @@
     </div>
   </section>
 
+
+  <!-- Moved below the hero on 18 September 2026, and the reasoning for it was
+       already written above: "a caveat at the top of a page is read before
+       there is anything to apply it to, and forgotten by the time there is."
+       That argued for moving the banner, and the earlier change only moved its
+       contents.
+
+       Measured on the live site at 375x667 before moving it: 114px, 17% of the
+       first screen, pushing the headline to 320px — so the promise this site
+       is built on began below the midpoint of the first thing anybody saw, and
+       an amber panel read as a warning about a product they had not yet been
+       shown. Two separate reviews asked for this, a day apart.
+
+       Nothing is hidden. It is the first thing after the hero, so it lands the
+       moment the claim it qualifies has been made, and it keeps its id, its
+       amber styling and its SITE_MODE gate. -->
+  <!-- Shown only when the server reports beta mode, so one env var controls it. -->
+  <aside id="beta-notice" hidden class="rounded-2xl border border-amber-300 bg-amber-50 p-5">
+    <p class="text-[13px] leading-6 text-amber-900">
+      <!-- Final review, point 1: the detail moves down to sit beside the
+           estimate it qualifies, and what stays up here is short.
+
+           The detail is not dropped, and this is the one refinement worth
+           being deliberate about. A price shown to a consumer has to be
+           accurate about what it is, and the full statement — planning
+           estimate not quotation, window rates indicative, measurement still
+           being calibrated — now sits in "What your estimate actually
+           includes", directly under the number. Beside the figure is arguably
+           where it always belonged: a caveat at the top of a page is read
+           before there is anything to apply it to, and forgotten by the time
+           there is. -->
+      <!-- UX Sprint handoff P0-D. This opened "Facet Pro is in beta." — the
+           first four words anybody read, above the headline, and an apology
+           before they had seen anything to apply it to. The tool works and the
+           rates are real; leading with a caveat asks the visitor to doubt
+           something they have not been shown.
+
+           The word is not suppressed, it is relocated to where it means
+           something: the stats block says it plainly ("Facet Pro is in beta,
+           we're still improving the visualisations and estimates…"), and the
+           full statement — planning estimate not quotation, window rates
+           indicative, measurement still being calibrated — sits in "What your
+           estimate actually includes", directly under the number it qualifies.
+           Removing it from both would be hiding it. Removing it from here is
+           putting it where it is read.
+
+           The banner keeps its id, its amber styling and its SITE_MODE gate,
+           so one env var still controls whether it appears at all. -->
+      <strong>Priced from real UK supplier and labour rates.</strong>
+      And honest about what the estimate covers &mdash;
+      <a href="#honest-heading" class="underline">what your estimate includes</a>.
+    </p>
+  </aside>
 
   <!-- Proof before the ask. This sat below the entire journey — the upload,
        the visualiser, the finishes, the estimate and the form — so the only
@@ -3491,6 +3507,92 @@ const FOOTPRINT_BADGE = {
 
    A trade that was not priced is not mentioned. Saying "0 m² of roof" would be
    worse than silence: it reads as a measurement rather than as an absence. */
+/* Did the photograph they uploaded actually size this estimate?
+
+   Null when there is nothing to say — no photograph yet, or the photograph
+   was used, which is the ordinary case and deserves no notice at all.
+
+   The wording comes from measure.js where it has one. That file already
+   writes the reason in plain English ("the walls fill 12.4% of the photo,
+   outside the 24–32% expected for a semi-detached — the photo is probably
+   framed too close or too far"), and it was buried behind a collapsed
+   "How we worked this out" further down the page. A reason the reader cannot
+   reach is the same as no reason. */
+function photoNotUsed() {
+  if (!state.uploadedImg) return null;
+  const source = String(state.price?.footprintSource || '');
+
+  /* Measured, then refused by the house-type band. measure.js keeps the note
+     saying which way it missed. */
+  if (source === 'photo_prior') {
+    const note = (state.measurement?.notes || []).find(n => /outside the/.test(n));
+    /* Cut the note at its own "so …" clause and supply the ending here.
+
+       Not a search-and-replace for the exact sentence measure.js writes: the
+       first attempt matched "we've" with a straight apostrophe against a note
+       written with a curly one, so the strip silently failed and the message
+       came out with two endings glued together. Cutting at ", so " needs to
+       know far less about the other file's prose. */
+    return {
+      why: note
+        ? `${note.split(/,\s+so\s+/)[0]}, so this uses a typical figure instead.`
+        : 'We read your photo but the wall area it gave us looked wrong for this kind of house, so this uses a typical figure instead.',
+    };
+  }
+
+  /* Never measured at all. A photograph is on screen and a house-type figure
+     is under it, and until now the page let the visitor assume the two were
+     connected. */
+  if (source === 'house_type_prior' || source === 'default_footprint') {
+    if (!state.scaleReference) {
+      return { why: 'We could not find your front door in this photo, and that is what we measure everything against — so this uses a typical figure for your house type rather than yours.' };
+    }
+    const note = (state.measurement?.notes || []).find(n => /framed too close or too far|No walls were detected/.test(n));
+    return {
+      why: note
+        ? `${note} So this uses a typical figure for your house type rather than yours.`
+        : 'We could not measure your house from this photo, so this uses a typical figure for your house type rather than yours.',
+    };
+  }
+
+  return null;
+}
+
+/* The notice itself, so both estimate panels say the same thing.
+
+   It has to appear in both: the measured panel gets it when the band refused
+   a reading, and the pre-photo panel gets it when the photograph could not be
+   measured at all — because an unmeasured photo leaves footprintSource as a
+   house-type prior, which is the branch for somebody who has uploaded
+   nothing. That branch ends "Add a photo above and we'll size it to your
+   home", which it then said to people who had just done exactly that. Being
+   told to take the step you have taken is worse than being told nothing. */
+function photoNotUsedNotice(spacing) {
+  const state_ = photoNotUsed();
+  if (!state_) return null;
+  const link = (label, onClick) => h('button', {
+    type: 'button', className: 'underline underline-offset-2 hover:text-amber-100', onClick,
+  }, label);
+
+  return h('p', { className: `${spacing} text-[11px] leading-5 text-amber-200/80` }, [
+    state_.why + ' ',
+    link('Try another photo', () => {
+      /* Counted as a branch, never as a funnel step — see BRANCH_STAGES in
+         server.js. It answers whether this offer is worth having, and whether
+         a second photograph actually rescues the measurement. */
+      reachedStage('photo_retry');
+      sharedRefs.fileInput?.click();
+    }),
+    ' — straight on, from across the road if you can — or ',
+    link('type your own wall area', () => {
+      const el = document.getElementById('refine-section');
+      el?.querySelector('details')?.setAttribute('open', '');
+      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }),
+    '.',
+  ]);
+}
+
 function areaBasis(price) {
   const priced = price?.priced || [];
   const qty = (value, unit, what) =>
@@ -3580,8 +3682,12 @@ function buildPricePanel(price, priceRow) {
           pricedIncludes(priced).map(item => h('div', {}, `• ${item}`))),
       ]),
 
-      h('p', { className: 'mt-4 text-[11px] leading-5 text-white/70' },
-        'This is a typical figure for that kind of house — not yours yet. Add a photo above and we’ll size it to your home.'),
+      /* "Add a photo above" is right for somebody who has not, and an insult
+         to somebody whose photo we could not use. */
+      photoNotUsed()
+        ? photoNotUsedNotice('mt-4')
+        : h('p', { className: 'mt-4 text-[11px] leading-5 text-white/70' },
+            'This is a typical figure for that kind of house — not yours yet. Add a photo above and we’ll size it to your home.'),
       h('p', { className: 'mt-3 text-[10px] leading-4 text-white/55' }, catalogue_note()),
     ]);
   }
@@ -3690,21 +3796,28 @@ function buildPricePanel(price, priceRow) {
        Widening the band is not something to do on one photograph — it is what
        the six surveyed properties are for — so until then the right response
        is to say the figure is typical and offer the override. */
-    state.price?.footprintSource === 'photo_prior'
-      ? h('p', { className: 'mt-2 text-[11px] leading-5 text-amber-200/80' }, [
-          'We read your photo but the wall area it gave us looked wrong for this kind of house, so this uses a typical figure instead. ',
-          h('button', {
-            type: 'button',
-            className: 'underline underline-offset-2 hover:text-amber-100',
-            onClick: () => {
-              const el = document.getElementById('refine-section');
-              el?.querySelector('details')?.setAttribute('open', '');
-              el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            },
-          }, 'Type your own wall area'),
-          ' and we will use that.',
-        ])
-      : null,
+    /* Both ways a photograph fails to size the estimate, and a way out of each.
+
+       This covered one of them. `photo_prior` is a reading the band refused,
+       and it got this message. The other case is a photograph that could not
+       be measured at all — no door-shaped box to scale from, or walls filling
+       too little of the frame — and there the source is `house_type_prior`,
+       which is also what an unmeasured visitor gets, so the page said nothing
+       whatsoever. Somebody who had just uploaded a photograph of their house
+       was shown a typical figure with no indication their photo had not been
+       used. That is the quieter half of the same problem and it is the half
+       nobody was told about.
+
+       The customer-journey audit asked for a photo check with "a clear choice
+       to use the photo or choose another". Choosing another is the fix that
+       usually works — a straight-on shot from across the road — and it was
+       never offered; the only remedy here was to type a wall area, which is
+       the measurement the site promises you will not have to take.
+
+       It stays beside the number rather than becoming a step before the
+       picture. The reveal is the product, and a validation gate in front of it
+       would undo the thing every brief since 1 September has asked for. */
+    photoNotUsedNotice('mt-2'),
 
     h('details', { className: 'mt-4 border-t border-white/10 pt-3' }, [
       /* An explicit marker, because this file sets `details > summary

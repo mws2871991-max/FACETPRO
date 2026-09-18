@@ -40,7 +40,7 @@ const measure = require('../measure');
  */
 module.exports = function opsRoutes({
   installerLimiter, requireInstallerPassword,
-  FUNNEL_STAGES, JOURNEY_SOURCES, DAILY_LIMITS,
+  FUNNEL_STAGES, BRANCH_STAGES, JOURNEY_SOURCES, DAILY_LIMITS,
   getUsage, LEAD_CAPTURE, SITE_MODE,
 }) {
   const router = express.Router();
@@ -78,8 +78,23 @@ module.exports = function opsRoutes({
       if (rows.some(r => r.count > 0)) byJourney[j] = rows;
     }
 
+    /* The loop-backs, each against a step it can honestly be compared with.
+
+       Reported beside the funnel rather than inside it: /api/funnel divides
+       every step by the one before, and a branch inserted into that chain
+       would hand its own small count to the next real step as a denominator.
+       See BRANCH_STAGES in server.js. */
+    const branches = [...(BRANCH_STAGES || new Map())].map(([stage, meta]) => {
+      const n = counts[stage] || 0;
+      const base = counts[meta.of] || 0;
+      return {
+        stage, label: meta.label, count: n, of: meta.of, ofCount: base,
+        ofPct: base > 0 ? Math.round((n / base) * 1000) / 10 : null,
+      };
+    });
+
     res.setHeader('Cache-Control', 'no-store');
-    res.json({ days, funnel, byJourney, note: 'Counts are per stage, not per person — see the funnel table in store.js. byJourney counts only visitors who arrived on a journey; the totals above include everyone.' });
+    res.json({ days, funnel, branches, byJourney, note: 'Counts are per stage, not per person — see the funnel table in store.js. byJourney counts only visitors who arrived on a journey; the totals above include everyone.' });
   });
 
   /* ── GET /api/measurements ──
@@ -137,9 +152,45 @@ module.exports = function opsRoutes({
       entry.furthest = entry.furthest === null ? v : (side === 'below' ? Math.min(entry.furthest, v) : Math.max(entry.furthest, v));
     }
 
+    /* How often the photograph did not end up being used, as a rate.
+
+       The 18 September review asked for this directly: both of the site's own
+       well-framed marketing photographs fell back to a typical figure, and
+       "2 of 2" is either terrible luck or the product's core claim not
+       working. byMethod has carried the counts all along, but a reader had to
+       do the division themselves and nobody was going to.
+
+       Split by cause, because the two want different fixes and a single
+       percentage hides which one you have:
+
+       - refused  — something was measured and the house-type band threw it
+                    out. The fix is the band, or the scale reference. This is
+                    the half that bandRejections below can revise.
+       - unusable — nothing could be measured at all: no door-shaped box, or
+                    walls filling too little or too much of the frame. The fix
+                    is detection, or the photo guidance before the upload.
+
+       A rate over a handful of samples is noise, so the sample count travels
+       with it and the note says so rather than leaving somebody to act on
+       two photographs. */
+    const measured = rows.filter(r => r.method && r.method !== 'prior').length;
+    const refused = rows.filter(r => r.method === 'prior' && Number.isFinite(Number(r.rejectedM2))).length;
+    const unusable = rows.filter(r => r.method === 'prior' && !Number.isFinite(Number(r.rejectedM2))).length;
+    const pct = (n) => (rows.length ? Math.round((n / rows.length) * 100) : null);
+
+    const fallback = {
+      samples: rows.length,
+      measured, refused, unusable,
+      fallbackPct: pct(refused + unusable),
+      refusedPct: pct(refused),
+      unusablePct: pct(unusable),
+      reliable: rows.length >= 30,
+    };
+
     res.setHeader('Cache-Control', 'no-store');
     res.json({
       samples: rows.length,
+      fallback,
       byMethod,
       currentThreshold: geometry.MIN_DOOR_RATIO,
       doorLeafRatio: Number(geometry.DOOR_LEAF_RATIO.toFixed(2)),
@@ -151,11 +202,14 @@ module.exports = function opsRoutes({
       note: 'Shape of the most door-like box each photograph offered, including boxes the measurer refused, '
           + 'and the figures the house-type band threw out. MIN_DOOR_RATIO and the bands in measure.js are '
           + 'currently set from a synthetic terrace and a prototype survey table; this is what would replace that. '
-          + 'bandRejections is empty until the band fires, and rows recorded before 18 August 2026 have no rejected figure.',
+          + 'bandRejections is empty until the band fires, and rows recorded before 18 August 2026 have no rejected figure. '
+          + '`fallback` is how often a photograph did not end up sizing the estimate — refused means the band threw a '
+          + 'reading out (fix the band, see bandRejections), unusable means nothing could be measured (fix detection '
+          + 'or the photo guidance). Treat it as noise until reliable is true, at 30 samples.',
     });
   });
 
-  router.get('/api/ops', installerLimiter, requireInstallerPassword, (req, res) => {
+  router.get('/api/ops', installerLimiter, requireInstallerPassword, async (req, res) => {
     const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 50));
     /* Read through the getter, every time.
 
@@ -167,9 +221,30 @@ module.exports = function opsRoutes({
        mechanical" extraction introduces and nobody notices until the caps look
        wrong. */
     const usage = getUsage();
+
+    /* The measurement fallback rate, repeated here on purpose.
+
+       It lives in full detail on /api/measurements, and nobody was going to
+       open a second endpoint to find out whether the thing the product is
+       built on is working. This is the page that gets watched, so the one
+       number that says "photographs are not sizing estimates" belongs on it,
+       with a pointer to where the detail is. */
+    let measurement = null;
+    try {
+      const rows = await store.readMeasurements(500);
+      const fell = rows.filter(r => !r.method || r.method === 'prior').length;
+      measurement = {
+        samples: rows.length,
+        fallbackPct: rows.length ? Math.round((fell / rows.length) * 100) : null,
+        reliable: rows.length >= 30,
+        detail: '/api/measurements',
+      };
+    } catch (_) { /* an ops page that fails because one panel failed is worse */ }
+
     res.json({
       ...obs.summary({ limit }),
       usage: { day: usage.day, detect: usage.detect, render: usage.render, caps: DAILY_LIMITS },
+      measurement,
       storage: store.hasDb ? 'postgres' : 'jsonl files (lost on restart without a volume)',
       leadCapture: LEAD_CAPTURE ? 'on' : 'off',
       siteMode: SITE_MODE,

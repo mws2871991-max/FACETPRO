@@ -3298,6 +3298,29 @@ const FUNNEL_STAGES = [
    directly rather than by coming through here. */
 const SERVER_ONLY_STAGES = new Set(['lead_qualified', 'lead_sent', 'installer_received', 'installer_accepted']);
 
+/* Things that happen off the main line, counted but never chained.
+
+   FUNNEL_STAGES is read as a journey, and /api/funnel walks it computing each
+   step against the one before. That arithmetic only means anything while the
+   list is a sequence somebody passes through in order. A loop-back is not:
+   inserting "went back for another photo" between two forward steps would give
+   it a tiny count and then divide the next real step by it, so a healthy
+   funnel would report several hundred per cent conversion at whichever step
+   happened to follow.
+
+   So branch stages are recorded exactly like any other — same allowlist, same
+   counters, same per-journey breakdown — and reported separately, against a
+   step they can be honestly compared with.
+
+   photo_retry: somebody was told their photograph could not size the estimate
+   and went back for another. Against upload_completed it says whether the
+   offer is worth having; against the measurement fallback rate on
+   /api/measurements it says whether a second photograph actually rescues the
+   measurement, or whether the fault is ours and no photograph would. */
+const BRANCH_STAGES = new Map([
+  ['photo_retry', { of: 'upload_completed', label: 'went back for another photo' }],
+]);
+
 /* ── POST /api/journey-timing ──
    The only number the server cannot measure: how long the homeowner waited.
 
@@ -3327,7 +3350,7 @@ app.post('/api/journey-timing', perMinute(60, 'Too many requests — please wait
 
 app.post('/api/funnel', perMinute(120, 'Too many requests — please wait a moment.'), async (req, res) => {
   const stage = String(req.body?.stage || '');
-  if (!FUNNEL_STAGES.includes(stage) || SERVER_ONLY_STAGES.has(stage)) return res.status(400).json({ error: 'Unknown stage.' });
+  if ((!FUNNEL_STAGES.includes(stage) && !BRANCH_STAGES.has(stage)) || SERVER_ONLY_STAGES.has(stage)) return res.status(400).json({ error: 'Unknown stage.' });
 
   /* The same stage, counted twice: once for everybody and once for the journey
      they came in on.
@@ -3372,7 +3395,7 @@ app.post('/api/funnel', perMinute(120, 'Too many requests — please wait a mome
    day rollover, so a captured reference would report one day's counts forever. */
 app.use(require('./routes/ops')({
   installerLimiter, requireInstallerPassword,
-  FUNNEL_STAGES, JOURNEY_SOURCES, DAILY_LIMITS,
+  FUNNEL_STAGES, BRANCH_STAGES, JOURNEY_SOURCES, DAILY_LIMITS,
   getUsage: () => usage,
   LEAD_CAPTURE, SITE_MODE,
 }));
