@@ -659,7 +659,9 @@ ${body}
 ${cta(siteUrl, slug)}
 <p class="caveat">${escapeHtml(CAVEAT)}</p>
 ${related ? `<nav class="related"><h2>Related costs</h2><ul>${related.map(r =>
-  `<li><a href="${escapeHtml(r.href)}">${escapeHtml(r.label)}</a></li>`).join('')}</ul></nav>` : ''}
+  `<li><a href="${escapeHtml(r.href)}">${escapeHtml(r.label)}</a>${
+    r.note ? ` <span class="rel-note">— ${escapeHtml(r.note)}</span>` : ''
+  }</li>`).join('')}</ul></nav>` : ''}
 </main>
 <footer class="site"><div class="wrap">
   Facet Pro &middot; <a href="/privacy">Privacy notice</a> &middot; <a href="/terms">Terms of use</a>
@@ -692,6 +694,26 @@ function faqFor(built) {
 
    Same trade first, because somebody reading about bifolds is more likely to
    want patio doors than a roof, then the rest to fill the five. */
+/* Pages whose trades share a scaffold, pinned to each other's related list.
+
+   The rotation below spreads links evenly, which is what it was written for
+   and it works — but evenly is not the same as sensibly. It left
+   /cost/house-rendering-cost linking to the roof page while the roof page
+   linked back to bifolds, conservatories and three window guides, and not to
+   rendering.
+
+   That is the one pairing on the site with money behind it. Walls and roof
+   both need the same scaffold, and the estimate charges it once, so doing
+   them together saves the whole second scaffold. A customer reading about a
+   re-roof is the single best-qualified reader of the rendering page there is,
+   and the link was missing in exactly that direction. */
+const SHARES_SCAFFOLD = [['new-roof-cost', 'house-rendering-cost']];
+
+const scaffoldPartner = (slug) => {
+  const pair = SHARES_SCAFFOLD.find(p => p.includes(slug));
+  return pair ? pair.find(s => s !== slug) : null;
+};
+
 function relatedFor(slug) {
   const mine = journeyForSlug(slug);
   const at = COST_PAGES.findIndex(p => p.slug === slug);
@@ -706,8 +728,21 @@ function relatedFor(slug) {
     .filter(p => p.slug !== slug);
   const sameTrade = mine ? rotated.filter(p => journeyForSlug(p.slug) === mine) : [];
   const rest = rotated.filter(p => !sameTrade.includes(p));
-  return [...sameTrade, ...rest].slice(0, 5)
-    .map(p => ({ href: `/cost/${p.slug}`, label: p.h1.replace(/\?$/, '') }));
+
+  // The scaffold partner first, ahead of same-trade, because it is the only
+  // link here that changes what the job costs.
+  const partnerSlug = scaffoldPartner(slug);
+  const partner = partnerSlug ? rotated.filter(p => p.slug === partnerSlug) : [];
+  const ordered = [...partner, ...sameTrade, ...rest]
+    .filter((p, i, a) => a.indexOf(p) === i);
+
+  return ordered.slice(0, 5)
+    .map(p => ({
+      href: `/cost/${p.slug}`,
+      label: p.h1.replace(/\?$/, ''),
+      /* Said on the link itself, because it is the reason to follow it. */
+      note: p.slug === partnerSlug ? 'shares the same scaffold as this job' : null,
+    }));
 }
 
 /* §4 of the UX brief: somebody who searched "house rendering cost" should land
@@ -737,7 +772,12 @@ const JOURNEY_HERO = {
   },
   roof: {
     h: 'See a new roof on your own house',
-    p: 'Upload one photo. We will estimate your roof area from your elevation and price it.',
+    /* This said "we will estimate your roof area from your elevation", and we
+       do not. The roof area is worked out from the size of the house — see
+       notes/roof-area-needs-a-source.md — and a photograph of the front
+       cannot see a rear slope. Claiming a measurement we do not take is the
+       one thing that makes the rest of the estimate not worth believing. */
+    p: 'Upload one photo. We will show you the coverings on your own roof and price the job, scaffolding and waste included.',
     cta: 'Show me my roof',
   },
   roofline: {

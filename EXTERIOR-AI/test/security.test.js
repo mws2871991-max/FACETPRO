@@ -234,12 +234,24 @@ test('/api/catalogue does not publish the cost model', async () => {
   // Swatches keep only what gets drawn — no per-material rates. Trim swatches
   // are colour-only and carry no image, so allow a subset rather than an
   // exact set.
-  const allowed = new Set(['id', 'name', 'hex', 'image']);
+  /* materialLabel is on the list because it is what the thing is — "Render",
+     "Slate Tiles", "Clay Tile" — and it is already printed on the cost pages
+     and in the lead emails. A roofing customer compares quotes by material,
+     so withholding it on the one screen where they choose was costing them
+     the comparison, not protecting anything. It is a noun, not a rate. */
+  const allowed = new Set(['id', 'name', 'hex', 'image', 'materialLabel']);
   for (const item of [...body.cladding, ...body.trim, ...body.roof]) {
     for (const key of Object.keys(item)) {
       assert.ok(allowed.has(key), `swatch ${item.id} exposes "${key}"`);
     }
     assert.ok(item.id && item.name, `swatch ${item.id} still needs id and name`);
+    /* And it stays a noun. A label is a free-text field on a public response,
+       which is a tempting place to put "Slate Tiles (£180/m²)" one day —
+       exactly the figure the rest of this test exists to keep private. */
+    if (item.materialLabel) {
+      assert.doesNotMatch(item.materialLabel, /[£$€]|\d/,
+        `swatch ${item.id} has a price or a number in materialLabel, which is a public field`);
+    }
   }
 });
 

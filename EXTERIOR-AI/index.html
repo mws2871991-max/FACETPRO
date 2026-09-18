@@ -1643,9 +1643,18 @@ async function loadCatalogue() {
     // Merge in real photo swatches (image field) from the catalogue —
     // SWATCHES starts as a plain colour-chip fallback until this loads.
     const allReal = [...state.catalogue.cladding, ...state.catalogue.trim, ...state.catalogue.roof];
+    /* materialLabel comes across too.
+
+       The swatches said "Alabaster", "Slate Roof", "Terracotta" — colours.
+       The cost pages have always said "Alabaster (Render)", "Slate Tiles",
+       "Clay Tile", and so do the lead emails, because the catalogue has
+       carried materialLabel from the start. Nobody compares roofing quotes by
+       colour: a roofer asks natural slate or fibre-cement, clay or concrete,
+       and the answer is hundreds of pounds a square metre. The visualiser was
+       the one place that withheld it. */
     SWATCHES = SWATCHES.map(sw => {
       const real = allReal.find(r => r.id === sw.id);
-      return real ? { ...sw, image: real.image || null } : sw;
+      return real ? { ...sw, image: real.image || null, materialLabel: real.materialLabel || null } : sw;
     });
     // state.cladding/trim/roof were captured by reference before this merge —
     // re-point them at the fresh (now image-bearing) objects with the same id.
@@ -2217,8 +2226,24 @@ function buildUploadDetect() {
          remove, move or resize any window, door or other opening" — said to
          the person it reassures. It answers the thing that stops people
          uploading: that we'll show them somebody else's house. */
+      /* Naming the brickwork is wrong for the one customer who came to cover
+         it. Somebody on ?journey=cladding is here to see their brick rendered
+         — the promise "your brickwork stays exactly as it is" describes the
+         opposite of the job, and reads as though we had not understood them.
+
+         What is actually being promised is the same in every case: we change
+         the finish you asked about and nothing else, and the shape of the
+         house never moves. Only the examples change. */
       h('div', { className: 'mt-3 text-[11px] leading-5 text-zinc-600 max-w-[34ch] mx-auto' },
-        'We only change the finish. Your brickwork, your windows and the shape of your home stay exactly as they are.'),
+        state.journey === 'cladding'
+          ? 'We only change the walls. Your windows, your doors, your roof and the shape of your home stay exactly as they are.'
+          : state.journey === 'roof'
+          ? 'We only change the roof. Your brickwork, your windows and the shape of your home stay exactly as they are.'
+          : (state.journey === 'windows' || state.journey === 'doors')
+          ? 'We only change the frames. Your brickwork, your roof and the shape of your home stay exactly as they are.'
+          : state.journey === 'roofline'
+          ? 'We only change the fascias, soffits and guttering. Your brickwork, your windows and the shape of your home stay exactly as they are.'
+          : 'We only change the finish. Your brickwork, your windows and the shape of your home stay exactly as they are.'),
     ]));
   }
 
@@ -2969,7 +2994,19 @@ function buildVisualizer() {
                 className: `w-4 h-4 rounded-full border ${sw.excluded ? 'border-dashed border-zinc-400' : 'border-black/10'}`,
                 style: { background: sw.excluded ? 'transparent' : sw.hex },
               }),
-          sw.name,
+          /* The colour, and under it what it is actually made of.
+
+             Roofing and cladding quotes are compared by material — natural
+             slate against fibre-cement, clay against concrete — and the gap
+             between them is over a hundred pounds a square metre. The cost
+             pages, the lead emails and the render prompt all name it; only
+             the buttons the homeowner actually presses did not. */
+          sw.materialLabel && !sw.excluded
+            ? h('span', { className: 'grid text-left leading-tight' }, [
+                h('span', {}, sw.name),
+                h('span', { className: 'text-[10px] text-zinc-500' }, sw.materialLabel),
+              ])
+            : sw.name,
         ]);
       })),
     ])
@@ -3445,6 +3482,40 @@ const FOOTPRINT_BADGE = {
   default_footprint: { label: 'A typical UK home', cls: 'bg-amber-400/15 border-amber-300/30 text-amber-200' },
 };
 
+/* The areas this figure was actually sized on, as nodes.
+
+   Two panels state this — the pre-photo one and the itemised breakdown — and
+   both said "of wall" unconditionally, including over a roof-only estimate
+   that prices no wall. One derivation, so the next trade added here appears in
+   both places or neither.
+
+   A trade that was not priced is not mentioned. Saying "0 m² of roof" would be
+   worse than silence: it reads as a measurement rather than as an absence. */
+function areaBasis(price) {
+  const priced = price?.priced || [];
+  const qty = (value, unit, what) =>
+    h('span', {}, [h('span', { className: 'measured' }, `${value} ${unit}`), ` of ${what}`]);
+
+  const parts = [];
+  if (priced.includes('cladding') && price?.footprintM2) parts.push(qty(price.footprintM2, 'm²', 'wall'));
+  if (priced.includes('roof') && price?.roofM2) parts.push(qty(price.roofM2, 'm²', 'roof'));
+  /* Roofline is the one priced by the metre rather than the square metre —
+     fascia, soffit and guttering are a run along the eaves. It was reported as
+     "85 m² of wall", which is not the quantity, not the unit, and not the
+     trade. */
+  if (priced.includes('trim') && price?.trimLengthM) parts.push(qty(price.trimLengthM, 'm', 'roofline'));
+
+  if (!parts.length) return [];
+  if (parts.length === 1) return [parts[0]];
+  // "a, b and c" — the comma matters once there are three.
+  const last = parts[parts.length - 1];
+  const head = parts.slice(0, -1);
+  const out = [];
+  head.forEach((p, i) => { out.push(p); if (i < head.length - 1) out.push(', '); });
+  out.push(' and ', last);
+  return out;
+}
+
 function buildPricePanel(price, priceRow) {
   const exact = state.price?.exact;
   const range = state.price?.range;
@@ -3493,7 +3564,14 @@ function buildPricePanel(price, priceRow) {
       h('div', { className: 'mt-5' }, [
         h('div', { className: 'serif text-[22px] sm:text-[26px] md:text-[30px] leading-tight' }, range ? `${fmtMoney(range.low)} – ${fmtMoney(range.high)}` : fmtMoney(price.total)),
         h('div', { className: 'mt-2 text-[11px] text-white/50' },
-          [`Typical ${typeLabel.toLowerCase()} · about `, h('span', { className: 'measured' }, `${price.footprintM2} m²`), ' of wall']),
+          /* Whatever actually sized this figure, not always the wall.
+
+             This said "about 85 m² of wall" over a roof-only estimate, which
+             prices no wall at all — the same mistake as the breakdown line
+             below, in the panel more people see, because it is the one shown
+             before anybody has uploaded anything. Both go through
+             areaBasis() now so they cannot disagree again. */
+          [`Typical ${typeLabel.toLowerCase()} · about `, ...areaBasis(price)]),
       ]),
 
       h('div', { className: 'mt-5 rounded-xl bg-white/5 border border-white/10 p-3' }, [
@@ -3642,6 +3720,22 @@ function buildPricePanel(price, priceRow) {
         priceRow('Roof, fitted', price.roof),
         priceRow('Fascia, soffit & guttering', price.trim),
         priceRow('Scaffolding', price.scaffolding, true),
+        /* The best argument on the site for doing two trades at once, and it
+           was never made.
+
+           Scaffolding is charged once however many trades are on it, which is
+           how the real job works — the same tower serves the walls and the
+           roof. Done as two separate jobs it is paid twice. That is the whole
+           reason a re-roof and a render belong in one estimate, and the
+           breakdown showed a flat line saying "Scaffolding £800" with nothing
+           to say it was doing double duty.
+
+           The saving is the scaffold they are not paying for a second time,
+           with VAT on it, because every other figure here carries VAT. */
+        (price.priced || []).length > 1 && price.scaffolding > 0
+          ? h('p', { className: 'text-[10px] leading-4 text-emerald-300/80 -mt-0.5 mb-1' },
+              `Counted once for all ${(price.priced || []).length} trades — doing them separately would mean paying it again, about ${fmtMoney(Math.round(price.scaffolding * 1.2))} more.`)
+          : null,
         priceRow('Waste allowance', price.waste, true),
         priceRow('VAT (20%)', price.vat, true),
         h('div', { className: 'h-px bg-white/10 my-1' }),
@@ -3657,17 +3751,8 @@ function buildPricePanel(price, priceRow) {
          The rear slope is said out loud because it is the first thing anyone
          who knows roofs will ask, and the photograph only ever shows the
          front. */
-      h('p', { className: 'mt-3 text-[10px] leading-4 text-white/50' }, [
-        'Based on ',
-        (price.priced || []).includes('cladding') || !price.roofM2
-          ? h('span', {}, [h('span', { className: 'measured' }, `${price.footprintM2} m²`), ' of wall'])
-          : null,
-        ((price.priced || []).includes('cladding') && price.roofM2) ? ' and ' : null,
-        price.roofM2
-          ? h('span', {}, [h('span', { className: 'measured' }, `${price.roofM2} m²`), ' of roof'])
-          : null,
-        '.',
-      ].filter(Boolean)),
+      h('p', { className: 'mt-3 text-[10px] leading-4 text-white/50' },
+        ['Based on ', ...areaBasis(price), '.']),
       /* The reviewer asked whether the roof figure includes the rear slope.
          It is meant to — it is derived from the whole house, not from the
          elevation in the photograph — but the ratio behind it has no source,

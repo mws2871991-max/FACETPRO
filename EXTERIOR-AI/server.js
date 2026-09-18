@@ -1391,7 +1391,18 @@ app.get('/api/config', (req, res) => {
    as the static-file allowlist — enumerate what's public rather than guess at
    what isn't, so the next section added here is private until someone says
    otherwise. */
-const swatchFields = ({ id, name, hex, image }) => ({ id, name, hex, image });
+/* materialLabel joins the list, pricePerM2 still does not.
+
+   "Render", "Slate Tiles", "Clay Tile" is what the thing is, and it is
+   already public in three places: the cost pages print it, the lead emails
+   print it, and the render prompt asks for it. The swatch buttons were the
+   only surface withholding it, which left a roofing customer choosing by
+   colour when every quote they compare it against is by material.
+
+   It is a name, not a rate. The reasoning above is about the basis of the
+   quote — per-m² prices, the material-versus-labour split, the waste and
+   scaffolding charges — and none of that moves. */
+const swatchFields = ({ id, name, hex, image, materialLabel }) => ({ id, name, hex, image, materialLabel });
 
 function buildPublicCatalogue(c) {
   const pickFields = (obj, keys) => obj ? Object.fromEntries(keys.filter(k => obj[k] !== undefined).map(k => [k, obj[k]])) : undefined;

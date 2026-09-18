@@ -95,3 +95,26 @@ test('the unsourced roof-area ratio is still flagged as unsourced', () => {
   assert.ok(fs.existsSync(path.join(ROOT, 'notes', 'roof-area-needs-a-source.md')),
     'the note explaining what this number needs has gone; the code points at it');
 });
+
+test('the stated basis names the trade that was priced, in its own unit', () => {
+  /* Three panels said "of wall" whatever was on the estimate. A roof-only job
+     announced 85 m² of wall and priced none; a roofline-only job announced the
+     same, while fascia, soffit and guttering are priced by the metre along the
+     eaves. The quantity, the unit and the trade were all wrong, in the line
+     whose entire job is to say where the number came from. */
+  const fn = html.match(/function areaBasis\(price\) \{[\s\S]*?\n\}/);
+  assert.ok(fn, 'areaBasis() has gone; the two panels are free to disagree again');
+  const src = fn[0];
+
+  assert.match(src, /priced\.includes\('cladding'\)[\s\S]*?footprintM2/,
+    'wall area must be gated on cladding actually being priced');
+  assert.match(src, /priced\.includes\('roof'\)[\s\S]*?roofM2/,
+    'roof area must be gated on the roof actually being priced');
+  assert.match(src, /priced\.includes\('trim'\)[\s\S]*?trimLengthM/,
+    'roofline is priced by the metre and must be reported that way');
+
+  // And both panels go through it, rather than one keeping a copy.
+  const callers = html.match(/areaBasis\(price\)/g) || [];
+  assert.ok(callers.length >= 2,
+    `only ${callers.length} panel(s) use areaBasis — the other one has drifted back to its own wording`);
+});
