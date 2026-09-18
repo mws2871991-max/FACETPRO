@@ -6065,14 +6065,8 @@ function reportJourneyTiming() {
   if (journeyReported || !journeyStartedAt) return;
   journeyReported = true;
   const ms = Date.now() - journeyStartedAt;
-  try {
-    fetch('/api/journey-timing', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ stage: 'photo_to_estimate', ms }),
-      keepalive: true,
-    }).catch(() => {});
-  } catch (_) { /* a measurement must never cost somebody their journey */ }
+  // Same beacon as the funnel, for the same reason — see postBeacon().
+  postBeacon('/api/journey-timing', { stage: 'photo_to_estimate', ms });
 }
 
 /* The slug in ?from=, read once and remembered. Shape-checked here as well
@@ -6088,25 +6082,53 @@ function readFromSlug() {
   return fromSlugCache;
 }
 
+/* Post a counter and forget it.
+
+   sendBeacon first, because it is the API built for exactly this and the
+   browser owns the request once it is handed over. fetch with keepalive does
+   arrive — measured, including a beacon fired as the tab was closing — but
+   Chrome logs every one of them as `net::ERR_ABORTED` beside its 204, because
+   the renderer drops a response nobody reads. Nothing is lost; it only looks
+   that way, and looking that way has already cost one reviewer an afternoon
+   and produced a bug report saying the funnel was leaking. An analytics call
+   that cries wolf in the network log is worse than useless: the next real
+   fault in there gets scrolled past.
+
+   The Blob carries the content type, which is what the endpoint parses. Same
+   origin, so application/json costs no preflight. sendBeacon returns false
+   when the browser's queue is full — then, and on anything without it, fall
+   back to the fetch that was here before. */
+function postBeacon(url, payload) {
+  const json = JSON.stringify(payload);
+  try {
+    if (navigator.sendBeacon &&
+        navigator.sendBeacon(url, new Blob([json], { type: 'application/json' }))) return;
+  } catch (_) { /* fall through to fetch */ }
+  try {
+    fetch(url, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: json, keepalive: true,
+    }).catch(() => {});
+  } catch (_) { /* never in the way */ }
+}
+
 function reachedStage(stage) {
   if (stagesSeen.has(stage)) return;
   stagesSeen.add(stage);
-  try {
-    fetch('/api/funnel', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      /* The journey goes with the stage so the funnel can be read per intent.
-         The server validates it against its own list and records a second,
-         prefixed counter — the untagged totals are unchanged. */
-      /* `from` is the landing page that sent them. journey says what they
-         wanted; this says which page earned it, which is the one that decides
-         what to write next — six pages currently report journey=windows and
-         are otherwise indistinguishable. Server-side it is checked against
-         landing.allPaths() before anything is recorded. */
-      body: JSON.stringify({ stage, journey: state.journey || undefined, from: readFromSlug() || undefined }),
-      keepalive: true,
-    }).catch(() => {});
-  } catch (_) { /* never in the way */ }
+  /* The journey goes with the stage so the funnel can be read per intent. The
+     server validates it against its own list and records a second, prefixed
+     counter — the untagged totals are unchanged.
+
+     `from` is the landing page that sent them. journey says what they wanted;
+     this says which page earned it, which is the one that decides what to
+     write next — six pages currently report journey=windows and are otherwise
+     indistinguishable. Server-side it is checked against landing.allPaths()
+     before anything is recorded. */
+  postBeacon('/api/funnel', {
+    stage,
+    journey: state.journey || undefined,
+    from: readFromSlug() || undefined,
+  });
 }
 
 /* Advances the narration in analysisPanel() while the detection call is out.
