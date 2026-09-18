@@ -1507,7 +1507,9 @@ const state = {
   leadCapture: true,   // the server decides; see LEAD_CAPTURE
   // Whole-house finishes: a quicker walls-only path alongside the detailed
   // visualiser. Prices here are the catalogue's illustrative figures.
-  wh: { finishId: null, roofColourId: null, windowColourId: null, areaM2: null, result: null, loading: false },
+  // areaTouched: they have moved the slider, so a measurement no longer
+  // overwrites the area — see syncWholeHouseArea().
+  wh: { finishId: null, roofColourId: null, windowColourId: null, areaM2: null, areaTouched: false, result: null, loading: false },
   conservatoryId: null,   // which style they're drawn to; goes with the lead
   // Set when the daily cap is spent. Neither stops the journey: without
   // detection they can still choose colours and price a house type, without a
@@ -1699,6 +1701,48 @@ async function loadLeads(token) {
   }
 }
 
+/* Two different questions, deliberately two lists.
+
+   MEASURED_FROM_PHOTO answers "did we read this off the picture?", which is
+   what earns the phrase "we measured". Named in full rather than matched on a
+   `photo_` prefix: `photo_prior` starts with it and is not a measurement — it
+   is the typical figure for the house type.
+
+   ABOUT_THIS_HOUSE answers the wider question, "is this figure about their
+   home rather than a stand-in?", and manual entry qualifies — somebody who
+   walked out with a tape measure has told us about their house as surely as
+   the camera did. Anything sized by house type is not on either list. */
+const MEASURED_FROM_PHOTO = ['photo_door', 'photo_coverage'];
+const ABOUT_THIS_HOUSE = [...MEASURED_FROM_PHOTO, 'manual_entry'];
+
+/* Once we know this house's wall area, the whole-house calculator uses it.
+
+   It used to be seeded once at startup — before any photograph — and then
+   never revisited, so a home measured at 85 m² was still costed against the
+   95 m² default sitting two hundred pixels below its own measurement. Two
+   numbers for the same wall, on the same screen, one of them ours and wrong.
+
+   Their own hand on the slider wins and keeps winning: `areaTouched` is never
+   cleared, because somebody who has said "no, it's more like 120" has told us
+   something the photograph did not, and a later re-measure silently overruling
+   them is the same bug facing the other way. */
+function syncWholeHouseArea() {
+  if (state.wh.areaTouched) return false;
+  if (!ABOUT_THIS_HOUSE.includes(String(state.price?.footprintSource || ''))) return false;
+
+  const area = Number(state.price?.footprintM2);
+  if (!Number.isFinite(area) || area <= 0) return false;
+
+  // The slider cannot express every house. Clamp rather than show a thumb
+  // pinned off the end reading a number the track does not contain.
+  const wh = state.catalogue?.wholeHouse;
+  const next = wh ? Math.min(Math.max(area, wh.areaMinM2), wh.areaMaxM2) : area;
+  if (next === state.wh.areaM2) return false;
+
+  state.wh.areaM2 = next;
+  return true;
+}
+
 async function refreshPrice() {
   if (!state.catalogue) return;
   try {
@@ -1722,7 +1766,15 @@ async function refreshPrice() {
     state.price = await res.json();
   } catch (err) {
     state.price = null;
+    return;
   }
+
+  /* Here rather than at the call sites, because a measurement can arrive from
+     several of them — the detection finishing, "use my measurement" being
+     switched on, dimensions typed in by hand — and one forgotten call site is
+     the original bug. Whoever repaints afterwards shows the new area; the
+     whole-house total is refreshed against it by the caller that owns it. */
+  if (syncWholeHouseArea()) await refreshWholeHouse();
 }
 
 /* Read a photo, and shrink it on the way.
@@ -2356,8 +2408,11 @@ function buildUploadDetect() {
        typical figure for the house type, and buildRefineEstimate labels it
        "a typical figure for your house type" three hundred lines down. A
        prefix test reads as correct and quietly claims the one case it must
-       not. Only these two are measured off the picture. */
-    const MEASURED_FROM_PHOTO = ['photo_door', 'photo_coverage'];
+       not. Only these two are measured off the picture.
+
+       Now declared at module scope beside ABOUT_THIS_HOUSE, because the whole-
+       house calculator asks a neighbouring question and a second copy of this
+       list is a copy that drifts. */
     const summaryLine = () => {
       const real = state.detections.filter(d => d.type !== 'analysis');
       const hits = (re) => real.filter(d => re.test(String(d.type || '')) || re.test(String(d.label || '')));
@@ -4449,6 +4504,8 @@ function buildWholeHouse() {
     className: 'w-full accent-zinc-900',
   });
   areaSlider.addEventListener('input', (e) => {
+    // From here on this number is theirs, and no measurement overwrites it.
+    state.wh.areaTouched = true;
     state.wh.areaM2 = parseInt(e.target.value, 10);
     const badge = document.getElementById('wh-area');
     if (badge) badge.textContent = `${state.wh.areaM2} m²`;
@@ -6699,10 +6756,13 @@ document.getElementById('hero-upload')?.addEventListener('click', () => {
 (async function init() {
   render();
   await Promise.all([loadCatalogue(), loadConfig()]);
-  // Seed the whole-house area from whatever currently sizes the estimate, so
-  // the two sections agree instead of one defaulting to a generic figure.
+  /* A starting number for the slider before anybody has shown us a house.
+     This used to read state.price?.footprintM2 first, which was always null
+     here — refreshPrice has not run yet — so the two sections were never
+     actually made to agree. syncWholeHouseArea() does that now, whenever a
+     real measurement turns up. */
   if (state.catalogue?.wholeHouse && state.wh.areaM2 === null) {
-    state.wh.areaM2 = state.price?.footprintM2 || state.catalogue.wholeHouse.areaDefaultM2;
+    state.wh.areaM2 = state.catalogue.wholeHouse.areaDefaultM2;
   }
   await Promise.all([refreshPrice(), refreshWholeHouse()]);
   render();
