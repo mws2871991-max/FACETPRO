@@ -310,7 +310,14 @@ test('a spent cap keeps the journey open rather than dead-ending', async () => {
   // reads "try again tomorrow" leaves, and the lost lead costs more than the
   // API call would have.
   const detect = await post('/api/detect', { image: tinyJpeg(), mimeType: 'image/jpeg' });
-  const render = await post('/api/render', { image: tinyJpeg(), mimeType: 'image/jpeg' });
+  /* The render needs something to render. This used to send bare bytes, which
+     reached the cap only because the handler would build a prompt for any
+     request at all — `claddingName || 'Alabaster'` meant an empty body asked
+     for an Alabaster house. That default is gone (see renderprompt.js), so a
+     request choosing nothing is now refused as invalid before the cap, which
+     is the same order the next test in this file relies on. */
+  const render = await post('/api/render',
+    { image: tinyJpeg(), mimeType: 'image/jpeg', claddingId: 'alabaster' });
   for (const [name, r] of [['detect', detect], ['render', render]]) {
     assert.strictEqual(r.status, 429, name);
     assert.strictEqual(r.body.reason, 'daily_limit', `${name} should be identifiable as a cap`);

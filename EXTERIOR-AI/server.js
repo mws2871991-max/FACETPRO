@@ -17,6 +17,7 @@ const glazing = require('./glazing');
 const resume = require('./resume');
 const leadscore = require('./leadscore');
 
+const { buildRenderPrompt } = require('./renderprompt');
 const catalogue = JSON.parse(fs.readFileSync(path.join(__dirname, 'catalogue.json'), 'utf8'));
 
 /* These are real supplier and labour rates, not placeholders, which makes
@@ -2428,12 +2429,31 @@ app.post('/api/render', renderLimiter, async (req, res) => {
   const replicateKey = process.env.REPLICATE_API_TOKEN;
   if (!replicateKey) return res.status(500).json({ error: 'REPLICATE_API_TOKEN not set — see .env.example.' });
 
-  // Checked last, after validation, so a malformed request doesn't spend quota.
-  if (!consumeDailyQuota('render', res)) return res.status(429).json(dailyLimitBody('render'));
+  /* Resolve what was chosen against the catalogue, by id.
 
-  const cladding = claddingName || 'Alabaster';
-  const trim = trimName || 'Ink Trim';
-  const roof = roofName || 'Slate Roof';
+     This used to be `claddingName || 'Alabaster'`, reading the display name
+     the client sent. "Leave as it is" is the *name* of the none swatch — its
+     id is 'none' — and it is a truthy string, so it went straight past the
+     default and into the prompt as if it were a finish. See renderprompt.js
+     for what that produced and why it explains three separate P0s.
+
+     Ids are authoritative. Names are accepted only as a fallback for a page
+     cached before this shipped, and a name that matches the none swatch is
+     read as the refusal it is rather than as a product. */
+  const NONE_NAMES = new Set(['leave as it is', 'none', '']);
+  const pick = (group, id, name) => {
+    const list = catalogue[group] || [];
+    if (id !== undefined && id !== null) {
+      return String(id) === 'none' ? null : (list.find(s => s.id === String(id)) || null);
+    }
+    const n = String(name || '').trim();
+    if (NONE_NAMES.has(n.toLowerCase())) return null;
+    return list.find(s => s.name === n) || null;
+  };
+
+  const cladding = pick('cladding', req.body?.claddingId, claddingName);
+  const trim = pick('trim', req.body?.trimId, trimName);
+  const roof = pick('roof', req.body?.roofId, roofName);
 
   /* Windows and doors change only when the homeowner has actually chosen
      something for them.
@@ -2469,28 +2489,40 @@ app.post('/api/render', renderLimiter, async (req, res) => {
      they are not drawn, because drawing them means drawing them somewhere they
      are not. */
   const doorStyle = REAR_OPENINGS.has(doorStyleId) ? '' : doorStyleRaw;
-  const changingGlazing = !!(glazingColour && (windowStyle || doorStyle));
+  // Whether that adds up to a glazing change is buildRenderPrompt's decision
+  // now, along with the matching "leave the frames alone" instruction — the
+  // two have to agree, so one place decides.
 
-  const glazingChange = changingGlazing
-    ? `Replace the window frames${doorStyle ? ' and the front door' : ''} with photorealistic ${windowStyle || 'casement'} windows${doorStyle ? ` and a ${doorStyle} front door` : ''}, both in ${glazingColour}. Frame proportions and opening sizes must match the existing apertures exactly — do not resize, add or remove any window or door. Glass reflections must stay consistent with the original sky and surroundings.`
-    : '';
+  /* The prompt itself lives in renderprompt.js, where it can be asserted as a
+     string. FLUX Kontext will return a plausible picture for an incoherent
+     request, so nothing downstream of here can tell a good prompt from a bad
+     one — which is exactly how the old one survived. */
+  const prompt = buildRenderPrompt({
+    cladding, trim, roof,
+    windowStyle, doorStyle, glazingColour,
+  });
 
-  const untouched = changingGlazing
-    ? 'The brickwork, garden, path, sky and every other element must remain completely untouched and pixel-perfect to the original — only the wall cladding, trim colour, roof material, window frames and door change.'
-    : 'The windows, doors, garden, path, sky and every other element must remain completely untouched and pixel-perfect to the original — only the wall cladding, trim colour, and roof material change.';
+  /* Nothing was chosen. Refuse before spending, rather than asking the model
+     to change nothing and billing a render for the answer.
 
-  const prompt = [
-    `Replace the exterior wall cladding with a photorealistic ${cladding} finish, the window/door trim with ${trim} coloured trim, and the roof material with ${roof}.`,
-    glazingChange,
-    `Critically: preserve the exact perspective, shadow direction, ambient lighting colour temperature, lens distortion, camera exposure, and depth of field of the original photograph.`,
-    untouched,
-    /* FLUX Kontext will happily "improve" a house by adding a window. A render
-       showing an opening the homeowner does not have is a complaint waiting
-       to happen, and it is the kind an installer discovers on survey. */
-    `Do not add, remove, move or resize any window, door or other opening.`,
-    `Shadows and reflections must remain consistent with the existing light source angle and intensity.`,
-    `The result must be indistinguishable from a real installation photograph.`
-  ].filter(Boolean).join(' ');
+     Reachable today: with ?journey=windows every swatch starts at "Leave as
+     it is", and the client-side guard meant to catch this compared the swatch
+     *name* against 'none' — while the name is "Leave as it is". It never
+     fired, so the first upload of every windows visitor bought a render of an
+     empty instruction. Both ends are fixed; this is the end that holds the
+     money. */
+  if (!prompt) {
+    return res.status(400).json({
+      error: 'Choose a finish, a roof or a trim colour first — there is nothing to change yet.',
+      reason: 'nothing_selected',
+    });
+  }
+
+  /* Quota last, after every validation including "is there anything to
+     render". It used to sit above the prompt, so a request that asked for no
+     change still spent one of the fifty renders a day before anything looked
+     at what it was asking for. */
+  if (!consumeDailyQuota('render', res)) return res.status(429).json(dailyLimitBody('render'));
 
   // Rebuilt from what the bytes are, so a client-supplied data: URL is never
   // forwarded to Replicate verbatim.

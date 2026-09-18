@@ -4657,6 +4657,13 @@ async function generateRealRender() {
       body: JSON.stringify({
         image: state.uploadedBase64,
         mimeType: state.uploadedMimeType,
+        /* Ids, because the server resolves them against the catalogue and a
+           display name is not a selection. Sending only names is how "Leave
+           as it is" ended up in the prompt as a finish — see renderprompt.js.
+           The names still go for the server's own fallback and for logs. */
+        claddingId: state.cladding.id,
+        trimId: state.trim.id,
+        roofId: state.roof.id,
         claddingName: state.cladding.name,
         trimName: state.trim.name,
         roofName: state.roof.name,
@@ -6390,8 +6397,13 @@ function startAutoRender() {
   if (!state.uploadedBase64) return;
   if (state.renderUnavailable || state.detectUnavailable) return;
   applyHouseTypePreset();
-  const changesSomething = [state.cladding, state.trim, state.roof]
-    .some(sw => sw && sw.name && sw.name.toLowerCase() !== 'none');
+  /* isNone, not a name comparison. This read `sw.name.toLowerCase() !== 'none'`
+     while the none swatch is named "Leave as it is" — so the guard was always
+     true and a visitor who had chosen nothing still bought a render of an
+     empty instruction. The helper two hundred lines up has always been right;
+     this is the second place that reimplemented it by hand and got it wrong. */
+  const changesSomething = [state.cladding, state.trim, state.roof].some(sw => sw && !isNone(sw))
+    || !!glazingChoice().windowDoorColourName;
   if (!changesSomething) return;
   autoRenderDone = true;
   generateRealRender();
@@ -6404,8 +6416,13 @@ function maybeAutoRender() {
   if (!state.detections.filter(d => d.type !== 'analysis').length) return;
 
   applyHouseTypePreset();
-  const changesSomething = [state.cladding, state.trim, state.roof]
-    .some(sw => sw && sw.name && sw.name.toLowerCase() !== 'none');
+  /* isNone, not a name comparison. This read `sw.name.toLowerCase() !== 'none'`
+     while the none swatch is named "Leave as it is" — so the guard was always
+     true and a visitor who had chosen nothing still bought a render of an
+     empty instruction. The helper two hundred lines up has always been right;
+     this is the second place that reimplemented it by hand and got it wrong. */
+  const changesSomething = [state.cladding, state.trim, state.roof].some(sw => sw && !isNone(sw))
+    || !!glazingChoice().windowDoorColourName;
   if (!changesSomething) return;
   autoRenderDone = true;
   autoRenderStart(true);
