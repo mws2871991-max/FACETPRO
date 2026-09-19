@@ -1911,6 +1911,8 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
     detectionId: id,
     canMeasure: record.detections.some(d => d.type === 'cladding'),
     scaleReference: record.detections.some(d => d.type === 'door-front') && record.aspectRatio !== null,
+    // What pricing will count, so the page does not count it a second way.
+    frontWindowCount: glazing.frontWindowCount(record.detections),
   });
 
   const seenId = detectionByImage.get(fingerprint);
@@ -2084,7 +2086,10 @@ Finally add: {"type":"analysis","summary":"2-3 sentence overview of the property
   const hasDoor = detections.some(d => d.type === 'door-front');
   const hasWall = detections.some(d => d.type === 'cladding');
 
-  res.json({ detections, detectionId, canMeasure: hasWall, scaleReference: hasDoor && !!size });
+  res.json({
+    detections, detectionId, canMeasure: hasWall, scaleReference: hasDoor && !!size,
+    frontWindowCount: glazing.frontWindowCount(detections),
+  });
 });
 
 /* Conservatory styles are guide price RANGES, not a computed quote — there is

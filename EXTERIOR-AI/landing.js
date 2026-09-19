@@ -723,6 +723,18 @@ const scaffoldPartner = (slug) => {
   return pair ? pair.find(s => s !== slug) : null;
 };
 
+/* Front door and windows, pinned to each other for the same reason, minus the
+   scaffold: they are the commonest combined job this site prices, and the
+   rotation left the front-door page linking to bifolds, roofline, rendering,
+   roof and conservatories — no window page at all — while the window page
+   linked to the door. */
+const PAIRED_TRADES = [['front-door-replacement-cost', 'window-replacement-cost-uk']];
+
+const pairedPage = (slug) => {
+  const pair = PAIRED_TRADES.find(p => p.includes(slug));
+  return pair ? pair.find(s => s !== slug) : null;
+};
+
 function relatedFor(slug) {
   const mine = journeyForSlug(slug);
   const at = COST_PAGES.findIndex(p => p.slug === slug);
@@ -742,7 +754,9 @@ function relatedFor(slug) {
   // link here that changes what the job costs.
   const partnerSlug = scaffoldPartner(slug);
   const partner = partnerSlug ? rotated.filter(p => p.slug === partnerSlug) : [];
-  const ordered = [...partner, ...sameTrade, ...rest]
+  const pairedSlug = pairedPage(slug);
+  const paired = pairedSlug ? rotated.filter(p => p.slug === pairedSlug) : [];
+  const ordered = [...partner, ...paired, ...sameTrade, ...rest]
     .filter((p, i, a) => a.indexOf(p) === i);
 
   return ordered.slice(0, 5)

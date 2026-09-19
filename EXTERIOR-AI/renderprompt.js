@@ -147,9 +147,12 @@ function buildRenderPrompt(sel = {}) {
     /* Every visible slope, said out loud. A front elevation usually shows a
        main slope and a porch or bay roof, and changing one and not the other
        is its own kind of wrong picture. */
+    /* "Of this house", because "every visible roof slope" was taken
+       literally: on 19 September the roof changed correctly and so did the
+       roof of the house next door, which was visible. */
     changes.push(
-      `Replace the roof covering on every visible roof slope, including any porch or bay roof, ` +
-      `with ${describe(roof, ROOF_SURFACE)}. The roof must visibly change.`);
+      `Replace the roof covering on every visible roof slope of this house, the one in the middle of the photograph, ` +
+      `including any porch or bay roof, with ${describe(roof, ROOF_SURFACE)}. The roof must visibly change.`);
   }
   if (trim) {
     changes.push(
@@ -173,6 +176,8 @@ function buildRenderPrompt(sel = {}) {
   if (!trim) holds.push(HOLDS.trim);
   if (!roof) holds.push(HOLDS.roof);
   if (!changingGlazing) holds.push(HOLDS.glazing);
+  // Held whatever was chosen: every change above is to this house only.
+  holds.push('every neighbouring or attached house, including its roof, walls and windows');
   holds.push('the garden, path, driveway, fencing, sky and everything beyond the house');
 
   /* "Change only the roof" is a stronger sentence than any list of holds, and

@@ -2217,7 +2217,13 @@ function buildTriage() {
       h('p', { className: 'mt-1 text-[13px] leading-6 text-zinc-600 max-w-[62ch]' },
         'So the first price you see is for the work you actually want. You can change any of it afterwards, and add the rest whenever you like.'),
       h('div', { className: 'mt-4 flex flex-wrap gap-2' }, TRIAGE.map(t => {
-        const active = state.journey === t.id && !(t.id === null && state.journey !== null);
+        /* "Everything / not sure yet" is an answer, not the absence of one. It
+           showed as chosen on every first visit because no journey and that
+           chip share the same null — so the page claimed an answer nobody had
+           given, above a price that covered the roof and roofline only. */
+        const active = t.id === null
+          ? state.triageAnswered === true && state.journey === null
+          : state.journey === t.id;
         return h('button', {
           type: 'button',
           'aria-pressed': active ? 'true' : 'false',
@@ -2227,6 +2233,7 @@ function buildTriage() {
           onClick: async () => {
             if (t.href) { document.querySelector(t.href)?.scrollIntoView({ behavior: 'smooth' }); return; }
             state.triageOpen = false;   // answered; state it from here rather than ask again
+            state.triageAnswered = true;
             await applyJourney(t.id);
             document.getElementById('your-photo')?.scrollIntoView({ behavior: 'smooth' });
           },
@@ -2506,7 +2513,9 @@ function buildUploadDetect() {
       const real = state.detections.filter(d => d.type !== 'analysis');
       const hits = (re) => real.filter(d => re.test(String(d.type || '')) || re.test(String(d.label || '')));
 
-      const windows = state.windowCount || hits(/window/i).length;
+      /* The server's count when it sent one: sidelights belong to the door and
+         a bay's panes are one window, which a regex over labels cannot know. */
+      const windows = state.windowCount || (state.frontWindowCount ?? hits(/window/i).length);
       const measured = MEASURED_FROM_PHOTO.includes(String(state.price?.footprintSource || ''));
 
       const parts = [];
@@ -2769,7 +2778,7 @@ function buildUploadDetect() {
                first one got rather than an empty frame and a button. It is one
                more render against the daily cap, spent on somebody who has
                demonstrably not given up. */
-            onClick: () => { state.uploadedImg = null; state.uploadedBase64 = null; state.detections = []; state.stage = 'landing'; state.detectionStatus = 'idle'; state.renderUrl = null; state.renderId = null; state.windowCount = null; state.glazing = null; state.hasCustomised = false; state.revealed = false; state.lastPriceDelta = null; autoRenderDone = false; U('Photo removed — add another whenever you like'); render(); }
+            onClick: () => { state.uploadedImg = null; state.uploadedBase64 = null; state.detections = []; state.stage = 'landing'; state.detectionStatus = 'idle'; state.renderUrl = null; state.renderId = null; state.windowCount = null; state.frontWindowCount = null; state.glazing = null; state.hasCustomised = false; state.revealed = false; state.lastPriceDelta = null; autoRenderDone = false; U('Photo removed — add another whenever you like'); render(); }
           }, 'Start again'),
         ]),
         /* The bail-out, next to the ask rather than below it.
@@ -3452,9 +3461,18 @@ function renderEstimatePanelOnly() {
    roof-only figure. The engine already reports which trades it priced; this
    reads that rather than restating the assumption. */
 const PRICED_TRADE_LINES = { cladding: 'Walls & cladding, fitted', roof: 'Roof, fitted', trim: 'Fascia, soffit & guttering' };
+const SCAFFOLD_TRADE_WORDS = { cladding: 'the walls', roof: 'the roof', trim: 'the roofline' };
+/* computePrice charges one scaffold whatever mix of these trades is priced,
+   which is the best reason to do them together — and the page never said so. */
+const scaffoldLine = (priced) => {
+  const words = priced.map(t => SCAFFOLD_TRADE_WORDS[t]).filter(Boolean);
+  if (words.length < 2) return 'Scaffolding';
+  const list = words.length === 2 ? words.join(' and ') : `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`;
+  return `Scaffolding — one scaffold, shared by ${list}`;
+};
 const pricedIncludes = (priced) => [
   ...priced.map(t => PRICED_TRADE_LINES[t]).filter(Boolean),
-  'Scaffolding',
+  scaffoldLine(priced),
   'Waste allowance',
   'VAT (20%)',
 ];
@@ -3487,7 +3505,11 @@ function buildGlazingLedPanel() {
     h('button', {
       type: 'button',
       className: 'mt-4 px-5 rounded-full bg-white text-zinc-900 text-xs font-medium min-h-[44px] inline-grid place-items-center',
-      onClick: () => document.getElementById('detail-options')?.scrollIntoView({ behavior: 'smooth', block: 'center' }),
+      /* To the heading of the group they have to answer first, not the middle
+         of #detail-options. That block is taller than a screen, so centring it
+         landed on Frame colour with Window style 450px above — past the one
+         choice that makes a price appear. */
+      onClick: () => document.getElementById(label === 'A front door' ? 'door-style' : 'window-style')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
     }, label === 'A front door' ? 'Choose a door' : 'Choose your windows'),
     h('p', { className: 'mt-4 text-[11px] leading-5 text-white/55' },
       'Walls, roof and roofline aren’t in this — you told us they’re staying as they are. Turn any of them back on above and they’ll be priced here too.'),
@@ -3504,6 +3526,11 @@ function buildGlazingLedPanel() {
   const spread = g.marketRange || g.range;
   const n = g.windowCount;
   const doorOnly = g.price.windowsIncluded === false;
+  /* Which door, in words. Bifolds, sliders and double doors were called "your
+     front door" directly above the note saying they open onto the garden. */
+  const doorId = state.prefs.doorStyleId;
+  const hasDoor = !!doorId && doorId !== 'none';
+  const doorNoun = isRearOpening(doorId) ? 'garden doors' : 'front door';
 
   return h('div', { className: 'rounded-2xl bg-zinc-900 text-white p-5' }, [
     h('h3', { className: 'text-[11px] tracking-widest uppercase text-white/50' }, 'Your estimate'),
@@ -3520,8 +3547,8 @@ function buildGlazingLedPanel() {
         `${fmtMoney(spread.low)} – ${fmtMoney(spread.high)}`),
       h('div', { className: 'mt-2 text-[11px] text-white/50' },
         doorOnly
-          ? 'Your front door, supplied and fitted'
-          : [`${n} window${n === 1 ? '' : 's'}`, state.prefs.doorStyleId && state.prefs.doorStyleId !== 'none' ? ' and a door' : '', ', supplied and fitted'].join('')),
+          ? `Your ${doorNoun}, supplied and fitted`
+          : [`${n} window${n === 1 ? '' : 's'}`, hasDoor ? ` and ${isRearOpening(doorId) ? 'garden doors' : 'a front door'}` : '', ', supplied and fitted'].join('')),
       /* What the last choice cost, under the number it moved. Both ends of the
          range shift, so both are shown — collapsing them to one figure would
          invent a precision the range does not have. */
@@ -3536,7 +3563,9 @@ function buildGlazingLedPanel() {
     h('div', { className: 'mt-5 rounded-xl bg-white/5 border border-white/10 p-3' }, [
       h('div', { className: 'text-[10px] tracking-widest uppercase text-white/55' }, 'Includes'),
       h('div', { className: 'mt-2 grid gap-1 text-[11px] text-white/60' }, [
-        doorOnly ? 'The door, supplied and fitted' : 'Every window, supplied and fitted',
+        doorOnly ? `The ${doorNoun}, supplied and fitted` : 'Every window, supplied and fitted',
+        // The door was in the price and missing from this list.
+        !doorOnly && hasDoor ? `The ${doorNoun}, supplied and fitted` : null,
         g.price.access ? 'Access for the upstairs windows' : null,
         'Taking the old frames away',
         'VAT (20%)',
@@ -3547,7 +3576,7 @@ function buildGlazingLedPanel() {
        explanation the windows section gives, shortened: the spread is which
        company quotes you, not how roughly we measured. */
     h('p', { className: 'mt-4 text-[11px] leading-5 text-white/70' },
-      'That range is which company quotes you — the lower end is close to what the keener of the two national installers settles at, the higher end what the same job goes out at elsewhere. Same windows, same house, same work.'),
+      `That range is which company quotes you — the lower end is close to what the keener of the two national installers settles at, the higher end what the same job goes out at elsewhere. Same ${doorOnly ? (isRearOpening(doorId) ? 'doors' : 'door') : hasDoor ? 'windows and door' : 'windows'}, same house, same work.`),
 
     h('p', { className: 'mt-3 text-[11px] leading-5 text-white/55' },
       'Walls, roof and roofline aren’t in this — you told us they’re staying as they are. Turn any of them back on above and they’ll be priced here too.'),
@@ -3618,6 +3647,10 @@ function photoNotUsed() {
       why: note
         ? `${note.split(/,\s+so\s+/)[0]}, so this uses a typical figure instead.`
         : 'We read your photo but the wall area it gave us looked wrong for this kind of house, so this uses a typical figure instead.',
+      /* The band that refused it is the house type's, and the house type is
+         usually a default nobody chose. A detached house measured at 181 m²
+         was told to retake a photo that was fine. */
+      houseTypeMayBeWrong: true,
     };
   }
 
@@ -3664,9 +3697,24 @@ function photoNotUsedNotice(spacing) {
     type: 'button', className: 'underline underline-offset-2 hover:text-amber-100', onClick,
   }, label);
 
+  const openRefine = () => {
+    const el = document.getElementById('refine-section');
+    el?.querySelector('details')?.setAttribute('open', '');
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  const typeLabel = (HOUSE_TYPES.find(t => t.id === state.houseType)?.label || 'semi-detached').toLowerCase();
+
   return h('p', { className: `${spacing} text-[11px] leading-5 text-amber-200/80` }, [
     state_.why + ' ',
-    link('Try another photo', () => {
+    /* Wrong house type first: it is the likelier cause, and the fix costs a
+       tap rather than a new photograph. The picker sits beside "Measure again"
+       in the refine section — changing type alone discards the measurement. */
+    ...(state_.houseTypeMayBeWrong ? [
+      `If your home isn’t ${/^[aeiou]/.test(typeLabel) ? 'an' : 'a'} ${typeLabel}, `,
+      link('change the house type and measure again', openRefine),
+      '. Otherwise ',
+    ] : []),
+    link(state_.houseTypeMayBeWrong ? 'try another photo' : 'Try another photo', () => {
       /* Counted as a branch, never as a funnel step — see BRANCH_STAGES in
          server.js. It answers whether this offer is worth having, and whether
          a second photograph actually rescues the measurement. */
@@ -3674,11 +3722,7 @@ function photoNotUsedNotice(spacing) {
       sharedRefs.fileInput?.click();
     }),
     ' — straight on, from across the road if you can — or ',
-    link('type your own wall area', () => {
-      const el = document.getElementById('refine-section');
-      el?.querySelector('details')?.setAttribute('open', '');
-      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }),
+    link('type your own wall area', openRefine),
     '.',
   ]);
 }
@@ -4447,7 +4491,7 @@ function buildDetailOptions() {
     ]);
   };
 
-  const group = (title, list, key, opts) => h('div', {}, [
+  const group = (title, list, key, opts) => h('div', { id: opts?.anchor || null, className: opts?.anchor ? 'scroll-mt-24' : '' }, [
     h('h4', { className: 'text-[10px] tracking-widest uppercase text-zinc-500' }, title),
     h('div', { className: 'mt-2 grid sm:grid-cols-2 gap-2' }, [
       ...list.map(i => optionCard(i, key, opts)),
@@ -4484,15 +4528,19 @@ function buildDetailOptions() {
     /* A style with no colour renders nothing: glazingChoice() sends the pair
        or neither, because "casement, colour unspecified" is not something to
        ask a model for. That was silent — the button simply did nothing. */
-    if (state.prefs.windowStyleId && !state.prefs.windowDoorColourId) {
-      return h('p', { className: 'mt-4 text-[12px] leading-5 text-zinc-600' },
-        'Pick a frame colour and we’ll show these on your house.');
-    }
+    const needsColour = !!state.prefs.windowStyleId && !state.prefs.windowDoorColourId;
+    const pickColour = h('p', { className: 'mt-4 text-[12px] leading-5 text-zinc-600' },
+      'Pick a frame colour and we’ll show these on your house.');
     if (state.glazingLoading && !state.glazing) {
-      return h('p', { className: 'mt-4 text-[12px] text-zinc-500' }, 'Working out a guide price…');
+      return needsColour ? pickColour : h('p', { className: 'mt-4 text-[12px] text-zinc-500' }, 'Working out a guide price…');
     }
     const g = state.glazing;
-    if (!g || !g.price) return null;
+    /* Only the picture needs a colour; the price and the count do not. This
+       used to return here whenever the colour was missing, which hid the
+       "We counted 18. Not right?" corrector while the estimate above was
+       already showing 18 windows — the detection panel's "correct it below"
+       pointed at a control that was not there yet. */
+    if (!g || !g.price) return needsColour ? pickColour : null;
 
     const counted = g.windowCount;
     const setCount = (n) => {
@@ -4590,7 +4638,9 @@ function buildDetailOptions() {
         ]),
       ]),
 
-      state.uploadedBase64 ? h('button', {
+      needsColour
+        ? h('p', { className: 'mt-3 text-[12px] leading-5 text-zinc-600' }, 'Pick a frame colour and we’ll show these on your house.')
+        : state.uploadedBase64 ? h('button', {
         type: 'button',
         className: 'mt-3 w-full py-2.5 rounded-full bg-zinc-900 text-white text-xs font-medium disabled:bg-zinc-300',
         disabled: state.rendering,
@@ -4677,9 +4727,9 @@ function buildDetailOptions() {
       h('p', { className: 'mt-1 text-[12px] leading-5 text-zinc-600 max-w-[68ch]' },
         'Pick a style and a colour and we’ll show them on your home and work out a guide price.'),
       h('div', { className: 'mt-4 grid gap-5' }, [
-        group('Window style', wd.windowStyles, 'windowStyleId', { optOut: 'windows' }),
+        group('Window style', wd.windowStyles, 'windowStyleId', { optOut: 'windows', anchor: 'window-style' }),
         h('div', {}, [
-          group('Door style', wd.doorStyles, 'doorStyleId', { optOut: 'front door' }),
+          group('Door style', wd.doorStyles, 'doorStyleId', { optOut: 'front door', anchor: 'door-style' }),
           /* Said before they choose, not after they look at the render and
              wonder where their bifolds are. */
           isRearOpening(state.prefs.doorStyleId)
@@ -4883,24 +4933,6 @@ function buildWholeHouse() {
     ]);
   }));
 
-  function colourRow(label, list, key) {
-    const current = state.wh[key] || list[0].id;
-    return h('div', {}, [
-      h('div', { className: 'text-[10px] tracking-widest uppercase text-zinc-500' }, label),
-      h('div', { className: 'mt-2 flex flex-wrap gap-2' }, list.map(c => h('button', {
-        type: 'button',
-        title: c.name,
-        'aria-label': c.name,
-        'aria-pressed': current === c.id ? 'true' : 'false',
-        className: `flex items-center gap-2 px-3.5 min-h-[44px] rounded-full border text-xs transition ${current === c.id ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-400'}`,
-        onClick: async () => { state.wh[key] = c.id; await refreshWholeHouse(); renderWholeHouseOnly(); },
-      }, [
-        h('span', { className: 'w-4 h-4 rounded-full border border-black/20', style: { background: c.hex } }),
-        c.name,
-      ]))),
-    ]);
-  }
-
   const areaNow = r?.areaM2 ?? state.wh.areaM2 ?? wh.areaDefaultM2;
   const areaSlider = h('input', {
     type: 'range', min: wh.areaMinM2, max: wh.areaMaxM2, step: 5, value: areaNow,
@@ -4931,10 +4963,11 @@ function buildWholeHouse() {
       h('div', {}, [
         h('div', { className: 'text-[10px] tracking-widest uppercase text-zinc-500' }, 'Choose a finish'),
         finishChips,
-        h('div', { className: 'mt-5 grid sm:grid-cols-2 gap-5' }, [
-          colourRow('Roof colour', wh.roofColours, 'roofColourId'),
-          colourRow('Window colour', wh.windowColours, 'windowColourId'),
-        ]),
+        /* Roof colour and Window colour used to sit here. Neither moves this
+           figure — it is walls only, and /api/whole-house echoes the two
+           colours back without pricing them — and the window one sat a
+           thousand pixels above the real frame colour picker, where a windows
+           customer found it first, chose Anthracite, and got a render price. */
         h('div', { className: 'mt-5' }, [
           h('div', { className: 'flex items-center justify-between' }, [
             h('span', { className: 'text-[10px] tracking-widest uppercase text-zinc-500' }, 'Roughly how much wall?'),
@@ -6713,6 +6746,7 @@ async function handleUpload(file) {
       reachedStage('design_created');
     }
     state.detectionId = data.detectionId || null;
+    state.frontWindowCount = Number.isFinite(data.frontWindowCount) ? data.frontWindowCount : null;
     state.canMeasure = !!data.canMeasure;
     state.scaleReference = !!data.scaleReference;
     state.measurement = null;
@@ -6926,11 +6960,20 @@ function applyHouseTypePreset() {
   const askedAboutWalls = state.journey === 'cladding';
   const groups = askedAboutWalls ? ['cladding', 'trim', 'roof'] : ['trim', 'roof'];
 
+  /* Nor the trade they came for. The journey already picked its opening swatch
+     for that one — ROOF_JOURNEY_DEFAULT for a roof, Alabaster for render — and
+     the house-type preset was overwriting it the moment a photo landed, so a
+     roof journey that opened on Charcoal switched to Slate, the dearest roof,
+     on upload. */
+  const JOURNEY_GROUP = { cladding: 'cladding', roof: 'roof', roofline: 'trim' };
+  const ownGroup = JOURNEY_GROUP[state.journey];
+
   const preset = AUTO_DEFAULTS[state.houseType] || AUTO_DEFAULTS.semi;
   let applied = false;
   for (const group of groups) {
     // Never override a journey exclusion — "leave it as it is" is a choice.
     if (state[group] && state[group].id === 'none') continue;
+    if (group === ownGroup) continue;
     const sw = SWATCHES.find(x => x.id === preset[group]);
     if (sw && state[group]?.id !== sw.id) { state[group] = sw; applied = true; }
   }

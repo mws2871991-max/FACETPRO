@@ -118,6 +118,60 @@ test('discards a low-confidence detection', () => {
   assert.strictEqual(base({ detections: noisy }).frontCount, 4);
 });
 
+/* Sidelights and bay panes, both seen on the live site: a detached house with
+   five windows reported seven because the two glazed panels beside its door
+   came back typed "window", and a bay-fronted semi with two bays reported
+   eight because each bay came back pane by pane. */
+const labelled = (label, d) => ({ ...d, label });
+const DOOR_X = 6.2;
+const withSidelights = [
+  ...semiPhoto,
+  labelled('Porch Sidelight Left', win(DOOR_X - 0.4, DOOR_Y, 0.38, 1.98)),
+  labelled('Porch Sidelight Right', win(DOOR_X + 0.92, DOOR_Y, 0.38, 1.98)),
+];
+
+test('glazed sidelights beside the door are not counted as windows', () => {
+  assert.strictEqual(base({ detections: withSidelights }).frontCount, 4);
+  assert.strictEqual(_internals.windowCandidates(withSidelights).sidelights, 2);
+});
+
+test('sidelights are dropped on the counting path too, with no door to scale from', () => {
+  const noDoor = withSidelights.filter(d => d.type !== 'door-front');
+  const r = base({ detections: noDoor });
+  assert.strictEqual(r.countSource, 'photo_count');
+  assert.strictEqual(r.frontCount, 4);
+});
+
+// Three 0.5 m panes side by side, labelled the way the model labels them.
+const bayPanes = (name, xM, yPct) => ['Left', 'Center', 'Right'].map((p, i) =>
+  labelled(`${name} - ${p} Pane`, win(xM + i * 0.5, yPct, 0.5, 1.2)));
+
+test('the panes of one bay count as one window', () => {
+  const upperLeft = semiPhoto[4];
+  const photo = [...semiPhoto.filter(d => d !== upperLeft), ...bayPanes('Upper Bay Window', 3.6, UPPER_WINDOW_Y)];
+  const r = base({ detections: photo });
+  assert.strictEqual(r.frontCount, 4);
+  // Sized as the whole bay, not as one pane of it.
+  const widest = Math.max(...r.windows.map(w => w.widthM));
+  assert.ok(Math.abs(widest - 1.5) < 0.05, `expected the merged bay to be about 1.5 m wide, got ${widest}`);
+  assert.strictEqual(_internals.windowCandidates(photo).panesMerged, 2);
+});
+
+test('two different bays stay two windows', () => {
+  const photo = [
+    ...semiPhoto.filter(d => d.type !== 'window'),
+    ...bayPanes('Lower Bay Window', 3.6, GROUND_WINDOW_Y),
+    ...bayPanes('Upper Bay Window', 3.6, UPPER_WINDOW_Y),
+  ];
+  assert.strictEqual(base({ detections: photo }).frontCount, 2);
+});
+
+test('the page is sent the same front count pricing uses', () => {
+  const { frontWindowCount } = require('../glazing');
+  assert.strictEqual(frontWindowCount(withSidelights), base({ detections: withSidelights }).frontCount);
+  assert.strictEqual(frontWindowCount([]), 0);
+});
+
 test('discards a box too small to be a window at scale', () => {
   const vent = [...semiPhoto, win(11.0, GROUND_WINDOW_Y, 0.2, 0.2)];
   const r = base({ detections: vent });

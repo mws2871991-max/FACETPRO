@@ -284,11 +284,52 @@ function bandFor(areaM2, bands) {
 
    Only the sizing step needs a door. Everything here is scale-free, so both
    paths get it. */
+/* Glazed panels either side of a front door. The detection prompt asks for
+   "any window", so the model boxes them and types them window; they are part
+   of the door set and are quoted with it. On a real photograph two of these
+   turned five windows into seven, and the front-to-total ratio made that
+   roughly six phantom windows in the price. */
+const SIDELIGHT_LABEL = /\bside[\s-]?(lights?|panels?)\b/i;
+
+/* One pane of a window the model has split up: "Lower Bay Window - Left Pane".
+   The part before the last " - " names the window; the rest names the pane.
+   Two bays came back as eight windows this way — IoU dedupe cannot catch it,
+   because panes sit side by side rather than on top of each other. */
+const PANE_LABEL = /^(.+?)\s+-\s+[^-]*\bpanes?\b[^-]*$/i;
+
+function unionBox(a, b) {
+  const x = Math.min(a.x, b.x), y = Math.min(a.y, b.y);
+  return { x, y, w: Math.max(a.x + a.w, b.x + b.w) - x, h: Math.max(a.y + a.h, b.y + b.h) - y };
+}
+
 function windowCandidates(detections) {
-  const candidates = (detections || [])
-    .filter(d => d?.type === 'window' && (Number(d?.confidence) || 0) >= MIN_CONFIDENCE)
-    .map(d => ({ b: box(d), confidence: Number(d?.confidence) || 0 }))
-    .filter(d => d.b)                                     // box() coerces and rejects the unusable
+  const confident = (detections || [])
+    .filter(d => d?.type === 'window' && (Number(d?.confidence) || 0) >= MIN_CONFIDENCE);
+
+  let sidelights = 0;
+  const units = new Map();          // pane group name -> merged candidate
+  const singles = [];
+  for (const d of confident) {
+    const b = box(d);
+    if (!b) continue;               // box() coerces and rejects the unusable
+    const label = String(d?.label || '');
+    if (SIDELIGHT_LABEL.test(label)) { sidelights++; continue; }
+    const c = { b, confidence: Number(d?.confidence) || 0 };
+    const pane = label.match(PANE_LABEL);
+    if (!pane) { singles.push(c); continue; }
+    const key = pane[1].trim().toLowerCase();
+    const seen = units.get(key);
+    if (seen) {
+      seen.b = unionBox(seen.b, c.b);
+      seen.confidence = Math.max(seen.confidence, c.confidence);
+      seen.panes++;
+    } else {
+      units.set(key, { ...c, panes: 1 });
+    }
+  }
+  const panesMerged = [...units.values()].reduce((n, u) => n + u.panes - 1, 0);
+
+  const candidates = [...singles, ...[...units.values()].map(({ b, confidence }) => ({ b, confidence }))]
     .sort((a, b) => (b.b.w * b.b.h) - (a.b.w * a.b.h));    // larger first, so dedupe keeps the larger
 
   const kept = [];
@@ -297,7 +338,15 @@ function windowCandidates(detections) {
     if (kept.some(k => iou(k.b, c.b) > DUPLICATE_IOU)) { duplicates++; continue; }
     kept.push(c);
   }
-  return { kept, duplicates };
+  return { kept, duplicates, sidelights, panesMerged };
+}
+
+/* The front-elevation count pricing will use, for the page to show. The
+   summary under the photograph counted every box with "window" in its type
+   or label, so it said 7 while the estimate was built on something else —
+   the same number worked out twice, differently. */
+function frontWindowCount(detections) {
+  return windowCandidates(detections).kept.length;
 }
 
 function measureWindows({ detections, aspectRatio, bands }) {
@@ -766,10 +815,11 @@ function estimateGlazing({
 
 module.exports = {
   estimateGlazing,
+  frontWindowCount,
   // Exposed for tests and for scripts/validate-*, not for server.js.
   _internals: {
     sizeWindow, bandFor, measureWindows, priorWindows, priceGlazing,
-    doorReference, iou, houseTypeKey,
+    doorReference, iou, houseTypeKey, windowCandidates,
   },
   HOUSE_TYPE_GLAZING_PRIORS,
   FRONT_TO_TOTAL_WINDOWS,

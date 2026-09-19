@@ -67,6 +67,20 @@ test('P0-1: a chosen roof is asked for in its own sentence, and insistently', ()
     'the shape of the bug: a compound request is as strong as its weakest clause');
 });
 
+test('the roof asked for is this house’s, and the house next door is held', () => {
+  /* 19 September: Terracotta turned the whole roof correctly and turned the
+     neighbouring house's roof too, because "every visible roof slope" includes
+     theirs. */
+  const p = buildRenderPrompt({ cladding: NONE, trim: NONE, roof: terracotta() });
+  const roofSentence = p.split('. ').find(s => /roof covering/i.test(s));
+  assert.match(roofSentence, /of this house/i);
+  assert.match(p, /Leave the following exactly as they are[\s\S]*neighbouring or attached house, including its roof/i);
+
+  // Held on every job, not only a roof job.
+  const walls = buildRenderPrompt({ cladding: sw('cladding', 'alabaster'), trim: NONE, roof: NONE });
+  assert.match(walls, /neighbouring or attached house/i);
+});
+
 test('P0-2: a trade set to "Leave as it is" is never asked to change', () => {
   // The reviewer's render 1: roof-only. Walls and trim explicitly left.
   const p = buildRenderPrompt({ cladding: NONE, trim: NONE, roof: slate() });

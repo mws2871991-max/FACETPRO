@@ -213,6 +213,18 @@ test('no cost page is an orphan', () => {
   assert.deepStrictEqual(orphans, [], `these pages have no inbound internal link: ${orphans.join(', ')}`);
 });
 
+test('the front-door and window pages link to each other', () => {
+  /* The commonest combined job, and the rotation left the door page with no
+     link to any window page. */
+  const related = (slug) => {
+    const html = landing.renderCostPage(slug, OPTS);
+    const nav = html.slice(html.indexOf('<nav class="related">'));
+    return [...nav.matchAll(/href="\/cost\/([a-z0-9-]+)"/g)].map(m => m[1]);
+  };
+  assert.ok(related('front-door-replacement-cost').includes('window-replacement-cost-uk'));
+  assert.ok(related('window-replacement-cost-uk').includes('front-door-replacement-cost'));
+});
+
 test('the bifold page does not promise a visualisation it cannot give', () => {
   /* The doors hero says "see a new front door on your own house". Bifolds are
      on the back, the photograph is of the front, and the page says so — so
