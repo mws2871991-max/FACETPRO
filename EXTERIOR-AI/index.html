@@ -391,7 +391,7 @@
              and three sentences of specification before the reader has agreed
              they want the thing. The trades are still named, in How it works
              and in the estimate breakdown, where somebody is looking for them. -->
-        <p class="mt-5 text-[16px] md:text-[18px] leading-7 text-white/75 max-w-[46ch]">Upload one photo. See new windows, doors and exterior improvements on your actual home, then get a realistic itemised estimate &mdash; before speaking to a salesperson.</p>
+        <p class="mt-5 text-[16px] md:text-[18px] leading-7 text-white/75 max-w-[46ch]">Upload one photo. See new windows, doors and exterior improvements on your actual home, then get a realistic itemised planning estimate &mdash; before speaking to a salesperson.</p>
         <!-- "No guesswork" was the third item here, and it contradicted the
              rest of the page. The methodology section says the photograph
              measurement is still being calibrated against surveyed properties,
@@ -1332,8 +1332,18 @@
       </div>
     </nav>
     <p id="beta-footer" hidden class="mt-5 text-[11px] leading-5 text-amber-900 bg-amber-50 border border-amber-200 rounded-xl p-3 max-w-[80ch]">
-      <strong>Beta.</strong> We're still calibrating how we measure a house from a photo against
-      surveyed properties. Figures may change, and an installer confirms everything on site.
+      <!-- Says why the estimate is a range, which is the half that was missing.
+
+           This stated the calibration and stopped, so the range further up the
+           page looked like vagueness rather than the honest consequence of a
+           known uncertainty. The developer handoff's §14 asks for the link to
+           be made explicitly, and it is the sentence that makes §13 land: a
+           range is not hedging, it is the width of what a photograph can tell
+           you before somebody stands in front of the house. -->
+      <strong>Beta.</strong> We continually calibrate how we measure a house from a photo against
+      surveyed properties. Your estimate is shown as a range rather than a single figure because
+      that is the uncertainty still left until a physical survey — an installer confirms
+      everything on site.
     </p>
     <p class="mt-5 text-[11px] leading-5 text-zinc-500 max-w-[80ch]">Facet Pro is a home exterior visualiser for UK homeowners. Figures shown are planning estimates based on typical material, labour, scaffolding and waste costs plus VAT — not fixed quotes. Renders are a visual guide to help you choose and may differ from the finished installation.</p>
   </div>
@@ -2503,14 +2513,46 @@ function buildUploadDetect() {
       if (windows) parts.push(`${windows} window${windows === 1 ? '' : 's'}`);
       if (hits(/door/i).length) parts.push('a front door');
       if (measured && state.price?.footprintM2) parts.push(`about ${state.price.footprintM2} m² of wall`);
-      if (!parts.length) return null;
 
-      const list = parts.length === 1
-        ? parts[0]
-        : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
+      /* What we did not find, which is the half that mattered and was missing.
 
-      return h('p', { className: 'mt-3 pt-3 border-t border-white/10 text-[11px] leading-5 text-white/65' },
-        `We found ${list}. If that isn’t right, correct it below — your number is the one we price.`);
+         This returned null when `parts` was empty — so the photograph that
+         found nothing, the one case where somebody needs to hear from us, was
+         the one case that got silence. And when it found some things but not
+         others it listed the hits and never the misses, so "we found 6
+         windows" read as success on a photo with no door in it, which is the
+         photo whose estimate is about to be a typical figure.
+
+         This is the developer handoff's photo-quality check, answered where it
+         belongs — beside their photograph, naming the same four things the
+         brief lists — rather than as a gate in front of the picture. */
+      const missing = [];
+      if (!windows) missing.push('any windows');
+      if (!hits(/door/i).length) missing.push('a front door');
+
+      /* "and" for what we found, "or" for what we did not. A negative takes
+         "or" — "we could not pick out any windows and a front door" reads as
+         a complaint about the pair rather than about each. */
+      const join = (a, conj) => a.length === 1 ? a[0] : `${a.slice(0, -1).join(', ')} ${conj} ${a[a.length - 1]}`;
+
+      if (!parts.length && !missing.length) return null;
+
+      return h('p', { className: 'mt-3 pt-3 border-t border-white/10 text-[11px] leading-5 text-white/65' }, [
+        parts.length ? `We found ${join(parts, 'and')}. ` : '',
+        missing.length
+          ? `We could not pick out ${join(missing, 'or')} in this photo${!parts.length ? ' at all' : ''}. `
+          : '',
+        missing.length
+          ? h('button', {
+              type: 'button',
+              className: 'underline underline-offset-2 hover:text-white',
+              onClick: () => { reachedStage('photo_retry'); sharedRefs.fileInput?.click(); },
+            }, 'Try another photo')
+          : null,
+        missing.length
+          ? ' — straight on, from across the road — or carry on and correct the numbers below.'
+          : 'If that isn’t right, correct it below — your number is the one we price.',
+      ].filter(Boolean));
     };
 
     /* Product UX handoff §2 and §3.
@@ -2634,7 +2676,28 @@ function buildUploadDetect() {
        read, it is forty-four pixels explaining what is already happening. */
     state.detectionStatus === 'detecting'
       ? null
-      : h('p', { className: 'mt-2 text-sm text-zinc-600 max-w-[62ch]' }, 'We’ll find your windows, doors, roof and walls automatically, so you don’t have to mark anything up or measure a thing.'),
+      : h('div', { className: 'mt-2 max-w-[62ch]' }, [
+          h('p', { className: 'text-sm text-zinc-600' },
+            'We’ll find your windows, doors, roof and walls automatically, so you don’t have to mark anything up or measure a thing.'),
+          /* The one sentence that prevents the failure the rest of this page
+             spends its time reporting.
+
+             Both of the site's own marketing photographs fell back to a
+             typical figure, and the measurement is scaled off the front door,
+             so framing is most of what decides whether a photo works. The
+             advice existed only in the notice shown after it had already gone
+             wrong. Saying it before the upload is the cheapest fix available
+             to this product.
+
+             And the three things we are not going to ask for, at the moment
+             somebody is deciding whether to hand over a photograph of their
+             home — the handoff's §6, and the point of its §11: never ask for
+             anything before giving them something. */
+          h('p', { className: 'mt-2 text-sm text-zinc-600' },
+            'A straight-on photo from across the road usually gives the best result — we size your house against your front door, so the whole front needs to be in shot.'),
+          h('p', { className: 'mt-2 text-[11px] tracking-wide uppercase text-zinc-500' },
+            'No measurements · No email · No phone number'),
+        ]),
     capNotice,
     resumePanel(),
     h('div', { className: 'mt-6 grid md:grid-cols-[1.1fr_0.9fr] gap-6' }, [
