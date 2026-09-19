@@ -164,6 +164,21 @@
      surrounded by controls that brief warns against. 56vh leaves the sticky
      bar its 70px and still shows the top of the swatch row, which is what
      tells somebody there is more below. */
+  /* Below 375px the sticky bar clips its own figure.
+
+     Measured: the left group needs 246px and gets 191px at 320px wide, so
+     "£24,500 - £37,500" rendered as "£24,500 - £37,5" — a truncated price
+     that reads as a lower maximum than it is, which is the one thing in that
+     bar that must never be half-shown. The "Typical home" pill is the widest
+     thing that is not the number, at about 78px, and dropping it clears the
+     55px overrun with room left.
+
+     What it says is not lost: the estimate panel leads with "Typical
+     semi-detached · about 85 m² of wall" directly above, which is where the
+     figure is explained rather than glanced at. Affects the 320-374px band
+     only — an iPhone SE, and any phone at large text zoom. */
+  @media (max-width: 374px) { .bar-typical { display: none; } }
+
   @media (max-width: 640px) {
     .media-cap { max-height: 56vh; }
     .media-cap img { height: 100%; object-fit: cover; }
@@ -629,7 +644,10 @@
   <section class="rounded-2xl bg-zinc-900 text-[#FBF8F3] p-6 md:p-8 text-center" aria-labelledby="proof-cta-heading">
     <h2 id="proof-cta-heading" class="serif text-[24px] md:text-[30px] tracking-tight">That could be your house.</h2>
     <p class="mt-3 text-[14px] leading-7 text-white/70 max-w-[46ch] mx-auto">Upload one photo and start exploring what your home could look like.</p>
-    <button type="button" class="mt-6 cta px-7 py-4 rounded-full text-[15px] font-semibold transition min-h-[52px]" onclick="goToUpload()">Upload a photo</button>
+    <!-- Counted separately from the hero CTA. Both land in the same upload
+         box, so together they said only "somebody started"; apart they say
+         which invitation earned it, which is what the handoff asks to test. -->
+    <button type="button" class="mt-6 cta px-7 py-4 rounded-full text-[15px] font-semibold transition min-h-[52px]" onclick="reachedStage('real_home_cta_click'); goToUpload()">Upload a photo</button>
     <p class="mt-4 text-[12px] text-white/50">Free to try &nbsp;&bull;&nbsp; No measurements &nbsp;&bull;&nbsp; No sales call unless you ask</p>
   </section>
 
@@ -2879,11 +2897,11 @@ function buildVisualizer() {
         /* Names only what is actually changing. "Alabaster cladding, Leave as
            it is trim" would be nonsense, and describing work nobody chose is
            the same mistake as pricing it. */
-        alt: `Your home with ${[
-          !isNone(state.cladding) && `${state.cladding.name} cladding`,
-          !isNone(state.trim) && `${state.trim.name} trim`,
-          !isNone(state.roof) && `a ${state.roof.name} roof`,
-        ].filter(Boolean).join(', ') || 'its finishes unchanged'}`,
+        /* Was three hand-rolled lines naming only walls, trim and roof — so a
+           screen-reader user who had changed their windows was told the house
+           had "its finishes unchanged". chosenSelections() knows about
+           glazing; this and the project summary now read from it. */
+        alt: `Your home with ${chosenSentence()}`,
         className: 'w-full h-full object-cover',
       }),
     ]);
@@ -3570,6 +3588,15 @@ function photoNotUsed() {
 function photoNotUsedNotice(spacing) {
   const state_ = photoNotUsed();
   if (!state_) return null;
+
+  /* Counted where it is shown, not where it is decided.
+
+     This panel is rebuilt on every price change and every swatch tap, so the
+     call has to be idempotent — reachedStage de-dupes per page load, which is
+     exactly the guarantee needed here and the reason it is safe to call from
+     a render path at all. */
+  reachedStage('photo_unmeasured');
+
   const link = (label, onClick) => h('button', {
     type: 'button', className: 'underline underline-offset-2 hover:text-amber-100', onClick,
   }, label);
@@ -3591,6 +3618,43 @@ function photoNotUsedNotice(spacing) {
     }),
     '.',
   ]);
+}
+
+/* Everything the homeowner has actually chosen, as label/value pairs.
+
+   The developer handoff asks for a persistent project summary — "Windows —
+   Anthracite, Front door — Black, Roofline — White" — beside the running
+   total. The sticky bar had the money and never the choices, so the one thing
+   permanently on screen while somebody designs said what it cost and not what
+   it was. On a phone, where the bar is most of what is visible, that is the
+   whole summary missing.
+
+   A trade left as it is does not appear. It is not a choice with a value, and
+   "Walls — Leave as it is" would pad the list with the four things somebody
+   declined and bury the two they picked. Same rule the alt text has always
+   used, and this is now the one place that decides it. */
+function chosenSelections() {
+  const wd = state.catalogue?.windowsDoors;
+  const nameOf = (list, id) => (id && (list || []).find(x => x.id === id)?.name) || null;
+
+  const windowStyle = nameOf(wd?.windowStyles, state.prefs.windowStyleId);
+  const doorStyle = nameOf(wd?.doorStyles, state.prefs.doorStyleId);
+  const glazColour = nameOf(wd?.colours, state.prefs.windowDoorColourId);
+
+  const out = [];
+  if (windowStyle) out.push(['Windows', [windowStyle, glazColour].filter(Boolean).join(' · ')]);
+  if (doorStyle) out.push(['Front door', [doorStyle, glazColour].filter(Boolean).join(' · ')]);
+  if (!isNone(state.cladding)) out.push(['Walls', state.cladding.name]);
+  if (!isNone(state.trim)) out.push(['Roofline', state.trim.name]);
+  if (!isNone(state.roof)) out.push(['Roof', state.roof.name]);
+  return out;
+}
+
+/* The same list as a sentence, for the render's alt text. One derivation, so
+   a screen reader and the summary panel can never describe different houses. */
+function chosenSentence() {
+  const parts = chosenSelections().map(([label, value]) => `${value} ${label.toLowerCase()}`);
+  return parts.length ? parts.join(', ') : 'its finishes unchanged';
 }
 
 function areaBasis(price) {
@@ -4077,7 +4141,7 @@ function buildTotalBar() {
      house. */
   const typicalTag = (state.useMeasurement && state.detectionId)
     ? null
-    : h('span', { className: 'text-[10px] uppercase tracking-[0.14em] text-zinc-500 whitespace-nowrap' }, 'Typical home');
+    : h('span', { className: 'bar-typical text-[10px] uppercase tracking-[0.14em] text-zinc-500 whitespace-nowrap' }, 'Typical home');
 
   /* The label names what the number covers. It read "walls, roof & trim"
      always, which stopped being true the moment a trade could be left out —
@@ -4110,7 +4174,23 @@ function buildTotalBar() {
 
      State rather than a native <details>, because this element is rebuilt on
      every price change and a DOM open-state would be lost on each rebuild. */
+  /* "Your project": what they chose, above what it costs.
+
+     The handoff's persistent project summary. It goes in the bar rather than
+     in a panel of its own because the bar is the thing already on screen at
+     every scroll position, which is what "persistent" has to mean on a phone,
+     and because a second summary elsewhere would be a second place to
+     disagree with this one. */
+  const selections = chosenSelections();
+
   const expanded = state.barOpen ? h('div', { className: 'max-w-6xl mx-auto px-6 pt-3 pb-1 grid gap-1.5' }, [
+    selections.length ? h('div', { className: 'pb-1.5 mb-0.5 border-b border-zinc-200 grid gap-1' }, [
+      h('p', { className: 'text-[10px] tracking-widest uppercase text-zinc-400' }, 'Your project'),
+      ...selections.map(([label, value]) => h('div', { className: 'flex items-baseline justify-between gap-4 text-[12px]' }, [
+        h('span', { className: 'text-zinc-600' }, label),
+        h('span', { className: 'text-zinc-900' }, value),
+      ])),
+    ]) : null,
     cladding ? h('div', { className: 'flex items-baseline justify-between gap-4 text-[12px]' }, [
       h('span', { className: 'text-zinc-600' }, cladLabel.charAt(0).toUpperCase() + cladLabel.slice(1)),
       h('span', { className: 'measured' }, cladding),
@@ -6583,6 +6663,10 @@ async function handleUpload(file) {
     stopAnalysisNarration();
     state.stage = 'visualizer';
     state.detectionStatus = 'error';
+    /* A branch, not a step. Without it, "the photo never arrived" and "they
+       lost patience" were the same gap between upload_started and
+       upload_completed, and those want opposite fixes. */
+    reachedStage('upload_failed');
     U(err.plain ? err.message : `We couldn’t read that photo: ${err.message}`);
   }
   /* Both, together. The windows panel prices before a photo exists — from the

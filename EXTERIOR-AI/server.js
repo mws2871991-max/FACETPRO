@@ -3319,6 +3319,29 @@ const SERVER_ONLY_STAGES = new Set(['lead_qualified', 'lead_sent', 'installer_re
    measurement, or whether the fault is ours and no photograph would. */
 const BRANCH_STAGES = new Map([
   ['photo_retry', { of: 'upload_completed', label: 'went back for another photo' }],
+  /* The denominator photo_retry needs.
+
+     On its own, "12 people went back for another photo" could mean the notice
+     works or that it barely reaches anybody. This is the count of visitors
+     actually told their photograph did not size the estimate, so the two
+     together give a retry rate and nothing has to be inferred about what
+     anybody intended.
+
+     It is not the same as the fallback rate on /api/measurements, which
+     counts measurement attempts. A photograph with no door to scale from is
+     never attempted, so it appears here and not there — and that is the case
+     the homeowner is most likely to be able to fix. */
+  ['photo_unmeasured', { of: 'upload_completed', label: 'told their photo could not be measured' }],
+  /* An upload that never arrived. Until now "they uploaded" and "they gave up
+     on the upload" were the same gap between upload_started and
+     upload_completed, so a broken photo path and an impatient visitor were
+     indistinguishable — and they want opposite fixes. */
+  ['upload_failed', { of: 'upload_started', label: 'the photo did not go through' }],
+  /* Which invitation earned it. The hero CTA and the "that could be your
+     house" block under the real homes both lead to the same upload box, and
+     the handoff asks to A/B the wording of the first — which cannot be read
+     while both are counted as one. */
+  ['real_home_cta_click', { of: 'landing', label: 'started from the real-homes block' }],
 ]);
 
 /* ── POST /api/journey-timing ──
