@@ -1588,6 +1588,9 @@ const state = {
   canMeasure: false,      // walls were found, so measuring is worth offering
   scaleReference: false,  // a door was found too, so the good method is available
   houseType: 'semi',
+  /* Whether that came from a person. The photograph may propose a house type;
+     only a tap on the picker or a resumed design settles one. */
+  houseTypeChosen: false,
   measurement: null,      // { m2, low, high, method, confidence, notes, caveat }
   measuring: false,
   useMeasurement: false,  // whether the measured area is currently sizing the quote
@@ -2243,7 +2246,7 @@ function applyDesign(d) {
   if (swatch(d.claddingId, 'Cladding')) state.cladding = swatch(d.claddingId, 'Cladding');
   if (swatch(d.trimId, 'Trim')) state.trim = swatch(d.trimId, 'Trim');
   if (swatch(d.roofId, 'Roof')) state.roof = swatch(d.roofId, 'Roof');
-  if (d.houseType && HOUSE_TYPES.some(t => t.id === d.houseType)) state.houseType = d.houseType;
+  if (d.houseType && HOUSE_TYPES.some(t => t.id === d.houseType)) { state.houseType = d.houseType; state.houseTypeChosen = true; }
   for (const key of ['windowStyleId', 'doorStyleId', 'windowDoorColourId', 'fasciaId', 'soffitId', 'gutteringId', 'rooflineCladdingId']) {
     if (d[key]) state.prefs[key] = d[key];
   }
@@ -3597,6 +3600,8 @@ function buildHouseTypePicker({ short } = {}) {
       onClick: async () => {
         if (state.houseType === t.id) return;
         state.houseType = t.id;
+        /* Told, not guessed — so a later photograph never overrides it. */
+        state.houseTypeChosen = true;
         state.measurement = null;      // prior and multiplier both change
         state.useMeasurement = false;
         // Glazing too: frontToTotal and the window priors both key off house
@@ -7020,6 +7025,24 @@ async function handleUpload(file) {
     }
     state.detectionId = data.detectionId || null;
     state.frontWindowCount = Number.isFinite(data.frontWindowCount) ? data.frontWindowCount : null;
+    /* What kind of house the photograph shows.
+
+       This defaulted to 'semi' and moved only if somebody found the picker, so
+       a detached house was measured against a semi's 55-130 m² band, its good
+       181 m² reading was refused, and the estimate became a typical figure —
+       which then told the visitor to try another photograph, and the
+       photograph was never the problem.
+
+       Applied before autoMeasure below, because the band is checked during the
+       measurement rather than after it. Never over a choice somebody has
+       already made: a tap on the picker and a resumed design both count as
+       told, and the model's read only fills the silence. */
+    if (data.houseType && !state.houseTypeChosen && HOUSE_TYPES.some(t => t.id === data.houseType)) {
+      if (data.houseType !== state.houseType) {
+        state.houseType = data.houseType;
+        U(`Sized as ${HOUSE_TYPE_ARTICLE(data.houseType)} — change it below if that is not right`);
+      }
+    }
     state.canMeasure = !!data.canMeasure;
     state.scaleReference = !!data.scaleReference;
     state.measurement = null;

@@ -241,6 +241,22 @@ function houseTypeKey(input) {
   return TYPE_LOOKUP.get(normaliseType(input)) || DEFAULT_HOUSE_TYPE;
 }
 
+/* The same lookup, refusing to guess.
+
+   houseTypeKey answers "which prior do I price against", and defaulting to a
+   semi is right there: something has to be priced. This answers a different
+   question — "did anybody actually say what kind of house this is" — and for
+   that a default is the bug. House type picks the plausibility band the wall
+   measurement is checked against, so a detached house silently treated as a
+   semi has a perfectly good 181 m² reading refused for sitting outside
+   55–130, and the estimate quietly becomes a typical figure.
+
+   Null means nobody said. The caller decides what to do about that, and the
+   one thing it must not do is pretend somebody did. */
+function resolveHouseType(input) {
+  return TYPE_LOOKUP.get(normaliseType(input)) || null;
+}
+
 /* ── SIZING ──
    With W/H the image dimensions in pixels and aspect = W/H:
 
@@ -898,6 +914,7 @@ function estimateGlazing({
 module.exports = {
   estimateGlazing,
   frontWindowCount,
+  resolveHouseType,
   isSidelight,
   // Exposed for tests and for scripts/validate-*, not for server.js.
   _internals: {
