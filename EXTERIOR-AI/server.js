@@ -1906,8 +1906,14 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
      the same house. On a real photograph that was seven windows before a
      deploy and six after. */
   const fingerprint = imageFingerprint(img.buffer);
+  /* Sidelights are priced with the door, so the list says so rather than
+     tagging them WINDOW under a heading that has just excluded them. The
+     stored record is untouched; this is a display copy. */
+  const forDisplay = (list) => (list || []).map(d =>
+    glazing.isSidelight(d) ? { ...d, countedWith: 'door' } : d);
+
   const answer = (record, id) => res.json({
-    detections: record.detections,
+    detections: forDisplay(record.detections),
     detectionId: id,
     canMeasure: record.detections.some(d => d.type === 'cladding'),
     scaleReference: record.detections.some(d => d.type === 'door-front') && record.aspectRatio !== null,
@@ -2087,7 +2093,7 @@ Finally add: {"type":"analysis","summary":"2-3 sentence overview of the property
   const hasWall = detections.some(d => d.type === 'cladding');
 
   res.json({
-    detections, detectionId, canMeasure: hasWall, scaleReference: hasDoor && !!size,
+    detections: forDisplay(detections), detectionId, canMeasure: hasWall, scaleReference: hasDoor && !!size,
     frontWindowCount: glazing.frontWindowCount(detections),
   });
 });
