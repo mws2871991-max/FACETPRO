@@ -2161,6 +2161,11 @@ async function getResumeCode(repaint = renderUploadOnly) {
     if (!res.ok) throw new Error(data.error || 'We couldn’t make you a code just now.');
     state.resumeCode = data.code;
     state.resumeExpiresAt = data.expiresAt || null;
+    /* Somebody wanted to keep this. While lead capture is off it is the only
+       save there is, and design_saved fires on lead submission, so nothing
+       recorded it — the question "does anyone want their design back?" had no
+       data on the one mechanism that could answer it. */
+    reachedStage('code_saved');
   } catch (err) {
     state.resumeError = err.message;
   } finally {
@@ -3174,6 +3179,14 @@ function buildVisualizer() {
                already have either side of a call that was already being made.
                Same information, no extra request, nothing disclosed. */
             const before = state.price?.total ?? null;
+            /* What the estimate covered before the tap, so the bar can say when
+               a colour choice was also a scope choice. Tapping Clay Stone on a
+               roof-and-roofline estimate took it from £15,000–£21,000 to
+               £26,500–£39,500: the walls were not in it and now are. The number
+               moved by more than a whole windows job and nothing on screen said
+               why — the delta line explaining it sits 1,326px further down the
+               page, which on a phone is off-screen at the moment of the tap. */
+            const pricedBefore = [...(state.price?.priced || [])];
             if (group === 'Cladding') state.cladding = sw;
             if (group === 'Trim') state.trim = sw;
             if (group === 'Roof') state.roof = sw;
@@ -3187,9 +3200,20 @@ function buildVisualizer() {
             U(`${sw.name} selected — updating your estimate`);
             await refreshPrice();
             const after = state.price?.total ?? null;
+            const TRADE_WORDS = { cladding: 'walls', roof: 'roof', trim: 'roofline' };
+            const added = (state.price?.priced || [])
+              .filter(t => !pricedBefore.includes(t))
+              .map(t => TRADE_WORDS[t])
+              .filter(Boolean);
             state.lastPriceDelta = (before !== null && after !== null && before !== after)
-              ? { label: sw.name, amount: after - before }
+              ? { label: sw.name, amount: after - before, added }
               : null;
+            /* The cross-sell, counted where it actually happens. There is no
+               "add another trade" control — a second trade arrives because a
+               swatch was tapped — so this is the only honest place to record
+               it. Only when something was already priced: the first trade is
+               the job they came for, not a cross-sell. */
+            if (added.length && (pricedBefore.length || state.glazing?.price)) reachedStage('trade_added');
             render();
           }
         }, [
@@ -3445,14 +3469,14 @@ function buildVisualizer() {
               ]),
               h('button', {
                 type: 'button',
-                className: 'mt-2 w-full py-2.5 rounded-full bg-zinc-900 text-white text-xs font-medium',
+                className: 'mt-2 w-full min-h-[44px] rounded-full bg-zinc-900 text-white text-xs font-medium',
                 onClick: () => document.getElementById('save-design')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
               }, 'Save my design →'),
             ]
           : [
               h('button', {
                 type: 'button',
-                className: `w-full py-2.5 rounded-full text-xs font-medium ${state.uploadedBase64 ? 'bg-zinc-900 text-white' : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'}`,
+                className: `w-full min-h-[44px] rounded-full text-xs font-medium ${state.uploadedBase64 ? 'bg-zinc-900 text-white' : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'}`,
                 disabled: !state.uploadedBase64 || state.rendering,
                 onClick: generateRealRender,
               }, renderButtonLabel),
@@ -3522,7 +3546,12 @@ function buildHouseTypePicker({ short } = {}) {
       // Subtle border at rest, filled dark when chosen — the same visual
       // language as the colour swatches, so "selected" reads the same way
       // everywhere on the page.
-      className: `px-3.5 py-2 rounded-full border text-xs font-medium transition ${state.houseType === t.id
+      /* min-h-[44px], like every other control on this page.
+         These were 34px tall on a phone — and this is the control that decides
+         whether the photograph's measurement is used at all, on a journey where
+         most photographs currently fall back to a typical figure. The smallest
+         target on the page was the one with the most riding on it. */
+      className: `px-3.5 min-h-[44px] inline-grid place-items-center rounded-full border text-xs font-medium transition ${state.houseType === t.id
         ? 'bg-zinc-900 text-white border-zinc-900'
         : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400 hover:text-zinc-900'}`,
       onClick: async () => {
@@ -4430,11 +4459,40 @@ function buildTotalBar() {
     }, 'See breakdown'),
   ]) : null;
 
+  /* Why the number just moved, next to the number.
+
+     The explanation existed — "Clay Stone: +£14,994" — in the estimate panel,
+     1,326px below the picture on a phone and off-screen at the moment of the
+     tap. So the felt experience was: I touched a colour, and the total jumped
+     by more than the whole windows job, unexplained. The figure and its reason
+     belong in the same glance, and the bar is the one thing always in view.
+
+     Where the tap also brought a trade into the estimate, that is the bigger
+     half of the answer and is said first: a colour choice that adds the walls
+     is a scope choice wearing a swatch. */
+  const delta = state.lastPriceDelta || (state.glazingDelta
+    ? { label: state.glazingDelta.label, amount: state.glazingDelta.low, added: [] }
+    : null);
+  const deltaStrip = delta ? h('div', {
+    className: `max-w-6xl mx-auto px-6 py-1.5 text-[11px] leading-4 ${delta.amount > 0 ? 'text-amber-700' : 'text-emerald-700'}`,
+    'aria-live': 'polite',
+  }, [
+    h('span', { className: 'font-medium' }, delta.label),
+    h('span', {}, `: ${delta.amount > 0 ? '+' : '−'}${fmtMoney(Math.abs(delta.amount))}`),
+    /* Phrased around the estimate rather than around the trade, so "walls"
+       and "roof" both read properly without agreeing a verb with a list. */
+    delta.added?.length
+      ? h('span', { className: 'text-zinc-600' },
+          ` — your estimate now includes the ${delta.added.join(' and the ')}`)
+      : null,
+  ]) : null;
+
   return h('div', {
     id: 'total-bar',
     className: 'fixed bottom-0 inset-x-0 z-40 border-t border-zinc-200 bg-[#FBF8F3]/95 backdrop-blur-xl',
   }, [
     expanded,
+    deltaStrip,
     h('button', {
       type: 'button',
       'aria-expanded': state.barOpen ? 'true' : 'false',
@@ -4534,6 +4592,15 @@ function buildDetailOptions() {
 
        The spread is caught here rather than inside refreshGlazing because only
        the caller knows which control was pressed and what it is called. */
+    /* The other direction of the same cross-sell: walls or a roof were already
+       priced and now windows or a door are too. Counted before the request, on
+       the choice rather than on the response, because the choice is the moment
+       the decision was made. */
+    if (['windowStyleId', 'doorStyleId'].includes(key)
+        && state.prefs[key] && state.prefs[key] !== 'none'
+        && (state.price?.priced || []).length) {
+      reachedStage('trade_added');
+    }
     if (['windowStyleId', 'doorStyleId', 'windowDoorColourId'].includes(key)) {
       /* And the picture has to stop showing the old frames.
 
@@ -4674,6 +4741,9 @@ function buildDetailOptions() {
     const counted = g.windowCount;
     const setCount = (n) => {
       state.windowCount = Math.max(1, Math.min(30, n));
+      /* How often the count we showed is not believed — the page invites the
+         correction and never recorded whether anybody took it. */
+      reachedStage('count_corrected');
       refreshGlazing();
     };
 
@@ -4790,7 +4860,7 @@ function buildDetailOptions() {
         ? h('p', { className: 'mt-3 text-[12px] leading-5 text-zinc-600' }, 'Pick a frame colour and we’ll show these on your house.')
         : state.uploadedBase64 ? h('button', {
         type: 'button',
-        className: 'mt-3 w-full py-2.5 rounded-full bg-zinc-900 text-white text-xs font-medium disabled:bg-zinc-300',
+        className: 'mt-3 w-full min-h-[44px] rounded-full bg-zinc-900 text-white text-xs font-medium disabled:bg-zinc-300',
         disabled: state.rendering,
         onClick: () => generateRealRender(),
       }, state.rendering ? 'Creating your picture…' : 'Show these on my house →') : null,
@@ -5155,7 +5225,7 @@ function buildWholeHouse() {
           : h('p', { className: 'mt-3 text-[11px] text-white/50' }, state.wh.loading ? 'Working it out…' : 'Choose a finish to see a rough cost.'),
         h('button', {
           type: 'button',
-          className: 'mt-5 w-full py-2.5 rounded-full bg-white text-zinc-900 text-xs font-medium',
+          className: 'mt-5 w-full min-h-[44px] rounded-full bg-white text-zinc-900 text-xs font-medium',
           onClick: () => document.getElementById('your-photo')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
         }, 'See it on my own home →'),
       ]),
@@ -6763,6 +6833,19 @@ function reachedStage(stage) {
     stage,
     journey: state.journey || undefined,
     from: readFromSlug() || undefined,
+    /* Which kind of screen this happened on.
+
+       The journey is photograph, upload, image and a set of pricing choices —
+       the most phone-shaped product this business could have built — and not
+       one stage could be split by device, so every question about it ("does
+       the reveal work under a thumb?", "do people price on a laptop and give
+       up on a phone?") was unanswerable.
+
+       Width rather than a user-agent string: it is what decides which layout
+       they actually got, it needs no parsing, and it says nothing about
+       anybody. Two buckets, because a third would invite a conversation about
+       tablets the data cannot yet support. */
+    device: innerWidth < 768 ? 'mobile' : 'desktop',
   });
 }
 

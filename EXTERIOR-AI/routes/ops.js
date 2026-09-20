@@ -78,6 +78,25 @@ module.exports = function opsRoutes({
       if (rows.some(r => r.count > 0)) byJourney[j] = rows;
     }
 
+    /* The same table again, split by the screen it happened on.
+
+       The journey is photograph, upload, image and pricing choices, and until
+       now not one stage could be read by device — so "is the reveal working on
+       a phone?" and "do people price on a laptop and give up on a mobile?"
+       were both unanswerable about the most phone-shaped product here. Same
+       shape as byJourney deliberately: the two are read side by side. */
+    const byDevice = {};
+    for (const d of ['mobile', 'desktop']) {
+      let prev = null;
+      const rows = FUNNEL_STAGES.map(stage => {
+        const n = counts[`device/${d}:${stage}`] || 0;
+        const ofPrevious = prev === null ? null : (prev > 0 ? Math.round((n / prev) * 1000) / 10 : 0);
+        prev = n;
+        return { stage, count: n, ofPreviousPct: ofPrevious };
+      });
+      if (rows.some(r => r.count > 0)) byDevice[d] = rows;
+    }
+
     /* The loop-backs, each against a step it can honestly be compared with.
 
        Reported beside the funnel rather than inside it: /api/funnel divides
@@ -114,7 +133,7 @@ module.exports = function opsRoutes({
     };
 
     res.setHeader('Cache-Control', 'no-store');
-    res.json({ days, keyKpi, funnel, branches, byJourney, note: 'Counts are per stage, not per person — see the funnel table in store.js. byJourney counts only visitors who arrived on a journey; the totals above include everyone.' });
+    res.json({ days, keyKpi, funnel, branches, byJourney, byDevice, note: 'Counts are per stage, not per person — see the funnel table in store.js. byJourney counts only visitors who arrived on a journey; the totals above include everyone. byDevice splits by the width the page was rendered at, under 768px being mobile, and only covers stages recorded since that key shipped — an empty or short column is missing history rather than missing traffic.' });
   });
 
   /* ── GET /api/measurements ──

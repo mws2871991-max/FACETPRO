@@ -3368,7 +3368,31 @@ const BRANCH_STAGES = new Map([
      who will not upload is exactly who they are for. */
   ['conservatory_used', { of: 'landing', label: 'chose a conservatory style' }],
   ['wholehouse_used', { of: 'landing', label: 'used the walls-only calculator' }],
+  /* Three blind spots the 20 September journey walk found, each answering a
+     question that was being asked and could not be answered.
+
+     code_saved — the six-character resume code is the only save that works
+     while lead capture is off, and design_saved fires on lead submission, so
+     nothing recorded it. "Does anybody want to keep their design?" had no
+     data at all, on the one mechanism available to answer it.
+
+     trade_added — cross-selling has no "add another trade" control: a windows
+     customer prices the walls by tapping a wall swatch four screens down,
+     which enlarges the estimate without anybody making a decision they would
+     recognise as one. This counts the estimate actually growing a trade.
+
+     count_corrected — the window count corrector is the page's own answer to
+     a wrong count, and how often it is used says whether the count is
+     believed. Against upload_completed, because only a visitor with a photo
+     ever sees it. */
+  ['code_saved', { of: 'visualisation_started', label: 'took a code to keep their design' }],
+  ['trade_added', { of: 'estimate_viewed', label: 'added a second trade to the estimate' }],
+  ['count_corrected', { of: 'upload_completed', label: 'corrected the window count' }],
 ]);
+
+/* Which layout the visitor actually got. Allowlisted for the same reason every
+   other key on the funnel is — see the note in the endpoint. */
+const DEVICE_KINDS = new Set(['mobile', 'desktop']);
 
 /* ── POST /api/journey-timing ──
    The only number the server cannot measure: how long the homeowner waited.
@@ -3424,6 +3448,13 @@ app.post('/api/funnel', perMinute(120, 'Too many requests — please wait a mome
   const fromRaw = String(req.body?.from || '');
   const from = fromRaw && LANDING_SLUGS.has(fromRaw) ? fromRaw : null;
 
+  /* A fourth key, on the same terms as journey and from: allowlisted, recorded
+     as a prefixed counter, no schema change, every existing total untouched.
+
+     Two values and no more, for the reason the stage name is allowlisted —
+     without it a client writes free text into the counter table. */
+  const device = DEVICE_KINDS.has(String(req.body?.device || '')) ? String(req.body.device) : null;
+
   /* Answered before the write. A counter that fails must never cost a visitor
      their journey, and the browser is not waiting for anything useful. */
   res.status(204).end();
@@ -3434,6 +3465,7 @@ app.post('/api/funnel', perMinute(120, 'Too many requests — please wait a mome
     await store.countStage(stage);
     if (journey) await store.countStage(`${journey}:${stage}`);
     if (from) await store.countStage(`from/${from}:${stage}`);
+    if (device) await store.countStage(`device/${device}:${stage}`);
   }
   catch (err) { obs.record('funnel', 'could not record a stage', { stage, reason: err.message }); }
 });
