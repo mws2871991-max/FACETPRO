@@ -55,7 +55,9 @@ test('P0-1: a chosen roof is asked for in its own sentence, and insistently', ()
     'the roof must be asked for as a material, not as the colour word "Terracotta"');
   assert.match(p, /every visible roof slope/i,
     'a front elevation usually has a porch or bay roof as well as the main slope');
-  assert.match(p, /roof must visibly change/i);
+  /* "The roof of this house", not just "the roof" — the sentence now has to
+     distinguish the subject from the neighbour it kept re-roofing. */
+  assert.match(p, /roof of this house must visibly change/i);
 
   /* The reviewer chose a roof three times and got the original roof three
      times. The old prompt asked for it as the third clause of a sentence
@@ -75,6 +77,13 @@ test('the roof asked for is this house’s, and the house next door is held', ()
   const roofSentence = p.split('. ').find(s => /roof covering/i.test(s));
   assert.match(roofSentence, /of this house/i);
   assert.match(p, /Leave the following exactly as they are[\s\S]*neighbouring or attached house, including its roof/i);
+
+  /* The specific failure this wording exists for: a roof plane running off
+     the edge of the frame, which reads as a continuation of the subject's
+     roofline. Measured on a live render — the left neighbour was held and the
+     right one was not. */
+  assert.match(p, /runs off the left or right edge of the frame/i);
+  assert.match(p, /even where it appears to continue from this roof/i);
 
   // Held on every job, not only a roof job.
   const walls = buildRenderPrompt({ cladding: sw('cladding', 'alabaster'), trim: NONE, roof: NONE });

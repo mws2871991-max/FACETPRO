@@ -302,6 +302,64 @@ function unionBox(a, b) {
   return { x, y, w: Math.max(a.x + a.w, b.x + b.w) - x, h: Math.max(a.y + a.h, b.y + b.h) - y };
 }
 
+/* Panes of one window, told apart from separate windows by where they are.
+
+   PANE_LABEL above catches "Lower Bay Window - Left Pane", which is what the
+   model produced on 19 September. On 20 September the same photograph came
+   back as "Upper Bay Window Left Angled", "Upper Bay Window 2", "Upper Bay
+   Window Center" — no "pane", no " - ", and the bay was counted as five
+   windows again. Labels are model prose and they vary run to run; a rule that
+   reads them is a rule that works on the run it was written for.
+
+   Geometry does not vary. Measured off both of this site's own photographs:
+
+     bay panes        horizontal gap 0.0      (they share an edge exactly)
+     separate windows horizontal gap 7, 16, 31
+
+   Nothing observed sits between. The threshold is 2% of frame width, which
+   leaves three and a half times the margin below the nearest real gap — a
+   pier of brick between two windows is simply not that thin.
+
+   Vertical overlap is required as well, so the upper bay never merges with
+   the lower one beneath it, and a run is merged transitively: five touching
+   panes collapse to one unit rather than to two.
+
+   Merging is the conservative direction. A "double window" or a bay is one
+   unit to whoever quotes it, so joining two boxes that genuinely touch is
+   what the trade would do anyway; splitting one is what put six phantom
+   windows in a price. */
+const PANE_GAP_MAX_PCT = 2;        // of frame width
+const PANE_ROW_OVERLAP_MIN = 0.6;  // of the shorter box's height
+
+function touchesHorizontally(a, b) {
+  const gap = Math.max(a.x, b.x) - Math.min(a.x + a.w, b.x + b.w);
+  if (gap > PANE_GAP_MAX_PCT) return false;
+  const overlapY = Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+  return overlapY >= PANE_ROW_OVERLAP_MIN * Math.min(a.h, b.h);
+}
+
+function mergeAdjacent(list) {
+  const out = list.map(c => ({ ...c }));
+  let merged = 0;
+  let again = true;
+  while (again) {
+    again = false;
+    outer:
+    for (let i = 0; i < out.length; i++) {
+      for (let j = i + 1; j < out.length; j++) {
+        if (!touchesHorizontally(out[i].b, out[j].b)) continue;
+        out[i].b = unionBox(out[i].b, out[j].b);
+        out[i].confidence = Math.max(out[i].confidence, out[j].confidence);
+        out.splice(j, 1);
+        merged++;
+        again = true;
+        break outer;
+      }
+    }
+  }
+  return { list: out, merged };
+}
+
 function windowCandidates(detections) {
   const confident = (detections || [])
     .filter(d => d?.type === 'window' && (Number(d?.confidence) || 0) >= MIN_CONFIDENCE);
@@ -327,18 +385,33 @@ function windowCandidates(detections) {
       units.set(key, { ...c, panes: 1 });
     }
   }
-  const panesMerged = [...units.values()].reduce((n, u) => n + u.panes - 1, 0);
+  const labelMerged = [...units.values()].reduce((n, u) => n + u.panes - 1, 0);
 
   const candidates = [...singles, ...[...units.values()].map(({ b, confidence }) => ({ b, confidence }))]
     .sort((a, b) => (b.b.w * b.b.h) - (a.b.w * a.b.h));    // larger first, so dedupe keeps the larger
 
-  const kept = [];
+  /* Duplicates first, panes second, and the order is load-bearing.
+
+     Two boxes over the same window overlap heavily; two panes of one bay sit
+     edge to edge and barely overlap at all. Merging before deduping let the
+     geometric join swallow a duplicate — the count came out right and
+     `discarded.duplicates` came out zero, so the one number that says "the
+     model saw double here" stopped being reported. Dedupe is about the same
+     window twice; merging is about one window described in parts. */
+  const deduped = [];
   let duplicates = 0;
   for (const c of candidates) {
-    if (kept.some(k => iou(k.b, c.b) > DUPLICATE_IOU)) { duplicates++; continue; }
-    kept.push(c);
+    if (deduped.some(k => iou(k.b, c.b) > DUPLICATE_IOU)) { duplicates++; continue; }
+    deduped.push(c);
   }
-  return { kept, duplicates, sidelights, panesMerged };
+
+  /* The label rule has already run above, because when the model does say
+     "Pane" it names the grouping and needs no threshold. This is geometry,
+     over everything, for the runs where it does not. */
+  const joined = mergeAdjacent(deduped);
+  const panesMerged = labelMerged + joined.merged;
+
+  return { kept: joined.list, duplicates, sidelights, panesMerged };
 }
 
 /* The front-elevation count pricing will use, for the page to show. The

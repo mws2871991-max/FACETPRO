@@ -554,3 +554,96 @@ test('the new doors were derived on the same basis as the one already here', () 
   assert.ok(Math.abs(fromList(2893) - p('upvc')) / p('upvc') < 0.03, 'uPVC does not follow the rule');
   assert.ok(Math.abs(fromList(5058) - p('sliding')) / p('sliding') < 0.03, 'sliding does not follow the rule');
 });
+
+/* ── Bay panes, told apart by geometry rather than by what the model called
+      them ──
+
+   The label rule (PANE_LABEL) was written against a run that produced
+   "Lower Bay Window - Center Left Pane". The next day the same photograph
+   came back as "Upper Bay Window Left Angled" / "Upper Bay Window 2" /
+   "Upper Bay Window Center", and the bay counted as five windows again.
+
+   Both fixtures below are the real boxes returned by /api/detect for this
+   site's own photographs, copied from the live response rather than invented,
+   so the thresholds are checked against the thing they have to separate. */
+
+/* Imported here rather than at the top, matching how the sidelight test above
+   reaches for it — this block was appended and stands on its own. */
+const { frontWindowCount } = require('../glazing');
+
+const HERO_BAYS = [
+  // Upper bay: five panes, each sharing an edge with the next.
+  { type: 'window', confidence: 0.9, label: 'Upper Bay Window Left Angled',  x_pct: 25, y_pct: 11, w_pct: 10, h_pct: 17 },
+  { type: 'window', confidence: 0.9, label: 'Upper Bay Window 2',            x_pct: 35, y_pct: 11, w_pct: 13, h_pct: 18 },
+  { type: 'window', confidence: 0.9, label: 'Upper Bay Window Center',       x_pct: 48, y_pct: 11, w_pct: 13, h_pct: 18 },
+  { type: 'window', confidence: 0.9, label: 'Upper Bay Window 4',            x_pct: 61, y_pct: 11, w_pct: 10, h_pct: 17 },
+  { type: 'window', confidence: 0.9, label: 'Upper Bay Window Right Angled', x_pct: 71, y_pct: 13, w_pct: 10, h_pct: 15 },
+  // Lower bay: the same, 37 points down the frame.
+  { type: 'window', confidence: 0.9, label: 'Lower Bay Window Left Angled',  x_pct: 25, y_pct: 48, w_pct: 10, h_pct: 20 },
+  { type: 'window', confidence: 0.9, label: 'Lower Bay Window 2',            x_pct: 35, y_pct: 48, w_pct: 13, h_pct: 21 },
+  { type: 'window', confidence: 0.9, label: 'Lower Bay Window Center',       x_pct: 48, y_pct: 48, w_pct: 13, h_pct: 21 },
+  { type: 'window', confidence: 0.9, label: 'Lower Bay Window 4',            x_pct: 61, y_pct: 48, w_pct: 10, h_pct: 20 },
+  { type: 'window', confidence: 0.9, label: 'Lower Bay Window Right Angled', x_pct: 71, y_pct: 50, w_pct: 10, h_pct: 18 },
+];
+
+const NEWBUILD_WINDOWS = [
+  { type: 'window', confidence: 0.9, label: 'Upper Right Triple Window',  x_pct: 61, y_pct: 15, w_pct: 25, h_pct: 16 },
+  { type: 'window', confidence: 0.9, label: 'Upper Left Double Window',   x_pct: 14, y_pct: 22, w_pct: 16, h_pct: 14 },
+  { type: 'window', confidence: 0.9, label: 'Upper Middle Single Window', x_pct: 37, y_pct: 24, w_pct: 8,  h_pct: 12 },
+  { type: 'window', confidence: 0.9, label: 'Lower Left Double Window',   x_pct: 13, y_pct: 55, w_pct: 16, h_pct: 15 },
+  { type: 'window', confidence: 0.9, label: 'Lower Right Triple Window',  x_pct: 60, y_pct: 56, w_pct: 28, h_pct: 15 },
+];
+
+test('two bays are two windows, whatever the model called the panes', () => {
+  assert.strictEqual(frontWindowCount(HERO_BAYS), 2,
+    'ten touching pane boxes are two bay windows — a homeowner with two bays ' +
+    'priced for ten is the bug this exists to stop');
+});
+
+test('five separate windows stay five — the merge does not over-reach', () => {
+  assert.strictEqual(frontWindowCount(NEWBUILD_WINDOWS), 5,
+    'these sit 7, 16 and 31 points apart; merging any of them would be as ' +
+    'wrong in the other direction');
+});
+
+test('the upper bay never merges with the lower one below it', () => {
+  /* They share their horizontal span exactly. Only the vertical-overlap
+     requirement keeps them apart, so this is the test that pins it. */
+  const upperOnly = HERO_BAYS.filter(d => /^Upper/.test(d.label));
+  const lowerOnly = HERO_BAYS.filter(d => /^Lower/.test(d.label));
+  assert.strictEqual(frontWindowCount(upperOnly), 1);
+  assert.strictEqual(frontWindowCount(lowerOnly), 1);
+  assert.strictEqual(frontWindowCount([...upperOnly, ...lowerOnly]), 2);
+});
+
+test('a run of panes collapses to one unit, not to two', () => {
+  /* Merging is transitive. Pane 1 touches 2, 2 touches 3, and so on — a
+     single pass that merged pairs and stopped would leave two or three units
+     from a five-pane bay, which is closer than five and still wrong. */
+  const five = HERO_BAYS.filter(d => /^Upper/.test(d.label));
+  assert.strictEqual(five.length, 5);
+  assert.strictEqual(frontWindowCount(five), 1);
+});
+
+test('the gap threshold sits well clear of both sides', () => {
+  /* The nearest real separation measured on these photographs is 7 points and
+     the panes are at 0. A boundary case either side, so a later tweak that
+     drags the threshold towards either one fails here rather than silently in
+     somebody's price. */
+  const row = (x, w) => ({ type: 'window', confidence: 0.9, label: `W${x}`, x_pct: x, y_pct: 20, w_pct: w, h_pct: 14 });
+  assert.strictEqual(frontWindowCount([row(10, 10), row(21.5, 10)]), 1,
+    'a 1.5-point gap is a pane join');
+  assert.strictEqual(frontWindowCount([row(10, 10), row(25, 10)]), 2,
+    'a 5-point gap is a pier between two windows');
+});
+
+test('the label rule still works where the model does say "Pane"', () => {
+  /* Kept alongside the geometry, because when the model names the grouping it
+     needs no threshold at all. Boxes deliberately left NOT touching, so only
+     the label rule can join them. */
+  const labelled = [
+    { type: 'window', confidence: 0.9, label: 'Lower Bay Window - Left Pane',   x_pct: 10, y_pct: 20, w_pct: 8, h_pct: 14 },
+    { type: 'window', confidence: 0.9, label: 'Lower Bay Window - Centre Pane', x_pct: 30, y_pct: 20, w_pct: 8, h_pct: 14 },
+  ];
+  assert.strictEqual(frontWindowCount(labelled), 1);
+});

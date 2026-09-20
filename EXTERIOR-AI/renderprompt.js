@@ -150,9 +150,25 @@ function buildRenderPrompt(sel = {}) {
     /* "Of this house", because "every visible roof slope" was taken
        literally: on 19 September the roof changed correctly and so did the
        roof of the house next door, which was visible. */
+    /* The exclusion goes in the sentence that does the work.
+
+       "Of this house, the one in the middle of the photograph" plus a hold
+       further down was not enough: measured on a real render, the subject's
+       roof turned correctly (red-minus-blue -18 → 74) and so did the
+       neighbour's at the right-hand edge (-2 → 90), while the neighbour at
+       the left edge was untouched (-42 → -35).
+
+       The asymmetry says what the problem is. The right-hand roof runs off the
+       edge of the frame and reads as a continuation of the subject's roofline;
+       a roof fully inside the frame does not. So the instruction names that
+       specific case, and it sits beside the verb rather than in a list of
+       things to leave alone twelve clauses later. */
     changes.push(
-      `Replace the roof covering on every visible roof slope of this house, the one in the middle of the photograph, ` +
-      `including any porch or bay roof, with ${describe(roof, ROOF_SURFACE)}. The roof must visibly change.`);
+      `Replace the roof covering on every visible roof slope of this house — the house in the centre of the photograph, ` +
+      `the one whose front door is visible — including any porch or bay roof, with ${describe(roof, ROOF_SURFACE)}. ` +
+      `Do not change the roof of the houses on either side of it: any roof that runs off the left or right edge of the ` +
+      `frame belongs to a neighbouring property and must keep its original colour, material and texture exactly, even ` +
+      `where it appears to continue from this roof. The roof of this house must visibly change.`);
   }
   if (trim) {
     changes.push(
@@ -187,6 +203,22 @@ function buildRenderPrompt(sel = {}) {
 
   return [
     'Edit this photograph of a house.',
+    /* Scope before instruction, because two attempts at putting it inside the
+       instruction failed.
+
+       Measured on live renders: naming the subject "the one in the middle of
+       the photograph" and holding "every neighbouring or attached house" left
+       the right-hand neighbour's roof turning terracotta (red-minus-blue
+       -2 → 90). Naming the frame edges explicitly inside the roof sentence
+       did the same (-2 → 84). The left-hand neighbour was held both times, so
+       the model can tell buildings apart — what it does not do is treat a
+       mid-sentence caveat as a boundary on where the edit may apply.
+
+       So the boundary is stated first, as the scope of the whole request,
+       before anything has been asked for. */
+    'Only one building in this photograph may change: the house in the centre, the one whose front door faces the camera. ' +
+    'Any other building — the properties at the left and right edges of the frame, attached or detached, and every part of them ' +
+    'including their roofs — must be pixel-for-pixel identical to the original.',
     single ? `Make one change, and only one.` : `Make the following changes, and only these.`,
     ...changes,
     `Leave the following exactly as they are in the original photograph, pixel for pixel: ${holds.join('; ')}.`,

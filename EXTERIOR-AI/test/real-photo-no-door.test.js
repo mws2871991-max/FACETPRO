@@ -47,12 +47,28 @@ test('the fixture is the case it exists for: windows, and no door', () => {
 
 test('it counts the windows it can see instead of pricing a guess', () => {
   const r = estimate();
-  const visible = detections.filter(d => d.type === 'window').length;
+  const boxes = detections.filter(d => d.type === 'window').length;
 
   assert.strictEqual(r.countSource, 'photo_count',
-    'fell back to the house-type prior on a photograph with six clear windows in it');
-  assert.strictEqual(r.frontCount, visible);
-  assert.ok(r.windowCount > visible, 'a front elevation still scales to the whole house');
+    'fell back to the house-type prior on a photograph with clear windows in it');
+
+  /* Six boxes, two windows.
+
+     This asserted frontCount === boxes, which was right while a box was a
+     window. It is not: this file's own header calls the house "a real
+     two-storey detached home, curved bay", and the six boxes are the three
+     facets of an upper bay and the three of a lower one — the model labels
+     them Upper/Lower Bay Window Left, Center and Right. A bay is one window
+     to anyone who quotes it, and the 19 September journey review reported
+     exactly this as a fault: "bays split into panes".
+
+     So the old expectation encoded the bug. Counting boxes is what put six
+     phantom windows into a detached house's price. */
+  assert.strictEqual(boxes, 6, 'the fixture has changed — re-read it before trusting the number below');
+  assert.strictEqual(r.frontCount, 2,
+    'two curved bays are two windows; counting their facets is the over-count ' +
+    'that made this tool two to three times the cost pages');
+  assert.ok(r.windowCount > r.frontCount, 'a front elevation still scales to the whole house');
 });
 
 test('and says which it did, without claiming to have measured', () => {
@@ -63,23 +79,34 @@ test('and says which it did, without claiming to have measured', () => {
     'this is not the house-type prior and must not describe itself as one');
 });
 
-test('the estimate is materially higher than the guess it replaced', () => {
-  /* The point of the change, in money. The prior is what this photograph used
-     to produce; if the two ever converge, one of them has drifted. */
-  const counted = estimate();
-  const prior = glazing.estimateGlazing({
-    detections: [],                       // nothing to count — the old outcome
-    aspectRatio: null,
-    houseType: 'detached',
-    selections: { windowStyleId: 'casement', windowDoorColourId: 'white' },
-    rates: catalogue.glazing,
-  });
+test('the scaling from front to whole house is arithmetic anybody can check', () => {
+  /* This used to assert the counted estimate was materially HIGHER than the
+     house-type prior — "the guess should be the smaller, weaker answer".
 
-  assert.strictEqual(prior.countSource, 'house_type_prior');
-  assert.ok(counted.windowCount > prior.windowCount,
-    `counted ${counted.windowCount} windows but the guess was ${prior.windowCount} — the guess should be the smaller, weaker answer`);
-  assert.ok(counted.price.total > prior.price.total,
-    'the counted estimate should not be cheaper than knowing nothing about the house');
+     That stopped being true the moment bays stopped being counted as panes,
+     and the change is the point rather than a regression. Six facets scaled
+     to eighteen whole-house windows and £12,909 – £21,061; two bays scale to
+     six and £4,777 – £7,795, against a prior of eleven and £7,994 – £14,846.
+     Counting correctly now lands BELOW the guess on this house.
+
+     Both numbers cannot be right. The count is: two bays are two windows.
+     What is now in question is FRONT_TO_TOTAL_WINDOWS, which glazing.js
+     admits is "derived from plan form rather than fitted to data" — it was
+     multiplying an inflated front count, and fixing the count changed what it
+     is being applied to. See notes/window-count-and-scaling.md.
+
+     So this no longer asserts a direction. It asserts the thing that should
+     always hold: the whole-house figure is the front count times a published
+     multiplier, and nothing else, so anybody can check it by hand. */
+  const counted = estimate();
+  const { FRONT_TO_TOTAL_WINDOWS } = glazing;
+
+  assert.strictEqual(counted.countSource, 'photo_count');
+  assert.strictEqual(counted.frontToTotal, FRONT_TO_TOTAL_WINDOWS.detached,
+    'the multiplier reported to the page must be the one actually applied');
+  assert.strictEqual(counted.windowCount,
+    Math.round(counted.frontCount * FRONT_TO_TOTAL_WINDOWS.detached),
+    'the whole-house count is the front count scaled, and nothing else');
 });
 
 test('the upstairs windows are still found, because that needs no scale', () => {
