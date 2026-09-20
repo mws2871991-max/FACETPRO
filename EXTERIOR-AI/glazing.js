@@ -360,6 +360,15 @@ function mergeAdjacent(list) {
   return { list: out, merged };
 }
 
+/* Is this detection a glazed panel of the door set rather than a window?
+
+   Exported so the page can say so too. It listed "Porch Sidelight Left —
+   WINDOW" under a heading reading "We found 5 windows", having excluded it
+   from the five: the same box described two ways on one screen. */
+function isSidelight(d) {
+  return d?.type === 'window' && SIDELIGHT_LABEL.test(String(d?.label || ''));
+}
+
 function windowCandidates(detections) {
   const confident = (detections || [])
     .filter(d => d?.type === 'window' && (Number(d?.confidence) || 0) >= MIN_CONFIDENCE);
@@ -370,8 +379,8 @@ function windowCandidates(detections) {
   for (const d of confident) {
     const b = box(d);
     if (!b) continue;               // box() coerces and rejects the unusable
+    if (isSidelight(d)) { sidelights++; continue; }
     const label = String(d?.label || '');
-    if (SIDELIGHT_LABEL.test(label)) { sidelights++; continue; }
     const c = { b, confidence: Number(d?.confidence) || 0 };
     const pane = label.match(PANE_LABEL);
     if (!pane) { singles.push(c); continue; }
@@ -889,6 +898,7 @@ function estimateGlazing({
 module.exports = {
   estimateGlazing,
   frontWindowCount,
+  isSidelight,
   // Exposed for tests and for scripts/validate-*, not for server.js.
   _internals: {
     sizeWindow, bandFor, measureWindows, priorWindows, priceGlazing,

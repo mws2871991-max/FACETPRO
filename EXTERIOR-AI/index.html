@@ -2916,7 +2916,11 @@ function buildUploadDetect() {
                 state.detections.filter(d => d.type !== 'analysis').map(d => h('div', { className: 'flex items-center gap-2' }, [
                   h('div', { className: 'w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0' }),
                   h('span', { className: 'text-[11px] text-white/80' }, d.label),
-                  h('span', { className: 'text-[10px] text-white/45 uppercase' }, d.type),
+                  /* Not "WINDOW" for something the count above has excluded —
+                     sidelights are glazed panels of the door set and are quoted
+                     with the door. */
+                  h('span', { className: 'text-[10px] text-white/45 uppercase' },
+                    d.countedWith === 'door' ? 'with the door' : d.type),
                 ]))),
             ]),
       ]),
@@ -3500,6 +3504,14 @@ const HOUSE_TYPES = [
   { id: 'bungalow',   label: 'Bungalow',      short: 'Bungalow' },
 ];
 
+/* "a semi-detached", "an end of terrace" — the label with its article, for
+   sentences that name the house type mid-flow. */
+const HOUSE_TYPE_ARTICLE = (id) => {
+  const label = (HOUSE_TYPES.find(t => t.id === id)?.label || '').toLowerCase();
+  if (!label) return 'this kind of house';
+  return `${/^[aeiou]/.test(label) ? 'an' : 'a'} ${label}`;
+};
+
 /* Picker used in two places — here and in the measure step — both writing to
    state.houseType, so they can never disagree. */
 function buildHouseTypePicker({ short } = {}) {
@@ -3799,7 +3811,7 @@ function photoNotUsedNotice(spacing) {
     el?.querySelector('details')?.setAttribute('open', '');
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
-  const typeLabel = (HOUSE_TYPES.find(t => t.id === state.houseType)?.label || 'semi-detached').toLowerCase();
+  const typeArticle = HOUSE_TYPE_ARTICLE(state.houseType);
 
   return h('p', { className: `${spacing} text-[11px] leading-5 text-amber-200/80` }, [
     state_.why + ' ',
@@ -3807,7 +3819,7 @@ function photoNotUsedNotice(spacing) {
        tap rather than a new photograph. The picker sits beside "Measure again"
        in the refine section — changing type alone discards the measurement. */
     ...(state_.houseTypeMayBeWrong ? [
-      `If your home isn’t ${/^[aeiou]/.test(typeLabel) ? 'an' : 'a'} ${typeLabel}, `,
+      `If your home isn’t ${typeArticle}, `,
       link('change the house type and measure again', openRefine),
       '. Otherwise ',
     ] : []),
@@ -4681,6 +4693,25 @@ function buildDetailOptions() {
       ]),
       h('p', { className: 'mt-1 text-[11px] leading-5 text-zinc-500' },
         `Based on ${counted} window${counted === 1 ? '' : 's'} — ${g.sourceLabel}. Includes VAT${g.price.access ? ', and scaffolding or ladder access for the upstairs windows' : ''}.`),
+
+      /* The arithmetic behind that number, which the photograph cannot show.
+
+         Only the front of the house is in the picture; the figure priced is
+         the whole house, reached by multiplying. notes/window-count-and-scaling.md
+         rests its honest position on this being checkable by the homeowner —
+         "the multiplier is published on screen" — and it was not. The
+         multiplier itself is an open question in that note, which is the
+         better reason to show it: a reader who knows their own house can see
+         the assumption and correct the total below.
+
+         Only where we counted. A typed count is the homeowner's own number
+         and a house-type prior is already a whole-house figure; neither is
+         reached this way, and dressing them up as arithmetic would invent a
+         derivation. */
+      (g.countSource === 'photo_door' || g.countSource === 'photo_count') && g.frontCount && g.frontToTotal
+        ? h('p', { className: 'mt-1 text-[11px] leading-5 text-zinc-500' },
+            `That is ${g.frontCount} on the front of your house × ${g.frontToTotal} for ${HOUSE_TYPE_ARTICLE(g.houseType)}, because your photo only shows the front. If your home has a different number, set it below.`)
+        : null,
 
       /* The window rates are invented, and this is where that has to be said.
 
