@@ -611,7 +611,12 @@ const ctaHref = (siteUrl, slug) => {
   const q = [];
   if (journey) q.push(`journey=${journey}`);
   if (slug) q.push(`from=${encodeURIComponent(slug)}`);
-  return `${siteUrl}/${q.length ? `?${q.join('&')}` : ''}#your-photo`;
+  /* The tool, not the homepage. Until 20 September these pages pointed at
+     `/?journey=…#your-photo`, which dropped a reader of a cost guide into a
+     30-screen page and asked them to find the uploader in it. `/design` is the
+     tool and nothing else; the anchor is gone because the upload box is at the
+     top of it. Old links still work — see the redirect in server.js. */
+  return `${siteUrl}/design${q.length ? `?${q.join('&')}` : ''}`;
 };
 
 const cta = (siteUrl, slug) => `<div class="cta-block">

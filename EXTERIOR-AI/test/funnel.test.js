@@ -98,8 +98,13 @@ test('conversion is measured against the step before, not the top', async () => 
      list is read as a journey and each sits where it happens — and the sibling
      test below is the one that guards the original eight against being
      renamed or reordered by an edit like this. */
+  /* design_opened joined on 20 September, when the tool moved to /design.
+     Until then "wanted the tool" and "opened the tool" were one event:
+     `landing` counted every reader of the homepage, and the key KPI divided
+     estimate_viewed by it. It sits between the click and the upload because
+     that is where it happens. */
   assert.deepStrictEqual(stages, [
-    'landing', 'cta_clicked', 'upload_started', 'upload_completed',
+    'landing', 'cta_clicked', 'design_opened', 'upload_started', 'upload_completed',
     'analysis_started', 'analysis_completed', 'visualisation_started',
     'render_shown', 'reveal_viewed',
     'design_created', 'design_changed',

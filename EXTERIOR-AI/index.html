@@ -362,7 +362,7 @@
            "Start with a photo", the hero said "See what my house could look
            like" and the close said the same again — three labels for one
            action, which is the list the brief asks to stop rotating between. -->
-      <a href="#your-photo" class="text-xs px-4 rounded-full bg-zinc-900 text-white hover:bg-zinc-800 transition min-h-[44px] inline-grid place-items-center">Upload a photo</a>
+      <a href="/design" class="text-xs px-4 rounded-full bg-zinc-900 text-white hover:bg-zinc-800 transition min-h-[44px] inline-grid place-items-center">Upload a photo</a>
     </nav>
   </div>
 </header>
@@ -370,7 +370,7 @@
 <main id="main" tabindex="-1" class="max-w-6xl mx-auto px-6 py-8 flex flex-col gap-8">
 
 
-  <section class="rounded-2xl bg-zinc-900 text-[#FBF8F3] overflow-hidden p-6 sm:p-8 md:p-12" aria-labelledby="hero-heading">
+  <section data-page="home" class="rounded-2xl bg-zinc-900 text-[#FBF8F3] overflow-hidden p-6 sm:p-8 md:p-12" aria-labelledby="hero-heading">
     <div class="grid lg:grid-cols-[1.05fr_1fr] gap-8 lg:gap-12 items-center">
       <div>
         <p class="text-[11px] tracking-[0.25em] uppercase text-white/50">Home exterior planning &middot; UK</p>
@@ -542,7 +542,7 @@
        the visualiser, the finishes, the estimate and the form — so the only
        evidence that any of this is real came after a stranger had been asked
        to hand over a photograph of their house. -->
-  <section id="our-work" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24" aria-labelledby="work-heading">
+  <section data-page="home" id="our-work" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24" aria-labelledby="work-heading">
     <div class="flex items-start justify-between gap-3 flex-wrap">
       <div>
         <p class="text-[11px] tracking-widest uppercase text-zinc-400">Real homes</p>
@@ -641,7 +641,7 @@
        shipped in five places, and reintroducing a second wording here is the
        exact rotation that rule exists to stop. The copy above the button is
        the handoff's. -->
-  <section class="rounded-2xl bg-zinc-900 text-[#FBF8F3] p-6 md:p-8 text-center" aria-labelledby="proof-cta-heading">
+  <section data-page="home" class="rounded-2xl bg-zinc-900 text-[#FBF8F3] p-6 md:p-8 text-center" aria-labelledby="proof-cta-heading">
     <h2 id="proof-cta-heading" class="serif text-[24px] md:text-[30px] tracking-tight">That could be your house.</h2>
     <p class="mt-3 text-[14px] leading-7 text-white/70 max-w-[46ch] mx-auto">Upload one photo and start exploring what your home could look like.</p>
     <!-- Counted separately from the hero CTA. Both land in the same upload
@@ -651,16 +651,16 @@
     <p class="mt-4 text-[12px] text-white/50">Free to try &nbsp;&bull;&nbsp; No measurements &nbsp;&bull;&nbsp; No sales call unless you ask</p>
   </section>
 
-  <div id="mount-triage"></div>
-  <div id="mount-upload"></div>
-  <div id="mount-visualizer"></div>
-  <div id="mount-wholehouse"></div>
+  <div data-page="design" id="mount-triage"></div>
+  <div data-page="design" id="mount-upload"></div>
+  <div data-page="design" id="mount-visualizer"></div>
+  <div data-page="design" id="mount-wholehouse"></div>
   <!-- Windows and doors were behind a collapsed accordion labelled "Optional",
        subtitled "Doesn't change your estimate" — while all four of the
        before-and-after photographs on this page are window-frame recolours.
        The proof sold windows; the page hid them. Open by default now, and it
        carries an id so the nav can point at it. -->
-  <details id="windows-doors" open class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24">
+  <details data-page="design" id="windows-doors" open class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24">
     <summary class="flex items-center justify-between gap-4">
       <!-- "Step 2" was numbering a journey the reader has not started. It sat
            above the visualiser on a page somebody may have landed on cold, so
@@ -680,16 +680,16 @@
     <div id="mount-details" class="mt-6"></div>
   </details>
 
-  <div id="mount-conservatory"></div>
-  <div id="mount-refine"></div>
+  <div data-page="design" id="mount-conservatory"></div>
+  <div data-page="design" id="mount-refine"></div>
   <!-- The moment between liking a design and giving anybody your details. It
        renders nothing until there is a design worth keeping — see
        buildSaveMoment() — because an empty exhortation to save is furniture. -->
-  <div id="mount-savemoment"></div>
-  <div id="mount-lead"></div>
+  <div data-page="design" id="mount-savemoment"></div>
+  <div data-page="design" id="mount-lead"></div>
   <!-- Sharing sits after the form rather than before it: a design shared
        before it is saved is a design nobody can come back to. -->
-  <div id="mount-share"></div>
+  <div data-page="design" id="mount-share"></div>
 
   <!-- Brief §3: three steps, minimal text, and explicitly no computer-vision
        explanation, no measurement algorithm, no pipeline.
@@ -708,7 +708,7 @@
        Output. Brief §3 names technical pipelines as a thing not to include
        and §6 names detailed technology architecture as content to remove. It
        described the software to somebody who came to price their windows. -->
-  <section id="how-it-works" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24" aria-labelledby="how-heading">
+  <section data-page="home" id="how-it-works" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24" aria-labelledby="how-heading">
     <h2 id="how-heading" class="serif text-[26px] md:text-[32px] tracking-tight">How it works</h2>
     <p class="mt-2 text-sm text-zinc-600 max-w-[62ch]">Three steps, start to finish, without anybody coming to your house.</p>
     <ol class="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -754,7 +754,7 @@
        What is left is what can be evidenced. A short row of true numbers reads
        as a company that counts carefully. A long row of invented ones reads as
        the opposite, to exactly the audience this section is for. -->
-  <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="stats-heading">
+  <section data-page="home" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="stats-heading">
     <h2 id="stats-heading" class="serif text-[26px] md:text-[32px] tracking-tight">By the numbers</h2>
     <div class="mt-6 grid grid-cols-2 md:grid-cols-3 gap-4">
       <div class="rounded-xl border border-zinc-200 p-5 text-center"><div class="serif text-[28px] measured">5</div><div class="mt-1 text-[12px] uppercase tracking-widest text-zinc-500">Trades priced from one photo</div></div>
@@ -849,7 +849,7 @@
        installers pay" strip, which was the table's argument drawn as boxes;
        the roadmap chips section, whose one live line moved into the trades
        list; and two of the three tellings of the founder story. -->
-  <section class="rounded-2xl bg-zinc-900 text-[#FBF8F3] p-6 md:p-10" aria-labelledby="fairness-heading">
+  <section data-page="home" class="rounded-2xl bg-zinc-900 text-[#FBF8F3] p-6 md:p-10" aria-labelledby="fairness-heading">
     <p class="text-[11px] tracking-[0.25em] uppercase text-white/50">The pricing problem</p>
     <h2 id="fairness-heading" class="mt-3 serif text-[28px] md:text-[38px] leading-[1.05] tracking-[-0.02em]">
       Two neighbours. Same street.<br>Same windows. Thousands apart.
@@ -971,7 +971,7 @@
        came out on an earlier brief; this is what remains of that section,
        folded in here because a list of six trades is not an argument and does
        not need a section to itself. -->
-  <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="vision-heading">
+  <section data-page="home" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="vision-heading">
     <!-- Copy-edit handoff §6. Conservatories were a chip in this row with a
          footnote underneath explaining that they are not, in fact, priced from
          the photo — a caveat cancelling the heading directly above it. They
@@ -1002,7 +1002,7 @@
        thing on the page and crawlers should see it. Each card shows the after
        by default, so if the toggle script never runs you still see the result. -->
 
-  <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="honest-heading">
+  <section data-page="home" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="honest-heading">
     <!-- §8. Headline and intro are the handoff's. The six cards are not: it
          asks to replace them with five generic labels (materials, labour,
          access, waste, VAT), and those are already the words in the intro. The
@@ -1070,7 +1070,7 @@
     </div>
   </section>
 
-  <section id="faq" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="faq-heading">
+  <section data-page="home" id="faq" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="faq-heading">
     <h2 id="faq-heading" class="serif text-[26px] md:text-[32px] tracking-tight">Questions homeowners ask</h2>
     <div class="mt-6 divide-y divide-zinc-200 border-y border-zinc-200">
 
@@ -1174,7 +1174,7 @@
        for every house on the street, and catalogue.json says so itself. Adding
        it to the count borrowed credibility the pricing engine had earned and
        the conservatory guide had not. -->
-  <section class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="tech-heading">
+  <section data-page="home" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="tech-heading">
     <!-- Brief §10: keep this compact, and head it with the question a
          homeowner actually has — "how can one photo be enough?" — rather than
          "Proprietary technology", which is the eyebrow this carried and is the
@@ -1249,7 +1249,7 @@
        far has either decided or has an objection, and the answer to both is
        the same low-risk restatement of what it costs them to try. The
        installer accordion follows, smaller, where it belongs. -->
-  <section class="rounded-2xl bg-zinc-900 text-[#FBF8F3] p-6 md:p-10 text-center" aria-labelledby="close-heading">
+  <section data-page="home" class="rounded-2xl bg-zinc-900 text-[#FBF8F3] p-6 md:p-10 text-center" aria-labelledby="close-heading">
     <!-- Brief §13, and the CTA rule in §8. The close read "You won't know what
          it could look like until you see it" over the third distinct wording
          of the same button. Headline, copy, button and trust line are the
@@ -1268,7 +1268,7 @@
 
 </main>
 
-<div id="mount-totalbar"></div>
+<div data-page="design" id="mount-totalbar"></div>
 
 <footer class="max-w-6xl mx-auto px-6 pb-14">
   <div class="rounded-2xl border border-zinc-200 bg-white p-6">
@@ -1332,7 +1332,7 @@
 
          Nothing about it changes but where it sits: same id, same mount, same
          buildInstaller(), so a signed-in tab still restores on load. -->
-    <details id="trade" class="mt-6 pt-5 border-t border-zinc-200">
+    <details data-page="installers" id="trade" class="mt-6 pt-5 border-t border-zinc-200">
       <summary class="cursor-pointer text-[12px] text-zinc-500 hover:text-zinc-900 transition">
         Are you an installer? Sign in to see homeowner designs
       </summary>
@@ -2019,6 +2019,41 @@ function fmtMoney(n) { return "£" + Math.round(n || 0).toLocaleString(); }
 
 let sharedRefs = {};
 
+/* ── WHICH PAGE THIS IS ──
+
+   One document, three routes. `/` argues, `/design` is the tool, `/installers`
+   is the staff door.
+
+   They were one page, and every layout defect the September reviews found was
+   a symptom of that rather than a bug of its own: 30 screens on a phone, four
+   unrelated prices in front of a windows customer, a trade chooser that moved
+   the page by 341px out of 21,807, and the save step ten screens below the
+   price. A windows customer met the conservatory guide, the walls-only
+   calculator and an installer sign-in on the way to their own estimate.
+
+   One document rather than three files, on purpose: index.html carries the
+   styles, the script and the mount points, and splitting it triples the head,
+   the stylesheet build and the script, then guarantees the three drift. The
+   server hands the same document to every route and the page shows the part
+   belonging to the one being visited — marked with data-page where the
+   sections are written, rather than in a list over here that somebody has to
+   remember to update.
+
+   No data-page means everywhere. The beta notice is the case that matters: it
+   is a statement about the product, not about one page of it. */
+const PAGE = (() => {
+  const path = location.pathname.replace(/\/+$/, '') || '/';
+  if (path === '/design') return 'design';
+  if (path === '/installers') return 'installers';
+  return 'home';
+})();
+
+function applyPage() {
+  for (const el of document.querySelectorAll('[data-page]')) {
+    el.hidden = el.dataset.page !== PAGE;
+  }
+}
+
 const MOUNTS = [
   ['mount-triage',     buildTriage],
   ['mount-upload',     buildUploadDetect],
@@ -2073,6 +2108,11 @@ function render() {
   MOUNTS.forEach(([id, build]) => {
     const slot = document.getElementById(id);
     if (!slot) return;
+    /* Not merely hidden — not built. Every one of these calls the catalogue,
+       the price panel or the visualiser, and a homepage that quietly renders
+       the whole tool behind display:none is the one-page problem wearing a
+       hat. */
+    if (slot.closest('[data-page]')?.dataset.page !== PAGE) return;
     slot.replaceChildren(build());
   });
   orderForJourney();
@@ -2128,7 +2168,7 @@ function resumeLifetimeLabel() {
    where a photograph is wanted. */
 const resumeLink = () =>
   state.resumeCode
-    ? `${location.origin}/?code=${encodeURIComponent(state.resumeCode)}#your-photo`
+    ? `${location.origin}/design?code=${encodeURIComponent(state.resumeCode)}`
     : null;
 
 /* Clipboard access is refused on plenty of ordinary configurations — an iOS
@@ -7390,8 +7430,29 @@ document.querySelectorAll('.work-reveal').forEach(card => {
    A global function rather than four copies, because the static buttons in the
    markup call it from inline onclick attributes, which run in global scope.
    Declared with `function` so it is hoisted above them. */
+/* Every "Upload a photo" on the site comes through here — the hero, the nav,
+   the real-homes block, the stats block and the closing call. On the homepage
+   that is now a door to another page rather than a scroll down this one, and
+   routing all of them through one function is why that is a three-line change
+   rather than five.
+
+   The journey and the landing page it came from travel in the query, exactly
+   as the cost pages already send them, so the tool opens on the right trade
+   and the funnel can still say which page earned it. */
+function designUrl(extra = {}) {
+  const q = new URLSearchParams();
+  const journey = state.journey || new URLSearchParams(location.search).get('journey');
+  const from = readFromSlug();
+  if (journey) q.set('journey', journey);
+  if (from) q.set('from', from);
+  for (const [k, v] of Object.entries(extra)) if (v) q.set(k, v);
+  const s = q.toString();
+  return `/design${s ? `?${s}` : ''}`;
+}
+
 function goToUpload() {
   reachedStage('cta_clicked');
+  if (PAGE !== 'design') { location.href = designUrl(); return; }
   document.getElementById('your-photo')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -7404,6 +7465,20 @@ document.getElementById('hero-upload')?.addEventListener('click', () => {
 });
 
 (async function init() {
+  /* Before the first paint, so the tool's sections never flash on the homepage
+     and the homepage's argument never flashes above the tool. */
+  applyPage();
+  /* The nav's upload button is a link, and where it points depends on which
+     page is reading it: a door from the homepage, a jump to the uploader once
+     you are already in the tool. */
+  const navUpload = document.querySelector('nav a[href="/design"]');
+  if (navUpload && PAGE === 'design') navUpload.setAttribute('href', '#your-photo');
+  /* The break the funnel never had. `landing` counts everyone who reads the
+     homepage, including people who were never going to use the tool, and the
+     key KPI divides estimate_viewed by it — which is most of why it reads
+     11.1%. With the tool on its own page, "wanted it" and "opened it" stop
+     being the same number. */
+  if (PAGE === 'design') reachedStage('design_opened');
   render();
   await Promise.all([loadCatalogue(), loadConfig()]);
   /* A starting number for the slider before anybody has shown us a house.

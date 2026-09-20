@@ -299,6 +299,28 @@ app.use((req, res, next) => {
   next();
 });
 
+/* ── LINKS WRITTEN BEFORE THE TOOL HAD ITS OWN PAGE ──
+
+   Until 20 September the tool was part of `/`, so the cost pages linked to
+   `/?journey=windows&from=…#your-photo` and every resume code was handed out
+   as `/?code=ABC123#your-photo`. Those URLs are in emails, in text messages
+   somebody sent themselves, and in whatever anybody bookmarked.
+
+   A code lasts 24 hours; a bookmark does not. So `/` carrying either of those
+   parameters is a visitor asking for the tool, and is sent there with the
+   query intact. Everything else about `/` is unchanged — the bare homepage is
+   the homepage.
+
+   301 rather than 302: this is where those links live now, and search engines
+   that have crawled the old form should update rather than keep asking. */
+app.use((req, res, next) => {
+  if (req.path !== '/' || req.method !== 'GET') return next();
+  const q = new URLSearchParams(req.query);
+  if (!q.has('code') && !q.has('journey')) return next();
+  const s = q.toString();
+  res.redirect(301, `/design${s ? `?${s}` : ''}`);
+});
+
 app.use((req, res, next) => {
   if (req.path.startsWith('/api/') || !isPublicPath(req.path)) return next();
   serveStatic(req, res, next);
@@ -3286,7 +3308,10 @@ app.get('/api/version', perMinute(120, 'Too many requests — please wait a mome
    Appended rather than inserted: /ops renders these in array order and the
    sequence below is roughly chronological, but nothing keys off the index. */
 const FUNNEL_STAGES = [
-  'landing', 'cta_clicked', 'upload_started', 'upload_completed',
+  /* design_opened sits between wanting the tool and starting it. Until the
+     tool had its own page those were the same event: `landing` counted every
+     reader of the homepage, and the key KPI divided estimate_viewed by it. */
+  'landing', 'cta_clicked', 'design_opened', 'upload_started', 'upload_completed',
   'analysis_started', 'analysis_completed', 'visualisation_started',
   'render_shown', 'reveal_viewed',
   'design_created', 'design_changed',
