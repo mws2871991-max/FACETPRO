@@ -174,6 +174,33 @@ module.exports = function pageRoutes({
   };
   router.get('/privacy', legalPage('privacy.html'));
   router.get('/terms', legalPage('terms.html'));
+
+  /* ── THE TOOL, AND THE STAFF DOOR ──
+
+     The same document `/` serves. index.html decides which of its sections
+     belong to the route being visited — see PAGE in that file for why this is
+     one document and not three.
+
+     Registered here, above the /:slug catch-all below, for the reason /privacy
+     and /terms are: Express matches in registration order, and the catch-all
+     would otherwise answer both of these with a 404.
+
+     noindex, follow on both. Neither is content. /design is a tool whose
+     subject is the visitor's own house, and /installers is a staff sign-in;
+     indexing either puts a thin copy of the homepage in the results and lands
+     a cold visitor on a page with nothing to read. `follow`, because the links
+     out of them are real pages and should still be crawled.
+
+     X-Robots-Tag rather than a meta tag, matching the legal pages above: one
+     document serves three routes, so a meta tag would have to be written by
+     the client — which is exactly the crawler that may not run it. */
+  const appPage = (req, res) => {
+    res.set('X-Robots-Tag', 'noindex, follow');
+    res.sendFile(path.join(__dirname, 'index.html'));
+  };
+  router.get('/design', perMinute(120, 'Too many requests — please wait a moment.'), appPage);
+  router.get('/installers', perMinute(120, 'Too many requests — please wait a moment.'), appPage);
+
   /* Gated — see requireInvestorPassword. noindex and robots.txt remain, but
      they were never the control; they only keep it out of search results.
      Served from gated/, which is not in PUBLIC_DIRS, so there is no static path

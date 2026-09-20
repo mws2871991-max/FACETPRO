@@ -149,11 +149,15 @@ test('every page drives to the visualiser with the same call to action', () => {
   for (const { slug, html } of allPages()) {
     assert.ok(html.includes('Upload a photo of your house'),
       `${slug} is missing the primary CTA`);
-    /* The link may now carry ?journey=, so match the destination rather than
-       one literal spelling of it. Still asserts what it always did: every page
-       lands on the site root at the upload step. */
-    assert.match(html, /href="[^"]*\/(\?[a-z]+=[^"#]*)?#your-photo"/,
-      `${slug} does not link into the upload step`);
+    /* The destination moved on 20 September: the tool is /design, and these
+       pages used to drop a reader of a cost guide into a 30-screen homepage
+       and ask them to find the uploader in it. Still asserting what this
+       always asserted — every page lands on the upload step — only the step
+       has its own page now, and needs no anchor to reach. */
+    assert.match(html, /href="[^"]*\/design(\?[^"]*)?"/,
+      `${slug} does not link into the tool`);
+    assert.doesNotMatch(html, /href="[^"]*\/\?[a-z]+=[^"]*#your-photo"/,
+      `${slug} still links into the old in-page uploader`);
   }
 });
 
@@ -267,7 +271,7 @@ test('the whole-exterior page carries no journey, because it is the default', ()
   assert.ok(!/\?journey=/.test(html), 'the whole-exterior page should not pre-declare a trade');
   /* The whole-exterior page has no journey — but it does carry `from`, so
      the href is no longer bare. What matters is the absence of a journey. */
-  assert.match(html, /href="[^"]*\/\?from=[a-z0-9-]+#your-photo"/);
+  assert.match(html, /href="[^"]*\/design\?from=[a-z0-9-]+"/);
   assert.ok(!/journey=/.test(html.slice(html.indexOf('cta-block'))), 'no journey on the default page');
 });
 
