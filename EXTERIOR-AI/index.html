@@ -4495,7 +4495,20 @@ function buildDetailOptions() {
   if (!wd && !fs) return h('div', { id: 'detail-options' });
 
   const setPref = (key, id, label) => {
-    state.prefs[key] = state.prefs[key] === id ? null : id;
+    /* Choosing is choosing. Tapping the chosen one again is not unchoosing.
+
+       This toggled back to null, and null is a third state that already has a
+       better-named twin: every one of these rows carries an explicit "Leave
+       as it is". So a customer who tapped the style they had just picked —
+       to confirm it, or by catching it while scrolling — lost their entire
+       windows estimate to a blank bar, with nothing on screen to say what had
+       happened or how to get it back. Walked on the live site: Flush at
+       £9,130 – £16,600, tap Flush, empty.
+
+       Removing the trade stays possible and stays deliberate, which is what
+       "Leave as it is" is for. */
+    if (state.prefs[key] === id) return;
+    state.prefs[key] = id;
     reachedStage('design_changed');
     renderDetailsOnly();
     /* Only the three that change the glazing price; roofline is a preference.
