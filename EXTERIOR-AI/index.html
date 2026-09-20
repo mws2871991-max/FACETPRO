@@ -1265,16 +1265,6 @@
     <p class="mt-4 text-[13px] text-white/60">No measurements &nbsp;&bull;&nbsp; No obligation &nbsp;&bull;&nbsp; No sales call unless you ask</p>
   </section>
 
-  <details id="trade" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8">
-    <summary class="flex items-center justify-between gap-4">
-      <span>
-        <span class="serif text-[22px] tracking-tight">Are you an installer?</span>
-        <span class="block mt-1 text-[13px] text-zinc-600">See homeowner designs and their estimates as they come in.</span>
-      </span>
-      <span class="chev text-zinc-400 transition-transform text-lg" aria-hidden="true">⌄</span>
-    </summary>
-    <div id="mount-installer" class="mt-6"></div>
-  </details>
 
 </main>
 
@@ -1331,6 +1321,24 @@
         <a href="/windows-surrey" class="hover:text-zinc-900">Windows Surrey</a>
       </div>
     </nav>
+    <!-- Moved out of <main> on 20 September 2026.
+
+         107px is not much height, but it is a different audience on the page
+         where a homeowner is deciding whether to trust us — a staff login
+         between "what will my windows cost" and the legal notices. The page
+         structure proposal asks for /installers or a footer link; there is no
+         /installers page, and a footer link is the smaller change that gets
+         the same result.
+
+         Nothing about it changes but where it sits: same id, same mount, same
+         buildInstaller(), so a signed-in tab still restores on load. -->
+    <details id="trade" class="mt-6 pt-5 border-t border-zinc-200">
+      <summary class="cursor-pointer text-[12px] text-zinc-500 hover:text-zinc-900 transition">
+        Are you an installer? Sign in to see homeowner designs
+      </summary>
+      <div id="mount-installer" class="mt-4 max-w-md"></div>
+    </details>
+
     <p id="beta-footer" hidden class="mt-5 text-[11px] leading-5 text-amber-900 bg-amber-50 border border-amber-200 rounded-xl p-3 max-w-[80ch]">
       <!-- Says why the estimate is a range, which is the half that was missing.
 
@@ -1997,12 +2005,48 @@ const MOUNTS = [
   ['mount-installer',  buildInstaller],
 ];
 
+/* The trade they asked for, first in the page.
+
+   The chooser scopes the estimate correctly and barely touches the page.
+   Measured on the live site: windows 15,548px, a roof 15,856px, everything
+   15,922px — a spread of 374px across roughly 15,900. Answering "what are you
+   looking for?" changed almost nothing about what the customer then had to
+   scroll through, and on a windows journey the window styles sat below the
+   wall, trim and roof swatches they had just declined.
+
+   The section order is static markup, deliberately — it is the reading order
+   for somebody who arrives with no journey at all, and it should stay that
+   way. So this moves one block rather than rebuilding the page: on a windows
+   or doors journey the glazing panel goes above the swatch panel, and on
+   every other journey the page is left exactly as authored.
+
+   Idempotent, because render() runs on every price change and every swatch
+   tap. insertBefore on a node already in position is a no-op in the DOM, but
+   the check keeps it from touching the tree at all — moving a <details> that
+   somebody has open would collapse it mid-interaction. */
+function orderForJourney() {
+  const glazingFirst = state.journey === 'windows' || state.journey === 'doors';
+  const glazing = document.getElementById('windows-doors');
+  const swatches = document.getElementById('mount-visualizer');
+  const wholeHouse = document.getElementById('mount-wholehouse');
+  if (!glazing || !swatches || !wholeHouse) return;
+
+  const parent = swatches.parentNode;
+  if (glazingFirst) {
+    if (glazing.nextElementSibling !== swatches) parent.insertBefore(glazing, swatches);
+  } else {
+    // Back where the markup puts it: after the walls-only calculator.
+    if (wholeHouse.nextElementSibling !== glazing) parent.insertBefore(glazing, wholeHouse.nextSibling);
+  }
+}
+
 function render() {
   MOUNTS.forEach(([id, build]) => {
     const slot = document.getElementById(id);
     if (!slot) return;
     slot.replaceChildren(build());
   });
+  orderForJourney();
   ensureStatusPill();
 }
 
@@ -2810,18 +2854,36 @@ function buildUploadDetect() {
           h('div', { className: `text-[10px] px-2 py-1 rounded-full font-medium ${detectionBadge.className}` }, detectionBadge.text),
         ]),
         analysisPanel(),
-        h('div', { className: 'grid gap-2' }, state.detections.length === 0
+        /* Proof you looked, in one line rather than twenty.
+
+           This rendered every detection as its own row: "Guttering - Left
+           Roofline — GUTTERING", "Brick Wall Left Side Structure — CLADDING",
+           twenty of them on a detailed elevation. That is a machine's working
+           shown to somebody who asked what their windows cost, in the
+           machine's own vocabulary, and it is one of the tallest things
+           between them and their estimate.
+
+           The summary line directly above already says what was found, in
+           English, with the count that is actually priced. The detail stays
+           for anyone who wants to check us — which is the point of showing it
+           at all — one tap away instead of in the way.
+
+           Closed by default via the `open` attribute being absent, and it is
+           a <details> so it costs nothing to leave collapsed. */
+        state.detections.length === 0
           ? (state.detectionStatus === 'detecting'
               ? null   // the narration above is doing this job
               : h('div', { className: 'rounded-xl bg-white/5 border border-white/10 p-4 text-xs leading-5 text-white/60' }, 'Nothing yet. Add a photo and we’ll pick out the windows, doors, roof and cladding on your house.'))
-          : state.detections.filter(d => d.type !== 'analysis').map(d => h('div', { className: 'flex items-center justify-between rounded-xl bg-white/5 border border-white/10 px-3 py-2.5' }, [
-              h('div', { className: 'flex items-center gap-2' }, [
-                h('div', { className: 'w-1.5 h-1.5 rounded-full bg-emerald-400' }),
-                h('span', { className: 'text-xs' }, d.label),
-                h('span', { className: 'text-[10px] text-white/55 uppercase' }, d.type),
-              ]),
-            ]))
-        ),
+          : h('details', { className: 'rounded-xl bg-white/5 border border-white/10' }, [
+              h('summary', { className: 'cursor-pointer px-3 py-2.5 text-[11px] text-white/60 hover:text-white/85 transition' },
+                `Show everything we found (${state.detections.filter(d => d.type !== 'analysis').length})`),
+              h('div', { className: 'grid gap-1.5 px-3 pb-3' },
+                state.detections.filter(d => d.type !== 'analysis').map(d => h('div', { className: 'flex items-center gap-2' }, [
+                  h('div', { className: 'w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0' }),
+                  h('span', { className: 'text-[11px] text-white/80' }, d.label),
+                  h('span', { className: 'text-[10px] text-white/45 uppercase' }, d.type),
+                ]))),
+            ]),
       ]),
     ]),
   ]);
@@ -4836,6 +4898,8 @@ function buildConservatory() {
         'aria-pressed': active ? 'true' : 'false',
         className: `mt-4 w-full min-h-[44px] rounded-full text-xs font-medium border transition ${active ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-900'}`,
         onClick: () => {
+          // Counted once per visit; see BRANCH_STAGES in server.js.
+          if (!active) reachedStage('conservatory_used');
           state.conservatoryId = active ? null : s.id;
           renderConservatoryOnly();
           U(active ? 'Conservatory style cleared' : `${s.name} noted — we’ll mention it when we’re in touch`);
@@ -4923,7 +4987,7 @@ function buildWholeHouse() {
          Clearing the floor here lets the flex row shrink and the truncation
          inside actually happen, which is what it was written to do. */
       className: `flex items-center gap-3 p-3 rounded-xl border text-left transition min-w-0 ${active ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-400'}`,
-      onClick: async () => { state.wh.finishId = f.id; await refreshWholeHouse(); renderWholeHouseOnly(); },
+      onClick: async () => { reachedStage('wholehouse_used'); state.wh.finishId = f.id; await refreshWholeHouse(); renderWholeHouseOnly(); },
     }, [
       h('span', { className: 'w-8 h-8 rounded-lg shrink-0 border border-black/10', style: { background: f.hex } }),
       h('span', { className: 'min-w-0 overflow-hidden' }, [

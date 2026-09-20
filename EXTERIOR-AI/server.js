@@ -3347,6 +3347,20 @@ const BRANCH_STAGES = new Map([
      the handoff asks to A/B the wording of the first — which cannot be read
      while both are counted as one. */
   ['real_home_cta_click', { of: 'landing', label: 'started from the real-homes block' }],
+  /* What the two sections a page-structure review wants moved actually earn.
+
+     The 20 September proposal asks to hide the conservatory guide and move
+     the walls-only calculator off the tool page — together about 3,700px on a
+     windows journey — and says, correctly, to check what they produce first.
+     Nothing tracked either of them, so there was no data to check and the
+     honest answer to "should we move it" was "nobody can tell".
+
+     These count somebody actually using each: picking a conservatory style,
+     or changing a finish in the walls-only calculator. Against landing rather
+     than upload, because both are reachable without a photograph — a visitor
+     who will not upload is exactly who they are for. */
+  ['conservatory_used', { of: 'landing', label: 'chose a conservatory style' }],
+  ['wholehouse_used', { of: 'landing', label: 'used the walls-only calculator' }],
 ]);
 
 /* ── POST /api/journey-timing ──
