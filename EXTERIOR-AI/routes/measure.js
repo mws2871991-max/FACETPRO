@@ -23,6 +23,7 @@ const store = require('../store');
 const glazing = require('../glazing');
 const measure = require('../measure');
 const obs = require('../observability');
+const { isTestTraffic } = require('../testtraffic');
 
 /**
  * @param {object} deps
@@ -151,30 +152,39 @@ module.exports = function measureRoutes({
        retention period to somebody, and why the privacy notice's counting
        paragraph covers it. Awaited so a storage failure surfaces rather than
        becoming an unhandled rejection, but never allowed to cost the homeowner
-       their measurement. */
-    try {
-      await store.recordMeasurement({
-        houseType: result.houseType,
-        method: result.method,
-        m2: result.m2,
-        doorRatio: result.observed?.doorRatio,
-        doorHeightPct: result.observed?.doorHeightPct,
-        doorBoxes: result.observed?.doorBoxes,
-        /* The figure the house-type band refused, when it refused one. Recorded
-           because the band's bounds are judgements and this is the only thing
-           that could ever revise them — see measure.js. */
-        rejected: result.observed?.rejected,
-        /* The working behind m2, which is front elevation times a multiplier.
-           Only the product was recorded, so a refused reading could be either
-           half being wrong and the table could not say which. See the
-           calibration block in routes/ops.js for what to do with these. */
-        frontElevationM2: result.observed?.frontElevationM2,
-        frontToTotal: result.observed?.frontToTotal,
-        coverageM2: result.observed?.coverageM2,
-        coveragePct: result.observed?.coveragePct,
-      });
-    } catch (err) {
-      obs.record('storage', 'could not record a measurement observation', { reason: err.message });
+       their measurement.
+
+       Not written for automated traffic. The 20 September fallback rate was
+       computed over 35 rows, roughly fifteen of which were one review's test
+       uploads of two photographs — all failures, about ten of them the same
+       181 m². Bands calibrated against that are calibrated against a test
+       harness. See testtraffic.js; the measurement itself is returned exactly
+       as it would be for anybody else. */
+    if (!isTestTraffic(req)) {
+      try {
+        await store.recordMeasurement({
+          houseType: result.houseType,
+          method: result.method,
+          m2: result.m2,
+          doorRatio: result.observed?.doorRatio,
+          doorHeightPct: result.observed?.doorHeightPct,
+          doorBoxes: result.observed?.doorBoxes,
+          /* The figure the house-type band refused, when it refused one. Recorded
+             because the band's bounds are judgements and this is the only thing
+             that could ever revise them — see measure.js. */
+          rejected: result.observed?.rejected,
+          /* The working behind m2, which is front elevation times a multiplier.
+             Only the product was recorded, so a refused reading could be either
+             half being wrong and the table could not say which. See the
+             calibration block in routes/ops.js for what to do with these. */
+          frontElevationM2: result.observed?.frontElevationM2,
+          frontToTotal: result.observed?.frontToTotal,
+          coverageM2: result.observed?.coverageM2,
+          coveragePct: result.observed?.coveragePct,
+        });
+      } catch (err) {
+        obs.record('storage', 'could not record a measurement observation', { reason: err.message });
+      }
     }
 
     res.json({

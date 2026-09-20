@@ -16,6 +16,7 @@ const routing = require('./routing');
 const glazing = require('./glazing');
 const resume = require('./resume');
 const leadscore = require('./leadscore');
+const { isTestTraffic } = require('./testtraffic');
 
 const { buildRenderPrompt } = require('./renderprompt');
 const catalogue = JSON.parse(fs.readFileSync(path.join(__dirname, 'catalogue.json'), 'utf8'));
@@ -3420,6 +3421,9 @@ app.post('/api/funnel', perMinute(120, 'Too many requests — please wait a mome
   /* Answered before the write. A counter that fails must never cost a visitor
      their journey, and the browser is not waiting for anything useful. */
   res.status(204).end();
+  /* Automated traffic is served identically and counted nowhere — see
+     testtraffic.js for the fifteen uploads that made this worth having. */
+  if (isTestTraffic(req)) return;
   try {
     await store.countStage(stage);
     if (journey) await store.countStage(`${journey}:${stage}`);

@@ -127,9 +127,44 @@ module.exports = function opsRoutes({
      describes the business rather than the product. */
   router.get('/api/measurements', installerLimiter, requireInstallerPassword, async (req, res) => {
     const limit = Math.min(5000, Math.max(1, parseInt(req.query.limit, 10) || 1000));
-    let rows = [];
-    try { rows = await store.readMeasurements(limit); }
+    let allRows = [];
+    try { allRows = await store.readMeasurements(limit); }
     catch (err) { return res.status(500).json({ error: 'Could not read the observations.' }); }
+
+    /* One photograph, measured five times, is one observation.
+
+       autoMeasure() runs on every upload, so a reload, a second journey or an
+       automated run writes another row for the same house. The 20 September
+       fallback rate read 86% over 35 rows — and about fifteen of those rows
+       were two photographs uploaded again and again by a review, roughly ten
+       of them the identical 181 m². A band retuned against that histogram is a
+       band fitted to one house.
+
+       There is no identifier to group by, deliberately: the table holds shape
+       numbers and an outcome and nothing tied to a person or a property, which
+       is why it needs no retention period. But the same photograph measured
+       twice produces the same numbers to the same precision, so the row itself
+       is the key. Anything that collides here measured identically, which is
+       the only sense in which two observations could be told apart anyway.
+
+       Both are reported. `rows` is what happened; `samples` is how many houses
+       it happened to, and every rate below is computed on the second, because
+       "86% of photographs" was the claim being made. */
+    const signature = (r) => [
+      r.houseType || '', r.method || '',
+      Number(r.m2) || '', Number(r.doorRatio) || '', Number(r.doorHeightPct) || '',
+      Number(r.doorBoxes) || '', Number(r.rejectedM2) || '', r.rejectedSide || '',
+    ].join('|');
+
+    const seen = new Set();
+    const rows = [];
+    for (const r of allRows) {
+      const key = signature(r);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      rows.push(r);
+    }
+    const repeats = allRows.length - rows.length;
 
     const buckets = {};
     const byMethod = {};
@@ -200,10 +235,14 @@ module.exports = function opsRoutes({
 
     const fallback = {
       samples: rows.length,
+      rows: allRows.length,
+      repeats,
       measured, refused, unusable,
       fallbackPct: pct(refused + unusable),
       refusedPct: pct(refused),
       unusablePct: pct(unusable),
+      /* Distinct photographs, not rows. Thirty rows of one house is one house,
+         and the whole point of the flag is to stop somebody acting on it. */
       reliable: rows.length >= 30,
     };
 
@@ -281,6 +320,8 @@ module.exports = function opsRoutes({
     res.setHeader('Cache-Control', 'no-store');
     res.json({
       samples: rows.length,
+      rows: allRows.length,
+      repeats,
       fallback,
       calibration,
       byMethod,
@@ -297,7 +338,11 @@ module.exports = function opsRoutes({
           + 'bandRejections is empty until the band fires, and rows recorded before 18 August 2026 have no rejected figure. '
           + '`fallback` is how often a photograph did not end up sizing the estimate — refused means the band threw a '
           + 'reading out (fix the band, see bandRejections), unusable means nothing could be measured (fix detection '
-          + 'or the photo guidance). Treat it as noise until reliable is true, at 30 samples.',
+          + 'or the photo guidance). Treat it as noise until reliable is true, at 30 samples. '
+          + 'samples counts distinct photographs and rows counts measurements: autoMeasure runs on every upload, '
+          + 'so one house reloaded or re-tested writes a row each time, and repeats is how many were folded away. '
+          + 'Every rate here is per photograph. Set TEST_TRAFFIC_TOKEN and send X-Facetpro-Test to keep automated '
+          + 'runs out of this table altogether.',
     });
   });
 
