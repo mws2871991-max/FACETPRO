@@ -1414,8 +1414,37 @@ function findSwatch(id) {
    this one has to agree with landing.js's journeyForSlug and with the ids the
    pricing engine accepts. */
 const JOURNEYS = {
-  windows:  { keeps: 'windows',  label: 'Windows',                     noun: 'window',    swatches: ['cladding', 'trim', 'roof'], prefs: { doorStyleId: 'none' } },
-  doors:    { keeps: 'doors',    label: 'A front door',                noun: 'door',      swatches: ['cladding', 'trim', 'roof'], prefs: { windowStyleId: 'none' } },
+  /* Windows and doors open on a choice, like every other journey does.
+
+     Walked as a customer on 20 September: choosing "Windows" emptied the
+     price bar — it had read £15,000 – £21,000 a moment earlier — and no
+     picture was ever generated. Seventy-one seconds after uploading a
+     photograph of their house, a windows customer had no number and no image.
+
+     The cause is an asymmetry rather than a bug in either part. A cladding
+     journey excludes trim and roof and leaves cladding on Alabaster; a roof
+     journey leaves the roof on Charcoal. A windows journey excludes cladding,
+     trim AND roof, and then sets no window style — so nothing at all is
+     selected, /api/glazing has nothing to price, and the auto-render guard
+     correctly declines to buy a render of an empty instruction. Every other
+     trade arrives at a priced, rendered starting point. The one the site is
+     named for arrived at a blank.
+
+     Casement because it is the commonest window in the country, and
+     Anthracite because every before-and-after photograph on this page is a
+     white-to-anthracite recolour — the default is the thing the proof
+     already shows.
+
+     uPVC rather than Composite for the door journey, for the same reason the
+     roof journey opens on Charcoal: /cost/front-door-replacement-cost leads
+     with the cheapest, and a customer arriving from that sentence should not
+     meet a higher number with nothing to explain it. uPVC is £955, Composite
+     £1,760.
+
+     This is not the brickwork case. Somebody who chose "Windows" has asked
+     about windows; showing them windows is answering, not presuming. */
+  windows:  { keeps: 'windows',  label: 'Windows',                     noun: 'window',    swatches: ['cladding', 'trim', 'roof'], prefs: { doorStyleId: 'none', windowStyleId: 'casement', windowDoorColourId: 'anthracite' } },
+  doors:    { keeps: 'doors',    label: 'A front door',                noun: 'door',      swatches: ['cladding', 'trim', 'roof'], prefs: { windowStyleId: 'none', doorStyleId: 'upvc', windowDoorColourId: 'anthracite' } },
   cladding: { keeps: 'cladding', label: 'Render or cladding',          noun: 'rendering', swatches: ['trim', 'roof'],             prefs: { windowStyleId: 'none', doorStyleId: 'none' } },
   roofline: { keeps: 'trim',     label: 'Fascias, soffits & guttering', noun: 'roofline',  swatches: ['cladding', 'roof'],         prefs: { windowStyleId: 'none', doorStyleId: 'none' } },
   roof:     { keeps: 'roof',     label: 'A roof',                      noun: 'roof',      swatches: ['cladding', 'trim'],         prefs: { windowStyleId: 'none', doorStyleId: 'none' } },
@@ -2204,8 +2233,14 @@ async function applyJourney(id) {
   state.roof = findSwatch(j && j.swatches.includes('roof') ? 'none'
     : id === 'roof' ? ROOF_JOURNEY_DEFAULT : 'slate-roof');
 
+  /* All three, not two. The colour was left out, and glazing is only priced
+     when there is a colour AND a style — see glazingChoice() — so a windows
+     journey chosen from the triage set a style, priced nothing, and left the
+     bar empty exactly as before. The URL path spreads the whole prefs object
+     and did not have this hole, which is why it only showed up on the walk. */
   state.prefs.windowStyleId = j?.prefs?.windowStyleId ?? null;
   state.prefs.doorStyleId = j?.prefs?.doorStyleId ?? null;
+  state.prefs.windowDoorColourId = j?.prefs?.windowDoorColourId ?? null;
 
   /* A render no longer matches what is selected. */
   state.renderUrl = null; state.renderId = null;
@@ -4285,10 +4320,17 @@ function buildTotalBar() {
 
      Caught by rendering the page rather than by reading it: the two live in
      different functions and neither looks wrong on its own. */
+  /* A range with the same number at both ends is not a range.
+
+     A roofline-only estimate prints "£5,500 – £5,500", because fascia, soffit
+     and guttering are a fixed rate over a fixed default length, so the band
+     has no width. Showing it as a spread claims an uncertainty that does not
+     exist and reads as a mistake, which is worse than either. */
   const clRange = state.price?.range;
+  const spread = clRange && clRange.high > clRange.low;
   const cladding = !clad ? null
-    : clRange ? `${fmtMoney(clRange.low)} – ${fmtMoney(clRange.high)}`
-    : fmtMoney(price.total);
+    : spread ? `${fmtMoney(clRange.low)} – ${fmtMoney(clRange.high)}`
+    : fmtMoney(clRange ? clRange.low : price.total);
   /* The installer spread, the same figure the windows section and the estimate
      panel lead with. The bar showed our own tighter range instead, so with the
      estimate panel now carrying a windows figure the two sat on screen
@@ -7359,7 +7401,18 @@ document.getElementById('hero-upload')?.addEventListener('click', () => {
   if (state.catalogue?.wholeHouse && state.wh.areaM2 === null) {
     state.wh.areaM2 = state.catalogue.wholeHouse.areaDefaultM2;
   }
-  await Promise.all([refreshPrice(), refreshWholeHouse()]);
+  /* refreshGlazing too, which was never called here.
+
+     A journey arriving in the URL spreads its prefs into state, so
+     ?journey=windows starts with Casement and Anthracite chosen — and then
+     nothing priced them, because glazing was only refreshed when somebody
+     touched a control. The bar stayed empty on the exact route the landing
+     pages use: eleven of the nineteen indexed pages send people to
+     ?journey=windows.
+
+     The on-page triage did not have this hole, because applyJourney calls
+     refreshGlazing itself. Two ways in, one of them priced. */
+  await Promise.all([refreshPrice(), refreshGlazing(), refreshWholeHouse()]);
   render();
 
   /* A code arriving in the address bar redeems itself.
