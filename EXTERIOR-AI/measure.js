@@ -511,6 +511,32 @@ function estimateWallArea({ detections, aspectRatio, houseType, tuning } = {}) {
         /* And the figure the band refused, for the same reason. Null when the
            band did not fire, which is the common case. */
         rejected,
+        /* ── THE WORKING, NOT JUST THE VERDICT ──
+
+           On 20 September the live data said the band refuses 87% of readings
+           — 34 of 39 — every one of them ABOVE the ceiling, every one from the
+           door method, across all five house types. A band that rejects the
+           method wholesale in one direction is not filtering outliers.
+
+           Two numbers could produce that, and the table could not tell them
+           apart. `m2` is `frontElevationM2 × frontToTotal`, and only the
+           product was kept, so a reading of 181 m² on a semi could be a front
+           elevation read 40% too large, or a correct front elevation times a
+           multiplier that is too big. Those want opposite fixes — one is in
+           geometry.js, one is a constant here — and picking between them
+           needed a second round of data nobody had collected.
+
+           Recorded separately, the moment six real houses are measured the
+           answer is arithmetic: compare frontElevationM2 against a tape
+           measure of the front, and the multiplier falls out of the rest.
+
+           coverageM2 is the independent second method's answer for the same
+           photograph, which is worth having beside the first for exactly the
+           same reason. All shape numbers; nothing identifying, as above. */
+        frontElevationM2: byDoor ? Math.round(byDoor.frontElevationM2 * 10) / 10 : null,
+        frontToTotal: byDoor ? tuned.frontToTotal : null,
+        coverageM2: byCoverage && byCoverage.framingOk ? Math.round(byCoverage.totalM2 * 10) / 10 : null,
+        coveragePct: byCoverage ? Math.round(byCoverage.coverage * 1000) / 10 : null,
       };
     })(),
   };

@@ -234,7 +234,18 @@ const SCHEMA = [
        opposite fixes. */
     rejected_m2 REAL,
     rejected_side TEXT,
-    rejected_method TEXT
+    rejected_method TEXT,
+    /* The working behind m2, so the two numbers that produce it can be told
+       apart. m2 is front_elevation_m2 x front_to_total; keeping only the
+       product meant a reading the band refused could be a front elevation
+       read too large OR a multiplier set too high, and those want opposite
+       fixes. coverage_m2 is the independent second method's answer for the
+       same photograph. See measure.js, and notes/window-count-and-scaling.md
+       for the same mistake made once already with window counts. */
+    front_elevation_m2 REAL,
+    front_to_total REAL,
+    coverage_m2 REAL,
+    coverage_pct REAL
   )`,
 
   `CREATE TABLE IF NOT EXISTS detection_cache (
@@ -335,7 +346,8 @@ async function ensureSchema() {
      and the deployment already has this table with the old shape. Rows written
      before this simply have nulls, which is the truthful record — nobody kept
      the rejected figure at the time. */
-  for (const col of ['rejected_m2 REAL', 'rejected_side TEXT', 'rejected_method TEXT']) {
+  for (const col of ['rejected_m2 REAL', 'rejected_side TEXT', 'rejected_method TEXT',
+                     'front_elevation_m2 REAL', 'front_to_total REAL', 'coverage_m2 REAL', 'coverage_pct REAL']) {
     await pool.query(`ALTER TABLE ${SCHEMA_NAME}.measurement_observations ADD COLUMN IF NOT EXISTS ${col}`);
   }
   try {
@@ -712,15 +724,23 @@ async function recordMeasurement(row) {
     /* Which method produced the rejected figure, which is not the method that
        ended up answering — that one is always 'prior' once the band fires. */
     rejectedMethod: row?.rejected?.method ?? null,
+    /* Kept whether or not the band fired: a reading that passed is as much
+       evidence for calibrating the multiplier as one that was refused. */
+    frontElevationM2: Number.isFinite(row?.frontElevationM2) ? row.frontElevationM2 : null,
+    frontToTotal: Number.isFinite(row?.frontToTotal) ? row.frontToTotal : null,
+    coverageM2: Number.isFinite(row?.coverageM2) ? row.coverageM2 : null,
+    coveragePct: Number.isFinite(row?.coveragePct) ? row.coveragePct : null,
   };
   if (pool) {
     await pool.query(
       `INSERT INTO ${SCHEMA_NAME}.measurement_observations
          (ts, house_type, door_ratio, door_height_pct, door_boxes, method, m2,
-          rejected_m2, rejected_side, rejected_method)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+          rejected_m2, rejected_side, rejected_method,
+          front_elevation_m2, front_to_total, coverage_m2, coverage_pct)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
       [r.ts, r.houseType, r.doorRatio, r.doorHeightPct, r.doorBoxes, r.method, r.m2,
-       r.rejectedM2, r.rejectedSide, r.rejectedMethod]);
+       r.rejectedM2, r.rejectedSide, r.rejectedMethod,
+       r.frontElevationM2, r.frontToTotal, r.coverageM2, r.coveragePct]);
     return;
   }
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -733,7 +753,9 @@ async function readMeasurements(limit = 1000) {
       `SELECT ts, house_type AS "houseType", door_ratio AS "doorRatio",
               door_height_pct AS "doorHeightPct", door_boxes AS "doorBoxes", method, m2,
               rejected_m2 AS "rejectedM2", rejected_side AS "rejectedSide",
-              rejected_method AS "rejectedMethod"
+              rejected_method AS "rejectedMethod",
+              front_elevation_m2 AS "frontElevationM2", front_to_total AS "frontToTotal",
+              coverage_m2 AS "coverageM2", coverage_pct AS "coveragePct"
          FROM ${SCHEMA_NAME}.measurement_observations
         ORDER BY id DESC LIMIT $1`, [limit]);
     return rows;

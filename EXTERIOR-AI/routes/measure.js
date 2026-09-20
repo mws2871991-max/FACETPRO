@@ -164,6 +164,14 @@ module.exports = function measureRoutes({
            because the band's bounds are judgements and this is the only thing
            that could ever revise them — see measure.js. */
         rejected: result.observed?.rejected,
+        /* The working behind m2, which is front elevation times a multiplier.
+           Only the product was recorded, so a refused reading could be either
+           half being wrong and the table could not say which. See the
+           calibration block in routes/ops.js for what to do with these. */
+        frontElevationM2: result.observed?.frontElevationM2,
+        frontToTotal: result.observed?.frontToTotal,
+        coverageM2: result.observed?.coverageM2,
+        coveragePct: result.observed?.coveragePct,
       });
     } catch (err) {
       obs.record('storage', 'could not record a measurement observation', { reason: err.message });

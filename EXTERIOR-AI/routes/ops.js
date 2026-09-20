@@ -207,10 +207,82 @@ module.exports = function opsRoutes({
       reliable: rows.length >= 30,
     };
 
+    /* ── THE CALIBRATION TABLE ──
+
+       What six real houses are compared against, arranged so the comparison
+       is one subtraction rather than a project.
+
+       On 20 September the band refused 87% of readings, every one above the
+       ceiling, every one from the door method, across all five house types.
+       Something is systematically over-reading by roughly a third — but m2 is
+       front elevation times a multiplier, and only the product was stored, so
+       there was no way to say which half.
+
+       Both halves are recorded now, and grouped here by house type with the
+       median rather than the mean: these are small samples and one bad
+       photograph should not move the figure a rate card gets set from.
+
+       HOW TO USE IT. For each of six houses, measure the front elevation and
+       get the whole-house wall area from an installer. Then:
+
+         frontElevationM2 close to the tape, m2 too high  -> frontToTotal is
+           too big; fix FRONT_TO_TOTAL / the calibration table in measure.js.
+         frontElevationM2 already too high                -> the door method
+           over-reads; the fix is in geometry.js, and the multiplier is
+           probably innocent.
+
+       The band is deliberately not widened in the meantime. Accepting these
+       readings would put figures 30-40% high into real prices, and an honest
+       typical figure beats a confident wrong one. */
+    const median = (xs) => {
+      const a = xs.filter(Number.isFinite).sort((x, y) => x - y);
+      if (!a.length) return null;
+      const m = Math.floor(a.length / 2);
+      return a.length % 2 ? a[m] : Math.round(((a[m - 1] + a[m]) / 2) * 10) / 10;
+    };
+
+    /* Number(null) is 0, not NaN — so a plain isFinite check lets every row
+       written before this shipped through as a zero and drags the medians to
+       nothing. Rows without the working are absent, not zero. */
+    const num = (v) => (v === null || v === undefined || v === '' ? null
+      : (Number.isFinite(Number(v)) ? Number(v) : null));
+
+    const calibration = {};
+    for (const r of rows) {
+      if (num(r.frontElevationM2) === null) continue;
+      const type = r.houseType || 'unknown';
+      const c = (calibration[type] ||= { samples: 0, front: [], total: [], coverage: [], frontToTotal: null });
+      c.samples += 1;
+      c.front.push(num(r.frontElevationM2));
+      /* The figure the door method produced, whether or not the band kept it.
+         rejectedM2 is where it lands once the band fires; m2 is where it
+         lands when it does not. */
+      const produced = num(r.rejectedM2) ?? num(r.m2);
+      if (produced !== null) c.total.push(produced);
+      const cov = num(r.coverageM2);
+      if (cov !== null) c.coverage.push(cov);
+      const f2t = num(r.frontToTotal);
+      if (f2t !== null) c.frontToTotal = f2t;
+    }
+    for (const [type, c] of Object.entries(calibration)) {
+      const band = (measure.HOUSE_TYPE_PRIORS || {})[type]?.band || null;
+      calibration[type] = {
+        samples: c.samples,
+        medianFrontElevationM2: median(c.front),
+        frontToTotal: c.frontToTotal,
+        medianTotalM2: median(c.total),
+        medianCoverageM2: median(c.coverage),
+        band,
+        overCeilingBy: band && median(c.total) ? Math.round((median(c.total) / band[1] - 1) * 100) : null,
+        needs: 'the front elevation from a tape measure, and the whole-house wall area from an installer',
+      };
+    }
+
     res.setHeader('Cache-Control', 'no-store');
     res.json({
       samples: rows.length,
       fallback,
+      calibration,
       byMethod,
       currentThreshold: geometry.MIN_DOOR_RATIO,
       doorLeafRatio: Number(geometry.DOOR_LEAF_RATIO.toFixed(2)),
