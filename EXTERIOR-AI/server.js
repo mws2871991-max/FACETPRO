@@ -1980,11 +1980,36 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
   } catch (err) {
     obs.record('detect', 'could not read the detection cache', { reason: err.message });
   }
-  if (stored) {
+  /* A cache entry from before the analysis grew a field is a miss.
+
+     The house type is read off the stored detections rather than a column,
+     which is the right call — it means a cached photograph answers without a
+     second API call. But entries written before that field existed do not
+     have it, and a cached answer with no house type silently falls back to
+     'semi', which is precisely the bug the field was added to fix. Measured
+     on the live site: the same photograph returned houseType 'detached' fresh
+     and null from cache, seven days of entries deep.
+
+     Customers are barely affected — nobody else's photograph is in the cache,
+     so a real first upload is always a miss. Testers are, and for a week they
+     would have been re-confirming the old behaviour and reporting it broken.
+
+     One re-detection per distinct stale photograph, on a site taking about
+     twenty-four uploads a month, is a price worth paying for the cache never
+     answering with less than the code expects. Written as a check on the
+     analysis object rather than a version number in the row, so it keeps
+     working for whatever the next field is. */
+  const cachedAnalysis = stored && (stored.detections || []).find(d => d?.type === 'analysis');
+  const cacheComplete = !!cachedAnalysis && 'houseType' in cachedAnalysis;
+
+  if (stored && cacheComplete) {
     const id = saveDetectionRecord(stored.detections, stored.aspectRatio !== null
       ? { width: stored.aspectRatio, height: 1 } : null);
     detectionByImage.set(fingerprint, id);
     return answer(detectionRecords.get(id), id);
+  }
+  if (stored) {
+    obs.record('detect', 'cached detection predates the house-type field — re-reading the photo', {});
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
