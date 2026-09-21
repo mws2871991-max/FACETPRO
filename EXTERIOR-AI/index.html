@@ -2932,17 +2932,45 @@ function buildUploadDetect() {
 
            Gone once they have uploaded — an example of a good photo sitting
            under the photo they just chose reads as a correction. */
-        state.uploadedImg ? null : h('div', { className: 'mt-3 flex items-center gap-3' }, [
-          h('img', {
-            src: '/assets/work/newbuild-before-sm.jpg',
-            alt: 'A well-framed example: the whole front of a house from the drive, roofline to ground, with the front door in shot',
-            width: 600, height: 450, loading: 'lazy', decoding: 'async',
-            className: 'w-[92px] shrink-0 rounded-lg border border-zinc-200 object-cover aspect-[4/3]',
-          }),
+        /* And the one to avoid, beside it.
+
+           The customer-journey brief asks for "one good-photo example and one
+           avoid example", and only the good one existed. The comment above
+           already identified the asset for the other half without using it:
+           hero-before.jpg is "a close crop of a bay window with the roofline
+           cut off and no front door in the frame — a demonstration of the
+           mistake this panel exists to prevent".
+
+           Worth the space because of what the live data says. Roughly three
+           photographs in four do not end up sizing the estimate, every
+           rejection is a reading the door method produced, and the front door
+           is the scale reference the whole measurement hangs on. "No front
+           door in shot" is not a hypothetical failure — it is the failure.
+           A picture of it before the upload is cheaper than any amount of
+           explaining afterwards.
+
+           Both gone once a photo is chosen: examples sitting under the
+           photograph somebody just picked read as a correction. */
+        state.uploadedImg ? null : h('div', { className: 'mt-3 grid grid-cols-2 gap-3' }, [
           h('div', {}, [
-            h('p', { className: 'text-[10px] tracking-widest uppercase text-zinc-400' }, 'Framed like this'),
-            h('p', { className: 'mt-1 text-[11px] leading-5 text-zinc-500' },
-              'Roofline down to the ground, front door in shot. It doesn’t have to be a good photo — it has to be a whole one.'),
+            h('img', {
+              src: '/assets/work/newbuild-before-sm.jpg',
+              alt: 'A well-framed example: the whole front of a house from the drive, roofline to ground, with the front door in shot',
+              width: 600, height: 450, loading: 'lazy', decoding: 'async',
+              className: 'w-full rounded-lg border-2 border-emerald-500/60 object-cover aspect-[4/3]',
+            }),
+            h('p', { className: 'mt-1.5 text-[10px] tracking-widest uppercase text-emerald-700' }, '✓ Like this'),
+            h('p', { className: 'mt-0.5 text-[11px] leading-4 text-zinc-500' }, 'Whole front, door in shot.'),
+          ]),
+          h('div', {}, [
+            h('img', {
+              src: '/assets/work/hero-before-sm.jpg',
+              alt: 'What to avoid: a close crop of one bay window, with the roofline cut off and no front door visible',
+              width: 600, height: 450, loading: 'lazy', decoding: 'async',
+              className: 'w-full rounded-lg border-2 border-amber-500/60 object-cover aspect-[4/3]',
+            }),
+            h('p', { className: 'mt-1.5 text-[10px] tracking-widest uppercase text-amber-700' }, '✕ Not this'),
+            h('p', { className: 'mt-0.5 text-[11px] leading-4 text-zinc-500' }, 'Too close, no door — we size your house against it.'),
           ]),
         ]),
         /* The answer to the question being asked at this exact moment.
@@ -2964,7 +2992,15 @@ function buildUploadDetect() {
            pixels are the difference between seeing the narration and not. */
         state.detectionStatus === 'detecting' ? null : h('div', { className: 'mt-3 flex gap-2' }, [
           h('button', { type: 'button', className: 'cta flex-1 px-3 rounded-full text-xs min-h-[44px]', onClick: () => sharedRefs.fileInput?.click() }, 'Choose a photo'),
-          h('button', {
+          /* Only once there is a photo to replace.
+
+             This rendered whenever detection was not running, so it sat there
+             before anybody had uploaded anything — offering to start again
+             from nothing. Harmless-looking as "Start again" and plainly wrong
+             once it read "Use a different photo", which is what renaming it
+             exposed. Beside the two framing examples it was the third thing
+             competing for the same decision. */
+          !state.uploadedImg ? null : h('button', {
             type: 'button',
             className: 'px-3 py-2 rounded-full border border-zinc-200 bg-white text-xs',
             /* windowCount and glazing go too. Correcting the count to 18 on a
