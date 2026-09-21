@@ -501,42 +501,6 @@
        moment the claim it qualifies has been made, and it keeps its id, its
        amber styling and its SITE_MODE gate. -->
   <!-- Shown only when the server reports beta mode, so one env var controls it. -->
-  <aside id="beta-notice" hidden class="rounded-2xl border border-amber-300 bg-amber-50 p-5">
-    <p class="text-[13px] leading-6 text-amber-900">
-      <!-- Final review, point 1: the detail moves down to sit beside the
-           estimate it qualifies, and what stays up here is short.
-
-           The detail is not dropped, and this is the one refinement worth
-           being deliberate about. A price shown to a consumer has to be
-           accurate about what it is, and the full statement — planning
-           estimate not quotation, window rates indicative, measurement still
-           being calibrated — now sits in "What your estimate actually
-           includes", directly under the number. Beside the figure is arguably
-           where it always belonged: a caveat at the top of a page is read
-           before there is anything to apply it to, and forgotten by the time
-           there is. -->
-      <!-- UX Sprint handoff P0-D. This opened "Facet Pro is in beta." — the
-           first four words anybody read, above the headline, and an apology
-           before they had seen anything to apply it to. The tool works and the
-           rates are real; leading with a caveat asks the visitor to doubt
-           something they have not been shown.
-
-           The word is not suppressed, it is relocated to where it means
-           something: the stats block says it plainly ("Facet Pro is in beta,
-           we're still improving the visualisations and estimates…"), and the
-           full statement — planning estimate not quotation, window rates
-           indicative, measurement still being calibrated — sits in "What your
-           estimate actually includes", directly under the number it qualifies.
-           Removing it from both would be hiding it. Removing it from here is
-           putting it where it is read.
-
-           The banner keeps its id, its amber styling and its SITE_MODE gate,
-           so one env var still controls whether it appears at all. -->
-      <strong>Priced from real UK supplier and labour rates.</strong>
-      And honest about what the estimate covers &mdash;
-      <a href="#honest-heading" class="underline">what your estimate includes</a>.
-    </p>
-  </aside>
 
   <!-- Proof before the ask. This sat below the entire journey — the upload,
        the visualiser, the finishes, the estimate and the form — so the only
@@ -651,8 +615,74 @@
     <p class="mt-4 text-[12px] text-white/50">Free to try &nbsp;&bull;&nbsp; No measurements &nbsp;&bull;&nbsp; No sales call unless you ask</p>
   </section>
 
-  <div data-page="design" id="mount-triage"></div>
+  <!-- Upload first, then the question.
+
+       A real customer said they were bamboozled by too much information, and
+       the funnel agreed: on 21 September, twenty-three people opened the tool
+       and four started an upload. What the other nineteen met was an amber
+       disclaimer and a seven-way question — "What are you looking for today?",
+       two of whose options are trade language — with the upload box below all
+       of it.
+
+       The site's own brief says never to ask a homeowner for anything before
+       giving them something, and the hero button says "Upload a photo". The
+       page then asked a question instead of showing one.
+
+       The trade question is not lost and it is not weakened: buildTriage
+       already hides itself once a photo is in (state.stage !== 'landing'), so
+       somebody who uploads straight away is asked it beside their own house
+       rather than in the abstract, which is a better place to ask it. Anyone
+       who wants to scope first still can — it is one scroll down, and it
+       still arrives pre-answered from a cost page. -->
   <div data-page="design" id="mount-upload"></div>
+  <div data-page="design" id="mount-triage"></div>
+
+  <!-- Moved again, for the same reason it moved off the top of the homepage
+       on 18 September: "a caveat at the top of a page is read before there is
+       anything to apply it to, and forgotten by the time there is."
+
+       That fixed the homepage and left the tool, where the hero is hidden so
+       this became the first thing on the page — an amber panel above the
+       upload box, warning about an estimate nobody had been given yet. It now
+       sits after the upload and the chooser on /design, and still directly
+       after the hero on the homepage, because mount-upload and mount-triage
+       are hidden there. Same id, same styling, same SITE_MODE gate. -->
+  <aside id="beta-notice" hidden class="rounded-2xl border border-amber-300 bg-amber-50 p-5">
+    <p class="text-[13px] leading-6 text-amber-900">
+      <!-- Final review, point 1: the detail moves down to sit beside the
+           estimate it qualifies, and what stays up here is short.
+
+           The detail is not dropped, and this is the one refinement worth
+           being deliberate about. A price shown to a consumer has to be
+           accurate about what it is, and the full statement — planning
+           estimate not quotation, window rates indicative, measurement still
+           being calibrated — now sits in "What your estimate actually
+           includes", directly under the number. Beside the figure is arguably
+           where it always belonged: a caveat at the top of a page is read
+           before there is anything to apply it to, and forgotten by the time
+           there is. -->
+      <!-- UX Sprint handoff P0-D. This opened "Facet Pro is in beta." — the
+           first four words anybody read, above the headline, and an apology
+           before they had seen anything to apply it to. The tool works and the
+           rates are real; leading with a caveat asks the visitor to doubt
+           something they have not been shown.
+
+           The word is not suppressed, it is relocated to where it means
+           something: the stats block says it plainly ("Facet Pro is in beta,
+           we're still improving the visualisations and estimates…"), and the
+           full statement — planning estimate not quotation, window rates
+           indicative, measurement still being calibrated — sits in "What your
+           estimate actually includes", directly under the number it qualifies.
+           Removing it from both would be hiding it. Removing it from here is
+           putting it where it is read.
+
+           The banner keeps its id, its amber styling and its SITE_MODE gate,
+           so one env var still controls whether it appears at all. -->
+      <strong>Priced from real UK supplier and labour rates.</strong>
+      And honest about what the estimate covers &mdash;
+      <a href="#honest-heading" class="underline">what your estimate includes</a>.
+    </p>
+  </aside>
   <div data-page="design" id="mount-visualizer"></div>
   <div data-page="design" id="mount-wholehouse"></div>
   <!-- Windows and doors were behind a collapsed accordion labelled "Optional",
@@ -2335,11 +2365,22 @@ async function applyJourney(id) {
   render();
 }
 
+/* The words a homeowner would use, with the trade's underneath.
+
+   "Fascias, soffits & guttering" and "Walls — render or cladding" are how an
+   installer writes a quote, not how somebody describes what they want. In a
+   list of seven choices, two lines of jargon are two chances to decide the
+   site is not for you — which is what a first customer said, in as many
+   words, about the page they met.
+
+   The trade name is kept as a second line rather than dropped: it is what
+   their quotes will say, and a homeowner who already knows the term should
+   not have to guess we mean the same thing. */
 const TRIAGE = [
   { id: 'windows',  label: 'Windows' },
   { id: 'doors',    label: 'A front door' },
-  { id: 'cladding', label: 'Walls — render or cladding' },
-  { id: 'roofline', label: 'Fascias, soffits & guttering' },
+  { id: 'cladding', label: 'Rendering the walls', hint: 'render or cladding' },
+  { id: 'roofline', label: 'The white boards and gutters', hint: 'fascias, soffits & guttering' },
   { id: 'roof',     label: 'A roof' },
   /* Not a journey in the pricing sense — a conservatory is a guide band, not
      priced from the photograph — so this answer takes them to the section that
@@ -2400,7 +2441,12 @@ function buildTriage() {
             await applyJourney(t.id);
             document.getElementById('your-photo')?.scrollIntoView({ behavior: 'smooth' });
           },
-        }, t.label);
+        }, t.hint
+          ? h('span', { className: 'grid text-left leading-tight' }, [
+              h('span', {}, t.label),
+              h('span', { className: 'text-[10px] opacity-60' }, t.hint),
+            ])
+          : t.label);
       })),
     ]),
   ]);
