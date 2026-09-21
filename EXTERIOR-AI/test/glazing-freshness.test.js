@@ -63,8 +63,20 @@ test('changing the house type changes the window count too', () => {
   assert.match(picker, /refreshGlazing\(\)/);
 });
 
-test('starting again clears the window state', () => {
-  const start = html.slice(html.indexOf("'Start again'") - 1200, html.indexOf("'Start again'"));
+test('replacing the photo clears the window state', () => {
+  /* The button was "Start again" and is now "Use a different photo" — the
+     customer-journey brief asks for a photo to be replaceable without
+     restarting, and the behaviour was already that: this clears the image,
+     the detections and the render while every colour, style and house type
+     the customer chose survives. Only the label was wrong.
+
+     What must NOT survive is a corrected count belonging to the old
+     photograph, which is what this test is actually about. Anchored on the
+     new label; if it is renamed again, retarget it rather than dropping it. */
+  const anchor = html.indexOf("'Use a different photo'");
+  assert.notStrictEqual(anchor, -1,
+    'the replace-photo button has been renamed again — retarget this test');
+  const start = html.slice(anchor - 1600, anchor);
   assert.match(start, /state\.windowCount = null/, 'the corrected count must not outlive the photo');
   assert.match(start, /state\.glazing = null/);
 });

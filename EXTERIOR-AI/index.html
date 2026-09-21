@@ -710,8 +710,15 @@
        described the software to somebody who came to price their windows. -->
   <section data-page="home" id="how-it-works" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24" aria-labelledby="how-heading">
     <h2 id="how-heading" class="serif text-[26px] md:text-[32px] tracking-tight">How it works</h2>
-    <p class="mt-2 text-sm text-zinc-600 max-w-[62ch]">Three steps, start to finish, without anybody coming to your house.</p>
-    <ol class="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <p class="mt-2 text-sm text-zinc-600 max-w-[62ch]">Four steps, start to finish, without anybody coming to your house.</p>
+    <!-- Four, not three. The customer-journey brief asks for "Your photo,
+         Your home, Your design, Your estimate", and reading what the house
+         is IS a step the customer watches happen — the analysis panel
+         narrates it for fifteen seconds and then shows what it found. Folding
+         it into "upload" described the software's structure rather than the
+         customer's experience, and left the one part that feels like magic
+         unmentioned on the page that has to sell it. -->
+    <ol class="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
         <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">1</span>
         <h3 class="mt-4 text-[15px] font-medium">Upload your home</h3>
@@ -719,11 +726,16 @@
       </li>
       <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
         <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">2</span>
+        <h3 class="mt-4 text-[15px] font-medium">We read your home</h3>
+        <p class="mt-2 text-[13px] leading-6 text-zinc-600">We find your windows, your front door, the roof and the roofline, and show you what we found so you can tell us if we have it wrong.</p>
+      </li>
+      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
+        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">3</span>
         <h3 class="mt-4 text-[15px] font-medium">Try different looks</h3>
         <p class="mt-2 text-[13px] leading-6 text-zinc-600">Windows, doors, walls, roof and roofline &mdash; try them on your own house and watch the price move with every choice.</p>
       </li>
       <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
-        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">3</span>
+        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">4</span>
         <h3 class="mt-4 text-[15px] font-medium">See the likely cost</h3>
         <p class="mt-2 text-[13px] leading-6 text-zinc-600">An itemised planning estimate, before you decide whether you want to speak to an installer at all.</p>
       </li>
@@ -1668,6 +1680,10 @@ const state = {
   // Whether the homeowner has pressed through the "We found your home" card to
   // their own before-and-after. Gates the reveal, not the render.
   revealed: false,
+  /* Screen 5 of the customer-journey brief: has the homeowner told us the
+     detection looks right? null until asked, true once confirmed, 'flagged'
+     if they said something was wrong. Never gates anything — see the panel. */
+  detectionOk: null,
   renderId: null,     // our id for it — the lead sends this, never a URL
   rendering: false,
   sendingLead: false,
@@ -2718,6 +2734,65 @@ function buildUploadDetect() {
         ? h('p', { className: 'mt-2 text-[11px] leading-5 text-white/55' }, 'Almost there — preparing your starting design.')
         : null,
       answered ? summaryLine() : null,
+      answered ? detectionReview() : null,
+    ]);
+  }
+
+  /* "Looks right" / "Something looks wrong".
+
+     Screen 5 of the customer-journey brief, and a Primary CTA in its own
+     hierarchy: the customer is asked to confirm what we found before the
+     numbers built on it start mattering. It was the one screen in that brief
+     with nothing behind it at all.
+
+     Deliberately NOT a gate. Every brief since 1 September asks for the
+     picture first, and 4f59b6f exists because a step in front of the reveal
+     is the thing that kills it. So this sits under the summary, the render
+     carries on behind it, and a customer who ignores it loses nothing.
+
+     "Something looks wrong" goes where the corrections actually are rather
+     than opening a form of its own: the window-count control and the manual
+     wall area already exist, already work, and were already the answer — they
+     were just never offered at the moment somebody is looking at what we
+     found and doubting it. */
+  function detectionReview() {
+    if (!state.detections.filter(d => d.type !== 'analysis').length) return null;
+
+    if (state.detectionOk === true) {
+      return h('p', { className: 'mt-3 text-[11px] text-emerald-300/90' }, '✓ Thanks — we’ll price it on that.');
+    }
+    if (state.detectionOk === 'flagged') {
+      return h('p', { className: 'mt-3 text-[11px] leading-5 text-amber-200/90' },
+        'Thanks — the controls below take your number over ours. Yours is the one we price.');
+    }
+
+    const btn = (label, cls, onClick) => h('button', {
+      type: 'button',
+      className: `flex-1 min-w-[9rem] px-3 min-h-[44px] rounded-full text-[12px] font-medium transition ${cls}`,
+      onClick,
+    }, label);
+
+    return h('div', { className: 'mt-3 pt-3 border-t border-white/10' }, [
+      h('p', { className: 'text-[11px] leading-5 text-white/65' }, 'Does that match your house?'),
+      h('div', { className: 'mt-2 flex flex-wrap gap-2' }, [
+        btn('Looks right — continue', 'bg-white text-zinc-900 hover:bg-white/90', () => {
+          state.detectionOk = true;
+          reachedStage('detection_confirmed');
+          renderUploadOnly();
+        }),
+        btn('Something looks wrong', 'border border-white/25 text-white hover:border-white/60', () => {
+          state.detectionOk = 'flagged';
+          reachedStage('detection_flagged');
+          renderUploadOnly();
+          /* Straight to the controls that fix it. The count corrector lives in
+             the glazing panel and the wall area in the refine section; the
+             first is the one people mean nine times out of ten. */
+          setTimeout(() => {
+            (document.getElementById('windows-doors') || document.getElementById('refine-section'))
+              ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 60);
+        }),
+      ]),
     ]);
   }
 
@@ -2903,7 +2978,14 @@ function buildUploadDetect() {
                more render against the daily cap, spent on somebody who has
                demonstrably not given up. */
             onClick: () => { state.uploadedImg = null; state.uploadedBase64 = null; state.detections = []; state.stage = 'landing'; state.detectionStatus = 'idle'; state.renderUrl = null; state.renderId = null; state.windowCount = null; state.frontWindowCount = null; state.glazing = null; state.hasCustomised = false; state.revealed = false; state.lastPriceDelta = null; autoRenderDone = false; U('Photo removed — add another whenever you like'); render(); }
-          }, 'Start again'),
+          /* Screen 3: "allow replace photo without restarting the journey".
+
+           The behaviour was already right — this clears the photograph, the
+           detections and the render, and leaves every colour, style and house
+           type the customer chose. Only the label was wrong, and "Start
+           again" is exactly the words somebody reads before deciding not to
+           risk it. */
+        }, 'Use a different photo'),
         ]),
         /* The bail-out, next to the ask rather than below it.
 

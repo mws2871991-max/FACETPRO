@@ -3391,6 +3391,19 @@ const BRANCH_STAGES = new Map([
      or changing a finish in the walls-only calculator. Against landing rather
      than upload, because both are reachable without a photograph — a visitor
      who will not upload is exactly who they are for. */
+  /* Screen 5 of the customer-journey brief: did the homeowner tell us the
+     detection looked right? Branches rather than funnel steps, because a
+     customer who ignores the question carries straight on — it is a
+     confirmation, not a gate, and counting it in the chain would make
+     everyone who skipped it look like a drop-out.
+
+     The pair is the point. Confirmations alone say the question is being
+     seen; flags alone say nothing about how often we are right. Together,
+     against upload_completed, they say what share of people check and what
+     share of those find a fault — which is the only honest read anybody has
+     on detection accuracy short of surveying the houses. */
+  ['detection_confirmed', { of: 'upload_completed', label: 'said the detection looked right' }],
+  ['detection_flagged', { of: 'upload_completed', label: 'said something looked wrong' }],
   ['conservatory_used', { of: 'landing', label: 'chose a conservatory style' }],
   ['wholehouse_used', { of: 'landing', label: 'used the walls-only calculator' }],
   /* Three blind spots the 20 September journey walk found, each answering a
