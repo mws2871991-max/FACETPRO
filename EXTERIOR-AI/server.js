@@ -19,6 +19,7 @@ const leadscore = require('./leadscore');
 const { isTestTraffic } = require('./testtraffic');
 
 const { buildRenderPrompt } = require('./renderprompt');
+const geometry = require('./geometry');
 const catalogue = JSON.parse(fs.readFileSync(path.join(__dirname, 'catalogue.json'), 'utf8'));
 
 /* These are real supplier and labour rates, not placeholders, which makes
@@ -1958,6 +1959,17 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
   const forDisplay = (list) => (list || []).map(d =>
     glazing.isSidelight(d) ? { ...d, countedWith: 'door' } : d);
 
+  /* Computed once, counted once. countStage is fire-and-forget by design —
+     a counter must never cost somebody their detection — so a failure here
+     is swallowed exactly as the funnel endpoint swallows its own. */
+  const subjectBoxFor = (dets) => {
+    const b = geometry.subjectBox(dets);
+    Promise.resolve()
+      .then(() => store.countStage(b ? 'crop_available' : 'crop_unavailable'))
+      .catch(() => {});
+    return b;
+  };
+
   const answer = (record, id) => res.json({
     detections: forDisplay(record.detections),
     detectionId: id,
@@ -1966,6 +1978,20 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
     // What pricing will count, so the page does not count it a second way.
     frontWindowCount: glazing.frontWindowCount(record.detections),
     houseType: houseTypeFrom(record.detections),
+    /* Where this house is, when the detections can say. Null whenever they
+       cannot — see geometry.subjectBox and its guards.
+
+       Returned but not yet acted on. The plan is to crop the photograph to
+       this box before the render, so a neighbour outside the frame cannot
+       have their roof re-tiled; what is not yet known is how often a crop is
+       possible at all. On both of this site's own photographs it is not: the
+       subject's own downpipe reaches x=98 and the neighbour's roof sits at
+       x 93-100, so no vertical cut separates them.
+
+       Two photographs is not a rate. countCropAvailable records the answer on
+       every upload, against upload_completed, so the page work is decided by
+       what real photographs look like rather than by these two. */
+    subjectBox: subjectBoxFor(record.detections),
   });
 
   const seenId = detectionByImage.get(fingerprint);
@@ -2169,6 +2195,7 @@ For houseType, judge it from what the photograph shows: a gap on both sides and 
   res.json({
     detections: forDisplay(detections), detectionId, canMeasure: hasWall, scaleReference: hasDoor && !!size,
     frontWindowCount: glazing.frontWindowCount(detections),
+    subjectBox: subjectBoxFor(detections),
     houseType: houseTypeFrom(detections),
   });
 });
@@ -3385,7 +3412,8 @@ const FUNNEL_STAGES = [
    makes spend decisions from, so the public endpoint refuses them. It costs
    nothing: the server records these itself, by calling store.countStage
    directly rather than by coming through here. */
-const SERVER_ONLY_STAGES = new Set(['lead_qualified', 'lead_sent', 'installer_received', 'installer_accepted']);
+const SERVER_ONLY_STAGES = new Set(['lead_qualified', 'lead_sent', 'installer_received', 'installer_accepted',
+  'crop_available', 'crop_unavailable']);
 
 /* Things that happen off the main line, counted but never chained.
 
@@ -3454,6 +3482,18 @@ const BRANCH_STAGES = new Map([
      against upload_completed, they say what share of people check and what
      share of those find a fault — which is the only honest read anybody has
      on detection accuracy short of surveying the houses. */
+  /* Could this photograph have been cropped to the house before rendering?
+
+     The neighbour's roof still changes when somebody picks a roof, and three
+     prompt wordings did not fix it. Cropping the input would, in principle —
+     a house that is not in the frame cannot be edited. On both of this site's
+     own photographs it cannot: the subject's own downpipe reaches x=98 and
+     the neighbour's roof sits at x 93-100, so no vertical cut separates them.
+
+     Two photographs is not a rate, and the page work is not worth doing on a
+     guess. Counted server-side, so it needs nothing from the browser and is
+     answered on every upload including cached ones. */
+  ['crop_available', { of: 'upload_completed', label: 'could have been cropped to the house' }],
   ['detection_confirmed', { of: 'upload_completed', label: 'said the detection looked right' }],
   ['detection_flagged', { of: 'upload_completed', label: 'said something looked wrong' }],
   ['conservatory_used', { of: 'landing', label: 'chose a conservatory style' }],
