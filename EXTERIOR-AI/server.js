@@ -3500,6 +3500,12 @@ const BRANCH_STAGES = new Map([
   ['crop_available', { of: 'upload_completed', label: 'could have been cropped to the house' }],
   ['detection_confirmed', { of: 'upload_completed', label: 'said the detection looked right' }],
   ['detection_flagged', { of: 'upload_completed', label: 'said something looked wrong' }],
+  /* Opened, as distinct from used. Both sections are folded away now, so
+     "nobody used it" and "nobody unfolded it" are different findings: the
+     first could mean the content is wrong, the second that the line above it
+     is. Zero of each over 177 landings is what folded them. */
+  ['conservatory_opened', { of: 'landing', label: 'opened the conservatory guide' }],
+  ['wholehouse_opened', { of: 'landing', label: 'opened the walls-only calculator' }],
   ['conservatory_used', { of: 'landing', label: 'chose a conservatory style' }],
   ['wholehouse_used', { of: 'landing', label: 'used the walls-only calculator' }],
   /* Three blind spots the 20 September journey walk found, each answering a

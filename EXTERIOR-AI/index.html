@@ -1717,6 +1717,9 @@ const state = {
      detection looks right? null until asked, true once confirmed, 'flagged'
      if they said something was wrong. Never gates anything — see the panel. */
   detectionOk: null,
+  /* Which of the folded-away sections this visitor has opened. Per visit, so
+     a render never re-folds something somebody is reading. */
+  unfolded: {},
   renderId: null,     // our id for it — the lead sends this, never a URL
   rendering: false,
   sendingLead: false,
@@ -2127,9 +2130,13 @@ const MOUNTS = [
   ['mount-triage',     buildTriage],
   ['mount-upload',     buildUploadDetect],
   ['mount-visualizer', buildVisualizer],
-  ['mount-wholehouse', buildWholeHouse],
+  ['mount-wholehouse', () => foldedSection('wholehouse',
+    'Price the walls without a photo', 'One finish, whole house — walls only',
+    buildWholeHouse)],
   ['mount-details',     buildDetailOptions],
-  ['mount-conservatory', buildConservatory],
+  ['mount-conservatory', () => foldedSection('conservatory',
+    'Thinking about a conservatory?', 'Guide prices, not from your photo',
+    buildConservatory)],
   ['mount-refine',     buildRefineEstimate],
   ['mount-totalbar',   buildTotalBar],
   ['mount-savemoment', buildSaveMoment],
@@ -2389,6 +2396,49 @@ const TRIAGE = [
   { id: null,       label: 'Everything / not sure yet' },
 ];
 
+/* Two sections nobody has ever used, folded rather than deleted.
+
+   The 20 September page-structure proposal asked for both to move off the
+   tool page and said, correctly, to check what they produce first. Counters
+   went in the same day. Over 177 landings:
+
+     conservatory_used   0
+     wholehouse_used     0
+
+   Not "few" — none. Together they are 4,179px of a 13,324px page, sitting
+   between somebody and their estimate, and a real customer has since said
+   the site bamboozles them with too much information.
+
+   Folded, not removed, for three reasons. The conservatory answer in the
+   trade chooser points at this section and would otherwise dead-end. The
+   walls-only calculator is the one path that prices a job with no photograph
+   at all, which is a genuine entry point for the visitor who will not
+   upload. And zero clicks is evidence nobody opens them, not evidence nobody
+   would ever want them — deleting on that is a stronger claim than the data
+   supports.
+
+   Opening one keeps it open for the visit, so the counters keep meaning what
+   they meant: a fold that reopens on every render would make "used" and
+   "seen" the same event. */
+function foldedSection(key, summary, sub, build) {
+  if (state.unfolded[key]) return build();
+  return h('details', {
+    id: `fold-${key}`,
+    className: 'rounded-2xl bg-white border border-zinc-200 px-6 py-4 scroll-mt-24',
+    onToggle: (e) => {
+      if (!e.target.open) return;
+      state.unfolded[key] = true;
+      reachedStage(key === 'conservatory' ? 'conservatory_opened' : 'wholehouse_opened');
+      render();
+    },
+  }, [
+    h('summary', { className: 'cursor-pointer flex items-baseline justify-between gap-4 flex-wrap' }, [
+      h('span', { className: 'text-[15px] font-medium' }, summary),
+      h('span', { className: 'text-[12px] text-zinc-500' }, sub),
+    ]),
+  ]);
+}
+
 function buildTriage() {
   if (state.stage !== 'landing') return h('div', { id: 'mount-triage' });
 
@@ -2435,7 +2485,17 @@ function buildTriage() {
             ? 'bg-zinc-900 text-white border-zinc-900'
             : 'bg-white border-zinc-200 hover:border-zinc-900'}`,
           onClick: async () => {
-            if (t.href) { document.querySelector(t.href)?.scrollIntoView({ behavior: 'smooth' }); return; }
+            if (t.href) {
+              /* The section it points at may be folded away. Open it first,
+                 or this scrolls to a summary line and looks broken. */
+              if (t.id === 'conservatory' && !state.unfolded.conservatory) {
+                state.unfolded.conservatory = true;
+                reachedStage('conservatory_opened');
+                render();
+              }
+              setTimeout(() => document.querySelector(t.href)?.scrollIntoView({ behavior: 'smooth' }), 40);
+              return;
+            }
             state.triageOpen = false;   // answered; state it from here rather than ask again
             state.triageAnswered = true;
             await applyJourney(t.id);
