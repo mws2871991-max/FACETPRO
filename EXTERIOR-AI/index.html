@@ -3310,7 +3310,29 @@ function buildVisualizer() {
      sections of their own — worth splitting out properly if they are going to
      carry their own nav entry for long. */
   const groupAnchors = { Cladding: 'rendering', Roof: 'roofs' };
-  const groupsRow = ['Cladding', 'Trim', 'Roof'].map(group =>
+  /* A trade they declined is not a control, it is scenery.
+
+     Measured on a windows journey, 375px: 14,265px of page, of which about
+     6,100 belonged to trades the visitor had just said no to — the conservatory
+     guide, the walls-only calculator, the roofline profiles, and these three
+     swatch rows. Somebody who answered "windows" still scrolled past all of it
+     to reach their own price.
+
+     So the ones they declined fold into a single line they can open. Declined
+     means: they named a trade, this is not it, and they have not since chosen a
+     colour in it — one tap on any swatch brings the row back out and keeps it
+     out. Nobody who answered "everything / not sure yet" loses anything, because
+     without a journey nothing counts as declined. */
+  const OWN_GROUP = { cladding: 'Cladding', roofline: 'Trim', roof: 'Roof' };
+  const swatchFor = { Cladding: () => state.cladding, Trim: () => state.trim, Roof: () => state.roof };
+  const isDeclined = (group) => {
+    if (!state.journey) return false;
+    if (OWN_GROUP[state.journey] === group) return false;
+    const sw = swatchFor[group]();
+    return !sw || sw.id === 'none';
+  };
+
+  const buildGroup = (group) =>
     h('div', { id: groupAnchors[group] || null, className: groupAnchors[group] ? 'scroll-mt-24' : '' }, [
       h('h3', { className: 'text-[10px] tracking-widest uppercase text-zinc-500' }, groupLabels[group]),
       h('div', { className: 'mt-2 flex flex-wrap gap-2' }, [...SWATCHES.filter(s => s.group === group), noneSwatch(group)].map(sw => {
@@ -3401,8 +3423,22 @@ function buildVisualizer() {
             : sw.name,
         ]);
       })),
-    ])
-  );
+    ]);
+
+  const kept = ['Cladding', 'Trim', 'Roof'].filter(g => !isDeclined(g));
+  const declined = ['Cladding', 'Trim', 'Roof'].filter(isDeclined);
+  const declinedWords = { Cladding: 'the walls', Trim: 'the roofline', Roof: 'a roof' };
+
+  const groupsRow = [
+    ...kept.map(buildGroup),
+    declined.length
+      ? h('details', { className: 'rounded-xl border border-zinc-200 bg-[#FDFCF9]' }, [
+          h('summary', { className: 'cursor-pointer px-3 min-h-[44px] flex items-center text-[12px] text-zinc-600' },
+            `Also thinking about ${declined.map(g => declinedWords[g]).join(', ').replace(/, ([^,]*)$/, ' or $1')}?`),
+          h('div', { className: 'px-3 pb-3 grid gap-4' }, declined.map(buildGroup)),
+        ])
+      : null,
+  ].filter(Boolean);
 
   const renderButtonLabel = state.rendering ? 'Creating your picture…' : (state.renderUrl ? 'Try this look again' : 'Show me this on my home');
 
@@ -5097,8 +5133,29 @@ function buildDetailOptions() {
     ]);
   }
 
+  /* Fold a section away when the visitor said they came for something else.
+
+     A trade they declined still has to be reachable — plenty of people add the
+     door once they have seen the windows — but it belongs behind one line
+     rather than between them and their price. Opened the moment they choose
+     anything inside it, and never folded for somebody who answered "everything
+     / not sure yet", because that answer declines nothing. */
+  const fold = (el, summary, isOwn, engaged) => {
+    if (!el) return null;
+    if (!state.journey || isOwn || engaged) return el;
+    return h('details', { className: 'rounded-xl border border-zinc-200 bg-[#FDFCF9]' }, [
+      h('summary', { className: 'cursor-pointer px-4 min-h-[48px] flex items-center text-[13px] text-zinc-700' }, summary),
+      h('div', { className: 'px-4 pb-4' }, el),
+    ]);
+  };
+  const glazingJourney = state.journey === 'windows' || state.journey === 'doors';
+  const glazingEngaged = ['windowStyleId', 'doorStyleId', 'windowDoorColourId']
+    .some(k => state.prefs[k] && state.prefs[k] !== 'none');
+  const rooflineEngaged = ['fasciaId', 'soffitId', 'gutteringId', 'rooflineCladdingId']
+    .some(k => state.prefs[k]);
+
   return h('div', { id: 'detail-options', className: 'grid gap-8' }, [
-    wd ? h('div', {}, [
+    fold(wd ? h('div', {}, [
       h('h3', { className: 'text-[15px] font-medium' }, 'Windows & doors'),
       /* This used to open "Style and colour only", which was true when the
          render was instructed to leave the frames alone. It now changes them,
@@ -5121,9 +5178,15 @@ function buildDetailOptions() {
         colourRow(wd.colours, 'windowDoorColourId'),
       ]),
       glazingPanel(),
-    ]) : null,
+    ]) : null, 'Also thinking about windows or a front door?', glazingJourney, glazingEngaged),
 
-    fs ? h('div', { id: 'roofline', className: `scroll-mt-24 ${wd ? 'pt-8 border-t border-zinc-200' : ''}` }, [
+    /* Folded away for anybody who did not come for the roofline.
+
+       These are the only controls on the page that move no money — the panel
+       says so itself — and on a windows journey they were 1,427px of it. They
+       are worth keeping, because they tell an installer what profile somebody
+       wants; they are not worth putting between a visitor and their price. */
+    fold(fs ? h('div', { id: 'roofline', className: `scroll-mt-24 ${wd ? 'pt-8 border-t border-zinc-200' : ''}` }, [
       h('h3', { className: 'text-[15px] font-medium' }, 'Fascias, soffits & cladding'),
       /* The brief's second pricing rule: "if an option is visual-only and not
          priced, label it clearly". These are the only controls on the page
@@ -5143,7 +5206,7 @@ function buildDetailOptions() {
         group('Guttering', fs.guttering, 'gutteringId'),
         group('Cladding profile', fs.cladding, 'rooflineCladdingId'),
       ]),
-    ]) : null,
+    ]) : null, 'Also thinking about fascias, soffits and guttering?', state.journey === 'roofline', rooflineEngaged),
 
     h('div', { className: 'rounded-xl bg-[#FDFCF9] border border-zinc-200 p-4 flex items-center justify-between gap-3 flex-wrap' }, [
       h('span', { className: 'text-[12px] text-zinc-600' },
