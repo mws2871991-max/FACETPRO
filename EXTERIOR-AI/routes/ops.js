@@ -50,9 +50,20 @@ module.exports = function opsRoutes({
      the business rather than the product. */
   router.get('/api/funnel', installerLimiter, requireInstallerPassword, async (req, res) => {
     const days = Math.min(365, Math.max(1, Number(req.query.days) || 30));
-    let counts = {};
-    try { counts = await store.readFunnel(days); }
+    /* Read days, then total them, rather than reading twice.
+
+       The totals below come from the same rows the breakdown reports, so the
+       two cannot disagree — and a change shipped this morning can be read
+       against this morning rather than against thirty days of history, which
+       is what left the confirmation question unreadable. */
+    let byDay = {};
+    try { byDay = await store.readFunnelDays(days); }
     catch (err) { return res.status(500).json({ error: 'Could not read the funnel.' }); }
+
+    const counts = {};
+    for (const stages of Object.values(byDay)) {
+      for (const [stage, n] of Object.entries(stages)) counts[stage] = (counts[stage] || 0) + n;
+    }
 
     let previous = null;
     const funnel = FUNNEL_STAGES.map(stage => {
@@ -133,7 +144,12 @@ module.exports = function opsRoutes({
     };
 
     res.setHeader('Cache-Control', 'no-store');
-    res.json({ days, keyKpi, funnel, branches, byJourney, byDevice, note: 'Counts are per stage, not per person — see the funnel table in store.js. byJourney counts only visitors who arrived on a journey; the totals above include everyone. byDevice splits by the width the page was rendered at, under 768px being mobile, and only covers stages recorded since that key shipped — an empty or short column is missing history rather than missing traffic.' });
+    res.json({ days, keyKpi, funnel, branches, byJourney, byDevice, byDay,
+      note: 'Counts are per stage, not per person — see the funnel table in store.js. '
+        + 'byJourney counts only visitors who arrived on a journey; the totals above include everyone. '
+        + 'byDevice splits by the width the page was rendered at, under 768px being mobile, and only covers stages recorded since that key shipped — an empty or short column is missing history rather than missing traffic. '
+        + 'byDay is the raw day-keyed breakdown, so it carries the prefixed counters in the same object as the plain stages — journey:…, from/…, device/… — where funnel, byJourney and byDevice present them already split out. Filter on the prefix before summing, or the same visit is counted more than once. '
+        + 'Read a change against the days since it shipped: a figure that looks like a rate against thirty days of history is usually a few hours of numerator over a month of denominator.' });
   });
 
   /* ── GET /api/measurements ──

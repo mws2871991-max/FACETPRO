@@ -2067,10 +2067,30 @@ const PAGE = (() => {
   return 'home';
 })();
 
+/* One document serves three routes, and it carried one <title>.
+
+   So /design and /installers were both titled "See Every Facet Of Your Home —
+   A Fair Price For Windows | Facet Pro". Not an SEO problem — both routes send
+   X-Robots-Tag: noindex, follow — but a homeowner with the homepage and the
+   tool open sees two identical tabs, and a bookmark of the tool reads as a
+   bookmark of the homepage.
+
+   Because those routes are noindex, setting it from script is honest and
+   costs nothing: no crawler is being told one thing and a reader another.
+
+   `home` is deliberately absent. The homepage title is the one that is
+   indexed, and it should keep coming from the served HTML rather than from
+   script that a crawler may or may not run. */
+const PAGE_TITLE = {
+  design: 'Design your home — Facet Pro',
+  installers: 'For installers — Facet Pro',
+};
+
 function applyPage() {
   for (const el of document.querySelectorAll('[data-page]')) {
     el.hidden = el.dataset.page !== PAGE;
   }
+  if (PAGE_TITLE[PAGE]) document.title = PAGE_TITLE[PAGE];
 }
 
 const MOUNTS = [

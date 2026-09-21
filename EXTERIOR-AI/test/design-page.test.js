@@ -120,3 +120,23 @@ test('the tool and the argument do not overlap', () => {
   assert.deepStrictEqual([...new Set(marked)].sort(), ['design', 'home', 'installers'],
     'a data-page value nobody routes has appeared — it would hide that section everywhere');
 });
+
+test('the tool and the installer door get their own tab titles', () => {
+  /* One document, three routes, one <title> — so /design was titled with the
+     homepage's headline. Two identical tabs, and a bookmark of the tool that
+     reads as a bookmark of the homepage.
+
+     Honest to do from script only because both routes are noindex: no crawler
+     is shown one title and a reader another. */
+  assert.match(indexHtml, /const PAGE_TITLE = \{/, 'PAGE_TITLE has gone');
+  assert.match(indexHtml, /design: 'Design your home/);
+  assert.match(indexHtml, /installers: 'For installers/);
+  assert.match(indexHtml, /if \(PAGE_TITLE\[PAGE\]\) document\.title = PAGE_TITLE\[PAGE\]/,
+    'applyPage no longer sets the title');
+
+  /* The homepage title stays in the served HTML, because it is the one that
+     is indexed. A `home` key here would move it into script. */
+  const map = indexHtml.slice(indexHtml.indexOf('const PAGE_TITLE = {'));
+  assert.doesNotMatch(map.slice(0, 260), /\bhome:/,
+    'the indexed homepage title must come from the markup, not from script');
+});

@@ -242,3 +242,54 @@ test('render_started is fired on the request, not the response', () => {
       'render_started sits beside render_shown — then it is measuring the response, not the request');
   }
 });
+
+test('the funnel can be read a day at a time, not only as a month total', async () => {
+  /* Why this exists, in one number: three confirmations against twenty-nine
+     uploads looked like 20% engagement with a question that had shipped seven
+     hours earlier. It could as easily have been 6 of 6. A gate in front of the
+     only conversion step that matters is not worth building on a denominator
+     that wrong — and every change from here on has the same problem until the
+     days come back separately.
+
+     The buckets were always written. Only the read collapsed them.
+
+     Seeded by writing the file directly, because countStage always writes
+     TODAY's bucket: a two-day fixture cannot be produced through the public
+     path, which is exactly why nobody noticed the reader was lossy. */
+  const fs = require('fs');
+  const path = require('path');
+  const { DATA_DIR } = require('./helpers/data-dir');
+
+  const day = (back) => new Date(Date.now() - back * 86400000).toISOString().slice(0, 10);
+  const today = day(0), yesterday = day(1);
+
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.writeFileSync(path.join(DATA_DIR, 'funnel.json'), JSON.stringify({
+    [yesterday]: { landing: 10, upload_completed: 4, detection_confirmed: 0 },
+    [today]:     { landing: 5,  upload_completed: 3, detection_confirmed: 3 },
+    // Well outside the window, and must not appear at any grain.
+    '2020-01-01': { landing: 999 },
+  }));
+
+  const byDay = await store.readFunnelDays(30);
+  assert.ok(byDay[today], 'today is missing');
+  assert.ok(byDay[yesterday], 'yesterday is missing');
+  assert.ok(!byDay['2020-01-01'], 'a day outside the window came back');
+
+  /* The point of the whole change: the same stage reads differently at the
+     two grains, and only the day-level one can answer "did this morning's
+     change work". */
+  assert.strictEqual(byDay[today].detection_confirmed, 3);
+  assert.strictEqual(byDay[yesterday].detection_confirmed, 0);
+  assert.strictEqual(byDay[today].detection_confirmed / byDay[today].upload_completed, 1,
+    'against today alone the question was answered by everybody who uploaded');
+
+  /* And the totals must be the same rows summed, or the endpoint reports two
+     different truths from one table. */
+  const totals = await store.readFunnel(30);
+  for (const stage of ['landing', 'upload_completed', 'detection_confirmed']) {
+    const summed = Object.values(byDay).reduce((n, s) => n + (s[stage] || 0), 0);
+    assert.strictEqual(summed, totals[stage] || 0,
+      `${stage}: byDay sums to ${summed} but readFunnel says ${totals[stage]}`);
+  }
+});

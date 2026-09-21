@@ -784,6 +784,46 @@ async function readFunnel(days = 30) {
   } catch (_) { return {}; }
 }
 
+/* The same rows readFunnel sums, before it sums them.
+
+   A change shipped this morning cannot be read against thirty days of
+   history: the denominator is a month of traffic and the numerator is a few
+   hours of it. Three confirmations against twenty-nine uploads looked like
+   20% engagement and could as easily have been 6 of 6, and a gate in front of
+   the only conversion step that matters is not worth building on that.
+
+   The buckets to answer it properly have always been written — both storage
+   paths are day-keyed — and only the read collapsed them, one line before the
+   return. Every change from here on is unreadable for a month without this.
+
+   `day::text` is load-bearing. The column is DATE, and without the cast the
+   Postgres path keys this object with something that does not match the file
+   path's YYYY-MM-DD — a difference no development machine would ever show,
+   because it has no DATABASE_URL.
+
+   readFunnel stays exactly as it is: three test files assert its contract.
+   This adds a reader, it does not replace one. */
+async function readFunnelDays(days = 30) {
+  const since = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+  if (pool) {
+    const { rows } = await pool.query(
+      `SELECT day::text AS day, stage, SUM(hits)::int AS hits
+         FROM ${SCHEMA_NAME}.funnel WHERE day >= $1
+        GROUP BY day, stage ORDER BY day`, [since]);
+    const out = {};
+    for (const r of rows) (out[r.day] ||= {})[r.stage] = r.hits;
+    return out;
+  }
+  try {
+    const all = JSON.parse(fs.readFileSync(path.join(DATA_DIR, FUNNEL_FILE), 'utf8'));
+    const out = {};
+    for (const [day, stages] of Object.entries(all)) {
+      if (day >= since) out[day] = { ...stages };
+    }
+    return out;
+  } catch (_) { return {}; }
+}
+
 /* ── DETECTIONS, KEYED BY THE PHOTOGRAPH ──
    See the detection_cache table for why this exists and what it deliberately
    does not hold. The JSONL path keeps one file, which is all a development
@@ -937,7 +977,7 @@ async function end() {
 module.exports = {
   ensureSchema, append, readAll, replaceAll, mutate, end, getResume, DATA_DIR, putRender, getRender, deleteRenders, staleRenderIds, hasDb: !!pool,
   getDetectionCache, putDetectionCache,
-  countStage, readFunnel, recordMeasurement, readMeasurements,
+  countStage, readFunnel, readFunnelDays, recordMeasurement, readMeasurements,
   // Exported for tests: scraping these out of the source with a regex broke
   // the moment another table was added after leads.
   _internals: { INSERT_PARAMS, INSERT_SQL, SELECT_SQL, FILE_NAMES, checkServerIdentity },
