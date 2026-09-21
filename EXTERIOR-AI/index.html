@@ -2666,6 +2666,27 @@ function buildUploadDetect() {
       if (hits(/door/i).length) parts.push('a front door');
       if (measured && state.price?.footprintM2) parts.push(`about ${state.price.footprintM2} m² of wall`);
 
+      /* And what kind of house we think it is, which is now the most
+         consequential thing on this list.
+
+         It picks the plausibility band the wall measurement is checked
+         against AND the multiplier that turns a front elevation into a whole
+         house — so it moves both whether the photograph is used at all and
+         what the answer becomes. Until 20 September it was hardcoded to
+         semi-detached and nobody was told; now it is read off the photograph
+         and a customer still only learned it from a toast that vanishes after
+         a few seconds.
+
+         Asked in the same breath as everything else, in the one place the
+         page asks "does that match your house?" — because a wrong house type
+         is exactly the kind of thing the person looking at their own home can
+         correct in a second and we cannot.
+
+         Phrased by who decided. "Looks like" is ours to be wrong about; once
+         they have tapped the picker it is theirs and we simply repeat it. */
+      const typeLabel = (HOUSE_TYPES.find(t => t.id === state.houseType) || {}).label;
+      const typePhrase = typeLabel ? HOUSE_TYPE_ARTICLE(state.houseType) : null;
+
       /* What we did not find, which is the half that mattered and was missing.
 
          This returned null when `parts` was empty — so the photograph that
@@ -2689,8 +2710,16 @@ function buildUploadDetect() {
 
       if (!parts.length && !missing.length) return null;
 
+      /* HOUSE_TYPE_ARTICLE, which already existed for exactly this — "a
+         semi-detached", "an end of terrace". Written by hand the first time
+         and it produced "a detached": no noun, and wrong before a vowel. */
+      const houseLine = !typePhrase ? '' : (state.houseTypeChosen
+        ? `You told us it's ${typePhrase}. `
+        : `It looks like ${typePhrase}, which sets the size we work from. `);
+
       return h('p', { className: 'mt-3 pt-3 border-t border-white/10 text-[11px] leading-5 text-white/65' }, [
         parts.length ? `We found ${join(parts, 'and')}. ` : '',
+        houseLine,
         missing.length
           ? `We could not pick out ${join(missing, 'or')} in this photo${!parts.length ? ' at all' : ''}. `
           : '',
@@ -2703,7 +2732,9 @@ function buildUploadDetect() {
           : null,
         missing.length
           ? ' — straight on, from across the road — or carry on and correct the numbers below.'
-          : 'If that isn’t right, correct it below — your number is the one we price.',
+          /* One instruction, not two. With the house type named above, the old
+             tail repeated "correct it below" in the same breath. */
+          : 'Anything wrong? Change it below — your number is the one we price.',
       ].filter(Boolean));
     };
 
@@ -3727,10 +3758,18 @@ const HOUSE_TYPES = [
 
 /* "a semi-detached", "an end of terrace" — the label with its article, for
    sentences that name the house type mid-flow. */
+/* Every label but one is an adjective, so the noun has to come with it.
+
+   "a detached", "an end of terrace", "for a mid-terrace" — all four callers
+   sit in the same grammatical position and all four read as though a word
+   went missing, because one had. "Bungalow" is already a noun and takes
+   nothing. */
+const HOUSE_TYPE_NOUNS = new Set(['bungalow']);
 const HOUSE_TYPE_ARTICLE = (id) => {
   const label = (HOUSE_TYPES.find(t => t.id === id)?.label || '').toLowerCase();
   if (!label) return 'this kind of house';
-  return `${/^[aeiou]/.test(label) ? 'an' : 'a'} ${label}`;
+  const phrase = HOUSE_TYPE_NOUNS.has(label) ? label : `${label} house`;
+  return `${/^[aeiou]/.test(phrase) ? 'an' : 'a'} ${phrase}`;
 };
 
 /* Picker used in two places — here and in the measure step — both writing to
