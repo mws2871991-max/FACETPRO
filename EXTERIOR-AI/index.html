@@ -415,7 +415,13 @@
                grounds that demanding a photograph of somebody's house on the
                first tap is the highest-friction opening move available. The
                upload panel it lands on has its own "Choose a photo". -->
-          <button id="hero-upload" type="button" class="cta w-full sm:w-auto px-7 py-4 rounded-full text-[15px] font-semibold transition min-h-[52px]">Upload a photo</button>
+          <!-- "Upload my house", not "Upload a photo". The content handoff's §3
+               asks for it and it is the better word: a photo is the thing we
+               want, a house is the thing they came about. The two entry points
+               also stop sharing a label, which is what cta_clicked and
+               real_home_cta_click have been trying to tell apart since 19
+               September — a reader could not tell them apart either. -->
+          <button id="hero-upload" type="button" class="cta w-full sm:w-auto px-7 py-4 rounded-full text-[15px] font-semibold transition min-h-[52px]">Upload my house</button>
           <a href="#our-work" class="w-full sm:w-auto px-6 py-4 rounded-full border border-white/20 text-[15px] font-medium hover:bg-white/10 transition text-center min-h-[52px] grid place-items-center">See real homes</a>
         </div>
 
@@ -611,7 +617,9 @@
     <!-- Counted separately from the hero CTA. Both land in the same upload
          box, so together they said only "somebody started"; apart they say
          which invitation earned it, which is what the handoff asks to test. -->
-    <button type="button" class="mt-6 cta px-7 py-4 rounded-full text-[15px] font-semibold transition min-h-[52px]" onclick="reachedStage('real_home_cta_click'); goToUpload()">Upload a photo</button>
+    <!-- §4 asks this one to read "Try your house", which is also what the
+         counter beside it measures. -->
+    <button type="button" class="mt-6 cta px-7 py-4 rounded-full text-[15px] font-semibold transition min-h-[52px]" onclick="reachedStage('real_home_cta_click'); goToUpload()">Try your house</button>
     <p class="mt-4 text-[12px] text-white/50">Free to try &nbsp;&bull;&nbsp; No measurements &nbsp;&bull;&nbsp; No sales call unless you ask</p>
   </section>
 
@@ -634,6 +642,54 @@
        rather than in the abstract, which is a better place to ask it. Anyone
        who wants to scope first still can — it is one scroll down, and it
        still arrives pre-answered from a cost page. -->
+  <!-- §15 puts "how it works" third, directly after the proof: hero, real
+       homes, how it works. It had drifted below the beta notice, so the four
+       steps that explain the whole product sat after a disclaimer about the
+       estimate. Hidden on /design, where somebody is already doing it. -->
+  <section data-page="home" id="how-it-works" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24" aria-labelledby="how-heading">
+    <h2 id="how-heading" class="serif text-[26px] md:text-[32px] tracking-tight">How it works</h2>
+    <p class="mt-2 text-sm text-zinc-600 max-w-[62ch]">Four steps, start to finish, without anybody coming to your house.</p>
+    <!-- Four, not three. The customer-journey brief asks for "Your photo,
+         Your home, Your design, Your estimate", and reading what the house
+         is IS a step the customer watches happen — the analysis panel
+         narrates it for fifteen seconds and then shows what it found. Folding
+         it into "upload" described the software's structure rather than the
+         customer's experience, and left the one part that feels like magic
+         unmentioned on the page that has to sell it. -->
+    <ol class="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
+        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">1</span>
+        <h3 class="mt-4 text-[15px] font-medium">Upload your home</h3>
+        <p class="mt-2 text-[13px] leading-6 text-zinc-600">One picture of the front of your house, taken from the pavement. No measurements, no visit.</p>
+      </li>
+      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
+        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">2</span>
+        <h3 class="mt-4 text-[15px] font-medium">We read your home</h3>
+        <p class="mt-2 text-[13px] leading-6 text-zinc-600">We find your windows, your front door, the roof and the roofline, and show you what we found so you can tell us if we have it wrong.</p>
+      </li>
+      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
+        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">3</span>
+        <h3 class="mt-4 text-[15px] font-medium">Try different looks</h3>
+        <p class="mt-2 text-[13px] leading-6 text-zinc-600">Windows, doors, walls, roof and roofline &mdash; try them on your own house and watch the price move with every choice.</p>
+      </li>
+      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
+        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">4</span>
+        <h3 class="mt-4 text-[15px] font-medium">See the likely cost</h3>
+        <p class="mt-2 text-[13px] leading-6 text-zinc-600">An itemised planning estimate, before you decide whether you want to speak to an installer at all.</p>
+      </li>
+    </ol>
+    <!-- Kept from the long paragraph this replaces, because five appointments
+         is the reader's actual problem and the trades are what they came to
+         price. The rest of it — what never adds up to one figure, the
+         conservatory caveat — is said again where it applies. -->
+    <!-- The claim first, the detail under it. This was one sentence carrying
+         a five-item list, a count, and the whole booking-and-chasing argument
+         at once — commercially the best line on the page and too dense to land
+         at a glance. Same content, read in two beats. -->
+    <p class="mt-6 serif text-[18px] md:text-[20px] tracking-tight">One photo. Five trades. One starting point.</p>
+    <p class="mt-2 text-sm leading-6 text-zinc-600 max-w-[68ch]">Windows, doors, walls, fascias and soffits, and the roof &mdash; five companies you would otherwise be booking, waiting in for and chasing, priced together from the same photograph.</p>
+  </section>
+
   <div data-page="design" id="mount-upload"></div>
   <div data-page="design" id="mount-triage"></div>
 
@@ -738,49 +794,6 @@
        Output. Brief §3 names technical pipelines as a thing not to include
        and §6 names detailed technology architecture as content to remove. It
        described the software to somebody who came to price their windows. -->
-  <section data-page="home" id="how-it-works" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24" aria-labelledby="how-heading">
-    <h2 id="how-heading" class="serif text-[26px] md:text-[32px] tracking-tight">How it works</h2>
-    <p class="mt-2 text-sm text-zinc-600 max-w-[62ch]">Four steps, start to finish, without anybody coming to your house.</p>
-    <!-- Four, not three. The customer-journey brief asks for "Your photo,
-         Your home, Your design, Your estimate", and reading what the house
-         is IS a step the customer watches happen — the analysis panel
-         narrates it for fifteen seconds and then shows what it found. Folding
-         it into "upload" described the software's structure rather than the
-         customer's experience, and left the one part that feels like magic
-         unmentioned on the page that has to sell it. -->
-    <ol class="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
-        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">1</span>
-        <h3 class="mt-4 text-[15px] font-medium">Upload your home</h3>
-        <p class="mt-2 text-[13px] leading-6 text-zinc-600">One picture of the front of your house, taken from the pavement. No measurements, no visit.</p>
-      </li>
-      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
-        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">2</span>
-        <h3 class="mt-4 text-[15px] font-medium">We read your home</h3>
-        <p class="mt-2 text-[13px] leading-6 text-zinc-600">We find your windows, your front door, the roof and the roofline, and show you what we found so you can tell us if we have it wrong.</p>
-      </li>
-      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
-        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">3</span>
-        <h3 class="mt-4 text-[15px] font-medium">Try different looks</h3>
-        <p class="mt-2 text-[13px] leading-6 text-zinc-600">Windows, doors, walls, roof and roofline &mdash; try them on your own house and watch the price move with every choice.</p>
-      </li>
-      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
-        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">4</span>
-        <h3 class="mt-4 text-[15px] font-medium">See the likely cost</h3>
-        <p class="mt-2 text-[13px] leading-6 text-zinc-600">An itemised planning estimate, before you decide whether you want to speak to an installer at all.</p>
-      </li>
-    </ol>
-    <!-- Kept from the long paragraph this replaces, because five appointments
-         is the reader's actual problem and the trades are what they came to
-         price. The rest of it — what never adds up to one figure, the
-         conservatory caveat — is said again where it applies. -->
-    <!-- The claim first, the detail under it. This was one sentence carrying
-         a five-item list, a count, and the whole booking-and-chasing argument
-         at once — commercially the best line on the page and too dense to land
-         at a glance. Same content, read in two beats. -->
-    <p class="mt-6 serif text-[18px] md:text-[20px] tracking-tight">One photo. Five trades. One starting point.</p>
-    <p class="mt-2 text-sm leading-6 text-zinc-600 max-w-[68ch]">Windows, doors, walls, fascias and soffits, and the roof &mdash; five companies you would otherwise be booking, waiting in for and chasing, priced together from the same photograph.</p>
-  </section>
 
 
 
@@ -1044,7 +1057,20 @@
        thing on the page and crawlers should see it. Each card shows the after
        by default, so if the toggle script never runs you still see the result. -->
 
-  <section data-page="home" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="honest-heading">
+  <!-- Expandable, per the content handoff's §7: "keep useful detail, but
+       move it below the main product journey", and §14: "do not delete useful
+       accuracy, privacy or pricing information".
+
+       1,371px of explanation on a homepage a real customer has called
+       bamboozling. Every word is kept and the heading now says what is behind
+       it, so somebody who wants the itemisation can have it and somebody who
+       wants to see their house is not reading it first. -->
+  <details data-page="home" class="rounded-2xl bg-white border border-zinc-200 px-6 md:px-8 py-4" aria-labelledby="honest-heading">
+    <summary class="cursor-pointer flex items-baseline justify-between gap-4 flex-wrap">
+      <span class="serif text-[20px] md:text-[24px] tracking-tight">What your estimate actually includes</span>
+      <span class="text-[12px] text-zinc-500">Materials, labour, access, waste, VAT</span>
+    </summary>
+    <div class="mt-5">
     <!-- §8. Headline and intro are the handoff's. The six cards are not: it
          asks to replace them with five generic labels (materials, labour,
          access, waste, VAT), and those are already the words in the intro. The
@@ -1109,8 +1135,8 @@
         <li>&bull; Your final product specification</li>
       </ul>
       <p class="mt-3 text-[12px] leading-6 text-zinc-600 max-w-[70ch]">That is why we show a realistic range rather than pretending one number is guaranteed. If a figure looks wrong for your home, tell us when you save your design.</p>
-    </div>
-  </section>
+    </div></div>
+  </details>
 
   <section data-page="home" id="faq" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="faq-heading">
     <h2 id="faq-heading" class="serif text-[26px] md:text-[32px] tracking-tight">Questions homeowners ask</h2>
@@ -1216,7 +1242,16 @@
        for every house on the street, and catalogue.json says so itself. Adding
        it to the count borrowed credibility the pricing engine had earned and
        the conservatory guide had not. -->
-  <section data-page="home" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="tech-heading">
+  <!-- Same treatment, same reason — §7 names "how one photo works" and
+       "accuracy / calibration" as the expandable material, and §14 forbids
+       deleting it. 1,000px, and the honest limits it states are the most
+       credible thing on the page; they are kept in full, one tap away. -->
+  <details data-page="home" class="rounded-2xl bg-white border border-zinc-200 px-6 md:px-8 py-4" aria-labelledby="tech-heading">
+    <summary class="cursor-pointer flex items-baseline justify-between gap-4 flex-wrap">
+      <span class="serif text-[20px] md:text-[24px] tracking-tight">How can one photo be enough?</span>
+      <span class="text-[12px] text-zinc-500">Detection, measurement and where it is still being calibrated</span>
+    </summary>
+    <div class="mt-5">
     <!-- Brief §10: keep this compact, and head it with the question a
          homeowner actually has — "how can one photo be enough?" — rather than
          "Proprietary technology", which is the eyebrow this carried and is the
@@ -1278,8 +1313,8 @@
          reads that and asks the obvious next question about ours — on a page
          that has just explained the estimate is a planning figure confirmed at
          survey. The moat argument belongs on /investors, where the reader is
-         the one it was written for. -->
-  </section>
+         the one it was written for. --></div>
+  </details>
 
   <!-- Section 10 of the copy handoff: a close.
 
