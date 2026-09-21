@@ -3554,7 +3554,15 @@ function buildVisualizer() {
        away, so it needs less room than it did when it was a six-row table.
        1.35 / 0.65 is 67.5%, in the middle of the range asked for. */
     h('div', { className: 'mt-6 grid lg:grid-cols-[1.35fr_0.65fr] gap-6' }, [
-      h('div', { className: 'rounded-2xl overflow-hidden border border-zinc-200 bg-[#FDFCF9]' }, [
+      /* Full width of the phone, not full width of a card inside a section.
+
+         The picture is the thing they came for, and on a 375px screen it was
+         275px wide — 96px of it lost to the page gutter and the section
+         padding it sits inside, which is a quarter of the display given to
+         margins around the one image the product exists to show. Edge to edge
+         below sm, and back inside its card from there up, where the width was
+         never the constraint. */
+      h('div', { className: '-mx-6 sm:mx-0 rounded-none sm:rounded-2xl overflow-hidden border-y sm:border border-zinc-200 bg-[#FDFCF9]' }, [
         /* The daylight filter goes on the frame holding both panes, not on the
            rendered image alone. Filtering only the "after" side meant dragging
            the slider compared this evening's new frames against this
