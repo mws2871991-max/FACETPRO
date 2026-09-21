@@ -1755,6 +1755,10 @@ const state = {
   /* Which of the folded-away sections this visitor has opened. Per visit, so
      a render never re-folds something somebody is reading. */
   unfolded: {},
+  /* A resumed design has no photograph — the code carries choices, not the
+     image — so "have they got a house on screen" is not the same question as
+     "have they uploaded". See gateUntilSubject(). */
+  resumedDesign: false,
   renderId: null,     // our id for it — the lead sends this, never a URL
   rendering: false,
   sendingLead: false,
@@ -2215,6 +2219,45 @@ function orderForJourney() {
   }
 }
 
+/* Nothing that designs a house appears until there is a house to design.
+
+   Before an upload, /design carried 7,567px — nine screens — of controls for
+   a photograph that did not exist: an empty visualiser, every window style
+   and frame colour on sale, a refine panel saying "Your estimate is ready",
+   and a save block for a design nobody had made. A customer told us the site
+   gives them too much, and this was most of it.
+
+   The predicate is "is there anything to design with", not "is there a
+   photo". A resume code carries choices and not the image — redeemResumeCode
+   restores the design and then asks them to go and take a picture — so a
+   photo test alone would hide a returning customer's own saved work from them
+   on the way back in.
+
+   This is the test buildTriage already uses at the top of the file, inverted
+   and applied to four more sections; it is not new machinery. It also stacks
+   with last week's declined-trade folding without overlapping: this asks "is
+   there a house yet", the fold asks "which trade". That is why the fold never
+   caught this — isDeclined is deliberately false while state.journey is null,
+   so the visitor who skips the chooser was getting the maximal page.
+
+   A failed detection still counts. state.stage becomes 'visualizer' either
+   way, which is right: a photograph we could not read is still a photograph,
+   and the controls are exactly what that person needs. */
+const GATED_UNTIL_SUBJECT = ['mount-visualizer', 'windows-doors', 'mount-refine', 'mount-lead'];
+
+function gateUntilSubject() {
+  const hasSubject = state.stage !== 'landing' || state.resumedDesign;
+  for (const id of GATED_UNTIL_SUBJECT) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    /* Only on the tool page. applyPage owns data-page visibility and the two
+       must not fight over the same attribute — on the homepage these are
+       hidden already and this would keep re-showing them. */
+    if (el.dataset.page && el.dataset.page !== PAGE) continue;
+    el.hidden = !hasSubject;
+  }
+}
+
 function render() {
   MOUNTS.forEach(([id, build]) => {
     const slot = document.getElementById(id);
@@ -2227,6 +2270,7 @@ function render() {
     slot.replaceChildren(build());
   });
   orderForJourney();
+  gateUntilSubject();
   ensureStatusPill();
 }
 
@@ -2331,6 +2375,8 @@ async function redeemResumeCode(code) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'That code didn’t work.');
     applyDesign(data.design || {});
+    /* They have something to design with, even without a photograph. */
+    state.resumedDesign = true;
     U('Your design is back — now take a photo of the front of your house');
   } catch (err) {
     state.resumeError = err.message;
