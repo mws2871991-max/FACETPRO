@@ -1929,6 +1929,29 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
      the same house. On a real photograph that was seven windows before a
      deploy and six after. */
   const fingerprint = imageFingerprint(img.buffer);
+  /* What kind of house the photograph shows, where the model could tell.
+
+     state.houseType has always defaulted to 'semi' and only moved if somebody
+     tapped the picker — so a detached house was measured against a semi's
+     55-130 m² band, its 181 m² reading refused, and the estimate fell back to
+     a typical figure. That is a large share of the fallback rate, and it is
+     not a measurement problem: the reading was fine, the band belonged to the
+     wrong kind of house.
+
+     The model was already being asked for an era and a wall material on every
+     photograph — and nothing has ever read either — so this costs no extra
+     call. It is a default, not a verdict: the picker still overrides it, a
+     value nobody recognises is discarded rather than coerced, and the
+     plausibility band still refuses a reading that does not fit whatever type
+     ends up chosen.
+
+     Reading it off the stored detections rather than a separate field means
+     cached photographs answer too, without invalidating the cache. */
+  const houseTypeFrom = (list) => {
+    const analysis = (list || []).find(d => d?.type === 'analysis');
+    return glazing.resolveHouseType(analysis?.houseType);
+  };
+
   /* Sidelights are priced with the door, so the list says so rather than
      tagging them WINDOW under a heading that has just excluded them. The
      stored record is untouched; this is a display copy. */
@@ -1942,6 +1965,7 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
     scaleReference: record.detections.some(d => d.type === 'door-front') && record.aspectRatio !== null,
     // What pricing will count, so the page does not count it a second way.
     frontWindowCount: glazing.frontWindowCount(record.detections),
+    houseType: houseTypeFrom(record.detections),
   });
 
   const seenId = detectionByImage.get(fingerprint);
@@ -2018,7 +2042,9 @@ Do not add any other keys, and do not describe anything in prose. Only the array
 
 Coordinates: x_pct/y_pct = top-left corner, w_pct/h_pct = width/height, all as % of image dimensions.
 
-Finally add: {"type":"analysis","summary":"2-3 sentence overview of the property","era":"victorian|edwardian|inter-war|post-war|modern|contemporary","wallMaterial":"red-brick|yellow-brick|grey-brick|render|stone|pebbledash|timber|other"}` }
+Finally add: {"type":"analysis","summary":"2-3 sentence overview of the property","era":"victorian|edwardian|inter-war|post-war|modern|contemporary","wallMaterial":"red-brick|yellow-brick|grey-brick|render|stone|pebbledash|timber|other","houseType":"detached|semi-detached|end-terrace|mid-terrace|bungalow"}
+
+For houseType, judge it from what the photograph shows: a gap on both sides and four visible corners is detached; a shared wall on one side with a neighbour continuing is semi-detached; a run of houses with this one at the end is end-terrace; a run continuing both ways is mid-terrace; a single storey is a bungalow. If the photograph does not show enough of the sides to tell, omit the field rather than guessing.` }
           ]
         }]
       })
@@ -2118,6 +2144,7 @@ Finally add: {"type":"analysis","summary":"2-3 sentence overview of the property
   res.json({
     detections: forDisplay(detections), detectionId, canMeasure: hasWall, scaleReference: hasDoor && !!size,
     frontWindowCount: glazing.frontWindowCount(detections),
+    houseType: houseTypeFrom(detections),
   });
 });
 
