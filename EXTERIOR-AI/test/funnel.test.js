@@ -106,7 +106,12 @@ test('conversion is measured against the step before, not the top', async () => 
   assert.deepStrictEqual(stages, [
     'landing', 'cta_clicked', 'design_opened', 'upload_started', 'upload_completed',
     'analysis_started', 'analysis_completed', 'visualisation_started',
-    'render_shown', 'reveal_viewed',
+    /* render_started added 21 September. It is the request; render_shown is
+       the response, and the gap between them is the thirty to sixty seconds
+       somebody spends deciding whether to wait. Without it, render_shown had
+       to be read against visualisation_started, which folds "never pressed
+       render" together with "pressed it and it failed". */
+    'render_started', 'render_shown', 'reveal_viewed',
     'design_created', 'design_changed',
     'estimate_viewed', 'breakdown_viewed', 'design_saved',
     'quote_started', 'quote_requested', 'quote_completed',
@@ -210,4 +215,30 @@ test('the store rolls a day up rather than keeping a row per visit', async () =>
   await store.countStage('landing');
   const totals = await store.readFunnel(30);
   assert.ok(typeof totals.landing === 'number', 'readFunnel should return counts, not rows');
+});
+
+test('render_started is fired on the request, not the response', () => {
+  /* The whole value of the stage is where it fires. Fired beside
+     render_shown it would measure nothing; fired at the request it turns
+     render_shown into a success rate and exposes the wait.
+
+     Asserted against the source because there is no way to reach
+     generateRealRender from node — the same approach declined-trades.test.js
+     takes. */
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const at = html.indexOf("reachedStage('render_started')");
+  assert.notStrictEqual(at, -1, 'render_started is not fired anywhere');
+
+  /* It must sit with the clock that starts the request, not near the code
+     that handles the reply. */
+  const clock = html.indexOf('renderStartedAt = Date.now()');
+  assert.notStrictEqual(clock, -1);
+  assert.ok(at > clock && at - clock < 900,
+    'render_started has drifted away from the start of the request');
+
+  const shown = html.indexOf("reachedStage('render_shown')");
+  if (shown !== -1) {
+    assert.ok(Math.abs(shown - at) > 200,
+      'render_started sits beside render_shown — then it is measuring the response, not the request');
+  }
 });

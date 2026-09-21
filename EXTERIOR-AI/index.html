@@ -5556,6 +5556,17 @@ async function generateRealRender() {
   state.rendering = true;
   stopRenderTimer();              // a second run must not leave the first ticking
   renderStartedAt = Date.now();
+  /* Fired on the request, not the response.
+
+     render_shown fires when the picture comes back. Nothing fired when one
+     was asked for, so the thirty to sixty seconds in between — the most
+     likely place in this journey for somebody to give up — was invisible.
+
+     visualisation_started is not a substitute: it fires when the visualiser
+     opens after detection, so render_shown over it folds "never pressed
+     render" together with "pressed it and it failed", and those want
+     opposite fixes. */
+  reachedStage('render_started');
   U('Creating a picture of your home — this can take up to a minute…');
   renderVisualizerOnly();
   /* Touch one text node a second. If the element is gone — the section was
@@ -6229,10 +6240,27 @@ function buildSaveFraming() {
   if (!state.leadCapture) {
     const hasRender = Boolean(state.renderId && state.renderUrl);
     return h('section', { id: 'save-design', className: 'rounded-2xl bg-[#111111] text-white p-6 md:p-8 scroll-mt-24' }, [
+      /* Lead with what works, not with what is missing.
+
+         This opened "Saving your design is coming shortly" over a paragraph
+         explaining that we are not taking details yet — and only then, four
+         hundred pixels down, offered the six-character code that saves a
+         design perfectly well and asks for nothing.
+
+         So the page announced a dead end and buried the working exit beneath
+         it. code_saved has fired zero times against twenty-nine
+         visualisations. That is what an apology at the top of a section does
+         to the offer underneath it: somebody who reads "coming shortly" has
+         already decided there is nothing here.
+
+         Nothing is removed. The honest note about quotes not being open moves
+         below the thing it qualifies, which is where every other caveat on
+         this site now sits — the same argument that moved the beta banner off
+         the top of the homepage. */
       h('p', { className: 'text-[11px] tracking-widest uppercase text-white/55' }, 'Step 3'),
-      h('h2', { className: 'mt-1 serif text-[26px] md:text-[32px] tracking-tight' }, 'Saving your design is coming shortly'),
+      h('h2', { className: 'mt-1 serif text-[26px] md:text-[32px] tracking-tight' }, 'Keep what you’ve designed'),
       h('p', { className: 'mt-3 text-sm leading-6 text-white/60 max-w-[60ch]' },
-        'We’re not taking anyone’s details just yet — we’re finishing our privacy policy first, and we’d rather do that properly than collect your information before it’s ready.'),
+        'Take the code below and your colours, styles and house type come straight back on any device — no account, no email, nothing to unsubscribe from.'),
 
       /* Somewhere to go, for the person who got all the way here and wants to
          keep what they made.
@@ -6253,6 +6281,8 @@ function buildSaveFraming() {
          the render has a permanent link and a download, buildShare renders
          both with capture off, and neither carries a name, an address or a
          price. So point at it rather than at a form. */
+      buildKeepChoices(hasRender),
+
       hasRender
         ? h('div', { className: 'mt-6 rounded-2xl bg-white/5 border border-white/10 p-4' }, [
             h('p', { className: 'text-[13px] leading-6 text-white/80' },
@@ -6265,8 +6295,11 @@ function buildSaveFraming() {
               onClick: () => document.getElementById('share-design')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
             }, 'Keep my design →'),
           ])
-        : h('p', { className: 'mt-3 text-sm leading-6 text-white/60 max-w-[60ch]' },
-            'Everything else on this page works, so do try the colours and the estimate. Come back shortly and you’ll be able to save what you’ve designed.'),
+        : null,
+
+      /* The caveat, under the offer rather than over it. */
+      h('p', { className: 'mt-6 pt-4 border-t border-white/10 text-[12px] leading-5 text-white/50 max-w-[60ch]' },
+        'Installer quotes aren’t open yet — we’re finishing our privacy policy first, and we’d rather do that properly than take your details before it’s ready. Your code will still work when they are.'),
 
       /* And the choices, which the picture does not carry.
 
@@ -6288,7 +6321,6 @@ function buildSaveFraming() {
          unfinished — a second collection route on the card that promises we
          are not collecting anything would be the one thing on this page that
          must not be built right now. */
-      buildKeepChoices(hasRender),
 
       /* This read "Nothing you do on this page is stored or sent anywhere
          while this notice is up." It is the strongest sentence on the card and

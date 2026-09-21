@@ -3399,7 +3399,11 @@ const FUNNEL_STAGES = [
      reader of the homepage, and the key KPI divided estimate_viewed by it. */
   'landing', 'cta_clicked', 'design_opened', 'upload_started', 'upload_completed',
   'analysis_started', 'analysis_completed', 'visualisation_started',
-  'render_shown', 'reveal_viewed',
+  /* Inserted between the visualiser opening and the picture arriving, so
+     render_shown over render_started reads as a render success rate and the
+     gap between them is the wait people abandon in. Inserted rather than
+     appended, because this list is read as a journey — see funnel.test.js. */
+  'render_started', 'render_shown', 'reveal_viewed',
   'design_created', 'design_changed',
   'estimate_viewed', 'breakdown_viewed', 'design_saved',
   'quote_started', 'quote_requested', 'quote_completed',
