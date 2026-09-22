@@ -1651,6 +1651,31 @@ const JOURNEYS = {
 const REAR_OPENINGS = new Set(['bifold', 'bifold-3m', 'sliding', 'double']);
 const isRearOpening = (id) => REAR_OPENINGS.has(id);
 
+/* The exclusion that costs the most, in one place so it cannot drift.
+
+   Garden doors nearly always replace a window or a single back door, so a
+   lintel, brickwork, making good and the threshold have to be paid for, and
+   none of it is in the figure. On a 3 m opening that is commonly a four-figure
+   sum against a headline of £4,778 - £8,686.
+
+   Said in the cost page's own words (landing.js:459) so the two agree.
+
+   It is a function rather than a constant because it has to appear in two
+   places, and those two places are not a duplication: a walk of the live site
+   found the first version of this sitting only in the estimate panel, which is
+   gated on having uploaded a photo — while the visitor arriving from
+   /cost/bifold-doors-cost sees £4,778 - £8,686 in the sticky bar immediately,
+   without uploading anything. The sentence was in the served HTML and
+   unreachable by the person it was written for. */
+const openingCaveat = (doorId) => (isRearOpening(doorId)
+  /* "The price above is for", not "This is the ${noun}" — the noun is plural
+     for every door this fires on ("garden doors"), and the singular verb read
+     "This is the garden doors" on screen. */
+  ? `The price above is for the garden doors, supplied and fitted. `
+    + `If your opening has to be made bigger — a lintel, brickwork, making good — `
+    + `that is builder's work and it is not in this figure.`
+  : null);
+
 const journeyLabel = (id) => JOURNEYS[id]?.label || null;
 /* The word to put in front of "project" or "quotes" — "your rendering project",
    "get rendering quotes". Null when they have not said, so the copy falls back
@@ -4310,9 +4335,9 @@ function buildGlazingLedPanel() {
          Beside the figure rather than in the "not included" list further down
          the page: that list is real and correct, but it is a scroll away from
          the total and is read by people already looking for caveats. */
-      isRearOpening(doorId)
+      openingCaveat(doorId)
         ? h('p', { className: 'mt-3 pt-3 border-t border-white/10 text-[11px] leading-4 text-white/70' },
-          `This is the ${doorNoun.toLowerCase()}, supplied and fitted. If your opening has to be made bigger — a lintel, brickwork, making good — that is builder's work and it is not in this figure.`)
+          openingCaveat(doorId))
         : null,
     ]),
 
@@ -4494,7 +4519,17 @@ function chosenSelections() {
 
   const out = [];
   if (windowStyle) out.push(['Windows', [windowStyle, glazColour].filter(Boolean).join(' · ')]);
-  if (doorStyle) out.push(['Front door', [doorStyle, glazColour].filter(Boolean).join(' · ')]);
+  /* "Front door" was printed over every door in the catalogue, including the
+     four that open onto the garden. A walk of the doors journey read "Front
+     door — Bifold, 3 m", which is the one place the summary is meant to tell
+     somebody what they have chosen. The same REAR_OPENINGS set that keeps
+     bifolds out of the picture names them here. */
+  if (doorStyle) {
+    out.push([
+      isRearOpening(state.prefs.doorStyleId) ? 'Garden doors' : 'Front door',
+      [doorStyle, glazColour].filter(Boolean).join(' · '),
+    ]);
+  }
   if (!isNone(state.cladding)) out.push(['Walls', state.cladding.name]);
   if (!isNone(state.trim)) out.push(['Roofline', state.trim.name]);
   if (!isNone(state.roof)) out.push(['Roof', state.roof.name]);
@@ -5058,6 +5093,17 @@ function buildTotalBar() {
       h('span', { className: 'measured' }, glazing),
     ]) : null,
     h('p', { className: 'text-[10px] leading-4 text-zinc-500' }, composition),
+    /* The opening caveat, here as well as in the estimate panel.
+
+       This is the copy that a bifold visitor actually reaches. They arrive
+       from /cost/bifold-doors-cost, the bar reads £4,778 - £8,686 before they
+       have uploaded anything, and the estimate panel carrying the same
+       sentence is gated behind having a photo. Same string from
+       openingCaveat(), so the two can never say different things. */
+    openingCaveat(state.prefs.doorStyleId)
+      ? h('p', { className: 'text-[10px] leading-4 text-zinc-500 border-t border-zinc-200 pt-1.5 mt-0.5' },
+        openingCaveat(state.prefs.doorStyleId))
+      : null,
     h('a', {
       href: '#visualizer-section',
       className: 'mt-1 text-[12px] px-4 rounded-full border border-zinc-300 hover:border-zinc-900 transition text-center min-h-[44px] inline-grid place-items-center',
