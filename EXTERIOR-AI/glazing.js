@@ -435,6 +435,30 @@ function insideSubject(b, subject) {
    is ever labelled any of them. */
 const NEIGHBOUR_LABEL = /\b(adjacent|neighbou?r(ing|s)?|next[\s-]door)\b/i;
 
+/* Whose building — by whichever test can actually answer.
+
+   Geometry first, always. The label only speaks where there is no subject box
+   to ask, which is the terrace case this rule was written for: the row's roof,
+   fascia and guttering come back as single full-frame boxes, nothing bounds a
+   subject, and subjectBox correctly returns null.
+
+   Running the label test everywhere was wrong in a way that matters. A window
+   on the customer's own house called "Window Adjacent To Front Door" would be
+   dropped even where the subject box exists and says plainly that it is
+   theirs — and the justification for that, that no window on somebody's own
+   house is ever labelled so, is an assumption about model phrasing. The
+   bay-pane rule is the standing evidence that model phrasing drifts.
+
+   The two mistakes are not equal. Counting a neighbour's window overcharges
+   somebody; dropping one of their own undercharges, silently, on a house we
+   could see perfectly well. Confining the label to where geometry is silent
+   costs nothing on the photograph that found the bug and removes the only way
+   this rule can delete a real window. */
+function isNeighbours(b, label, subject) {
+  if (subject) return !insideSubject(b, subject);
+  return NEIGHBOUR_LABEL.test(label);
+}
+
 function windowCandidates(detections) {
   const subject = subjectBox(detections || []);
 
@@ -448,7 +472,7 @@ function windowCandidates(detections) {
   for (const d of confident) {
     const b = box(d);
     if (!b) continue;               // box() coerces and rejects the unusable
-    if (!insideSubject(b, subject) || NEIGHBOUR_LABEL.test(String(d?.label || ''))) { neighbours++; continue; }
+    if (isNeighbours(b, String(d?.label || ''), subject)) { neighbours++; continue; }
     if (isSidelight(d)) { sidelights++; continue; }
     const label = String(d?.label || '');
     const c = { b, confidence: Number(d?.confidence) || 0 };

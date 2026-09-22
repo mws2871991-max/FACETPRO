@@ -162,8 +162,24 @@ module.exports = function opsRoutes({
      describes the business rather than the product. */
   router.get('/api/measurements', installerLimiter, requireInstallerPassword, async (req, res) => {
     const limit = Math.min(5000, Math.max(1, parseInt(req.query.limit, 10) || 1000));
+
+    /* ?days=N, clamped the way /api/funnel clamps it.
+
+       Without a window these aggregates cover the whole table, so the fallback
+       rate mixes photographs from before the house-type fix with photographs
+       after it, and nothing measured from here on can be attributed to the
+       change that caused it. Same fault the funnel had until readFunnelDays.
+
+       Absent means everything, which is what every existing caller expects.
+       A default window would silently change what this endpoint has been
+       reporting all week. */
+    const daysRaw = req.query.days === undefined ? null
+      : Math.min(365, Math.max(1, parseInt(req.query.days, 10) || 1));
+    const sinceIso = daysRaw === null ? null
+      : new Date(Date.now() - daysRaw * 86400000).toISOString();
+
     let allRows = [];
-    try { allRows = await store.readMeasurements(limit); }
+    try { allRows = await store.readMeasurements(limit, sinceIso); }
     catch (err) { return res.status(500).json({ error: 'Could not read the observations.' }); }
 
     /* One photograph, measured five times, is one observation.
@@ -357,6 +373,10 @@ module.exports = function opsRoutes({
       samples: rows.length,
       rows: allRows.length,
       repeats,
+      /* What window these numbers cover, so a figure quoted from here can be
+         attributed to a change. Null means the whole table. */
+      days: daysRaw,
+      since: sinceIso,
       fallback,
       calibration,
       byMethod,

@@ -747,8 +747,22 @@ async function recordMeasurement(row) {
   fs.appendFileSync(path.join(DATA_DIR, MEASUREMENT_FILE), JSON.stringify(r) + '\n');
 }
 
-async function readMeasurements(limit = 1000) {
+/* Optionally windowed, because an aggregate over all of history cannot be
+   attributed to anything.
+
+   The fallback rate mixed photographs from before the house-type fix with
+   photographs after it, and there was no way to tell them apart from outside
+   — the same fault the funnel had until readFunnelDays. `ts` was already
+   stored and already selected; it was thrown away before anybody could use it.
+
+   The window is pushed into the query rather than applied to the result,
+   because ORDER BY id DESC LIMIT n returns the newest n and filtering those
+   afterwards silently answers a different question once the table outgrows
+   the limit. */
+async function readMeasurements(limit = 1000, sinceIso = null) {
   if (pool) {
+    const where = sinceIso ? 'WHERE ts >= $2' : '';
+    const params = sinceIso ? [limit, sinceIso] : [limit];
     const { rows } = await pool.query(
       `SELECT ts, house_type AS "houseType", door_ratio AS "doorRatio",
               door_height_pct AS "doorHeightPct", door_boxes AS "doorBoxes", method, m2,
@@ -757,12 +771,15 @@ async function readMeasurements(limit = 1000) {
               front_elevation_m2 AS "frontElevationM2", front_to_total AS "frontToTotal",
               coverage_m2 AS "coverageM2", coverage_pct AS "coveragePct"
          FROM ${SCHEMA_NAME}.measurement_observations
-        ORDER BY id DESC LIMIT $1`, [limit]);
+        ${where}
+        ORDER BY id DESC LIMIT $1`, params);
     return rows;
   }
   try {
-    return fs.readFileSync(path.join(DATA_DIR, MEASUREMENT_FILE), 'utf8')
-      .trim().split('\n').filter(Boolean).map(l => JSON.parse(l)).slice(-limit).reverse();
+    const all = fs.readFileSync(path.join(DATA_DIR, MEASUREMENT_FILE), 'utf8')
+      .trim().split('\n').filter(Boolean).map(l => JSON.parse(l));
+    const windowed = sinceIso ? all.filter(r => String(r?.ts || '') >= sinceIso) : all;
+    return windowed.slice(-limit).reverse();
   } catch (_) { return []; }
 }
 

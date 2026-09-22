@@ -761,3 +761,35 @@ test('a window the model names as next door is dropped even with no subject box'
   assert.strictEqual(fwc([...terrace, win('Landing window', 62)]), base + 1,
     'a real window was dropped');
 });
+
+test('a trigger word does not delete a window geometry says is theirs', () => {
+  /* The false-positive direction, which nothing pinned. The label rule exists
+     for the terrace, where subjectBox is null and geometry cannot speak — but
+     it ran on every window, so "Window Adjacent To Front Door" on somebody's
+     own house was dropped even where the subject box said plainly it was
+     theirs.
+
+     The two mistakes are not equal. Counting a neighbour's window overcharges
+     somebody; dropping one of their own undercharges silently, on a house we
+     could see perfectly well. */
+  /* Placed clear of the other two on both axes. The first attempt sat 1% from
+     the upper-left window on the same row, and the bay merge — correctly —
+     joined them, so the count did not move and the test read as a label
+     failure. A fixture that trips a different rule proves nothing about this
+     one. */
+  const inside = { type: 'window', confidence: 0.9, label: 'Window Adjacent To Front Door',
+                   x_pct: 44, y_pct: 49, w_pct: 10, h_pct: 11 };
+  const withTriggerWord = [...SUBJECT_HOUSE, inside];
+
+  const subject = geometry.subjectBox(withTriggerWord);
+  assert.ok(subject, 'this fixture must HAVE a subject box, or it tests the label path instead');
+
+  assert.strictEqual(fwc(withTriggerWord), fwc(SUBJECT_HOUSE) + 1,
+    'a window inside the subject box was dropped for its label — geometry had already answered');
+
+  /* And the neighbour is still excluded there, by geometry rather than by
+     wording: the same box outside the subject box goes, whatever it is called. */
+  const outside = { ...inside, label: 'Perfectly ordinary window', x_pct: 1, y_pct: 40 };
+  assert.strictEqual(fwc([...SUBJECT_HOUSE, outside]), fwc(SUBJECT_HOUSE),
+    'a window outside the subject box was counted');
+});
