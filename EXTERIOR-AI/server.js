@@ -3463,6 +3463,24 @@ const BRANCH_STAGES = new Map([
      the handoff asks to A/B the wording of the first — which cannot be read
      while both are counted as one. */
   ['real_home_cta_click', { of: 'landing', label: 'started from the real-homes block' }],
+  /* The third invitation, added 22 September because the four steps ended at
+     4,539px and the next visible CTA was at 5,892px — 1.7 phone screens with
+     nothing to act on, directly after the section that explains the product.
+
+     It has its own counter for the same reason the one above does, and for a
+     sharper one: a CTA inserted between two existing CTAs can look successful
+     while earning nothing, by taking clicks that would have happened 1,353px
+     later anyway. Only reading it per day, against landing, distinguishes a
+     third door from a nearer one.
+
+     HOW TO READ THE THREE. They do not sum. Every one of these buttons calls
+     goToUpload(), which fires cta_clicked, so that is the TOTAL and the two
+     named branches are subsets of it:
+
+       hero = cta_clicked - real_home_cta_click - steps_cta_click
+
+     Adding the three together counts the same click twice. */
+  ['steps_cta_click', { of: 'landing', label: 'started from under the four steps' }],
   /* What the two sections a page-structure review wants moved actually earn.
 
      The 20 September proposal asks to hide the conservatory guide and move
