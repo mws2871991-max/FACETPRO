@@ -668,8 +668,22 @@ ${faq ? `<script type="application/ld+json">${JSON.stringify(faq)}</script>` : '
 </div></header>
 <main class="wrap">
 <h1>${escapeHtml(h1)}</h1>
-${beta ? `<p class="notice">${escapeHtml(BETA_NOTICE)}</p>` : ''}
 ${body}
+<!-- The beta notice, after the figures rather than before them.
+
+     It sat directly under the h1, so the first thing a searcher read on
+     the pages that bring this site its traffic was a disclaimer — and one
+     about wall-area measurement, on a page about window prices, which come
+     from the rate card and not from any photograph. It qualified something
+     the reader had not been shown yet and was not about what they were
+     reading at all.
+
+     Same argument that moved it off the top of the homepage and then off
+     the top of the tool: a caveat above the value is read before there is
+     anything to apply it to. Nothing is hidden — it is the paragraph
+     immediately before the call to action, which is the moment it becomes
+     relevant. -->
+${beta ? `<p class="notice">${escapeHtml(BETA_NOTICE)}</p>` : ''}
 ${cta(siteUrl, slug)}
 <p class="caveat">${escapeHtml(CAVEAT)}</p>
 ${related ? `<nav class="related"><h2>Related costs</h2><ul>${related.map(r =>
@@ -845,6 +859,22 @@ function renderCostPage(slug, { catalogue, siteUrl, siteMode }) {
   const def = COST_PAGES.find(p => p.slug === slug);
   if (!def) return null;
   const built = def.build(catalogue);
+  /* NOTE, unresolved: two briefs disagree about what comes first here.
+
+     §4 of the UX brief put journeyHero above the guide — "somebody who
+     searched house rendering cost should land in a rendering experience,
+     not only in a guide that links to one" — and landing.test.js asserts
+     it.
+
+     §9 of the content brief asks for question, guide price, every home
+     differs, see it on your home. On a phone the current order puts the
+     number the searcher came for about 590px down, behind a restated
+     question, a notice and a call to action.
+
+     Left as §4 has it, because that decision is tested and deliberate and
+     this is a judgement about acquisition rather than a defect. Moving the
+     beta notice below the body, which both briefs would want, is done
+     regardless and is most of the distance. */
   const body = `${journeyHero(siteUrl, slug)}
 <div class="answer"><strong>The short answer</strong><span>${escapeHtml(built.answer)}</span></div>
 ${built.sections.map(section).join('\n')}`;
