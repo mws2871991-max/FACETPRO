@@ -4293,6 +4293,27 @@ function buildGlazingLedPanel() {
         'Taking the old frames away',
         'VAT (20%)',
       ].filter(Boolean).map(item => h('div', {}, `• ${item}`))),
+
+      /* The biggest cost on a bifold is not in the bifold.
+
+         Garden doors nearly always replace a window or a single back door, so
+         a lintel, brickwork, making good and the threshold have to be paid
+         for, and none of it is priced here. On a 3 m opening that is commonly
+         a four-figure sum of its own, sitting under a headline that reads
+         £4,778 – £8,686 — the dearest number the tool produces.
+
+         /cost/bifold-doors-cost has said this in plain words since it was
+         written (landing.js:459). The estimate, which is the screen somebody
+         actually plans against, has never said it. The page before the number
+         is not where an exclusion belongs.
+
+         Beside the figure rather than in the "not included" list further down
+         the page: that list is real and correct, but it is a scroll away from
+         the total and is read by people already looking for caveats. */
+      isRearOpening(doorId)
+        ? h('p', { className: 'mt-3 pt-3 border-t border-white/10 text-[11px] leading-4 text-white/70' },
+          `This is the ${doorNoun.toLowerCase()}, supplied and fitted. If your opening has to be made bigger — a lintel, brickwork, making good — that is builder's work and it is not in this figure.`)
+        : null,
     ]),
 
     /* Why it is a range, said here rather than only two screens down. Same
