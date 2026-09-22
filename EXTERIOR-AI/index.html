@@ -3820,7 +3820,24 @@ function buildVisualizer() {
       : null,
   ].filter(Boolean);
 
-  const renderButtonLabel = state.rendering ? 'Creating your picture…' : (state.renderUrl ? 'Try this look again' : 'Show me this on my home');
+  /* Offering a picture only when there is one to make.
+
+     "Show me this on my home" sat enabled on the doors journey with a garden
+     door chosen, and pressing it returned the server's nothing_selected copy —
+     which asks for a finish, a roof or a trim colour, none of which that
+     visitor came for. The button now says what is true, and the line under it
+     offers the thing that would actually work. */
+  const nothingToDraw = !!state.uploadedBase64 && !state.rendering && !hasDrawableChange();
+  const gardenDoorOnly = nothingToDraw && isRearOpening(state.prefs.doorStyleId);
+  const renderButtonLabel = state.rendering
+    ? 'Creating your picture…'
+    : state.renderUrl
+      ? 'Try this look again'
+      : gardenDoorOnly
+        ? 'Garden doors aren’t on this photo'
+        : nothingToDraw
+          ? 'Pick a finish to see it on your home'
+          : 'Show me this on my home';
 
   /* Only over a real render — there is nothing to light up on a swatch
      preview, and offering the controls before the picture exists promises
@@ -4061,10 +4078,22 @@ function buildVisualizer() {
           : [
               h('button', {
                 type: 'button',
-                className: `w-full min-h-[44px] rounded-full text-xs font-medium ${state.uploadedBase64 ? 'bg-zinc-900 text-white' : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'}`,
-                disabled: !state.uploadedBase64 || state.rendering,
+                className: `w-full min-h-[44px] rounded-full text-xs font-medium ${state.uploadedBase64 && !nothingToDraw ? 'bg-zinc-900 text-white' : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'}`,
+                disabled: !state.uploadedBase64 || state.rendering || nothingToDraw,
                 onClick: generateRealRender,
               }, renderButtonLabel),
+              /* What they could see instead, offered where the refusal is.
+
+                 A doors visitor with a bifold is the highest-value customer on
+                 the site and the one the picture cannot serve. Saying only
+                 "not this" leaves the strongest part of the product unused on
+                 the most expensive job; naming what would work is the whole
+                 difference between a dead end and a next step. */
+              gardenDoorOnly
+                ? h('p', { className: 'mt-2 text-[11px] leading-4 text-zinc-500 text-center' },
+                  'Garden doors open onto the back, and your photo is of the front — so there’s nothing to draw. '
+                  + 'Pick new windows, walls, a roof or roofline and we’ll show you those on this house.')
+                : null,
               /* Said once the picture exists, because until then there is
                  nothing to disagree with.
 
@@ -7836,19 +7865,38 @@ let autoRenderDone = false;
 /* Called from handleUpload the moment the bytes exist, before detection has
    answered. Every guard maybeAutoRender applies still applies except the one
    it cannot know yet — whether anything was found in the photograph. */
+/* Is there anything the picture could actually show?
+
+   The server decides this in buildRenderPrompt, and the client has to agree or
+   it offers a button that cannot work. On the doors journey with a garden door
+   chosen, every swatch is "Leave as it is", REAR_OPENINGS blanks the door
+   before the prompt is built, the prompt comes back null and /api/render
+   answers 400 nothing_selected — whose copy asks for "a finish, a roof or a
+   trim colour", on the one journey where the visitor was told those are not
+   their project. Walked live on 22 September with a 3 m bifold selected: the
+   button was enabled and pressing it said they had chosen nothing.
+
+   The rear-opening test is the part both earlier copies were missing. A colour
+   plus a bifold passed them, so the automatic render fired on upload and
+   bought a 400 — one wasted render per doors upload against a cap of fifty a
+   day that auto-render has already turned into an upload cap.
+
+   Third place to need this test, so it is a function now rather than a third
+   hand-rolled copy. The two it replaces each got it wrong in their own way. */
+function hasDrawableChange() {
+  if ([state.cladding, state.trim, state.roof].some(sw => sw && !isNone(sw))) return true;
+  const g = glazingChoice();
+  if (!g.windowDoorColourName) return false;
+  const drawableDoor = !!g.doorStyleName && !isRearOpening(g.doorStyleId);
+  return !!(g.windowStyleName || drawableDoor);
+}
+
 function startAutoRender() {
   if (autoRenderDone || state.rendering || state.renderUrl) return;
   if (!state.uploadedBase64) return;
   if (state.renderUnavailable || state.detectUnavailable) return;
   applyHouseTypePreset();
-  /* isNone, not a name comparison. This read `sw.name.toLowerCase() !== 'none'`
-     while the none swatch is named "Leave as it is" — so the guard was always
-     true and a visitor who had chosen nothing still bought a render of an
-     empty instruction. The helper two hundred lines up has always been right;
-     this is the second place that reimplemented it by hand and got it wrong. */
-  const changesSomething = [state.cladding, state.trim, state.roof].some(sw => sw && !isNone(sw))
-    || !!glazingChoice().windowDoorColourName;
-  if (!changesSomething) return;
+  if (!hasDrawableChange()) return;
   autoRenderDone = true;
   generateRealRender();
 }
@@ -7860,14 +7908,7 @@ function maybeAutoRender() {
   if (!state.detections.filter(d => d.type !== 'analysis').length) return;
 
   applyHouseTypePreset();
-  /* isNone, not a name comparison. This read `sw.name.toLowerCase() !== 'none'`
-     while the none swatch is named "Leave as it is" — so the guard was always
-     true and a visitor who had chosen nothing still bought a render of an
-     empty instruction. The helper two hundred lines up has always been right;
-     this is the second place that reimplemented it by hand and got it wrong. */
-  const changesSomething = [state.cladding, state.trim, state.roof].some(sw => sw && !isNone(sw))
-    || !!glazingChoice().windowDoorColourName;
-  if (!changesSomething) return;
+  if (!hasDrawableChange()) return;
   autoRenderDone = true;
   autoRenderStart(true);
 }
