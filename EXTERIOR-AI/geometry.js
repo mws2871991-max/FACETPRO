@@ -307,8 +307,16 @@ const TILED_WALL_LABEL = /\btiles?\b/i;
 /* Below this, the roof is a strip along the top edge rather than a surface.
 
    Two photographs is a direction, not a calibration: tilehung-before renders
-   correctly and reads 45-58, hero-before does not and reads 15-16. 20 sits
-   between them with room on both sides. Widen the sample before trusting it.
+   correctly and reads 45-58, hero-before does not and reads 14-16. 20 sits
+   between them. Widen the sample before trusting it.
+
+   The binding constraint is not either of those, though — it is
+   semi-before-sm.jpg, the plain brick house that renders perfectly and whose
+   roof reads 22-28. That is 2 points of margin above this threshold, against
+   detection variance of around 6 measured on a single photograph. A bad call
+   on that house would refuse a roof it can do, which is the more expensive
+   direction of failure: a wrong picture loses trust, a refusal loses the sale.
+   More houses, or a lower number, before this is trustworthy.
 
    Those are ranges because detection is not deterministic. The same photograph
    returned a roof of 58 on one call and 45 on another, and named the same wall
