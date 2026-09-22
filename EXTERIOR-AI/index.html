@@ -687,7 +687,41 @@
          at once — commercially the best line on the page and too dense to land
          at a glance. Same content, read in two beats. -->
     <p class="mt-6 serif text-[18px] md:text-[20px] tracking-tight">One photo. Five trades. One starting point.</p>
-    <p class="mt-2 text-sm leading-6 text-zinc-600 max-w-[68ch]">Windows, doors, walls, fascias and soffits, and the roof &mdash; five companies you would otherwise be booking, waiting in for and chasing, priced together from the same photograph.</p>
+    <!-- The booking-and-chasing clause came out on the 22 September review:
+         "the customer doesn't need to be told repeatedly how frustrating
+         traditional quoting is". They are told once in the hero and again in
+         "Why two neighbours pay thousands apart"; a third time, in the middle
+         of the section explaining how the product works, is arguing where it
+         should be describing. "roofline" rather than "fascias and soffits"
+         because that is the word the rest of the site uses for that trade. -->
+    <p class="mt-2 text-sm leading-6 text-zinc-600 max-w-[68ch]">Windows, doors, walls, roofline and roof &mdash; priced together from the same photograph.</p>
+  </section>
+
+  <!-- The invitation, where the explanation ends.
+
+       Measured 22 September: the four steps finished at 4,539px and the next
+       CTA a homeowner could see was at 5,892px — 1,353px, 1.7 phone screens,
+       with nothing to act on in between. The one before it sat at 3,178px,
+       ABOVE the explanation. So the page invited, then explained, then left
+       the most persuaded reader on it with no way to act short of scrolling
+       two screens or going back up.
+
+       (There is an "Upload a photo" button inside the folded "Why two
+       neighbours" block in that gap. It does not count: nobody sees a button
+       inside a fold they have not opened.)
+
+       The wording picks up step two deliberately. "We read your home" is what
+       bridges uploading a photograph and seeing the visualisation, and
+       "we'll show you what we found" is that promise in the imperative.
+
+       Counted as its own branch, like real_home_cta_click, because three
+       invitations landing in one upload box otherwise say only "somebody
+       started" — and the question this has to answer is whether a third
+       position earns uploads or merely moves them. -->
+  <section data-page="home" class="rounded-2xl bg-zinc-900 text-[#FBF8F3] p-6 md:p-8 text-center" aria-labelledby="steps-cta-heading">
+    <h2 id="steps-cta-heading" class="serif text-[24px] md:text-[30px] tracking-tight">See it on your home.</h2>
+    <p class="mt-3 text-[14px] leading-7 text-white/70 max-w-[46ch] mx-auto">Upload one photo and we&rsquo;ll show you what we found.</p>
+    <button type="button" class="mt-6 cta px-7 py-4 rounded-full text-[15px] font-semibold transition min-h-[52px]" onclick="reachedStage('steps_cta_click'); goToUpload()">Upload my house</button>
   </section>
 
   <div data-page="design" id="mount-upload"></div>
