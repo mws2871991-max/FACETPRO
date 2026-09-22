@@ -343,8 +343,28 @@ test('the tile-hanging label is matched however the model phrases it', () => {
      a label-format match shipped one day and the model rephrased the next. */
   const roof = sw('roof', 'slate-roof');
   const sentence = /area of small overlapping tiles on the wall below the guttering is tile-hanging/i;
-  for (const label of ['Tile Hanging Upper Wall', 'Tile-hung upper wall', 'TILE HUNG WALL', 'tile hanging']) {
+  /* "Roof Tile Cladding (Gable Wall)" is the label the model returned for the
+     same feature on tilehung-before.jpg — no "hanging", no "hung", and the
+     word "Roof" inside a cladding label. The narrow matcher missed it, so the
+     correction never fired on the one house in the standing test set it was
+     written for. These are all real labels seen from /api/detect. */
+  for (const label of ['Tile Hanging Upper Wall', 'Tile-hung upper wall', 'TILE HUNG WALL',
+    'tile hanging', 'Roof Tile Cladding (Gable Wall)', 'Clay Tile Cladding']) {
     assert.match(buildRenderPrompt({ roof, wallMaterials: [label] }), sentence, `missed "${label}"`);
+  }
+});
+
+test('a wall that is not tiled does not get the tile-hanging correction', () => {
+  /* The matcher is deliberately broad — any cladding label mentioning a tile —
+     because detection has already said these are walls. That breadth is only
+     safe if it still excludes the ordinary wall materials, so this is the
+     other half of the pair. */
+  const roof = sw('roof', 'slate-roof');
+  const sentence = /area of small overlapping tiles on the wall below the guttering is tile-hanging/i;
+  for (const label of ['Red Brick Lower Wall', 'Brick Wall', 'Right Side Brick Wall',
+    'Render Upper Wall', 'Pebbledash Front Wall', 'Timber Boarding']) {
+    assert.doesNotMatch(buildRenderPrompt({ roof, wallMaterials: [label] }), sentence,
+      `"${label}" is not a tiled wall and must not get the correction`);
   }
 });
 

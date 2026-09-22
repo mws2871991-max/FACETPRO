@@ -163,7 +163,20 @@ const HOLDS = {
    Detection already labels them — "Tile Hanging Upper Wall" comes back as a
    cladding box on the test photograph — and until now that knowledge stopped
    at the detect call and never reached the render. */
-const TILE_HUNG = /\btile[\s-]?(hang|hung|hanging)\b/i;
+/* Any wall the model described as tiled, however it phrased it.
+
+   This asked for "tile-hanging", "tile hung" or "tile hanging", and the
+   standing test set broke it the first time it ran: on tilehung-before.jpg the
+   same feature comes back as "Roof Tile Cladding (Gable Wall)" — the word
+   "hanging" never appears, and the label even contains "Roof". The correction
+   silently did not fire on the one house it was written for.
+
+   Matching on "tile" alone is safe here because these labels are already
+   filtered to type === 'cladding'. Detection has said this is a wall; a wall
+   made of tiles is exactly the case that needs the sentence, whatever the
+   model chose to call it. The narrow version was a third bet on model
+   phrasing, and the third to lose. */
+const TILE_HUNG = /\btiles?\b/i;
 
 function buildRenderPrompt(sel = {}) {
   const cladding = chosen(sel.cladding);
