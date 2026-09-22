@@ -87,6 +87,33 @@ const COLOUR_WORDS = {
   terracotta: 'warm orange-brown terracotta',
 };
 
+/* The same idea for window and door frames, which had none.
+
+   Every other trade reaches the model as a description. Frames reached it as
+   "Anthracite" or "Chartwell Green" — trade names off a swatch card, which the
+   comment above says steer the picture poorly, and which the model is left to
+   guess at. That is why frame colour has been ignored on every run since
+   August while walls and roofs obeyed.
+
+   Kept separate from COLOUR_WORDS rather than merged into it, because two of
+   these ids are the words "white" and "black". A cladding or roof swatch could
+   be given either name tomorrow, and the merge would silently hand a frame
+   description to a wall.
+
+   The words are read off the swatch hexes, not the names. Two of the six
+   disagree with what the name suggests: agate-grey is #8A8D8F, a mid neutral
+   that is faintly cool rather than a light warm grey, and chartwell-green is
+   #5B7C5B, which is a mid green and not a pale one. Describing them the way
+   the names sound would reintroduce the same problem one step further along. */
+const FRAME_COLOUR_WORDS = {
+  anthracite: 'very dark blue-grey, almost black, matte',       // #2B2D42
+  'agate-grey': 'mid cool grey, matte',                         // #8A8D8F
+  white: 'clean bright white',                                  // #FFFFFF
+  'chartwell-green': 'muted mid sage green',                    // #5B7C5B
+  black: 'matte black',                                         // #1C1C1C
+  cream: 'soft warm cream',                                     // #F5F0E6
+};
+
 const describe = (sw, table) => {
   if (!sw) return null;
   const colour = COLOUR_WORDS[sw.id];
@@ -114,22 +141,52 @@ const chosen = (sw) => (sw && sw.id && sw.id !== 'none') ? sw : null;
    are exactly the ones the customer said to leave, so they are the ones worth
    the words. */
 const HOLDS = {
-  cladding: 'the existing wall surface — every brick, its colour, its mortar ' +
-            'joints and its texture',
+  /* Material-neutral, because naming brick excused everything that is not.
+
+     This read "every brick, its colour, its mortar joints and its texture".
+     On a tile-hung house that sentence holds nothing: the upper wall is not
+     brick, so no part of the instruction covers it. Measured on the site's own
+     hero photograph, asking for a slate roof turned the tile-hung upper wall
+     slate grey and left the terracotta roof alone — the model took the only
+     surface in the frame made of small flat overlapping tiles and changed
+     that, which is a defensible reading of what it was told. */
+  cladding: 'the existing wall surface, whatever it is made of — brick, ' +
+            'tile-hanging, render, stone or boarding — including its colour, ' +
+            'its texture and any joints or courses in it',
   trim: 'the fascias, soffits, bargeboards and guttering, in their existing colour',
   roof: 'the existing roof covering — the same tiles, the same colour, the same texture',
   glazing: 'the windows and the front door, including the exact colour of every frame',
 };
+
+/* Wall surfaces the model will mistake for a roof if nobody says otherwise.
+
+   Detection already labels them — "Tile Hanging Upper Wall" comes back as a
+   cladding box on the test photograph — and until now that knowledge stopped
+   at the detect call and never reached the render. */
+const TILE_HUNG = /\btile[\s-]?(hang|hung|hanging)\b/i;
 
 function buildRenderPrompt(sel = {}) {
   const cladding = chosen(sel.cladding);
   const trim = chosen(sel.trim);
   const roof = chosen(sel.roof);
 
+  /* What detection saw on the walls, as labels. Optional: a render without a
+     detectionId still works exactly as it did, which matters because the
+     record is pruned after a while and a retry may outlive it. */
+  const wallMaterials = Array.isArray(sel.wallMaterials) ? sel.wallMaterials.map(String) : [];
+  const tileHungWall = wallMaterials.some(l => TILE_HUNG.test(l));
+
   const windowStyle = String(sel.windowStyle || '').trim();
   const doorStyle = String(sel.doorStyle || '').trim();
   const glazingColour = String(sel.glazingColour || '').trim();
   const changingGlazing = !!(glazingColour && (windowStyle || doorStyle));
+
+  /* The frame colour as a description where the id is known, and as the bare
+     trade name only where it is not. Same rule as every other trade: the id is
+     the selection, the name is a label somebody in marketing may reword. */
+  const glazingColourId = String(sel.glazingColourId || '').trim();
+  const frameWords = FRAME_COLOUR_WORDS[glazingColourId] || null;
+  const glazingColourPhrase = frameWords ? `${glazingColour} — ${frameWords}` : glazingColour;
 
   /* One sentence per trade, each beginning with the thing it acts on.
 
@@ -164,8 +221,19 @@ function buildRenderPrompt(sel = {}) {
        specific case, and it sits beside the verb rather than in a list of
        things to leave alone twelve clauses later. */
     changes.push(
-      `Replace the roof covering on every visible roof slope of this house — the house in the centre of the photograph, ` +
+      /* The roof named by where it is, not only by what it is made of.
+
+         "Every visible roof slope" is a material description, and on a
+         tile-hung house there are two surfaces in the frame that answer to it.
+         Position is the thing that separates them: the roof is above the
+         fascia and guttering, and the tile-hanging is below. */
+      `Replace the roof covering on every visible roof slope of this house — the sloping roof above the fascia and ` +
+      `guttering, on the house in the centre of the photograph, ` +
       `the one whose front door is visible — including any porch or bay roof, with ${describe(roof, ROOF_SURFACE)}. ` +
+      (tileHungWall
+        ? `The vertical tiles on the upper wall are wall tile-hanging, not roof. They are part of the walls, they sit ` +
+          `below the fascia and guttering, and they must not change unless the walls are being changed. `
+        : '') +
       `Do not change the roof of the houses on either side of it: any roof that runs off the left or right edge of the ` +
       `frame belongs to a neighbouring property and must keep its original colour, material and texture exactly, even ` +
       `where it appears to continue from this roof. The roof of this house must visibly change.`);
@@ -179,7 +247,8 @@ function buildRenderPrompt(sel = {}) {
     changes.push(
       `Replace the window frames${doorStyle ? ' and the front door' : ''} with photorealistic ` +
       `${windowStyle || 'casement'} windows${doorStyle ? ` and a ${doorStyle} front door` : ''}, ` +
-      `both in ${glazingColour}. Frame proportions and opening sizes must match the existing ` +
+      `both in ${glazingColourPhrase}. Every window frame and the door frame must visibly take this colour. ` +
+      `Frame proportions and opening sizes must match the existing ` +
       `apertures exactly. Glass reflections must stay consistent with the original sky and surroundings.`);
   }
 

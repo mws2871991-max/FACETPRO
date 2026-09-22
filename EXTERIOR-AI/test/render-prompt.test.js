@@ -64,7 +64,18 @@ test('P0-1: a chosen roof is asked for in its own sentence, and insistently', ()
      whose first two clauses were nonsense. It gets its own now. */
   const roofSentence = p.split('. ').find(s => /roof covering/i.test(s));
   assert.ok(roofSentence, 'the roof instruction is not a sentence of its own');
-  assert.doesNotMatch(roofSentence, /wall surface|fascia/i,
+  /* Matched on the other trades' verbs rather than their nouns.
+
+     This read /wall surface|fascia/, and the 22 September rendering fix had to
+     name the fascia inside the roof sentence — "the sloping roof above the
+     fascia and guttering" — because material alone does not separate a roof
+     from a tile-hung wall, and position does. A landmark is not a request, and
+     a noun match cannot tell the two apart.
+
+     Asking for the verbs is also the stricter test. The bug was a roof clause
+     bolted onto "Replace the exterior wall surface with…"; that shape is
+     caught here however the nouns around it are reworded. */
+  assert.doesNotMatch(roofSentence, /Replace the exterior wall surface|Repaint the fascias|Replace the window frames/i,
     'the roof request is sharing a sentence with another trade again — that is ' +
     'the shape of the bug: a compound request is as strong as its weakest clause');
 });
@@ -100,7 +111,7 @@ test('P0-2: a trade set to "Leave as it is" is never asked to change', () => {
     'the trim was set to leave and the porch canopy went from green to red');
 
   // And not merely absent — actively held.
-  assert.match(p, /Leave the following exactly as they are[\s\S]*every brick/i);
+  assert.match(p, /Leave the following exactly as they are[\s\S]*existing wall surface, whatever it is made of/i);
   assert.match(p, /Leave the following exactly as they are[\s\S]*fascias, soffits/i);
   assert.match(p, /windows and the front door, including the exact colour of every frame/i,
     'render 3 changed the window frames from white to grey in a session that ' +
@@ -241,7 +252,10 @@ test('glazing alone is enough to be worth a render', () => {
   assert.match(p, /Make one change, and only one/);
   assert.match(p, /a Composite front door/);
   // The walls and roof they did not ask about are held.
-  assert.match(p, /every brick, its colour, its mortar joints/i);
+  /* Held whatever the wall is made of. The brick-only wording this used to
+     assert is what let a tile-hung wall be repainted slate — see the 22
+     September rendering review below. */
+  assert.match(p, /existing wall surface, whatever it is made of/i);
   assert.match(p, /the same tiles, the same colour, the same texture/i);
 });
 
@@ -263,7 +277,105 @@ test('all three trades each get their own sentence', () => {
   assert.match(p, /Replace the roof covering/i);
   assert.match(p, /Repaint the fascias/i);
   // And nothing is held that is also being changed.
-  assert.doesNotMatch(p, /Leave the following[\s\S]*every brick/i);
+  assert.doesNotMatch(p, /Leave the following[\s\S]*existing wall surface/i);
   assert.doesNotMatch(p, /Leave the following[\s\S]*fascias, soffits/i);
   assert.doesNotMatch(p, /Leave the following[\s\S]*same tiles, the same colour/i);
+});
+
+/* The 22 September rendering review. On the site's own hero photograph —
+   brick below, tile-hanging above, terracotta roof — asking for a slate roof
+   turned the tile-hung wall slate grey and left the roof terracotta. Roof and
+   frame colour had been ignored on every run since August. */
+
+test('the wall hold does not assume the wall is brick', () => {
+  /* It read "every brick, its colour, its mortar joints and its texture",
+     which holds nothing at all on a tile-hung, rendered or boarded wall — so
+     the one surface the model was free to change was the one it changed. */
+  const p = buildRenderPrompt({ roof: terracotta() });
+  assert.match(p, /existing wall surface, whatever it is made of/i);
+  assert.match(p, /brick, tile-hanging, render, stone or boarding/i);
+  assert.doesNotMatch(p, /every brick, its colour, its mortar joints/i,
+    'the brick-only hold is what let the tile-hanging be repainted');
+});
+
+test('the roof is named by where it is, not only by what it is made of', () => {
+  /* "Natural slate tiles — thin, flat, rectangular, laid in regular
+     overlapping courses" describes a tile-hung wall as exactly as it describes
+     a slate roof. Position is the only thing that separates the two. */
+  const p = buildRenderPrompt({ roof: sw('roof', 'slate-roof') });
+  assert.match(p, /the sloping roof above the fascia and guttering/i);
+});
+
+test('detection tells the render where the tile-hanging is', () => {
+  const roof = sw('roof', 'slate-roof');
+  const sentence = /vertical tiles on the upper wall are wall tile-hanging, not roof/i;
+
+  const seen = buildRenderPrompt({ roof, wallMaterials: ['Tile Hanging Upper Wall', 'Red Brick Lower Wall'] });
+  assert.match(seen, sentence);
+  assert.match(seen, /must not change unless the walls are being changed/i);
+
+  /* Only when detection actually saw it. The sentence is a correction, and a
+     correction aimed at a house that does not have the problem is one more
+     thing for the model to misread. */
+  assert.doesNotMatch(buildRenderPrompt({ roof, wallMaterials: ['Red Brick Lower Wall'] }), sentence);
+
+  /* And a render with no detection at all still works exactly as before —
+     records are pruned on a timer and a retry can outlive one. */
+  assert.doesNotMatch(buildRenderPrompt({ roof }), sentence);
+});
+
+test('the tile-hanging label is matched however the model phrases it', () => {
+  /* The bay-pane rule is the standing evidence that model phrasing drifts:
+     a label-format match shipped one day and the model rephrased the next. */
+  const roof = sw('roof', 'slate-roof');
+  const sentence = /vertical tiles on the upper wall are wall tile-hanging/i;
+  for (const label of ['Tile Hanging Upper Wall', 'Tile-hung upper wall', 'TILE HUNG WALL', 'tile hanging']) {
+    assert.match(buildRenderPrompt({ roof, wallMaterials: [label] }), sentence, `missed "${label}"`);
+  }
+});
+
+test('frame colours reach the model as descriptions, not swatch names', () => {
+  /* Every other trade travels as a description. Frames travelled as
+     "Anthracite" — a trade name off a swatch card — which is why frame colour
+     was the one choice the picture ignored. */
+  const p = buildRenderPrompt({
+    windowStyle: 'Casement', doorStyle: 'Composite Door',
+    glazingColour: 'Anthracite', glazingColourId: 'anthracite',
+  });
+  assert.match(p, /very dark blue-grey, almost black, matte/i);
+  assert.match(p, /Every window frame and the door frame must visibly take this colour/i);
+});
+
+test('the frame colour words match the swatch hex, not the swatch name', () => {
+  /* Two of the six names mislead. agate-grey is #8A8D8F — a mid neutral that
+     is faintly cool, not the "light warm grey" the name suggests — and
+     chartwell-green is #5B7C5B, a mid green rather than a pale one. Describing
+     them the way they sound would move the same bug one step along. */
+  const colours = (catalogue.windowsDoors && catalogue.windowsDoors.colours) || [];
+  const hexOf = (id) => (colours.find(c => c.id === id) || {}).hex;
+
+  assert.strictEqual(hexOf('agate-grey'), '#8A8D8F', 'the swatch moved — recheck the words');
+  assert.strictEqual(hexOf('chartwell-green'), '#5B7C5B', 'the swatch moved — recheck the words');
+
+  const agate = buildRenderPrompt({ windowStyle: 'Casement', glazingColour: 'Agate Grey', glazingColourId: 'agate-grey' });
+  assert.match(agate, /mid cool grey/i);
+  assert.doesNotMatch(agate, /light warm grey/i);
+});
+
+test('an unknown frame colour falls back to its name rather than dropping it', () => {
+  /* A swatch added to the catalogue without a word here must still reach the
+     model. Silently sending no colour is the failure this whole fix is about. */
+  const p = buildRenderPrompt({ windowStyle: 'Casement', glazingColour: 'Mystery Beige', glazingColourId: 'not-a-colour' });
+  assert.match(p, /in Mystery Beige/i);
+});
+
+test('every frame colour in the catalogue has words for the model', () => {
+  /* The guard that catches the next swatch added without one. */
+  const colours = (catalogue.windowsDoors && catalogue.windowsDoors.colours) || [];
+  assert.ok(colours.length, 'no frame colours in the catalogue — this test is fiction');
+  for (const c of colours) {
+    const p = buildRenderPrompt({ windowStyle: 'Casement', glazingColour: c.name, glazingColourId: c.id });
+    assert.match(p, new RegExp(`in ${c.name} —`, 'i'),
+      `${c.id} (${c.hex}) has no entry in FRAME_COLOUR_WORDS`);
+  }
 });

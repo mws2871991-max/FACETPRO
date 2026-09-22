@@ -279,7 +279,7 @@
           "name": "Will you change my window frames in the picture?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Yes. Pick a style and a frame colour and the after picture is generated from your own photo, keeping your home's perspective, lighting and shadows, and changing the frames and door to what you chose. Nothing is added, removed or resized. It is a realistic guide to help you choose, not a guarantee of the finished installation."
+            "text": "Yes. Pick a style and a frame colour and the after picture is generated from your own photo, keeping your home's perspective, lighting and shadows, and showing the frames and door you chose where it can. Nothing is added, removed or resized. It is a realistic guide to help you choose, not a guarantee of the finished installation, and if the picture has not changed something you asked for, your estimate still prices what you chose."
           }
         },
         {
@@ -976,7 +976,14 @@
 
       <details class="group">
         <summary class="flex items-center justify-between gap-4 py-4"><h3 class="text-[15px] font-medium">Will you change my window frames in the picture?</h3><span class="chev text-zinc-400 transition-transform" aria-hidden="true">⌄</span></summary>
-        <p class="pb-4 text-[13px] leading-6 text-zinc-600 max-w-[72ch]">Yes. Pick a style and a frame colour and the after picture is generated from your own photo — keeping your home's perspective, lighting and shadows, and changing the frames and door to what you chose. Nothing is added, removed or resized. It's a realistic guide to help you choose, not a guarantee of the finished installation.</p>
+        <!-- "where it can", not "to what you chose". The picture is one call to
+             an image model, and frame colour in particular has been the choice
+             it most often leaves alone. Promising it outright is the kind of
+             claim a homeowner checks against the screen in front of them and
+             finds false — so the sentence says what is true, and the line
+             after it says the thing that protects them: the estimate prices
+             the choice whether or not the picture managed to show it. -->
+        <p class="pb-4 text-[13px] leading-6 text-zinc-600 max-w-[72ch]">Yes. Pick a style and a frame colour and the after picture is generated from your own photo — keeping your home's perspective, lighting and shadows, and showing the frames and door you chose where it can. Nothing is added, removed or resized. It's a realistic guide to help you choose, not a guarantee of the finished installation — and if the picture hasn't changed something you asked for, your estimate still prices what you chose.</p>
       </details>
 
       <details class="group">
@@ -4033,6 +4040,21 @@ function buildVisualizer() {
                 disabled: !state.uploadedBase64 || state.rendering,
                 onClick: generateRealRender,
               }, renderButtonLabel),
+              /* Said once the picture exists, because until then there is
+                 nothing to disagree with.
+
+                 The page had no way to admit a mismatch. The after-image names
+                 what was asked for, so a homeowner looking at an unchanged
+                 roof is reading a caption that says the roof changed, with
+                 nothing on the screen acknowledging the gap — and the estimate
+                 beside it is charging for the work either way. This does not
+                 detect the mismatch; it stops the page from denying one, and
+                 it says the thing that actually matters to them, which is that
+                 the price is not built from the picture. */
+              (state.renderUrl && !state.rendering)
+                ? h('p', { className: 'mt-2 text-[11px] leading-4 text-zinc-500 text-center' },
+                  'Not what you picked? The picture can miss a change. Your estimate still prices what you chose — try again for a different result.')
+                : null,
               /* Something has to move. The picture takes up to a minute and
                  the only feedback was a disabled button and a static line
                  reading "Takes up to a minute" — after fifteen seconds of a
@@ -5841,6 +5863,11 @@ function glazingChoice() {
        this elevation, and it should not have to do that by matching a label. */
     doorStyleId: state.prefs.doorStyleId,
     windowDoorColourName: nameOf(wd.colours, state.prefs.windowDoorColourId),
+    /* The id as well, for the same reason the door style sends one: the server
+       turns it into a description the model can actually use. "Anthracite" is
+       a swatch-card name, and frame colour was ignored on every render since
+       August while walls and roofs — which travel as descriptions — obeyed. */
+    windowDoorColourId: state.prefs.windowDoorColourId,
   };
   // A colour and at least one style, or there is nothing coherent to ask for.
   if (!out.windowDoorColourName || (!out.windowStyleName && !out.doorStyleName)) return {};
@@ -5912,6 +5939,13 @@ async function generateRealRender() {
         claddingName: state.cladding.name,
         trimName: state.trim.name,
         roofName: state.roof.name,
+        /* So the render can be told what detection saw. Detection labels the
+           upper wall of a tile-hung house as cladding; without this the prompt
+           can only describe surfaces by material, and "flat rectangular tiles
+           in overlapping courses" describes a tile-hung wall as exactly as it
+           describes a slate roof. Null is fine — the server treats a missing
+           or expired record as "no extra information" and renders as before. */
+        detectionId: state.detectionId,
         /* Sent by name, and only when they have actually chosen. The render
            leaves frames alone unless there is something to change them to —
            see the prompt in server.js. */

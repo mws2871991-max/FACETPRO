@@ -2566,7 +2566,8 @@ app.use(require('./routes/measure')({
    Accepts { image: 'data:image/...;base64,...', mimeType, claddingName, trimName, roofName } */
 app.post('/api/render', renderLimiter, async (req, res) => {
   const { image, mimeType, claddingName, trimName, roofName,
-          windowStyleName, doorStyleName, doorStyleId, windowDoorColourName } = req.body || {};
+          windowStyleName, doorStyleName, doorStyleId, windowDoorColourName,
+          windowDoorColourId, detectionId } = req.body || {};
   if (!image) return res.status(400).json({ error: 'image required' });
   if (typeof image !== 'string' || image.length < 10) return res.status(400).json({ error: 'Invalid image data.' });
   // Size is checked on the decoded bytes below, not on the base64 string —
@@ -2654,9 +2655,28 @@ app.post('/api/render', renderLimiter, async (req, res) => {
      string. FLUX Kontext will return a plausible picture for an incoherent
      request, so nothing downstream of here can tell a good prompt from a bad
      one — which is exactly how the old one survived. */
+  /* What detection already knows about the walls, handed to the render.
+
+     The two calls have run side by side since they were written and nothing
+     passed between them: detect labelled the upper wall "Tile Hanging Upper
+     Wall" and the render was never told, so the prompt could only describe
+     surfaces by material and the model picked the wrong one.
+
+     Read defensively. The record is pruned on a timer, a retry can outlive it,
+     and a render with no detectionId has to keep working unchanged — this adds
+     information where it exists and changes nothing where it does not. */
+  const detectionRecord = detectionId ? detectionRecords.get(String(detectionId)) : null;
+  const wallMaterials = detectionRecord
+    ? (detectionRecord.detections || [])
+      .filter(d => d && d.type === 'cladding' && d.label)
+      .map(d => String(d.label))
+    : [];
+
   const prompt = buildRenderPrompt({
     cladding, trim, roof,
     windowStyle, doorStyle, glazingColour,
+    glazingColourId: windowDoorColourId,
+    wallMaterials,
   });
 
   /* Nothing was chosen. Refuse before spending, rather than asking the model
