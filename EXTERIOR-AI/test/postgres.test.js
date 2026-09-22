@@ -256,3 +256,55 @@ test('the read and the write happen under one lock, not two', () => {
   assert.ok(readAt > lockAt, 'mutate reads before taking the lock — the race is still open');
   assert.ok(writeAt > readAt, 'mutate writes before it reads');
 });
+
+/* ── The day-keyed funnel read, on the path that has a DATE column ──
+
+   readFunnelDays exists so a change shipped this morning can be read against
+   this morning. store.js calls one line in it load-bearing:
+
+       SELECT day::text AS day, …
+
+   Without the cast, node-postgres hands back a Date for a DATE column, the
+   object is keyed with something that is not YYYY-MM-DD, and every consumer
+   that looks up a day misses. Nothing throws. /api/funnel still answers 200,
+   the totals — which are summed from the values, not the keys — still look
+   exactly right, and only the day-indexed read is wrong.
+
+   The file path has no such problem: its keys are already strings, so a
+   development machine can never show this. That is precisely why it needed a
+   test here and had none. */
+
+test('readFunnelDays keys days as YYYY-MM-DD strings, not Dates', opts, async () => {
+  const today = new Date().toISOString().slice(0, 10);
+  await store.countStage('landing');
+  await store.countStage('landing');
+  await store.countStage('upload_completed');
+
+  const byDay = await store.readFunnelDays(30);
+  const keys = Object.keys(byDay);
+  assert.ok(keys.length > 0, 'nothing came back for a day we just wrote to');
+
+  for (const k of keys) {
+    assert.strictEqual(typeof k, 'string', `key ${String(k)} is a ${typeof k}, not a string — the ::text cast has gone`);
+    assert.match(k, /^\d{4}-\d{2}-\d{2}$/, `key "${k}" is not YYYY-MM-DD — the ::text cast has gone`);
+  }
+
+  /* The lookup that breaks silently without the cast: a caller asking for
+     today by name. This is the whole reason the column is cast. */
+  assert.ok(byDay[today], `today (${today}) is not reachable by name — keys were ${JSON.stringify(keys)}`);
+  assert.ok(byDay[today].landing >= 2, 'today\'s bucket does not hold what we just wrote');
+});
+
+test('the day breakdown sums to the totals readFunnel reports', opts, async () => {
+  /* Two readers over one table. If they ever disagree the endpoint reports
+     two different truths, and the per-day view is the one nobody would check
+     against the other. */
+  const byDay = await store.readFunnelDays(30);
+  const totals = await store.readFunnel(30);
+
+  for (const stage of Object.keys(totals)) {
+    const summed = Object.values(byDay).reduce((n, s) => n + (s[stage] || 0), 0);
+    assert.strictEqual(summed, totals[stage],
+      `${stage}: byDay sums to ${summed}, readFunnel says ${totals[stage]}`);
+  }
+});
