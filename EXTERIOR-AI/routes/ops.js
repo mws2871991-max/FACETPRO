@@ -65,27 +65,68 @@ module.exports = function opsRoutes({
       for (const [stage, n] of Object.entries(stages)) counts[stage] = (counts[stage] || 0) + n;
     }
 
-    let previous = null;
-    const funnel = FUNNEL_STAGES.map(stage => {
-      const n = counts[stage] || 0;
-      /* Conversion is against the step before, not against the top, because the
-         question is always "where do we lose them". */
-      const ofPrevious = previous === null ? null : (previous > 0 ? Math.round((n / previous) * 1000) / 10 : 0);
-      previous = n;
-      return { stage, count: n, ofPreviousPct: ofPrevious };
-    });
+    /* The first day each counter recorded anything.
+
+       Two stages divided by each other are only a rate if both were being
+       counted over the same days. render_shown over render_started read as
+       387% — not because more renders finished than began, but because
+       render_shown has a month of history and render_started was moved to fire
+       on the request a few days ago. The ratio spanned two different windows
+       and looked like a finding.
+
+       Every stage inserted into this journey from now on creates the same
+       artefact for as long as the window is wider than its own history, so the
+       fix belongs here rather than in a note telling the reader to remember
+       which stages are new. */
+    const firstSeen = {};
+    for (const [day, stages] of Object.entries(byDay)) {
+      for (const [stage, n] of Object.entries(stages)) {
+        if (!n) continue;
+        if (!firstSeen[stage] || day < firstSeen[stage]) firstSeen[stage] = day;
+      }
+    }
+
+    /* Conversion is against the step before, not against the top, because the
+       question is always "where do we lose them".
+
+       A percentage over 100 is left alone where both stages share a window:
+       there it is real and it means the chain is not strictly nested —
+       design_opened outruns cta_clicked because the cost pages link straight
+       to the tool without passing the homepage button. That is worth seeing.
+       What is suppressed is only the case where the two counters have
+       different amounts of history, which is arithmetic, not behaviour. */
+    const chain = (key) => {
+      let prev = null;
+      let prevKey = null;
+      return FUNNEL_STAGES.map(stage => {
+        const k = key(stage);
+        const n = counts[k] || 0;
+        const isFirst = prevKey === null;
+        const sameWindow = !isFirst && (firstSeen[k] || null) === (firstSeen[prevKey] || null);
+        const ofPrevious = isFirst || !sameWindow
+          ? null
+          : (prev > 0 ? Math.round((n / prev) * 1000) / 10 : 0);
+        prev = n;
+        prevKey = k;
+        return {
+          stage,
+          count: n,
+          ofPreviousPct: ofPrevious,
+          firstSeen: firstSeen[k] || null,
+          /* Distinguishes "no rate because this is the first step" from "no
+             rate because these two do not cover the same days". */
+          comparable: isFirst ? null : sameWindow,
+        };
+      });
+    };
+
+    const funnel = chain(stage => stage);
 
     /* Per journey, same shape, so the two can be read side by side. A journey
        with no traffic is omitted rather than shown as a column of zeroes. */
     const byJourney = {};
     for (const j of JOURNEY_SOURCES) {
-      let prev = null;
-      const rows = FUNNEL_STAGES.map(stage => {
-        const n = counts[`${j}:${stage}`] || 0;
-        const ofPrevious = prev === null ? null : (prev > 0 ? Math.round((n / prev) * 1000) / 10 : 0);
-        prev = n;
-        return { stage, count: n, ofPreviousPct: ofPrevious };
-      });
+      const rows = chain(stage => `${j}:${stage}`);
       if (rows.some(r => r.count > 0)) byJourney[j] = rows;
     }
 
@@ -98,13 +139,7 @@ module.exports = function opsRoutes({
        shape as byJourney deliberately: the two are read side by side. */
     const byDevice = {};
     for (const d of ['mobile', 'desktop']) {
-      let prev = null;
-      const rows = FUNNEL_STAGES.map(stage => {
-        const n = counts[`device/${d}:${stage}`] || 0;
-        const ofPrevious = prev === null ? null : (prev > 0 ? Math.round((n / prev) * 1000) / 10 : 0);
-        prev = n;
-        return { stage, count: n, ofPreviousPct: ofPrevious };
-      });
+      const rows = chain(stage => `device/${d}:${stage}`);
       if (rows.some(r => r.count > 0)) byDevice[d] = rows;
     }
 
@@ -148,6 +183,7 @@ module.exports = function opsRoutes({
       note: 'Counts are per stage, not per person — see the funnel table in store.js. '
         + 'byJourney counts only visitors who arrived on a journey; the totals above include everyone. '
         + 'byDevice splits by the width the page was rendered at, under 768px being mobile, and only covers stages recorded since that key shipped — an empty or short column is missing history rather than missing traffic. '
+        + 'Each row carries firstSeen, the first day that counter recorded anything, and comparable, which is false where the step and the one before it do not cover the same days. ofPreviousPct is null in that case rather than a number, because a stage with a month of history divided by one with three days of it is arithmetic and not a conversion rate. Where comparable is true a figure above 100% is real and means the chain is not strictly nested — the cost pages link straight to the tool, so design_opened outruns cta_clicked. '
         + 'byDay is the raw day-keyed breakdown, so it carries the prefixed counters in the same object as the plain stages — journey:…, from/…, device/… — where funnel, byJourney and byDevice present them already split out. Filter on the prefix before summing, or the same visit is counted more than once. '
         + 'Read a change against the days since it shipped: a figure that looks like a rate against thirty days of history is usually a few hours of numerator over a month of denominator.' });
   });

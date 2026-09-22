@@ -112,5 +112,61 @@ test('the operator view reports the device split beside the journey one', async 
   const row = body.byDevice.desktop.find(r => r.stage === 'upload_completed');
   assert.ok(row && row.count >= 1);
   /* Same shape as byJourney, so the two can be read side by side. */
-  assert.deepStrictEqual(Object.keys(row).sort(), ['count', 'ofPreviousPct', 'stage']);
+  assert.deepStrictEqual(
+    Object.keys(row).sort(),
+    ['comparable', 'count', 'firstSeen', 'ofPreviousPct', 'stage'],
+  );
+
+  /* The device tables get the history guard too, not just the main funnel.
+
+     They need it more: byDevice only covers stages recorded since the device
+     key shipped, so every one of its rows is younger than the stage it counts,
+     and dividing two of them was the most misleading arithmetic on the page. */
+  const chain = body.byDevice.desktop;
+  assert.strictEqual(chain[0].comparable, null, 'the first step has nothing to compare against');
+  for (const r of chain) {
+    if (r.comparable === false) {
+      assert.strictEqual(r.ofPreviousPct, null, `${r.stage} is not comparable but still reports a rate`);
+    }
+  }
+});
+
+test('a stage with less history than the one before it does not report a rate', async () => {
+  /* render_shown over render_started read as 387% on live data: the first has
+     a month of history, the second was moved to fire on the request days ago.
+     Nothing was wrong with either counter, and the ratio still looked like a
+     finding. Seed exactly that shape — an older stage followed by a younger
+     one — and assert the endpoint declines to divide them. */
+  const fs = require('fs');
+  const path = require('path');
+  const { DATA_DIR } = require('./helpers/data-dir');
+
+  const day = (back) => new Date(Date.now() - back * 86400000).toISOString().slice(0, 10);
+  const older = day(6);
+  const today = day(0);
+
+  /* Written straight to the file rather than fired through the endpoint:
+     countStage only ever writes today's bucket, so a two-day fixture cannot be
+     produced through the public path. Last test in the file, because this
+     replaces everything the earlier ones recorded. */
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.writeFileSync(path.join(DATA_DIR, 'funnel.json'), JSON.stringify({
+    [older]: { render_shown: 20 },
+    [today]: { render_shown: 11, render_started: 8 },
+  }));
+
+  const res = await realFetch(`${BASE}/api/funnel?days=30`, { headers: { Authorization: 'Bearer the-installer-password' } });
+  const body = await res.json();
+  const started = body.funnel.find(r => r.stage === 'render_started');
+  const shown = body.funnel.find(r => r.stage === 'render_shown');
+
+  assert.strictEqual(started.firstSeen, today, 'render_started should be the younger counter');
+  assert.strictEqual(shown.firstSeen, older, 'render_shown should carry the longer history');
+  assert.strictEqual(shown.comparable, false, 'the two do not cover the same days');
+  assert.strictEqual(shown.ofPreviousPct, null, 'a rate across two different windows is not a rate');
+
+  /* And the counts themselves are untouched — this suppresses a division, not
+     the data. Without that, the guard would hide the traffic it is describing. */
+  assert.strictEqual(shown.count, 31);
+  assert.strictEqual(started.count, 8);
 });
