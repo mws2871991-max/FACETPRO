@@ -809,7 +809,16 @@
        What is left is what can be evidenced. A short row of true numbers reads
        as a company that counts carefully. A long row of invented ones reads as
        the opposite, to exactly the audience this section is for. -->
-  <section data-page="home" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="stats-heading">
+  <!-- Same reasoning as the fairness block below. The spec says cut; this is
+       indexed markup on the page that ranks, and folding frees the same 585px
+       without betting the homepage's standing on a guess about what it
+       earns. -->
+  <details data-page="home" class="rounded-2xl bg-white border border-zinc-200 px-6 md:px-8 py-4" aria-labelledby="stats-heading">
+    <summary class="cursor-pointer flex items-baseline justify-between gap-4 flex-wrap">
+      <span class="serif text-[20px] md:text-[24px] tracking-tight">By the numbers</span>
+      <span class="text-[12px] text-zinc-500">Rates, coverage and what has been measured</span>
+    </summary>
+    <div class="mt-5">
     <h2 id="stats-heading" class="serif text-[26px] md:text-[32px] tracking-tight">By the numbers</h2>
     <div class="mt-6 grid grid-cols-2 md:grid-cols-3 gap-4">
       <div class="rounded-xl border border-zinc-200 p-5 text-center"><div class="serif text-[28px] measured">5</div><div class="mt-1 text-[12px] uppercase tracking-widest text-zinc-500">Trades priced from one photo</div></div>
@@ -868,7 +877,8 @@
          The full statement still sits under the estimate it qualifies, and the
          methodology section still says the measurement is being calibrated. -->
     <p class="mt-4 text-[11px] leading-5 text-zinc-500 max-w-[72ch]">Usage figures are not shown because there are not yet enough of them to mean anything &mdash; when there are, they will appear here and they will be real. If something doesn&rsquo;t look right on your house, tell us; that is how the estimates get sharper.</p>
-  </section>
+    </div>
+  </details>
 
   <!-- ── ONE ARGUMENT, MADE ONCE ──
 
@@ -904,7 +914,28 @@
        installers pay" strip, which was the table's argument drawn as boxes;
        the roadmap chips section, whose one live line moved into the trades
        list; and two of the three tellings of the founder story. -->
-  <section data-page="home" class="rounded-2xl bg-zinc-900 text-[#FBF8F3] p-6 md:p-10" aria-labelledby="fairness-heading">
+  <!-- Folded, not moved. The spec's B1 asks for this on its own page and for
+       "By the numbers" to be cut outright — 2,781px between them, and it is
+       right that they are the largest thing left on a homepage a customer
+       called bamboozling.
+
+       But both sit in the served HTML of the one page on this site that is
+       indexed and in the sitemap. /design and /installers are noindex
+       precisely because a JavaScript shell is not content, so a new route of
+       that kind would take this text out of the index rather than move it.
+       Cutting does the same thing more directly.
+
+       Folding spends the scroll and keeps the crawl: the markup stays in the
+       document, and it is the treatment the content brief already asked for
+       twice — keep the substance, move it out of the way. If it later turns
+       out to be earning nothing, deleting it is one commit; putting it back
+       after an indexing loss is not. -->
+  <details data-page="home" class="rounded-2xl bg-white border border-zinc-200 px-6 md:px-8 py-4" aria-labelledby="fairness-heading">
+    <summary class="cursor-pointer flex items-baseline justify-between gap-4 flex-wrap">
+      <span class="serif text-[20px] md:text-[24px] tracking-tight">Why two neighbours pay thousands apart</span>
+      <span class="text-[12px] text-zinc-500">What the estimate protects you from</span>
+    </summary>
+    <div class="mt-5">
     <p class="text-[11px] tracking-[0.25em] uppercase text-white/50">The pricing problem</p>
     <h2 id="fairness-heading" class="mt-3 serif text-[28px] md:text-[38px] leading-[1.05] tracking-[-0.02em]">
       Two neighbours. Same street.<br>Same windows. Thousands apart.
@@ -1020,7 +1051,8 @@
       </div>
       <p class="mt-5 text-[13px] leading-6 text-white/50">Free for homeowners. No account, nothing to cancel, and no installer hears from you unless you ask.</p>
     </div>
-  </section>
+    </div>
+  </details>
 
   <!-- What can be priced today. The roadmap chips and the "platform" framing
        came out on an earlier brief; this is what remains of that section,
