@@ -114,29 +114,32 @@ test('the operator view reports the device split beside the journey one', async 
   /* Same shape as byJourney, so the two can be read side by side. */
   assert.deepStrictEqual(
     Object.keys(row).sort(),
-    ['comparable', 'count', 'firstSeen', 'ofPreviousPct', 'stage'],
+    ['count', 'firstSeen', 'ofPreviousPct', 'sameWindowAsPrevious', 'stage'],
   );
 
-  /* The device tables get the history guard too, not just the main funnel.
+  /* The device tables carry the history flag too, not just the main funnel.
 
-     They need it more: byDevice only covers stages recorded since the device
+     They need it most: byDevice only covers stages recorded since the device
      key shipped, so every one of its rows is younger than the stage it counts,
-     and dividing two of them was the most misleading arithmetic on the page. */
+     and dividing any two of them is the least meaningful arithmetic here. */
   const chain = body.byDevice.desktop;
-  assert.strictEqual(chain[0].comparable, null, 'the first step has nothing to compare against');
-  for (const r of chain) {
-    if (r.comparable === false) {
-      assert.strictEqual(r.ofPreviousPct, null, `${r.stage} is not comparable but still reports a rate`);
-    }
-  }
+  assert.strictEqual(chain[0].sameWindowAsPrevious, null, 'the first step has nothing before it');
+  assert.ok(chain.slice(1).every(r => typeof r.sameWindowAsPrevious === 'boolean'),
+    'every later step says whether it shares a window with the one before it');
 });
 
-test('a stage with less history than the one before it does not report a rate', async () => {
+test('a rate spanning two different histories is reported, and flagged as one', async () => {
   /* render_shown over render_started read as 387% on live data: the first has
      a month of history, the second was moved to fire on the request days ago.
      Nothing was wrong with either counter, and the ratio still looked like a
-     finding. Seed exactly that shape — an older stage followed by a younger
-     one — and assert the endpoint declines to divide them. */
+     finding.
+
+     The first fix withheld the number. That was wrong and the live table
+     showed it immediately — thirteen of sixteen rows went blank, because
+     firstSeen is first traffic rather than the day a counter shipped, so every
+     quiet stage looked young. The number goes out with the caveat attached
+     instead. This pins both halves: the flag is false, and the rate is still
+     there to be read. */
   const fs = require('fs');
   const path = require('path');
   const { DATA_DIR } = require('./helpers/data-dir');
@@ -162,11 +165,13 @@ test('a stage with less history than the one before it does not report a rate', 
 
   assert.strictEqual(started.firstSeen, today, 'render_started should be the younger counter');
   assert.strictEqual(shown.firstSeen, older, 'render_shown should carry the longer history');
-  assert.strictEqual(shown.comparable, false, 'the two do not cover the same days');
-  assert.strictEqual(shown.ofPreviousPct, null, 'a rate across two different windows is not a rate');
+  assert.strictEqual(shown.sameWindowAsPrevious, false, 'the two do not cover the same days');
 
-  /* And the counts themselves are untouched — this suppresses a division, not
-     the data. Without that, the guard would hide the traffic it is describing. */
+  /* The number survives the flag. This is the half the first attempt got
+     wrong, so it is asserted explicitly rather than left implied: 31 shown
+     over 8 started is the 387% that started all this, and it is still
+     readable — labelled, not deleted. */
   assert.strictEqual(shown.count, 31);
   assert.strictEqual(started.count, 8);
+  assert.strictEqual(shown.ofPreviousPct, 387.5);
 });

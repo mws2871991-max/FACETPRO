@@ -89,12 +89,22 @@ module.exports = function opsRoutes({
     /* Conversion is against the step before, not against the top, because the
        question is always "where do we lose them".
 
-       A percentage over 100 is left alone where both stages share a window:
-       there it is real and it means the chain is not strictly nested —
-       design_opened outruns cta_clicked because the cost pages link straight
-       to the tool without passing the homepage button. That is worth seeing.
-       What is suppressed is only the case where the two counters have
-       different amounts of history, which is arithmetic, not behaviour. */
+       The rate is reported even where the two counters do not share a window,
+       and flagged rather than withheld. An earlier cut of this suppressed it,
+       and the live table killed that idea inside a minute: thirteen of sixteen
+       rows went blank.
+
+       The reason is that firstSeen cannot mean what suppression needs it to
+       mean. It is the first day a counter recorded anything, which is "when it
+       shipped" only for a counter that saw traffic immediately. cta_clicked
+       has been running the whole time and simply idled for five days; by
+       first-traffic it is indistinguishable from a counter added last week.
+       Withholding on that basis throws away good rows to hide bad ones.
+
+       So both facts go out and the reader decides: the number, and whether the
+       two counters covered the same days. That is enough to stop 387% being
+       read as a render success rate, without pretending to know which stages
+       are young. */
     const chain = (key) => {
       let prev = null;
       let prevKey = null;
@@ -102,10 +112,8 @@ module.exports = function opsRoutes({
         const k = key(stage);
         const n = counts[k] || 0;
         const isFirst = prevKey === null;
+        const ofPrevious = isFirst ? null : (prev > 0 ? Math.round((n / prev) * 1000) / 10 : 0);
         const sameWindow = !isFirst && (firstSeen[k] || null) === (firstSeen[prevKey] || null);
-        const ofPrevious = isFirst || !sameWindow
-          ? null
-          : (prev > 0 ? Math.round((n / prev) * 1000) / 10 : 0);
         prev = n;
         prevKey = k;
         return {
@@ -113,9 +121,10 @@ module.exports = function opsRoutes({
           count: n,
           ofPreviousPct: ofPrevious,
           firstSeen: firstSeen[k] || null,
-          /* Distinguishes "no rate because this is the first step" from "no
-             rate because these two do not cover the same days". */
-          comparable: isFirst ? null : sameWindow,
+          /* False means the rate beside it spans two different amounts of
+             history and is arithmetic rather than behaviour. Null on the first
+             step, which has nothing before it to compare against. */
+          sameWindowAsPrevious: isFirst ? null : sameWindow,
         };
       });
     };
@@ -183,7 +192,7 @@ module.exports = function opsRoutes({
       note: 'Counts are per stage, not per person — see the funnel table in store.js. '
         + 'byJourney counts only visitors who arrived on a journey; the totals above include everyone. '
         + 'byDevice splits by the width the page was rendered at, under 768px being mobile, and only covers stages recorded since that key shipped — an empty or short column is missing history rather than missing traffic. '
-        + 'Each row carries firstSeen, the first day that counter recorded anything, and comparable, which is false where the step and the one before it do not cover the same days. ofPreviousPct is null in that case rather than a number, because a stage with a month of history divided by one with three days of it is arithmetic and not a conversion rate. Where comparable is true a figure above 100% is real and means the chain is not strictly nested — the cost pages link straight to the tool, so design_opened outruns cta_clicked. '
+        + 'Each row carries firstSeen, the first day that counter recorded anything, and sameWindowAsPrevious. Where that is false, ofPreviousPct divides two counters with different amounts of history and is arithmetic rather than behaviour — render_shown over render_started read as 387% for that reason, the first having a month of history and the second days. Treat those as uncomparable rather than as findings. Note that firstSeen is first traffic, not the day the counter shipped, so a genuinely old but rarely-hit stage looks young. Where the window does match, a figure above 100% is real and means the chain is not strictly nested — the cost pages link straight into the tool, so design_opened outruns cta_clicked. '
         + 'byDay is the raw day-keyed breakdown, so it carries the prefixed counters in the same object as the plain stages — journey:…, from/…, device/… — where funnel, byJourney and byDevice present them already split out. Filter on the prefix before summing, or the same visit is counted more than once. '
         + 'Read a change against the days since it shipped: a figure that looks like a rate against thirty days of history is usually a few hours of numerator over a month of denominator.' });
   });
