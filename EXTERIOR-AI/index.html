@@ -4105,6 +4105,15 @@ function buildVisualizer() {
                  detect the mismatch; it stops the page from denying one, and
                  it says the thing that actually matters to them, which is that
                  the price is not built from the picture. */
+              /* Said first, because it is specific and the line below it is
+                 general. The roof was deliberately left out of the request —
+                 the photograph could not carry it — so this is the one case
+                 where the page knows exactly what the picture is missing and
+                 can say so rather than inviting them to spot it. */
+              (state.renderUrl && !state.rendering && state.roofSkipped)
+                ? h('p', { className: 'mt-2 text-[11px] leading-4 text-zinc-700 text-center' },
+                  'Roof shown unchanged — it sits right at the top edge of your photo, so a new one wouldn’t show. Your estimate still includes the new roof.')
+                : null,
               (state.renderUrl && !state.rendering)
                 ? h('p', { className: 'mt-2 text-[11px] leading-4 text-zinc-500 text-center' },
                   'Not what you picked? The picture can miss a change. Your estimate still prices what you chose — try again for a different result.')
@@ -6054,8 +6063,24 @@ async function generateRealRender() {
       state.renderUnavailable = data.reason === 'daily_limit';
       throw Object.assign(new Error(data.error || 'Busy right now — please try again later.'), { plain: true });
     }
+    /* The photograph cannot carry a roof, and a roof was all they asked for.
+
+       Not a failure and not their mistake, so it is shown as guidance rather
+       than an error — the same advice the upload panel gives, at the moment it
+       matters. `plain` keeps the wording as the server wrote it instead of
+       wrapping it in "something went wrong". */
+    if (data.reason === 'roof_not_in_frame') {
+      state.roofNotInFrame = true;
+      throw Object.assign(new Error(data.error), { plain: true });
+    }
     if (!res.ok) throw new Error(data.error || 'Render failed');
     state.renderUnavailable = false;
+    state.roofNotInFrame = false;
+    /* The rest was rendered and the roof was left out of the request, because
+       this photograph could not show it. Said on the picture rather than left
+       for them to notice, and paired with the fact that protects them: the
+       estimate still prices the roof they chose. */
+    state.roofSkipped = !!data.roofSkipped;
     state.renderUrl = safeRenderUrl(data.url);
     state.renderId = data.renderId || null;
     landed = true;

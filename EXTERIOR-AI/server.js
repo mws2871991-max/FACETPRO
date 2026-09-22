@@ -2498,9 +2498,9 @@ async function keepRender(replicateUrl) {
    prediction is cheap to repeat and the two failures behind this are both
    transient more often than not. It deliberately does not say the render
    failed, which would be a lie about the part that went right. */
-async function respondWithRender(res, url) {
+async function respondWithRender(res, url, extra = {}) {
   try {
-    return res.json(await keepRender(url));
+    return res.json({ ...await keepRender(url), ...extra });
   } catch (err) {
     if (err instanceof RenderNotKept) {
       return res.status(502).json({ error: "We made your image but couldn't save it — please try again." });
@@ -2672,12 +2672,43 @@ app.post('/api/render', renderLimiter, async (req, res) => {
       .map(d => String(d.label))
     : [];
 
+  /* Whether this photograph can carry a roof change at all.
+
+     Three attempts at winning this with wording have lost. On hero-before.jpg
+     the roof is a strip along the top edge and the tile-hung wall below it is
+     half again bigger, so "flat rectangular tiles in overlapping courses"
+     describes the wall better than the roof, and the model changes the wall.
+     The instruction is not wrong; there is barely any roof to apply it to.
+
+     So the geometry decides whether to ask, rather than the prompt asking
+     harder. Only consulted when a record exists — a render without a
+     detectionId behaves exactly as it did. */
+  const framing = detectionRecord
+    ? geometry.roofFraming(detectionRecord.detections || [])
+    : { ok: true, reason: null, roofHPct: null, tiledWallHPct: null };
+  const roofUnsupported = !!roof && !framing.ok;
+
   const prompt = buildRenderPrompt({
-    cladding, trim, roof,
+    cladding, trim, roof: roofUnsupported ? null : roof,
     windowStyle, doorStyle, glazingColour,
     glazingColourId: windowDoorColourId,
     wallMaterials,
   });
+
+  /* The roof was the only thing asked for and the photograph cannot show it.
+
+     Refused before the quota check and before Replicate, because this is the
+     case that currently spends a render to produce a picture of the wrong
+     surface and bills for it. Its own reason code and its own words: the
+     generic "choose a finish, a roof or a trim colour" would be absurd here,
+     since a roof is exactly what they chose. */
+  if (!prompt && roofUnsupported) {
+    return res.status(400).json({
+      error: 'Your roof is right at the top edge of this photo, so we can’t show a new one on it. '
+        + 'Step back across the road and we’ll get the whole roof in — or carry on and we’ll price it anyway.',
+      reason: 'roof_not_in_frame',
+    });
+  }
 
   /* Nothing was chosen. Refuse before spending, rather than asking the model
      to change nothing and billing a render for the answer.
@@ -2789,7 +2820,7 @@ app.post('/api/render', renderLimiter, async (req, res) => {
     const pred = await predRes.json();
     if (pred.status === 'succeeded' && pred.output) {
       const url = Array.isArray(pred.output) ? pred.output[0] : pred.output;
-      return respondWithRender(res, url);
+      return respondWithRender(res, url, { roofSkipped: roofUnsupported || undefined });
     }
 
     /* Poll until the deadline.
@@ -2847,7 +2878,7 @@ app.post('/api/render', renderLimiter, async (req, res) => {
 
       if (p.status === 'succeeded') {
         const url = Array.isArray(p.output) ? p.output[0] : p.output;
-        return respondWithRender(res, url);
+        return respondWithRender(res, url, { roofSkipped: roofUnsupported || undefined });
       }
       /* Terminal either way. Waiting out the clock on a prediction that has
          already stopped is ninety seconds of a homeowner watching a spinner. */

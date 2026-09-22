@@ -164,3 +164,86 @@ test('the existing real fixture is handled, whatever it answers', () => {
   assert.doesNotThrow(() => { out = subjectBox(detections); });
   assert.ok(out === null || (out.w > 0 && out.h > 0));
 });
+
+/* ── Roof framing: decide from the boxes whether to ask at all ── */
+
+const mkBox = (type, label, h, extra = {}) => ({
+  type, label, x_pct: 5, y_pct: 0, w_pct: 80, h_pct: h, ...extra,
+});
+
+test('a roof that fills a reasonable share of the frame is rendered', () => {
+  /* tilehung-before.jpg: roof 58, tiled wall 50. This photograph renders
+     correctly today and the guard must not touch it. */
+  const v = geometry.roofFraming([
+    mkBox('roof', 'Main Gable Roof', 58),
+    mkBox('cladding', 'Roof Tile Cladding (Gable Wall)', 50),
+  ]);
+  assert.strictEqual(v.ok, true);
+  assert.strictEqual(v.reason, null);
+});
+
+test('a roof that is a sliver along the top edge is refused', () => {
+  /* hero-before.jpg: roof 16, tiled wall 25. Three separate prompt rewrites
+     failed on this photograph. There is barely any roof to apply them to. */
+  const v = geometry.roofFraming([
+    mkBox('roof', 'Main Roof', 16),
+    mkBox('cladding', 'Tile Hanging Cladding Upper', 25),
+  ]);
+  assert.strictEqual(v.ok, false);
+  assert.strictEqual(v.reason, 'roof_sliver');
+  assert.strictEqual(v.roofHPct, 16);
+});
+
+test('a tiled wall bigger than the roof is refused even when the roof is large', () => {
+  const v = geometry.roofFraming([
+    mkBox('roof', 'Main Roof', 30),
+    mkBox('cladding', 'Tile Hung Upper Wall', 45),
+  ]);
+  assert.strictEqual(v.ok, false);
+  assert.strictEqual(v.reason, 'tiled_wall_larger');
+});
+
+test('an ordinary brick house is never refused, however big the wall', () => {
+  /* The regression that matters. semi-before-sm.jpg renders correctly and its
+     brick wall is far larger than its roof — if the guard keyed on wall size
+     alone it would refuse the one photograph that works. Only a *tiled* wall
+     competes with a roof for the same instruction. */
+  const v = geometry.roofFraming([
+    mkBox('roof', 'Main Roof', 28),
+    mkBox('cladding', 'Brick Wall', 60),
+  ]);
+  assert.strictEqual(v.ok, true);
+});
+
+test('no roof box means no opinion, not a refusal', () => {
+  /* Refusing on absent evidence would break photographs that work today —
+     the same trap subjectBox's null has. */
+  const v = geometry.roofFraming([mkBox('cladding', 'Brick Wall', 60)]);
+  assert.strictEqual(v.ok, true);
+  assert.strictEqual(v.roofHPct, null);
+});
+
+test('the framing guard and the prompt correction read the same labels', () => {
+  /* They must never disagree: one decides whether to ask for a roof, the other
+     whether the request carries the tile-hanging correction. Two copies of the
+     regex is how the bay-pane rule drifted. */
+  const { TILED_WALL_LABEL } = geometry;
+  for (const l of ['Tile Hanging Cladding', 'Roof Tile Cladding (Gable Wall)', 'Clay Tile Cladding']) {
+    assert.ok(TILED_WALL_LABEL.test(l), `${l} should read as tiled`);
+  }
+  for (const l of ['Brick Wall', 'Render Upper Wall', 'Timber Boarding']) {
+    assert.ok(!TILED_WALL_LABEL.test(l), `${l} should not read as tiled`);
+  }
+});
+
+test('a tiled wall exactly as tall as the roof still renders', () => {
+  /* Measured, not invented: one detect call on tilehung-before.jpg returned a
+     roof of 45 and a tiled wall of 45, and that photograph renders correctly.
+     The comparison has to be strict or the guard refuses a house it can do.
+     It clears by nothing, which is why this case is pinned. */
+  const v = geometry.roofFraming([
+    mkBox('roof', 'Main Gable Roof', 45),
+    mkBox('cladding', 'Tile Hanging Upper Wall', 45),
+  ]);
+  assert.strictEqual(v.ok, true, 'an equal-sized tiled wall must not refuse the roof');
+});

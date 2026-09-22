@@ -294,9 +294,75 @@ function subjectBox(detections) {
   return { x: r1(left), y: r1(top), w: r1(w), h: r1(h) };
 }
 
+/* A wall the model described as tiled, however it worded it.
+
+   Deliberately broad — any cladding label mentioning a tile — because these
+   labels are only ever tested after detection has classified the box as
+   cladding. Detection has already said "this is a wall"; a wall made of tiles
+   is the case that confuses a roof instruction, whatever it got called. The
+   narrow version asked for "tile-hanging"/"tile hung" and missed "Roof Tile
+   Cladding (Gable Wall)" on the one house it was written for. */
+const TILED_WALL_LABEL = /\btiles?\b/i;
+
+/* Below this, the roof is a strip along the top edge rather than a surface.
+
+   Two photographs is a direction, not a calibration: tilehung-before renders
+   correctly and reads 45-58, hero-before does not and reads 15-16. 20 sits
+   between them with room on both sides. Widen the sample before trusting it.
+
+   Those are ranges because detection is not deterministic. The same photograph
+   returned a roof of 58 on one call and 45 on another, and named the same wall
+   "Roof Tile Cladding (Gable Wall)" once and "Brick Wall Left" the next time —
+   in which case no tiled wall is seen at all. Both tests have to tolerate
+   that, which is why the height rule carries the weight and the comparison
+   below is strict.
+
+   The strictness matters more than it looks. On one call tilehung-before came
+   back with a roof of 45 and a tiled wall of 45, and it renders correctly — so
+   an equal-sized tiled wall must pass. It clears the guard by nothing at all.
+   If that photograph ever starts being refused, this is the line to look at
+   first, and the answer is a margin rather than a different rule. */
+const ROOF_MIN_H_PCT = 20;
+
+/* Can this photograph support a roof change at all?
+
+   Three attempts at winning this with wording have now lost — the bay-pane
+   label rule, the neighbour-window regex, and the tile-hanging matcher. The
+   instruction is not the problem on hero-before.jpg: the roof is a sliver
+   along the top edge and there is a much larger field of tiles below it, so
+   the model applies "flat rectangular tiles in overlapping courses" to the
+   only surface that really answers to it.
+
+   So this decides from the boxes whether to ask at all, rather than asking
+   more loudly. A null roof box is not a refusal — with no roof detected there
+   is nothing to judge, and refusing on no evidence would break photographs
+   that work today. */
+function roofFraming(detections) {
+  const list = Array.isArray(detections) ? detections : [];
+  const tallest = (pred) => list
+    .filter(d => d && pred(d))
+    .map(d => box(d))
+    .filter(Boolean)
+    .reduce((best, b) => (!best || b.h > best.h ? b : best), null);
+
+  const roof = tallest(d => d.type === 'roof');
+  const tiledWall = tallest(d => d.type === 'cladding' && TILED_WALL_LABEL.test(String(d.label || '')));
+
+  const roofHPct = roof ? roof.h : null;
+  const tiledWallHPct = tiledWall ? tiledWall.h : null;
+
+  if (!roof) return { ok: true, reason: null, roofHPct, tiledWallHPct };
+  if (roof.h < ROOF_MIN_H_PCT) return { ok: false, reason: 'roof_sliver', roofHPct, tiledWallHPct };
+  if (tiledWall && tiledWall.h > roof.h) {
+    return { ok: false, reason: 'tiled_wall_larger', roofHPct, tiledWallHPct };
+  }
+  return { ok: true, reason: null, roofHPct, tiledWallHPct };
+}
+
 module.exports = {
   DOOR_HEIGHT_M, DOOR_LEAF_RATIO, MIN_DOOR_RATIO, DOOR_TYPES,
   clamp, isFiniteNumber, box, intersectionPct, shapeRatio,
   doorReference, sawDoorBox, observedDoorShape,
   subjectBox, SUBJECT_MARGIN_PCT, SUBJECT_BOUND_TYPES, SUBJECT_ANCHOR_TYPES, SUBJECT_VERTICAL_TYPES,
+  roofFraming, TILED_WALL_LABEL, ROOF_MIN_H_PCT,
 };
