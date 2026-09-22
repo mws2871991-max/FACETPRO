@@ -308,11 +308,25 @@ test('the roof is named by where it is, not only by what it is made of', () => {
 
 test('detection tells the render where the tile-hanging is', () => {
   const roof = sw('roof', 'slate-roof');
-  const sentence = /vertical tiles on the upper wall are wall tile-hanging, not roof/i;
+  const sentence = /area of small overlapping tiles on the wall below the guttering is tile-hanging/i;
 
   const seen = buildRenderPrompt({ roof, wallMaterials: ['Tile Hanging Upper Wall', 'Red Brick Lower Wall'] });
   assert.match(seen, sentence);
-  assert.match(seen, /must not change unless the walls are being changed/i);
+  assert.match(seen, /it is not a roof, and no instruction about the roof applies to it/i);
+
+  /* And it is stated as scope, before the request — not inside it.
+
+     The first version put it in the roof sentence and was measured on the
+     site's own hero photograph: the tile-hung wall shifted 24.9 to slate
+     blue-grey and the terracotta roof shifted 1.0. That is the same failure,
+     with the same cause, as the two attempts at the neighbour's roof before
+     the boundary was moved ahead of the instruction. Ordering is the fix, so
+     ordering is what this asserts. */
+  const boundaryAt = seen.indexOf('is not a roof');
+  const requestAt = seen.indexOf('Replace the roof covering');
+  assert.ok(boundaryAt > -1 && requestAt > -1);
+  assert.ok(boundaryAt < requestAt,
+    'the tile-hanging boundary has drifted back inside the request, which is the shape that failed');
 
   /* Only when detection actually saw it. The sentence is a correction, and a
      correction aimed at a house that does not have the problem is one more
@@ -328,7 +342,7 @@ test('the tile-hanging label is matched however the model phrases it', () => {
   /* The bay-pane rule is the standing evidence that model phrasing drifts:
      a label-format match shipped one day and the model rephrased the next. */
   const roof = sw('roof', 'slate-roof');
-  const sentence = /vertical tiles on the upper wall are wall tile-hanging/i;
+  const sentence = /area of small overlapping tiles on the wall below the guttering is tile-hanging/i;
   for (const label of ['Tile Hanging Upper Wall', 'Tile-hung upper wall', 'TILE HUNG WALL', 'tile hanging']) {
     assert.match(buildRenderPrompt({ roof, wallMaterials: [label] }), sentence, `missed "${label}"`);
   }

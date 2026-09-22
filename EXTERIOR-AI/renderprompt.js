@@ -230,10 +230,6 @@ function buildRenderPrompt(sel = {}) {
       `Replace the roof covering on every visible roof slope of this house — the sloping roof above the fascia and ` +
       `guttering, on the house in the centre of the photograph, ` +
       `the one whose front door is visible — including any porch or bay roof, with ${describe(roof, ROOF_SURFACE)}. ` +
-      (tileHungWall
-        ? `The vertical tiles on the upper wall are wall tile-hanging, not roof. They are part of the walls, they sit ` +
-          `below the fascia and guttering, and they must not change unless the walls are being changed. `
-        : '') +
       `Do not change the roof of the houses on either side of it: any roof that runs off the left or right edge of the ` +
       `frame belongs to a neighbouring property and must keep its original colour, material and texture exactly, even ` +
       `where it appears to continue from this roof. The roof of this house must visibly change.`);
@@ -288,6 +284,30 @@ function buildRenderPrompt(sel = {}) {
     'Only one building in this photograph may change: the house in the centre, the one whose front door faces the camera. ' +
     'Any other building — the properties at the left and right edges of the frame, attached or detached, and every part of them ' +
     'including their roofs — must be pixel-for-pixel identical to the original.',
+
+    /* Which surface is the roof, stated as scope, for the same reason the
+       building boundary is.
+
+       This shipped once inside the roof sentence and was measured on the
+       site's own hero photograph: the tile-hung wall went from warm red-brown
+       to slate blue-grey (shift 24.9) and the terracotta roof did not move
+       (shift 1.0). Identical outcome to the two failed attempts at the
+       neighbour's roof, and the same cause — the model does not treat a
+       mid-sentence caveat as a boundary on where the edit may apply.
+
+       On a close-up like that photograph the tile-hanging is also the largest
+       tiled surface in the frame, so "every visible roof slope" and "thin,
+       flat, rectangular, laid in regular overlapping courses" both point at it
+       more strongly than at the sliver of real roof along the top edge. Naming
+       what the roof is not, before anything has been asked for, is the only
+       shape of this instruction that has ever held. */
+    (tileHungWall && roof)
+      ? 'One more boundary, before the change: in this photograph the roof is only the sloping surface at the very top, '
+        + 'above the fascia and guttering. The large area of small overlapping tiles on the wall below the guttering is '
+        + 'tile-hanging. It is a wall surface, it is not a roof, and no instruction about the roof applies to it — it must '
+        + 'stay exactly the colour, material and texture it is now.'
+      : null,
+
     single ? `Make one change, and only one.` : `Make the following changes, and only these.`,
     ...changes,
     `Leave the following exactly as they are in the original photograph, pixel for pixel: ${holds.join('; ')}.`,
@@ -295,7 +315,7 @@ function buildRenderPrompt(sel = {}) {
     `Preserve the exact perspective, shadow direction, ambient lighting colour temperature, lens distortion, camera exposure and depth of field of the original photograph.`,
     `Shadows and reflections must remain consistent with the existing light source angle and intensity.`,
     `The result must be indistinguishable from a real photograph of the same house after that work was carried out.`,
-  ].join(' ');
+  ].filter(Boolean).join(' ');
 }
 
 module.exports = { buildRenderPrompt, CLADDING_SURFACE, ROOF_SURFACE, COLOUR_WORDS };
