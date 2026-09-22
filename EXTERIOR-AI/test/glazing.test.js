@@ -647,3 +647,117 @@ test('the label rule still works where the model does say "Pane"', () => {
   ];
   assert.strictEqual(frontWindowCount(labelled), 1);
 });
+
+/* ── Whose house is that window on? ──
+
+   A live run on 22 September returned thirteen elements, one of them labelled
+   by the model itself "Neighboring Structure Window", and the count included
+   it. On a front count of three with a detached house's x3.0 multiplier, a
+   third of that homeowner's glazing estimate belonged to next door.
+
+   The fix is a filter on geometry.subjectBox. The dangerous half is what it
+   does when there is no subject box, which is the case these tests exist for
+   more than the one they fix. */
+
+const { frontWindowCount: fwc } = require('../glazing');
+const geometry = require('../geometry');
+
+/* A house with clear ground either side, so subjectBox has something to say.
+   A door and cladding anchor it; roof and windows bound it. */
+const SUBJECT_HOUSE = [
+  { type: 'roof',       confidence: 0.9, label: 'Main Roof',   x_pct: 20, y_pct: 10, w_pct: 55, h_pct: 22 },
+  { type: 'cladding',   confidence: 0.9, label: 'Brick Wall',  x_pct: 18, y_pct: 30, w_pct: 60, h_pct: 52 },
+  { type: 'door-front', confidence: 0.9, label: 'Front Door',  x_pct: 45, y_pct: 60, w_pct: 7,  h_pct: 16 },
+  { type: 'window',     confidence: 0.9, label: 'Upper Left',  x_pct: 25, y_pct: 36, w_pct: 12, h_pct: 11 },
+  { type: 'window',     confidence: 0.9, label: 'Upper Right', x_pct: 60, y_pct: 36, w_pct: 12, h_pct: 11 },
+];
+
+test('a window the model says is the neighbour\'s is not priced', () => {
+  const withNeighbour = [...SUBJECT_HOUSE,
+    { type: 'window', confidence: 0.9, label: 'Neighboring Structure Window', x_pct: 2, y_pct: 38, w_pct: 8, h_pct: 9 }];
+
+  assert.strictEqual(fwc(SUBJECT_HOUSE), 2, 'the subject house has two windows');
+  assert.strictEqual(fwc(withNeighbour), 2,
+    'a window outside the subject box was counted — on a detached that is three ' +
+    'whole-house windows of somebody else\'s glazing in this estimate');
+});
+
+test('a null subject box counts exactly what it counted before', () => {
+  /* THE REGRESSION IN WAITING. subjectBox returns null on four guards, and if
+     null fell through as an empty box every window would be outside it, the
+     count would go to zero, and photographs that work today would price at
+     nothing. That fault would only appear on the photographs where the guards
+     trip, which is to say on the ones nobody tests with. */
+  const fillsTheFrame = [
+    { type: 'roof',     confidence: 0.9, x_pct: 0,  y_pct: 0,  w_pct: 100, h_pct: 30 },
+    { type: 'cladding', confidence: 0.9, x_pct: 0,  y_pct: 28, w_pct: 100, h_pct: 70 },
+    { type: 'window',   confidence: 0.9, x_pct: 10, y_pct: 35, w_pct: 14,  h_pct: 12, label: 'A' },
+    { type: 'window',   confidence: 0.9, x_pct: 40, y_pct: 35, w_pct: 14,  h_pct: 12, label: 'B' },
+    { type: 'window',   confidence: 0.9, x_pct: 72, y_pct: 35, w_pct: 14,  h_pct: 12, label: 'C' },
+  ];
+  assert.strictEqual(geometry.subjectBox(fillsTheFrame), null,
+    'this fixture is meant to trip a guard — if it stops doing so the test below proves nothing');
+  assert.strictEqual(fwc(fillsTheFrame), 3, 'a null subject box must not zero the count');
+
+  // And the other null paths: no anchor at all, and nothing to go on.
+  const noAnchor = [{ type: 'window', confidence: 0.9, x_pct: 10, y_pct: 35, w_pct: 14, h_pct: 12 }];
+  assert.strictEqual(geometry.subjectBox(noAnchor), null);
+  assert.strictEqual(fwc(noAnchor), 1, 'no door and no wall must still count the window it can see');
+  assert.strictEqual(fwc([]), 0);
+});
+
+test('the bay merge still happens inside the subject box', () => {
+  /* The filter runs before the merge, so a bay whose panes are all on the
+     subject house must still collapse to one. */
+  const bays = [...SUBJECT_HOUSE.filter(d => d.type !== 'window'),
+    { type: 'window', confidence: 0.9, label: 'Bay Left',   x_pct: 30, y_pct: 36, w_pct: 10, h_pct: 12 },
+    { type: 'window', confidence: 0.9, label: 'Bay Centre', x_pct: 40, y_pct: 36, w_pct: 10, h_pct: 12 },
+    { type: 'window', confidence: 0.9, label: 'Bay Right',  x_pct: 50, y_pct: 36, w_pct: 10, h_pct: 12 },
+  ];
+  assert.strictEqual(fwc(bays), 1, 'three touching panes inside the subject box are one bay');
+});
+
+test('the count, the price and the displayed number all come from one filter', () => {
+  /* They read the same function, so they cannot disagree — but only while
+     they keep doing so. The neighbour's window was visible in all three. */
+  const withNeighbour = [...SUBJECT_HOUSE,
+    { type: 'window', confidence: 0.9, label: 'Neighbouring window', x_pct: 2, y_pct: 38, w_pct: 8, h_pct: 9 }];
+  const priced = estimateGlazing({
+    detections: withNeighbour, aspectRatio: ASPECT_4_3, houseType: 'detached',
+    selections: { windowStyleId: 'casement', windowDoorColourId: 'white' }, rates: RATES,
+  });
+  assert.strictEqual(priced.frontCount, fwc(withNeighbour),
+    'the priced front count and the displayed count have diverged');
+  assert.strictEqual(priced.frontCount, 2);
+});
+
+test('a window the model names as next door is dropped even with no subject box', () => {
+  /* The case geometry cannot reach. On a terrace the detector returns the
+     whole row's roof and roofline as single full-frame boxes, so there is
+     nothing to bound a subject box with and subjectBox correctly returns null
+     — and on exactly such a photograph it also returned "Adjacent House
+     Window", which was counted and priced.
+
+     Deliberately not the mistake the bay-pane rule made. That parsed a label
+     FORMAT to infer a grouping, and broke the next day when the model phrased
+     it differently. This reads an explicit statement of ownership, for an
+     exclusion: if the wording changes we are no worse than today, and no
+     window on the customer's own house is ever called adjacent. */
+  const win = (label, x) => ({ type: 'window', confidence: 0.9, label, x_pct: x, y_pct: 30, w_pct: 10, h_pct: 12 });
+  const terrace = [win('Upper Bay Window', 30), win('Lower Bay Window', 30)];
+
+  assert.strictEqual(geometry.subjectBox(terrace), null,
+    'this fixture must have no subject box, or it exercises the geometric path instead');
+
+  const base = fwc(terrace);
+  for (const label of ['Adjacent House Window', 'Neighboring Structure Window',
+                       'Neighbour window', 'Next-door window']) {
+    assert.strictEqual(fwc([...terrace, win(label, 2)]), base,
+      `"${label}" was counted — that is somebody else's glazing in this estimate`);
+  }
+
+  /* And a real window must survive. Dropping one under-prices the job, which
+     is the failure this filter could introduce. */
+  assert.strictEqual(fwc([...terrace, win('Landing window', 62)]), base + 1,
+    'a real window was dropped');
+});

@@ -203,8 +203,24 @@ function observedDoorShape(detections, aspectRatio) {
    Cladding still counts as an ANCHOR, because its presence is good evidence
    the detection found a house at all — it just cannot say where the house
    stops. */
+/* Windows classify; they do not bound.
+
+   A window was in this set, which made the box circular: on a photograph
+   containing a "Neighboring Structure Window", that window widened the
+   subject box far enough to contain itself, and then passed the test for
+   being inside it. The thing being excluded was helping to define the
+   boundary it had to fall outside of.
+
+   What is left is per-building and unambiguous. The model names the subject's
+   roof "Main Roof"; the front door is the subject's by definition — it is the
+   scale reference and the photograph is of the front; and the roofline runs
+   along this house's eaves. A window belongs to whichever house it is on,
+   which is precisely the question, so it cannot be part of the answer.
+
+   No effect on the real photographs: on both of this site's own, the windows
+   sat comfortably inside the roof-and-roofline extent anyway. */
 const SUBJECT_BOUND_TYPES = new Set([
-  'roof', 'door-front', 'window', 'fascia', 'soffit', 'guttering',
+  'roof', 'door-front', 'fascia', 'soffit', 'guttering',
 ]);
 const SUBJECT_ANCHOR_TYPES = new Set(['door-front', 'cladding']);
 

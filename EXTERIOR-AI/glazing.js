@@ -48,7 +48,7 @@
 
 /* Shared with measure.js. These lived in both files as identical copies, and
    the fanlight bug had to be found in each of them separately. */
-const { clamp, isFiniteNumber, box, doorReference } = require('./geometry');
+const { clamp, isFiniteNumber, box, doorReference, subjectBox } = require('./geometry');
 
 const { DOOR_HEIGHT_M } = require('./measure');
 
@@ -385,16 +385,70 @@ function isSidelight(d) {
   return d?.type === 'window' && SIDELIGHT_LABEL.test(String(d?.label || ''));
 }
 
+/* Is this box on the customer's house, or the one next door?
+
+   A run-through on 22 September returned thirteen elements, one of them
+   labelled by the model itself as "Neighboring Structure Window" — and it was
+   counted. On a front count of three, with a detached house's x3.0 multiplier,
+   a third of that homeowner's glazing estimate was their neighbour's window.
+
+   windowCandidates filtered on type and confidence, dropped sidelights, merged
+   panes and deduped overlaps, and never once asked whose house the box was on.
+
+   geometry.subjectBox already answers that. It is computed on every detection
+   and already returned by /api/detect; it simply was not consulted here.
+   Tested on the box centre rather than on overlap, because a bay on the party
+   wall of a semi legitimately touches the edge of the subject box and would
+   fail an containment test while plainly belonging to this house.
+
+   THE NULL IS THE DANGEROUS PART. subjectBox returns null on four guards — no
+   door or cladding to anchor on, a box too small, one covering too much of the
+   frame, or no clear margin either side. Null must mean "count everything, as
+   today". If it fell through as an empty box every window would sit outside
+   it, the count would go to zero, and photographs that work today would price
+   at nothing — a far worse fault than the one being fixed, and one that would
+   only appear on the photographs where the guards trip. Hence the explicit
+   early return rather than a clever default. */
+function insideSubject(b, subject) {
+  if (!subject) return true;              // no opinion — count it, as today
+  const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
+  return cx >= subject.x && cx <= subject.x + subject.w
+      && cy >= subject.y && cy <= subject.y + subject.h;
+}
+
+/* And the case geometry cannot reach, where the model simply says so.
+
+   On a terrace the detector returns the whole row's roof, fascia, soffit and
+   guttering as single full-frame boxes, so there is nothing to bound a subject
+   box with and subjectBox correctly returns null. On exactly such a photograph
+   it also returned a window labelled "Adjacent House Window" — and counted it.
+
+   This is deliberately not the mistake the bay-pane rule made. That one parsed
+   a label FORMAT — a " - " and the word "Pane" — to infer a grouping, and broke
+   the next day when the model phrased it differently. This reads an explicit
+   statement of ownership that the model volunteered, for an exclusion. If the
+   wording changes we are no worse than today; the geometric test is the
+   primary and this only reaches further.
+
+   Narrow on purpose. "Adjacent", "neighbour" and "next door" describe whose
+   building it is and nothing else does; no window on the customer's own house
+   is ever labelled any of them. */
+const NEIGHBOUR_LABEL = /\b(adjacent|neighbou?r(ing|s)?|next[\s-]door)\b/i;
+
 function windowCandidates(detections) {
+  const subject = subjectBox(detections || []);
+
   const confident = (detections || [])
     .filter(d => d?.type === 'window' && (Number(d?.confidence) || 0) >= MIN_CONFIDENCE);
 
   let sidelights = 0;
   const units = new Map();          // pane group name -> merged candidate
   const singles = [];
+  let neighbours = 0;
   for (const d of confident) {
     const b = box(d);
     if (!b) continue;               // box() coerces and rejects the unusable
+    if (!insideSubject(b, subject) || NEIGHBOUR_LABEL.test(String(d?.label || ''))) { neighbours++; continue; }
     if (isSidelight(d)) { sidelights++; continue; }
     const label = String(d?.label || '');
     const c = { b, confidence: Number(d?.confidence) || 0 };
@@ -436,7 +490,7 @@ function windowCandidates(detections) {
   const joined = mergeAdjacent(deduped);
   const panesMerged = labelMerged + joined.merged;
 
-  return { kept: joined.list, duplicates, sidelights, panesMerged };
+  return { kept: joined.list, duplicates, sidelights, panesMerged, neighbours };
 }
 
 /* The front-elevation count pricing will use, for the page to show. The
