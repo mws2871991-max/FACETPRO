@@ -3516,6 +3516,13 @@ const BRANCH_STAGES = new Map([
      guess. Counted server-side, so it needs nothing from the browser and is
      answered on every upload including cached ones. */
   ['crop_available', { of: 'upload_completed', label: 'could have been cropped to the house' }],
+  /* Its sibling, reported because the pair is what carries the meaning.
+     crop_available has read zero since it shipped, and on its own that number
+     cannot distinguish "subjectBox refuses every photograph" from "the counter
+     never fires at all" — the second would be a broken counter reporting as a
+     finding. Counted at the same call site, so the two always sum to the
+     uploads that reached detection. */
+  ['crop_unavailable', { of: 'upload_completed', label: 'had no croppable subject box' }],
   ['detection_confirmed', { of: 'upload_completed', label: 'said the detection looked right' }],
   ['detection_flagged', { of: 'upload_completed', label: 'said something looked wrong' }],
   /* Opened, as distinct from used. Both sections are folded away now, so
