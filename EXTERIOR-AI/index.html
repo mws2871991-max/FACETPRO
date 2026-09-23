@@ -3034,7 +3034,22 @@ function buildUploadDetect() {
       const measured = MEASURED_FROM_PHOTO.includes(String(state.price?.footprintSource || ''));
 
       const parts = [];
-      if (windows) parts.push(`${windows} window${windows === 1 ? '' : 's'}`);
+      /* Name the bays, because the bare count reads as a miscount.
+
+         "We found 2 windows" on a frontage with two five-pane bays is
+         arithmetically correct and looks wrong to the person standing in front
+         of the house, and that is the sentence their trust in the price rests
+         on. The units are counted the way a fitter would count them — a bay is
+         one window — so the wording says which of them are bays rather than
+         changing the number. */
+      const bays = state.frontBayCount || 0;
+      if (windows) {
+        const noun = `${windows} window${windows === 1 ? '' : 's'}`;
+        parts.push(bays === 0 ? noun
+          : bays === windows && windows === 1 ? 'a bay window'
+          : bays === windows ? `${windows} bay windows`
+          : `${noun}, ${bays === 1 ? 'one of them a bay' : `${bays} of them bays`}`);
+      }
       if (hits(/door/i).length) parts.push('a front door');
       if (measured && state.price?.footprintM2) parts.push(`about ${state.price.footprintM2} m² of wall`);
 
@@ -7780,6 +7795,7 @@ async function handleUpload(file) {
     }
     state.detectionId = data.detectionId || null;
     state.frontWindowCount = Number.isFinite(data.frontWindowCount) ? data.frontWindowCount : null;
+    state.frontBayCount = Number.isFinite(data.frontBayCount) ? data.frontBayCount : 0;
     /* What kind of house the photograph shows.
 
        This defaulted to 'semi' and moved only if somebody found the picker, so

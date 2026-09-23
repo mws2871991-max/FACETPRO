@@ -1977,6 +1977,7 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
     scaleReference: record.detections.some(d => d.type === 'door-front') && record.aspectRatio !== null,
     // What pricing will count, so the page does not count it a second way.
     frontWindowCount: glazing.frontWindowCount(record.detections),
+    frontBayCount: glazing.frontBayCount(record.detections),
     houseType: houseTypeFrom(record.detections),
     /* Where this house is, when the detections can say. Null whenever they
        cannot — see geometry.subjectBox and its guards.
@@ -2195,6 +2196,7 @@ For houseType, judge it from what the photograph shows: a gap on both sides and 
   res.json({
     detections: forDisplay(detections), detectionId, canMeasure: hasWall, scaleReference: hasDoor && !!size,
     frontWindowCount: glazing.frontWindowCount(detections),
+    frontBayCount: glazing.frontBayCount(detections),
     subjectBox: subjectBoxFor(detections),
     houseType: houseTypeFrom(detections),
   });

@@ -344,7 +344,10 @@ function unionBox(a, b) {
    unit to whoever quotes it, so joining two boxes that genuinely touch is
    what the trade would do anyway; splitting one is what put six phantom
    windows in a price. */
-const PANE_GAP_MAX_PCT = 2;        // of frame width
+const PANE_GAP_MAX_PCT = 2;
+
+/* Panes in one merged unit before it is a bay rather than a wide window. */
+const BAY_MIN_PANES = 3;        // of frame width
 const PANE_ROW_OVERLAP_MIN = 0.6;  // of the shorter box's height
 
 function touchesHorizontally(a, b) {
@@ -355,7 +358,12 @@ function touchesHorizontally(a, b) {
 }
 
 function mergeAdjacent(list) {
-  const out = list.map(c => ({ ...c }));
+  /* Each output unit remembers how many panes went into it.
+
+     Merging was only ever counted in aggregate, as panesMerged, which answers
+     "how many boxes did we collapse" and not "is this one a bay". Those are
+     different questions and only the second can name a unit or price it. */
+  const out = list.map(c => ({ panes: 1, ...c }));
   let merged = 0;
   let again = true;
   while (again) {
@@ -366,6 +374,7 @@ function mergeAdjacent(list) {
         if (!touchesHorizontally(out[i].b, out[j].b)) continue;
         out[i].b = unionBox(out[i].b, out[j].b);
         out[i].confidence = Math.max(out[i].confidence, out[j].confidence);
+        out[i].panes = (out[i].panes || 1) + (out[j].panes || 1);
         out.splice(j, 1);
         merged++;
         again = true;
@@ -475,7 +484,7 @@ function windowCandidates(detections) {
     if (isNeighbours(b, String(d?.label || ''), subject)) { neighbours++; continue; }
     if (isSidelight(d)) { sidelights++; continue; }
     const label = String(d?.label || '');
-    const c = { b, confidence: Number(d?.confidence) || 0 };
+    const c = { b, confidence: Number(d?.confidence) || 0, panes: 1 };
     const pane = label.match(PANE_LABEL);
     if (!pane) { singles.push(c); continue; }
     const key = pane[1].trim().toLowerCase();
@@ -490,7 +499,9 @@ function windowCandidates(detections) {
   }
   const labelMerged = [...units.values()].reduce((n, u) => n + u.panes - 1, 0);
 
-  const candidates = [...singles, ...[...units.values()].map(({ b, confidence }) => ({ b, confidence }))]
+  /* panes travels with the unit. It was dropped here, which is why a
+     five-pane bay reached pricing indistinguishable from a single casement. */
+  const candidates = [...singles, ...[...units.values()].map(({ b, confidence, panes }) => ({ b, confidence, panes }))]
     .sort((a, b) => (b.b.w * b.b.h) - (a.b.w * a.b.h));    // larger first, so dedupe keeps the larger
 
   /* Duplicates first, panes second, and the order is load-bearing.
@@ -514,7 +525,21 @@ function windowCandidates(detections) {
   const joined = mergeAdjacent(deduped);
   const panesMerged = labelMerged + joined.merged;
 
-  return { kept: joined.list, duplicates, sidelights, panesMerged, neighbours };
+  /* A unit built from three or more panes is a bay.
+
+     Two is deliberately not enough: a two-pane merge is as likely a double
+     window or a mullioned unit, and both of those are priced as one ordinary
+     window. Three is where the shape stops being explicable any other way —
+     the case that prompted this was two five-pane bays reported as "2
+     windows" and priced as two casements.
+
+     A judgement, not a measurement. If it turns out to be wrong it will be
+     wrong in the cheap direction: BAY_MIN_PANES is one number, and the pane
+     counts it reads are now on every unit. */
+  for (const u of joined.list) u.isBay = (u.panes || 1) >= BAY_MIN_PANES;
+  const bays = joined.list.filter(u => u.isBay).length;
+
+  return { kept: joined.list, duplicates, sidelights, panesMerged, neighbours, bays };
 }
 
 /* The front-elevation count pricing will use, for the page to show. The
@@ -523,6 +548,16 @@ function windowCandidates(detections) {
    the same number worked out twice, differently. */
 function frontWindowCount(detections) {
   return windowCandidates(detections).kept.length;
+}
+
+/* How many of those units are bays.
+
+   Reported alongside the count because the count on its own reads as wrong on
+   the houses this matters for: "We found 2 windows" on a frontage with two
+   five-pane bays is arithmetically right and looks like a miscount, which is
+   the moment a homeowner stops trusting the figure beside it. */
+function frontBayCount(detections) {
+  return windowCandidates(detections).bays;
 }
 
 function measureWindows({ detections, aspectRatio, bands }) {
@@ -553,6 +588,9 @@ function measureWindows({ detections, aspectRatio, bands }) {
       // Entirely above the door's top edge: upper storey, needs access.
       upperStorey: (c.b.y + c.b.h) <= (doorTop + UPPER_STOREY_TOLERANCE_PCT),
       confidence: c.confidence,
+      /* Priced as a bay because it is one, not because a style was picked. */
+      isBay: !!c.isBay,
+      panes: c.panes || 1,
     });
   }
 
@@ -613,6 +651,8 @@ function countWindows({ detections, houseType, bands }) {
     bandId: band.id, bandLabel: band.label,
     upperStorey: (c.b.y + c.b.h / 2) < 50,
     confidence: c.confidence,
+    isBay: !!c.isBay,
+    panes: c.panes || 1,
   }));
 
   return { method: 'count', frontCount: windows.length, windows };
@@ -712,7 +752,18 @@ function priceGlazing({ windows, totalCount, selections, rates, houseType , open
     for (const w of windows) {
       const band = rates.windowBands.find(b => b.id === w.bandId);
       if (!band) throw new Error(`No rate for window band "${w.bandId}" in catalogue.glazing.`);
-      const unit = band.supplyFit * styleMult * colourMult * (isBay ? (rates.bayUplift ?? 1) : 1);
+      /* The uplift follows the window, not only the dropdown.
+
+         isBay was true for every window whenever the visitor picked the Bay
+         style, and false for a real bay whenever they picked anything else.
+         Both directions were wrong: choosing Bay uplifted eight ordinary
+         windows, and a house with two five-pane bays priced them as two plain
+         casements unless the visitor happened to select Bay.
+
+         Either reason is enough — a unit detected as a bay, or a bay
+         explicitly asked for. */
+      const bayHere = w.isBay || isBay;
+      const unit = band.supplyFit * styleMult * colourMult * (bayHere ? (rates.bayUplift ?? 1) : 1);
       supplyFit += unit * scale;
       if (w.upperStorey) upperStoreyCount += scale;
       byBand[w.bandId] = (byBand[w.bandId] || 0) + scale;
@@ -992,6 +1043,7 @@ function estimateGlazing({
 module.exports = {
   estimateGlazing,
   frontWindowCount,
+  frontBayCount,
   resolveHouseType,
   isSidelight,
   // Exposed for tests and for scripts/validate-*, not for server.js.

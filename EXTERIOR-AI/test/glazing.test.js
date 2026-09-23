@@ -793,3 +793,77 @@ test('a trigger word does not delete a window geometry says is theirs', () => {
   assert.strictEqual(fwc([...SUBJECT_HOUSE, outside]), fwc(SUBJECT_HOUSE),
     'a window outside the subject box was counted');
 });
+
+/* ── A bay is one window, and costs what a bay costs ── */
+
+const pane = (group, n, x) => ({
+  type: 'window', label: `${group} - Pane ${n}`, confidence: 0.9,
+  x_pct: x, y_pct: 40, w_pct: 6, h_pct: 12,
+});
+const plain = (x) => ({
+  type: 'window', label: 'Landing window', confidence: 0.9,
+  x_pct: x, y_pct: 15, w_pct: 8, h_pct: 10,
+});
+
+test('a five-pane bay is one unit, and is known to be a bay', () => {
+  const photo = [pane('Bay', 1, 10), pane('Bay', 2, 16), pane('Bay', 3, 22),
+    pane('Bay', 4, 28), pane('Bay', 5, 34), plain(60)];
+  const r = _internals.windowCandidates(photo);
+  assert.strictEqual(r.kept.length, 2, 'the bay merges to one unit beside the landing window');
+  assert.strictEqual(r.bays, 1);
+  assert.deepStrictEqual(r.kept.map(k => k.panes).sort(), [1, 5]);
+});
+
+test('two touching panes are a wide window, not a bay', () => {
+  /* The judgement this rests on. A two-pane merge is as likely a double window
+     or a mullioned unit, and both are priced as one ordinary window — so the
+     threshold is three, and this pins the side of it that must not move. */
+  const r = _internals.windowCandidates([pane('Front', 1, 10), pane('Front', 2, 16), plain(60)]);
+  assert.strictEqual(r.kept.length, 2);
+  assert.strictEqual(r.bays, 0);
+});
+
+test('a detected bay is priced as a bay whatever style was chosen', () => {
+  /* The defect: the uplift keyed on the dropdown alone. A house with a real
+     bay priced it as a plain casement unless the visitor happened to pick
+     "Bay" — and picking "Bay" uplifted every ordinary window in the house. */
+  const bayPhoto = [pane('Bay', 1, 10), pane('Bay', 2, 16), pane('Bay', 3, 22), plain(60)];
+  const flatPhoto = [plain(10), plain(60)];
+  const opts = (detections) => ({
+    rates: catalogue.glazing, houseType: 'semi', detections, aspectRatio: 0.75,
+    selections: { windowStyleId: 'casement', doorStyleId: 'none', windowDoorColourId: 'white' },
+  });
+
+  const withBay = estimateGlazing(opts(bayPhoto));
+  const withoutBay = estimateGlazing(opts(flatPhoto));
+
+  assert.ok(catalogue.glazing.bayUplift > 1, 'the catalogue must actually charge more for a bay');
+  /* Same count, same style, same colour — the only difference is that one of
+     the two units is a bay, so it must cost more. */
+  assert.ok(withBay.price.supplyFit > withoutBay.price.supplyFit,
+    `a bay should cost more than a flat window (${withBay.price.supplyFit} vs ${withoutBay.price.supplyFit})`);
+});
+
+test('a bay already detected is not uplifted twice when Bay is also chosen', () => {
+  /* Deliberately NOT changed: picking "Bay" still uplifts the windows it is
+     applied to. Replacing flat windows with bays is a real and more expensive
+     job, so that request is coherent. The review's defect was the missing
+     direction — a bay detected in the photograph priced as a plain casement
+     because nobody touched the dropdown.
+
+     What must hold is that the two reasons do not compound. Isolated on a
+     frontage that is nothing but a bay, so every unit is already uplifted by
+     detection: choosing Bay on top of that can then only change the price if
+     the uplift is being applied a second time. styleMultipliers.bay is 1, so
+     the style itself contributes nothing to compare against. */
+  const onlyABay = [pane('Bay', 1, 10), pane('Bay', 2, 16), pane('Bay', 3, 22)];
+  const priced = (styleId) => estimateGlazing({
+    rates: catalogue.glazing, houseType: 'semi', detections: onlyABay, aspectRatio: 0.75,
+    selections: { windowStyleId: styleId, doorStyleId: 'none', windowDoorColourId: 'white' },
+  }).price.supplyFit;
+
+  assert.strictEqual(catalogue.glazing.styleMultipliers?.bay, 1,
+    'this test reads the Bay style as carrying no multiplier of its own — recheck if that changed');
+  assert.strictEqual(priced('bay'), priced('casement'),
+    'the bay uplift is compounding when a bay is both detected and chosen');
+});
