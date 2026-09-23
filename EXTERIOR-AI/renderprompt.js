@@ -197,6 +197,8 @@ function buildRenderPrompt(sel = {}) {
   const doorStyle = String(sel.doorStyle || '').trim();
   const glazingColour = String(sel.glazingColour || '').trim();
   const changingGlazing = !!(glazingColour && (windowStyle || doorStyle));
+  // Bars only mean anything on windows that are being replaced.
+  const georgianBars = !!sel.georgianBars && !!windowStyle && changingGlazing;
 
   /* The frame colour as a description where the id is known, and as the bare
      trade name only where it is not. Same rule as every other trade: the id is
@@ -260,7 +262,19 @@ function buildRenderPrompt(sel = {}) {
     changes.push(
       `Replace the window frames${doorStyle ? ' and the front door' : ''} with photorealistic ` +
       `${windowStyle || 'casement'} windows${doorStyle ? ` and a ${doorStyle} front door` : ''}, ` +
-      `both in ${glazingColourPhrase}. Every window frame and the door frame must visibly take this colour. ` +
+      /* "and the door frame" only when the door is changing. This sentence
+         used to say it unconditionally, so a windows-only render with the door
+         held was told, in the same prompt, to recolour the door frame and to
+         leave the door alone. The model obeyed the first. */
+      `${doorStyle ? 'both ' : ''}in ${glazingColourPhrase}. ` +
+      `${doorStyle ? 'Every window frame and the door frame' : 'Every window frame'} must visibly take this colour. ` +
+      /* Georgian bars: the one window option that changes the glass, not the
+         frame, so it gets its own sentence and says where the bars go. Windows
+         only — "every pane" would otherwise put a grid on the door glass too. */
+      (georgianBars
+        ? `Add Georgian glazing bars to every window: slim bars in the same colour as the frames dividing each pane of ` +
+          `glass into a grid of small rectangular panes, evenly spaced. Do not add bars to the front door. `
+        : '') +
       `Frame proportions and opening sizes must match the existing ` +
       `apertures exactly. Glass reflections must stay consistent with the original sky and surroundings.`);
   }

@@ -760,6 +760,10 @@ function priceGlazing({ windows, totalCount, selections, rates, houseType , open
   const colourMult = selections.windowDoorColourId && selections.windowDoorColourId !== 'white'
     ? (rates.nonWhiteUplift ?? 1)
     : 1;
+  /* Georgian bars: windows only. A front door with a grid is a different
+     product, priced as a door; this multiplies the window units and nothing
+     else. The figure is ours, not a supplier's — see georgianBarNote. */
+  const barsMult = selections.windowBarsId === 'georgian' ? (rates.georgianBarUplift ?? 1) : 1;
 
   /* The windows we have describe the front elevation. The ones we have not
      seen are priced at the house type's typical mix, not as copies of the
@@ -817,7 +821,7 @@ function priceGlazing({ windows, totalCount, selections, rates, houseType , open
          Either reason is enough — a unit detected as a bay, or a bay
          explicitly asked for. */
       const bayHere = w.isBay || isBay;
-      const unit = band.supplyFit * styleMult * colourMult * (bayHere ? (rates.bayUplift ?? 1) : 1);
+      const unit = band.supplyFit * styleMult * colourMult * barsMult * (bayHere ? (rates.bayUplift ?? 1) : 1);
       supplyFit += unit * scale;
       upperStoreyCount += scale * w.upperShare;
       byBand[w.bandId] = (byBand[w.bandId] || 0) + scale;
@@ -916,7 +920,7 @@ function priceGlazing({ windows, totalCount, selections, rates, houseType , open
      detections,          // as returned by /api/detect
      aspectRatio,         // from the image bytes, server-side, never the client
      houseType,           // 'semi' etc — used for the front→whole-house scale
-     selections,          // { windowStyleId, doorStyleId, windowDoorColourId }
+     selections,          // { windowStyleId, doorStyleId, windowDoorColourId, windowBarsId }
      rates,               // catalogue.glazing
      windowCountOverride, // the homeowner corrected the count by hand
    }

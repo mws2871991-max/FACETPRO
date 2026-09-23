@@ -409,6 +409,14 @@
         "description": "Angled multi-pane projection that adds floor space and lets in light from three directions."
       }
     ],
+    "windowBars": [
+      {
+        "id": "georgian",
+        "name": "Georgian bars",
+        "detail": "A grid on each pane",
+        "description": "Slim bars dividing each pane of glass into small squares, as on a Georgian or Victorian house. Sealed into the double glazing or fixed on the surface, depending on the installer."
+      }
+    ],
     "doorStyles": [
       {
         "id": "upvc",
@@ -641,6 +649,8 @@
       "bay": 1
     },
     "bayUplift": 1.45,
+    "georgianBarUplift": 1.12,
+    "georgianBarNote": "Georgian bars, per window, as a multiple of the window price. Our own figure from typical UK trade pricing (bars commonly add about 10-15% to a window), not a supplier rate card; replace when one lands.",
     "nonWhiteUplift": 1.08,
     "doors": [
       {

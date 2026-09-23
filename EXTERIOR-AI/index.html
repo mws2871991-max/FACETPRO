@@ -1848,7 +1848,7 @@ const state = {
   glazing: null,            // the window and door estimate, once we have one
   glazingLoading: false,
   windowCount: null,        // the homeowner's own count, which beats ours
-  prefs: { windowStyleId: null, doorStyleId: null, windowDoorColourId: null,
+  prefs: { windowStyleId: null, doorStyleId: null, windowDoorColourId: null, windowBarsId: null,
            fasciaId: null, soffitId: null, gutteringId: null, rooflineCladdingId: null,
            /* A journey pre-declines the glazing it did not come for. Both are
               still chips the visitor can undo — see JOURNEYS. */
@@ -2447,6 +2447,7 @@ function designChoices() {
     windowStyleId: state.prefs.windowStyleId,
     doorStyleId: state.prefs.doorStyleId,
     windowDoorColourId: state.prefs.windowDoorColourId,
+    windowBarsId: state.prefs.windowBarsId,
     fasciaId: state.prefs.fasciaId, soffitId: state.prefs.soffitId,
     gutteringId: state.prefs.gutteringId, rooflineCladdingId: state.prefs.rooflineCladdingId,
     conservatoryStyleId: state.conservatoryId,
@@ -2583,7 +2584,7 @@ function applyDesign(d) {
   if (swatch(d.trimId, 'Trim')) state.trim = swatch(d.trimId, 'Trim');
   if (swatch(d.roofId, 'Roof')) state.roof = swatch(d.roofId, 'Roof');
   if (d.houseType && HOUSE_TYPES.some(t => t.id === d.houseType)) { state.houseType = d.houseType; state.houseTypeChosen = true; }
-  for (const key of ['windowStyleId', 'doorStyleId', 'windowDoorColourId', 'fasciaId', 'soffitId', 'gutteringId', 'rooflineCladdingId']) {
+  for (const key of ['windowStyleId', 'doorStyleId', 'windowDoorColourId', 'windowBarsId', 'fasciaId', 'soffitId', 'gutteringId', 'rooflineCladdingId']) {
     if (d[key]) state.prefs[key] = d[key];
   }
   if (d.conservatoryStyleId) state.conservatoryId = d.conservatoryStyleId;
@@ -4614,9 +4615,10 @@ function chosenSelections() {
   const windowStyle = nameOf(wd?.windowStyles, state.prefs.windowStyleId);
   const doorStyle = nameOf(wd?.doorStyles, state.prefs.doorStyleId);
   const glazColour = nameOf(wd?.colours, state.prefs.windowDoorColourId);
+  const bars = nameOf(wd?.windowBars, state.prefs.windowBarsId);
 
   const out = [];
-  if (windowStyle) out.push(['Windows', [windowStyle, glazColour].filter(Boolean).join(' · ')]);
+  if (windowStyle) out.push(['Windows', [windowStyle, glazColour, bars].filter(Boolean).join(' · ')]);
   /* "Front door" was printed over every door in the catalogue, including the
      four that open onto the garden. A walk of the doors journey read "Front
      door — Bifold, 3 m", which is the one place the summary is meant to tell
@@ -4998,6 +5000,7 @@ async function refreshGlazing({ label } = {}) {
         windowStyleId: state.prefs.windowStyleId,
         doorStyleId: state.prefs.doorStyleId,
         windowDoorColourId: state.prefs.windowDoorColourId,
+        windowBarsId: state.prefs.windowBarsId,
         windowCount: state.windowCount,
         openerCount: state.openerCount,
       }),
@@ -5351,7 +5354,7 @@ function buildDetailOptions() {
         && (state.price?.priced || []).length) {
       reachedStage('trade_added');
     }
-    if (['windowStyleId', 'doorStyleId', 'windowDoorColourId'].includes(key)) {
+    if (['windowStyleId', 'doorStyleId', 'windowDoorColourId', 'windowBarsId'].includes(key)) {
       /* And the picture has to stop showing the old frames.
 
          This is the acceptance criterion from the feedback, in one line: a
@@ -5444,6 +5447,35 @@ function buildDetailOptions() {
       ...(opts?.optOut ? [leaveAsItIs(key, opts.optOut)] : []),
     ]),
   ]);
+
+  /* Georgian bars. Two buttons rather than a checkbox, because the rest of
+     this panel never un-chooses on a second tap (see setPref) and a toggle
+     would be the one control that did. Only once there are new windows to put
+     them on: "keep my windows" with bars is not a thing anyone can order. */
+  const barsRow = (list) => {
+    const georgian = (list || []).find(b => b.id === 'georgian');
+    if (!georgian || !state.prefs.windowStyleId || state.prefs.windowStyleId === 'none') return null;
+    const opt = (id, name, detail) => {
+      const active = (state.prefs.windowBarsId || null) === id;
+      return h('button', {
+        type: 'button', 'aria-pressed': active ? 'true' : 'false',
+        className: `text-left px-4 py-3 min-h-[44px] rounded-xl border transition ${active ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-400'}`,
+        onClick: () => setPref('windowBarsId', id, name),
+      }, [
+        h('div', { className: 'text-[13px] font-medium' }, name),
+        h('div', { className: `text-[11px] ${active ? 'text-white/70' : 'text-zinc-500'}` }, detail),
+      ]);
+    };
+    return h('div', {}, [
+      h('h4', { className: 'text-[10px] tracking-widest uppercase text-zinc-500' }, 'Glazing bars'),
+      h('div', { className: 'mt-2 grid grid-cols-2 gap-2' }, [
+        opt(null, 'Plain glass', 'No bars'),
+        opt('georgian', georgian.name, georgian.detail),
+      ]),
+      h('p', { className: 'mt-2 text-[11px] leading-5 text-zinc-500' },
+        `Georgian bars add about ${georgian.upliftPct}% to each window. That is our own figure from typical trade prices, not a supplier’s — your installer confirms it.`),
+    ]);
+  };
 
   const colourRow = (list, key) => h('div', {}, [
     h('h4', { className: 'text-[10px] tracking-widest uppercase text-zinc-500' }, 'Frame colour'),
@@ -5752,6 +5784,7 @@ function buildDetailOptions() {
         'Pick a style and a colour and we’ll show them on your home and work out a guide price.'),
       h('div', { className: 'mt-4 grid gap-5' }, [
         group('Window style', wd.windowStyles, 'windowStyleId', { optOut: 'windows', anchor: 'window-style' }),
+        barsRow(wd.windowBars),
         h('div', {}, [
           group('Door style', wd.doorStyles, 'doorStyleId', { optOut: 'front door', anchor: 'door-style' }),
           /* Said before they choose, not after they look at the render and
@@ -6068,6 +6101,7 @@ function glazingChoice() {
        a swatch-card name, and frame colour was ignored on every render since
        August while walls and roofs — which travel as descriptions — obeyed. */
     windowDoorColourId: state.prefs.windowDoorColourId,
+    windowBarsId: state.prefs.windowBarsId,
   };
   // A colour and at least one style, or there is nothing coherent to ask for.
   if (!out.windowDoorColourName || (!out.windowStyleName && !out.doorStyleName)) return {};
@@ -7346,6 +7380,8 @@ function buildInstaller() {
       const n = lead.glazing?.windowCount;
       if (Number.isFinite(n) && n > 0) out.push(`${n} window${n === 1 ? '' : 's'}`);
       else if (lead.preferences?.windows?.style) out.push('Windows');
+      // Bars change what the installer orders, so they ride on the windows line.
+      if (lead.preferences?.windows?.bars && out.length) out[out.length - 1] += `, ${lead.preferences.windows.bars.name.toLowerCase()}`;
       if (lead.preferences?.windows?.door) out.push(`${lead.preferences.windows.door.name || 'Front door'}`);
       if (lead.selections?.cladding) out.push(`Walls: ${lead.selections.cladding}`);
       if (lead.selections?.roof) out.push(`Roof: ${lead.selections.roof}`);

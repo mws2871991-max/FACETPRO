@@ -1458,6 +1458,13 @@ function buildPublicCatalogue(c) {
       windowStyles: c.windowsDoors.windowStyles.map(s => pickFields(s, ['id', 'name', 'detail', 'description'])),
       doorStyles: c.windowsDoors.doorStyles.map(s => pickFields(s, ['id', 'name', 'detail', 'description'])),
       colours: c.windowsDoors.colours.map(x => pickFields(x, ['id', 'name', 'hex'])),
+      /* The uplift travels as a percentage for the sentence under the
+         buttons, derived from the one figure glazing.js prices with, so the
+         page cannot say 12% while the estimate charges something else. */
+      windowBars: (c.windowsDoors.windowBars || []).map(b => ({
+        ...pickFields(b, ['id', 'name', 'detail', 'description']),
+        upliftPct: Math.round(((c.glazing?.georgianBarUplift ?? 1) - 1) * 100),
+      })),
     },
     fsgc: c.fsgc && Object.fromEntries([
       ['note', c.fsgc.note],
@@ -2244,6 +2251,7 @@ function resolveGlazing(body) {
         windowStyleId: body.windowStyleId,
         doorStyleId: body.doorStyleId,
         windowDoorColourId: body.windowDoorColourId,
+        windowBarsId: body.windowBarsId,
       },
       rates: catalogue.glazing,
       windowCountOverride: body.windowCount,
@@ -2311,6 +2319,7 @@ function resolvePreferences(body) {
     style: pickById(wd.windowStyles, body.windowStyleId, [...named, 'detail']),
     door: pickById(wd.doorStyles, body.doorStyleId, [...named, 'detail']),
     colour: pickById(wd.colours, body.windowDoorColourId, [...named, 'hex']),
+    bars: pickById(wd.windowBars, body.windowBarsId, [...named, 'detail']),
   } : null;
 
   const roofline = fs_ ? {
@@ -2580,7 +2589,7 @@ app.use(require('./routes/measure')({
 app.post('/api/render', renderLimiter, async (req, res) => {
   const { image, mimeType, claddingName, trimName, roofName,
           windowStyleName, doorStyleName, doorStyleId, windowDoorColourName,
-          windowDoorColourId, detectionId } = req.body || {};
+          windowDoorColourId, windowBarsId, detectionId } = req.body || {};
   if (!image) return res.status(400).json({ error: 'image required' });
   if (typeof image !== 'string' || image.length < 10) return res.status(400).json({ error: 'Invalid image data.' });
   // Size is checked on the decoded bytes below, not on the base64 string —
@@ -2712,6 +2721,7 @@ app.post('/api/render', renderLimiter, async (req, res) => {
     cladding, trim, roof: roofUnsupported ? null : roof,
     windowStyle, doorStyle, glazingColour,
     glazingColourId: windowDoorColourId,
+    georgianBars: windowBarsId === 'georgian',
     wallMaterials,
   });
 
