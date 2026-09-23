@@ -72,7 +72,7 @@ const isCode = (raw) => new RegExp(`^[${ALPHABET}]{${CODE_LENGTH}}$`).test(norma
    from a browser. */
 const ID_FIELDS = [
   'claddingId', 'trimId', 'roofId',
-  'windowStyleId', 'doorStyleId', 'windowDoorColourId',
+  'windowStyleId', 'doorStyleId', 'windowDoorColourId', 'windowBarsId',
   'fasciaId', 'soffitId', 'gutteringId', 'rooflineCladdingId',
   'conservatoryStyleId', 'houseType',
 ];

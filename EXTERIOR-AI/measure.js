@@ -190,6 +190,11 @@ function tuningFor(type, tuning) {
 
 // How wide a range to show, by method. The door method is geometric and
 // tighter; the prior is a population average and deserves to look vague.
+/* How far outside a house type's band a reading may land and still be used,
+   held at the edge, rather than replaced by the typical figure. See the
+   near-miss block in estimateWallArea. */
+const NEAR_MISS = 0.2;
+
 const UNCERTAINTY = { door: 0.12, coverage: 0.20, prior: 0.25 };
 
 // How far the two methods may differ before we stop calling it agreement.
@@ -455,7 +460,36 @@ function estimateWallArea({ detections, aspectRatio, houseType, tuning } = {}) {
      is a band that stays a judgement forever, and these bounds are currently
      five guesses about five kinds of house. */
   let rejected = null;
+  /* A near miss is held at the edge of the band, not thrown out.
+
+     The band used to be a cliff. On 23 September the same photograph of a
+     detached house (band 90–200, typical 130) read 94 m² on one upload and
+     86 m² on the next — the difference between a door box 30% and 33% of the
+     frame tall, which is the model drawing the same door a few pixels apart.
+     94 was priced at 94. 86 was refused and priced at 130. A smaller reading
+     produced a bigger price, the homeowner saw two very different estimates
+     for one photograph, and 2 of 4 runs on that house landed on each side.
+
+     So within NEAR_MISS of the band the reading is clamped to the nearest
+     edge: 86 becomes 90, continuous with the 94 beside it. Further out it is
+     still a detection failure and still falls back to the typical figure —
+     that part of the rule is unchanged, and so is what gets recorded for
+     calibration (`clamped` beside `rejected`). The range widens to the prior's,
+     because a clamped figure is partly ours. */
+  let clamped = null;
   if (m2 !== null) {
+    const [lo, hi] = prior.band;
+    if (m2 < lo && m2 >= lo * (1 - NEAR_MISS)) {
+      clamped = { m2: Math.round(m2), to: lo, method, side: 'below', lo, hi };
+      notes.push(`We measured about ${Math.round(m2)} m², a little under the ${lo}–${hi} m² usual for a ${prior.label.toLowerCase()}, so we've priced ${lo} m² — the bottom of that range. If you know your wall area, enter it and we'll use that.`);
+      m2 = lo;
+    } else if (m2 > hi && m2 <= hi * (1 + NEAR_MISS)) {
+      clamped = { m2: Math.round(m2), to: hi, method, side: 'above', lo, hi };
+      notes.push(`We measured about ${Math.round(m2)} m², a little over the ${lo}–${hi} m² usual for a ${prior.label.toLowerCase()}, so we've priced ${hi} m² — the top of that range. If you know your wall area, enter it and we'll use that.`);
+      m2 = hi;
+    }
+  }
+  if (m2 !== null && !clamped) {
     const [lo, hi] = prior.band;
     if (m2 < lo || m2 > hi) {
       notes.push(`${Math.round(m2)} m² is outside the ${lo}–${hi} m² range expected for a ${prior.label.toLowerCase()}, so we've used the typical figure instead.`);
@@ -479,6 +513,7 @@ function estimateWallArea({ detections, aspectRatio, houseType, tuning } = {}) {
      second method contradicts does not — widen to at least the size of the
      disagreement, so the range still covers what the other method said. */
   let spread = UNCERTAINTY[method] ?? UNCERTAINTY.prior;
+  if (clamped) spread = Math.max(spread, UNCERTAINTY.prior);
   if (method === 'door' && crossCheck && !crossCheck.agrees) {
     spread = Math.max(spread, Math.min(crossCheck.differencePct / 100, UNCERTAINTY.prior));
   }
@@ -493,7 +528,7 @@ function estimateWallArea({ detections, aspectRatio, houseType, tuning } = {}) {
     houseTypeLabel: prior.label,
     // A door reading the second method contradicts isn't "good", whatever
     // method produced it.
-    confidence: method === 'door'
+    confidence: clamped ? 'rough' : method === 'door'
       ? (crossCheck && !crossCheck.agrees ? 'rough' : 'good')
       : method === 'coverage' ? 'rough' : 'typical figure',
     crossCheck,
@@ -511,6 +546,10 @@ function estimateWallArea({ detections, aspectRatio, houseType, tuning } = {}) {
         /* And the figure the band refused, for the same reason. Null when the
            band did not fire, which is the common case. */
         rejected,
+        /* A near miss held at the band edge rather than refused. The reading
+           is kept for the same reason `rejected` is: these are exactly the
+           cases that say where the edge should sit. */
+        clamped,
         /* ── THE WORKING, NOT JUST THE VERDICT ──
 
            On 20 September the live data said the band refuses 87% of readings

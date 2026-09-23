@@ -1848,7 +1848,7 @@ const state = {
   glazing: null,            // the window and door estimate, once we have one
   glazingLoading: false,
   windowCount: null,        // the homeowner's own count, which beats ours
-  prefs: { windowStyleId: null, doorStyleId: null, windowDoorColourId: null,
+  prefs: { windowStyleId: null, doorStyleId: null, windowDoorColourId: null, windowBarsId: null,
            fasciaId: null, soffitId: null, gutteringId: null, rooflineCladdingId: null,
            /* A journey pre-declines the glazing it did not come for. Both are
               still chips the visitor can undo — see JOURNEYS. */
@@ -1976,7 +1976,15 @@ async function loadCatalogue() {
     state.cladding = findSwatch(state.cladding.id);
     state.trim = findSwatch(state.trim.id);
     state.roof = findSwatch(state.roof.id);
-    U('Colours and prices loaded');
+    /* No "Colours and prices loaded" pill. Success here is the page working
+       as expected, and on a phone the pill sat over the resume-code box for
+       six seconds on every visit. The failure below still speaks up.
+
+       The pill mounts already showing "Getting your colours and prices
+       ready…" and only U() ever hid it, so it has to be put away here —
+       otherwise the loading message would stay up for good. */
+    clearTimeout(statusHideTimer);
+    document.getElementById('app-status')?.classList.add('opacity-0', 'pointer-events-none');
     reachedStage('landing');
     checkBuild();
   } catch (err) {
@@ -2439,6 +2447,7 @@ function designChoices() {
     windowStyleId: state.prefs.windowStyleId,
     doorStyleId: state.prefs.doorStyleId,
     windowDoorColourId: state.prefs.windowDoorColourId,
+    windowBarsId: state.prefs.windowBarsId,
     fasciaId: state.prefs.fasciaId, soffitId: state.prefs.soffitId,
     gutteringId: state.prefs.gutteringId, rooflineCladdingId: state.prefs.rooflineCladdingId,
     conservatoryStyleId: state.conservatoryId,
@@ -2575,7 +2584,7 @@ function applyDesign(d) {
   if (swatch(d.trimId, 'Trim')) state.trim = swatch(d.trimId, 'Trim');
   if (swatch(d.roofId, 'Roof')) state.roof = swatch(d.roofId, 'Roof');
   if (d.houseType && HOUSE_TYPES.some(t => t.id === d.houseType)) { state.houseType = d.houseType; state.houseTypeChosen = true; }
-  for (const key of ['windowStyleId', 'doorStyleId', 'windowDoorColourId', 'fasciaId', 'soffitId', 'gutteringId', 'rooflineCladdingId']) {
+  for (const key of ['windowStyleId', 'doorStyleId', 'windowDoorColourId', 'windowBarsId', 'fasciaId', 'soffitId', 'gutteringId', 'rooflineCladdingId']) {
     if (d[key]) state.prefs[key] = d[key];
   }
   if (d.conservatoryStyleId) state.conservatoryId = d.conservatoryStyleId;
@@ -3057,7 +3066,10 @@ function buildUploadDetect() {
         parts.push(bays === 0 ? noun
           : bays === windows && windows === 1 ? 'a bay window'
           : bays === windows ? `${windows} bay windows`
-          : `${noun}, ${bays === 1 ? 'one of them a bay' : `${bays} of them bays`}`);
+          /* In brackets, not after a comma: join() below adds "and a front
+             door", and "3 windows, one of them a bay and a front door" read
+             as the door being one of the windows. */
+          : `${noun} (${bays === 1 ? 'one of them a bay' : `${bays} of them bays`})`);
       }
       if (hits(/door/i).length) parts.push('a front door');
       if (measured && state.price?.footprintM2) parts.push(`about ${state.price.footprintM2} m² of wall`);
@@ -3612,22 +3624,19 @@ function lightingLayers() {
         opacity: 0.95,
       });
     } else {
-      Object.assign(style, {
-        background: 'linear-gradient(180deg, rgba(255,255,255,0.88), rgba(210,225,255,0.3))',
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8)',
-        opacity: 0.72,
-      });
+      /* Daylight from outside: nothing over the glass.
+
+         This painted a 72%-opaque white "glass" panel plus a specular sweep
+         on every detected window, by default — afternoon, outside is where
+         everyone lands. Over a photoreal render that is a pale box floating
+         on the window, placed from a detection box that never sits exactly
+         on the frame, and it was drawn across both sides of the slider, so
+         the untouched photograph got the boxes too. The render already has
+         real glass in it. The glow is an effect people ask for; this was an
+         effect nobody asked for, on the picture they came to trust. */
+      continue;
     }
     layers.push(h('div', { className: 'absolute pointer-events-none', style }));
-
-    /* The specular sweep is what actually reads as "glass" — daytime, and
-       only when we're looking from outside. */
-    if (!lit && !isDoor) {
-      layers.push(h('div', {
-        className: 'absolute pointer-events-none',
-        style: { ...style, background: 'linear-gradient(110deg, transparent 0 35%, rgba(255,255,255,0.75) 50%, transparent 65%)', boxShadow: 'none', opacity: 0.7 },
-      }));
-    }
   }
 
   return layers;
@@ -4038,7 +4047,12 @@ function buildVisualizer() {
           ...lightingLayers(),
           /* Labels too. The slider and the readout were lifted out; these
              two were missed, and dimmed with the photograph. */
-          h('div', { className: 'absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-white border border-zinc-200' }, 'Before'),
+          /* Each label in the corner its own picture occupies. afterPane is
+             clipped with inset(0 <100-afterPct>% 0 0), so the render fills the
+             LEFT of the frame and the photograph shows on the RIGHT. The pills
+             had it the other way round: "After" sat over the untouched photo
+             and "Before" over the new design, at every slider position. */
+          h('div', { className: 'absolute right-3 top-3 text-[10px] px-2 py-1 rounded-full bg-white border border-zinc-200' }, 'Before'),
           state.renderUrl
             /* Opposite corner, no clip.
 
@@ -4059,7 +4073,7 @@ function buildVisualizer() {
                The three Real Homes cards have always put their labels in
                opposite corners with no clipping, and they read correctly at
                every position. Same here. */
-            ? h('div', { className: 'absolute right-3 top-3 text-[10px] px-2 py-1 rounded-full bg-emerald-600 text-white whitespace-nowrap' }, 'After')
+            ? h('div', { className: 'absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-emerald-600 text-white whitespace-nowrap' }, 'After')
             : null,
           slider,
           h('div', { className: 'absolute bottom-3 right-3 text-[10px] px-2 py-1 rounded-full bg-white border border-zinc-200' }, `${state.afterPct}% after`),
@@ -4601,9 +4615,10 @@ function chosenSelections() {
   const windowStyle = nameOf(wd?.windowStyles, state.prefs.windowStyleId);
   const doorStyle = nameOf(wd?.doorStyles, state.prefs.doorStyleId);
   const glazColour = nameOf(wd?.colours, state.prefs.windowDoorColourId);
+  const bars = nameOf(wd?.windowBars, state.prefs.windowBarsId);
 
   const out = [];
-  if (windowStyle) out.push(['Windows', [windowStyle, glazColour].filter(Boolean).join(' · ')]);
+  if (windowStyle) out.push(['Windows', [windowStyle, glazColour, bars].filter(Boolean).join(' · ')]);
   /* "Front door" was printed over every door in the catalogue, including the
      four that open onto the garden. A walk of the doors journey read "Front
      door — Bifold, 3 m", which is the one place the summary is meant to tell
@@ -4985,6 +5000,7 @@ async function refreshGlazing({ label } = {}) {
         windowStyleId: state.prefs.windowStyleId,
         doorStyleId: state.prefs.doorStyleId,
         windowDoorColourId: state.prefs.windowDoorColourId,
+        windowBarsId: state.prefs.windowBarsId,
         windowCount: state.windowCount,
         openerCount: state.openerCount,
       }),
@@ -5338,7 +5354,7 @@ function buildDetailOptions() {
         && (state.price?.priced || []).length) {
       reachedStage('trade_added');
     }
-    if (['windowStyleId', 'doorStyleId', 'windowDoorColourId'].includes(key)) {
+    if (['windowStyleId', 'doorStyleId', 'windowDoorColourId', 'windowBarsId'].includes(key)) {
       /* And the picture has to stop showing the old frames.
 
          This is the acceptance criterion from the feedback, in one line: a
@@ -5432,6 +5448,35 @@ function buildDetailOptions() {
     ]),
   ]);
 
+  /* Georgian bars. Two buttons rather than a checkbox, because the rest of
+     this panel never un-chooses on a second tap (see setPref) and a toggle
+     would be the one control that did. Only once there are new windows to put
+     them on: "keep my windows" with bars is not a thing anyone can order. */
+  const barsRow = (list) => {
+    const georgian = (list || []).find(b => b.id === 'georgian');
+    if (!georgian || !state.prefs.windowStyleId || state.prefs.windowStyleId === 'none') return null;
+    const opt = (id, name, detail) => {
+      const active = (state.prefs.windowBarsId || null) === id;
+      return h('button', {
+        type: 'button', 'aria-pressed': active ? 'true' : 'false',
+        className: `text-left px-4 py-3 min-h-[44px] rounded-xl border transition ${active ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-400'}`,
+        onClick: () => setPref('windowBarsId', id, name),
+      }, [
+        h('div', { className: 'text-[13px] font-medium' }, name),
+        h('div', { className: `text-[11px] ${active ? 'text-white/70' : 'text-zinc-500'}` }, detail),
+      ]);
+    };
+    return h('div', {}, [
+      h('h4', { className: 'text-[10px] tracking-widest uppercase text-zinc-500' }, 'Glazing bars'),
+      h('div', { className: 'mt-2 grid grid-cols-2 gap-2' }, [
+        opt(null, 'Plain glass', 'No bars'),
+        opt('georgian', georgian.name, georgian.detail),
+      ]),
+      h('p', { className: 'mt-2 text-[11px] leading-5 text-zinc-500' },
+        `Georgian bars add about ${georgian.upliftPct}% to each window. That is our own figure from typical trade prices, not a supplier’s — your installer confirms it.`),
+    ]);
+  };
+
   const colourRow = (list, key) => h('div', {}, [
     h('h4', { className: 'text-[10px] tracking-widest uppercase text-zinc-500' }, 'Frame colour'),
     h('div', { className: 'mt-2 flex flex-wrap gap-2' }, list.map(c => {
@@ -5447,7 +5492,11 @@ function buildDetailOptions() {
     })),
   ]);
 
-  const chosen = Object.values(state.prefs).filter(Boolean).length;
+  /* 'none' is "keep what I have", not a preference, and a windows journey
+     arrives with three prefs already set — so a visitor who had touched
+     nothing read "3 preferences noted". Count what is actually in the design,
+     and say it is in the design rather than that we noted it. */
+  const chosen = Object.values(state.prefs).filter(v => v && v !== 'none').length;
 
   /* The window and door estimate.
 
@@ -5476,6 +5525,11 @@ function buildDetailOptions() {
     if (!g || !g.price) return needsColour ? pickColour : null;
 
     const counted = g.windowCount;
+    const shown = g.marketRange || g.range;
+    /* Scaled from the front: the photograph showed frontCount, the rest are
+       assumed for the elevations it cannot see. */
+    const scaled = (g.countSource === 'photo_door' || g.countSource === 'photo_count') && g.frontCount && g.frontToTotal;
+    const assumed = scaled ? Math.max(0, counted - g.frontCount) : 0;
     const setCount = (n) => {
       state.windowCount = Math.max(1, Math.min(30, n));
       /* How often the count we showed is not believed — the page invites the
@@ -5494,12 +5548,32 @@ function buildDetailOptions() {
            as the headline would be presenting the smaller uncertainty and
            hiding the bigger one. */
         h('span', { className: 'measured text-[19px] tracking-tight' },
-          g.marketRange
-            ? `${fmtMoney(g.marketRange.low)} – ${fmtMoney(g.marketRange.high)}`
-            : `${fmtMoney(g.range.low)} – ${fmtMoney(g.range.high)}`),
+          `${fmtMoney(shown.low)} – ${fmtMoney(shown.high)}`),
       ]),
+      /* One number to plan around.
+
+         The range is honest and it is wide — £15k to £28k on a detached
+         house — and a homeowner leaves it not knowing what to put aside. The
+         middle is not a claim about what people pay (we have no data that
+         says so), so it is labelled as what it is: the middle, offered as a
+         budgeting figure. */
+      h('p', { className: 'mt-1 text-[12px] leading-5 text-zinc-700' }, [
+        'Middle of the range: ',
+        h('span', { className: 'measured' }, fmtMoney(Math.round((shown.low + shown.high) / 2 / 50) * 50)),
+        ' — a sensible figure to budget around.',
+      ]),
+      /* Lead with what we saw.
+
+         This said "Based on 9 windows — measured from your photo" directly
+         under a detection panel that had just said "We found 3 windows", and
+         the ×3 that reconciles them was a line further down. What a
+         homeowner notices first is being charged for nine windows when they
+         can see three. So: the three we measured, then the six we assumed,
+         then the total. */
       h('p', { className: 'mt-1 text-[11px] leading-5 text-zinc-500' },
-        `Based on ${counted} window${counted === 1 ? '' : 's'} — ${g.sourceLabel}. Includes VAT${g.price.access ? ', and scaffolding or ladder access for the upstairs windows' : ''}.`),
+        scaled && assumed
+          ? `${g.frontCount} window${g.frontCount === 1 ? '' : 's'} on the front, ${g.sourceLabel}, plus ${assumed} we’ve assumed for the back and sides of ${HOUSE_TYPE_ARTICLE(g.houseType)} (×${g.frontToTotal}) — ${counted} in all. Your photo only shows the front, so set the real number below if you know it. Includes VAT${g.price.access ? ', and scaffolding or ladder access for the upstairs windows' : ''}.`
+          : `Based on ${counted} window${counted === 1 ? '' : 's'} — ${g.sourceLabel}. Includes VAT${g.price.access ? ', and scaffolding or ladder access for the upstairs windows' : ''}.`),
 
       /* The arithmetic behind that number, which the photograph cannot show.
 
@@ -5515,10 +5589,8 @@ function buildDetailOptions() {
          and a house-type prior is already a whole-house figure; neither is
          reached this way, and dressing them up as arithmetic would invent a
          derivation. */
-      (g.countSource === 'photo_door' || g.countSource === 'photo_count') && g.frontCount && g.frontToTotal
-        ? h('p', { className: 'mt-1 text-[11px] leading-5 text-zinc-500' },
-            `That is ${g.frontCount} on the front of your house × ${g.frontToTotal} for ${HOUSE_TYPE_ARTICLE(g.houseType)}, because your photo only shows the front. If your home has a different number, set it below.`)
-        : null,
+      /* (The multiplier is published in the line above now, beside the count
+         it produces, rather than in a second sentence under it.) */
 
       /* The window rates are invented, and this is where that has to be said.
 
@@ -5558,8 +5630,14 @@ function buildDetailOptions() {
       ]) : null,
       /* Two money figures on one page, and nothing said how they related.
          Someone could reasonably read the range as the whole job. */
-      h('p', { className: 'mt-1 text-[11px] leading-5 text-zinc-500' },
-        'Separate from the cladding and roof estimate above — windows and doors are quoted and fitted independently.'),
+      /* Only when there is a walls-and-roof estimate to be separate from. On
+         a windows journey those trades are declined, and the page told the
+         visitor this was "separate from the cladding and roof estimate above"
+         when there was no such estimate anywhere. */
+      (state.price?.priced || []).length
+        ? h('p', { className: 'mt-1 text-[11px] leading-5 text-zinc-500' },
+            'Separate from the walls and roof estimate — windows and doors are quoted and fitted independently.')
+        : null,
       // Shown next to the corrector, which is the thing that fixes it.
       g.countNote ? h('p', { className: 'mt-2 text-[11px] leading-5 text-amber-800' }, g.countNote) : null,
 
@@ -5613,7 +5691,9 @@ function buildDetailOptions() {
         h('span', { className: 'text-[12px] text-zinc-600' },
           g.countSource === 'house_type_prior'
             ? `We're assuming ${counted}. Not right?`
-            : `We counted ${counted}. Not right?`),
+            : scaled && assumed
+              ? `We counted ${g.frontCount} on the front and assumed ${counted} in all. Not right?`
+              : `We counted ${counted}. Not right?`),
         h('div', { className: 'flex items-center gap-2' }, [
           h('button', {
             type: 'button', 'aria-label': 'One fewer window',
@@ -5704,6 +5784,7 @@ function buildDetailOptions() {
         'Pick a style and a colour and we’ll show them on your home and work out a guide price.'),
       h('div', { className: 'mt-4 grid gap-5' }, [
         group('Window style', wd.windowStyles, 'windowStyleId', { optOut: 'windows', anchor: 'window-style' }),
+        barsRow(wd.windowBars),
         h('div', {}, [
           group('Door style', wd.doorStyles, 'doorStyleId', { optOut: 'front door', anchor: 'door-style' }),
           /* Said before they choose, not after they look at the render and
@@ -5748,7 +5829,7 @@ function buildDetailOptions() {
 
     h('div', { className: 'rounded-xl bg-[#FDFCF9] border border-zinc-200 p-4 flex items-center justify-between gap-3 flex-wrap' }, [
       h('span', { className: 'text-[12px] text-zinc-600' },
-        chosen ? `${chosen} preference${chosen === 1 ? '' : 's'} noted — we’ll pass these on with your design.` : 'Nothing chosen yet. Anything you pick travels with your design.'),
+        chosen ? `${chosen} choice${chosen === 1 ? '' : 's'} in your design — change any of them above, and they travel with it.` : 'Nothing chosen yet. Anything you pick travels with your design.'),
       chosen ? h('button', {
         type: 'button',
         className: 'text-[11px] px-3 min-h-[44px] rounded-full border border-zinc-200 hover:border-zinc-900 transition',
@@ -6020,6 +6101,7 @@ function glazingChoice() {
        a swatch-card name, and frame colour was ignored on every render since
        August while walls and roofs — which travel as descriptions — obeyed. */
     windowDoorColourId: state.prefs.windowDoorColourId,
+    windowBarsId: state.prefs.windowBarsId,
   };
   // A colour and at least one style, or there is nothing coherent to ask for.
   if (!out.windowDoorColourName || (!out.windowStyleName && !out.doorStyleName)) return {};
@@ -7298,6 +7380,8 @@ function buildInstaller() {
       const n = lead.glazing?.windowCount;
       if (Number.isFinite(n) && n > 0) out.push(`${n} window${n === 1 ? '' : 's'}`);
       else if (lead.preferences?.windows?.style) out.push('Windows');
+      // Bars change what the installer orders, so they ride on the windows line.
+      if (lead.preferences?.windows?.bars && out.length) out[out.length - 1] += `, ${lead.preferences.windows.bars.name.toLowerCase()}`;
       if (lead.preferences?.windows?.door) out.push(`${lead.preferences.windows.door.name || 'Front door'}`);
       if (lead.selections?.cladding) out.push(`Walls: ${lead.selections.cladding}`);
       if (lead.selections?.roof) out.push(`Roof: ${lead.selections.roof}`);

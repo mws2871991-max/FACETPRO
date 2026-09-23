@@ -409,6 +409,14 @@
         "description": "Angled multi-pane projection that adds floor space and lets in light from three directions."
       }
     ],
+    "windowBars": [
+      {
+        "id": "georgian",
+        "name": "Georgian bars",
+        "detail": "A grid on each pane",
+        "description": "Slim bars dividing each pane of glass into small squares, as on a Georgian or Victorian house. Sealed into the double glazing or fixed on the surface, depending on the installer."
+      }
+    ],
     "doorStyles": [
       {
         "id": "upvc",
@@ -601,7 +609,7 @@
   },
   "glazing": {
     "note": "Guide prices for supply and fitting, per window and per door, including access and VAT.",
-    "internalNote": "Door rates are real. Window bands are still invented and running at roughly half of trade. See notes/glazing-rates-from-the-trade.md.",
+    "internalNote": "Door and window rates are settled prices from the owner's nearly 25 years selling for a national installer, confirmed 6 August 2026: they sit at the cheaper national installer's settled level, about 35-40% below Anglian settled (list less 40%). Deliberately so. Not a supplier rate card, which is why `sourced` is still false. See notes/glazing-rates-from-the-trade.md.",
     "source": "Prices are what jobs settle at, from 24 years selling for a national installer, inclusive of VAT and stored net. The base is close to the keener of the two installers who buy leads here; Anglian settles about 1.6x higher on doors and 2x on a 3 m bifold, which is what the estimate range spans. Checked 2026-08-06 against Anglian list prices less the 40% discount routinely available. Not a supplier rate card. Openers are modelled: openerCost is the net cost of one opening part and typicalOpeners is how many the base rate already assumes, so a fixed light comes down and a three-opener window goes up — see notes/glazing-rates-from-the-trade.md.",
     "sourced": true,
     "windowBands": [
@@ -641,6 +649,8 @@
       "bay": 1
     },
     "bayUplift": 1.45,
+    "georgianBarUplift": 1.12,
+    "georgianBarNote": "Georgian bars, per window, as a multiple of the window price. Our own figure from typical UK trade pricing (bars commonly add about 10-15% to a window), not a supplier rate card; replace when one lands.",
     "nonWhiteUplift": 1.08,
     "doors": [
       {

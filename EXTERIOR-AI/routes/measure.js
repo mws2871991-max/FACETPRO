@@ -60,7 +60,7 @@ module.exports = function measureRoutes({
      caveat the client renders — every figure here is a guide until a supplier
      rate card replaces catalogue.glazing. */
   router.post('/api/glazing', (req, res) => {
-    const { detectionId, houseType, windowStyleId, doorStyleId, windowDoorColourId, windowCount, openerCount } = req.body || {};
+    const { detectionId, houseType, windowStyleId, doorStyleId, windowDoorColourId, windowBarsId, windowCount, openerCount } = req.body || {};
 
     /* No style chosen, no price. The module will happily price a default set,
        which is the right behaviour for a module and the wrong one for an
@@ -81,7 +81,7 @@ module.exports = function measureRoutes({
         // house-type prior while looking like it had measured the photograph.
         aspectRatio: record?.aspectRatio ?? null,
         houseType,
-        selections: { windowStyleId, doorStyleId, windowDoorColourId },
+        selections: { windowStyleId, doorStyleId, windowDoorColourId, windowBarsId },
         rates: catalogue.glazing,
         windowCountOverride: windowCount,
         openerCount,
@@ -173,6 +173,8 @@ module.exports = function measureRoutes({
              because the band's bounds are judgements and this is the only thing
              that could ever revise them — see measure.js. */
           rejected: result.observed?.rejected,
+          // A near miss held at the band edge — measure.js, NEAR_MISS.
+          clamped: result.observed?.clamped,
           /* The working behind m2, which is front elevation times a multiplier.
              Only the product was recorded, so a refused reading could be either
              half being wrong and the table could not say which. See the

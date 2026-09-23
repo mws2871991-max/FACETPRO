@@ -235,6 +235,10 @@ const SCHEMA = [
     rejected_m2 REAL,
     rejected_side TEXT,
     rejected_method TEXT,
+    /* A reading just outside the band, held at its edge instead of refused
+       (measure.js, NEAR_MISS). m2 holds the edge; this holds what was read. */
+    clamped_m2 REAL,
+    clamped_side TEXT,
     /* The working behind m2, so the two numbers that produce it can be told
        apart. m2 is front_elevation_m2 x front_to_total; keeping only the
        product meant a reading the band refused could be a front elevation
@@ -347,6 +351,7 @@ async function ensureSchema() {
      before this simply have nulls, which is the truthful record — nobody kept
      the rejected figure at the time. */
   for (const col of ['rejected_m2 REAL', 'rejected_side TEXT', 'rejected_method TEXT',
+                     'clamped_m2 REAL', 'clamped_side TEXT',
                      'front_elevation_m2 REAL', 'front_to_total REAL', 'coverage_m2 REAL', 'coverage_pct REAL']) {
     await pool.query(`ALTER TABLE ${SCHEMA_NAME}.measurement_observations ADD COLUMN IF NOT EXISTS ${col}`);
   }
@@ -724,6 +729,9 @@ async function recordMeasurement(row) {
     /* Which method produced the rejected figure, which is not the method that
        ended up answering — that one is always 'prior' once the band fires. */
     rejectedMethod: row?.rejected?.method ?? null,
+    /* Held at the band edge rather than refused: the reading, and which edge. */
+    clampedM2: Number.isFinite(row?.clamped?.m2) ? row.clamped.m2 : null,
+    clampedSide: row?.clamped?.side ?? null,
     /* Kept whether or not the band fired: a reading that passed is as much
        evidence for calibrating the multiplier as one that was refused. */
     frontElevationM2: Number.isFinite(row?.frontElevationM2) ? row.frontElevationM2 : null,
@@ -735,11 +743,11 @@ async function recordMeasurement(row) {
     await pool.query(
       `INSERT INTO ${SCHEMA_NAME}.measurement_observations
          (ts, house_type, door_ratio, door_height_pct, door_boxes, method, m2,
-          rejected_m2, rejected_side, rejected_method,
+          rejected_m2, rejected_side, rejected_method, clamped_m2, clamped_side,
           front_elevation_m2, front_to_total, coverage_m2, coverage_pct)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
       [r.ts, r.houseType, r.doorRatio, r.doorHeightPct, r.doorBoxes, r.method, r.m2,
-       r.rejectedM2, r.rejectedSide, r.rejectedMethod,
+       r.rejectedM2, r.rejectedSide, r.rejectedMethod, r.clampedM2, r.clampedSide,
        r.frontElevationM2, r.frontToTotal, r.coverageM2, r.coveragePct]);
     return;
   }
@@ -768,6 +776,7 @@ async function readMeasurements(limit = 1000, sinceIso = null) {
               door_height_pct AS "doorHeightPct", door_boxes AS "doorBoxes", method, m2,
               rejected_m2 AS "rejectedM2", rejected_side AS "rejectedSide",
               rejected_method AS "rejectedMethod",
+              clamped_m2 AS "clampedM2", clamped_side AS "clampedSide",
               front_elevation_m2 AS "frontElevationM2", front_to_total AS "frontToTotal",
               coverage_m2 AS "coverageM2", coverage_pct AS "coveragePct"
          FROM ${SCHEMA_NAME}.measurement_observations
