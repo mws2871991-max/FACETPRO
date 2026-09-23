@@ -268,6 +268,13 @@ function buildRenderPrompt(sel = {}) {
          leave the door alone. The model obeyed the first. */
       `${doorStyle ? 'both ' : ''}in ${glazingColourPhrase}. ` +
       `${doorStyle ? 'Every window frame and the door frame' : 'Every window frame'} must visibly take this colour. ` +
+      /* The roofline, beside the verb that tempts it. HOLDS.trim says leave
+         it alone twelve clauses later, and on 23 September a windows-only
+         render still turned white fascias and guttering anthracite to match
+         the frames — the same lesson the roof sentence learned about the
+         neighbour's roof: the exclusion goes where the work is described. */
+      (trim ? '' : 'Only the frames change colour: do not recolour the fascias, soffits, bargeboards, guttering or ' +
+        'downpipes to match them — they keep their existing colour. ') +
       /* Georgian bars: the one window option that changes the glass, not the
          frame, so it gets its own sentence and says where the bars go. Windows
          only — "every pane" would otherwise put a grid on the door glass too. */

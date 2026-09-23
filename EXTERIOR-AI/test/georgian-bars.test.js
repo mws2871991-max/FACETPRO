@@ -86,3 +86,14 @@ test('the choice travels: price request, render, save code, lead', () => {
   const glazingChoice = html.slice(html.indexOf('function glazingChoice'), html.indexOf('function glazingChoice') + 1500);
   assert.match(glazingChoice, /windowBarsId: state\.prefs\.windowBarsId/, 'the render request does not send the bars');
 });
+
+test('a kept roofline is excluded in the frames sentence itself', () => {
+  const trimKept = buildRenderPrompt({ windowStyle: 'Casement', glazingColour: 'Anthracite', glazingColourId: 'anthracite' });
+  assert.match(trimKept, /do not recolour the fascias, soffits, bargeboards, guttering or downpipes/);
+  const trimChanging = buildRenderPrompt({
+    windowStyle: 'Casement', glazingColour: 'Anthracite', glazingColourId: 'anthracite',
+    trim: { id: 'ink-trim', name: 'Ink Trim', hex: '#1f2a44' },
+  });
+  assert.doesNotMatch(trimChanging, /do not recolour the fascias/,
+    'asking for a new roofline colour and forbidding it in the same prompt');
+});
