@@ -1976,7 +1976,15 @@ async function loadCatalogue() {
     state.cladding = findSwatch(state.cladding.id);
     state.trim = findSwatch(state.trim.id);
     state.roof = findSwatch(state.roof.id);
-    U('Colours and prices loaded');
+    /* No "Colours and prices loaded" pill. Success here is the page working
+       as expected, and on a phone the pill sat over the resume-code box for
+       six seconds on every visit. The failure below still speaks up.
+
+       The pill mounts already showing "Getting your colours and prices
+       ready…" and only U() ever hid it, so it has to be put away here —
+       otherwise the loading message would stay up for good. */
+    clearTimeout(statusHideTimer);
+    document.getElementById('app-status')?.classList.add('opacity-0', 'pointer-events-none');
     reachedStage('landing');
     checkBuild();
   } catch (err) {
@@ -3057,7 +3065,10 @@ function buildUploadDetect() {
         parts.push(bays === 0 ? noun
           : bays === windows && windows === 1 ? 'a bay window'
           : bays === windows ? `${windows} bay windows`
-          : `${noun}, ${bays === 1 ? 'one of them a bay' : `${bays} of them bays`}`);
+          /* In brackets, not after a comma: join() below adds "and a front
+             door", and "3 windows, one of them a bay and a front door" read
+             as the door being one of the windows. */
+          : `${noun} (${bays === 1 ? 'one of them a bay' : `${bays} of them bays`})`);
       }
       if (hits(/door/i).length) parts.push('a front door');
       if (measured && state.price?.footprintM2) parts.push(`about ${state.price.footprintM2} m² of wall`);
@@ -3612,22 +3623,19 @@ function lightingLayers() {
         opacity: 0.95,
       });
     } else {
-      Object.assign(style, {
-        background: 'linear-gradient(180deg, rgba(255,255,255,0.88), rgba(210,225,255,0.3))',
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8)',
-        opacity: 0.72,
-      });
+      /* Daylight from outside: nothing over the glass.
+
+         This painted a 72%-opaque white "glass" panel plus a specular sweep
+         on every detected window, by default — afternoon, outside is where
+         everyone lands. Over a photoreal render that is a pale box floating
+         on the window, placed from a detection box that never sits exactly
+         on the frame, and it was drawn across both sides of the slider, so
+         the untouched photograph got the boxes too. The render already has
+         real glass in it. The glow is an effect people ask for; this was an
+         effect nobody asked for, on the picture they came to trust. */
+      continue;
     }
     layers.push(h('div', { className: 'absolute pointer-events-none', style }));
-
-    /* The specular sweep is what actually reads as "glass" — daytime, and
-       only when we're looking from outside. */
-    if (!lit && !isDoor) {
-      layers.push(h('div', {
-        className: 'absolute pointer-events-none',
-        style: { ...style, background: 'linear-gradient(110deg, transparent 0 35%, rgba(255,255,255,0.75) 50%, transparent 65%)', boxShadow: 'none', opacity: 0.7 },
-      }));
-    }
   }
 
   return layers;
@@ -4038,7 +4046,12 @@ function buildVisualizer() {
           ...lightingLayers(),
           /* Labels too. The slider and the readout were lifted out; these
              two were missed, and dimmed with the photograph. */
-          h('div', { className: 'absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-white border border-zinc-200' }, 'Before'),
+          /* Each label in the corner its own picture occupies. afterPane is
+             clipped with inset(0 <100-afterPct>% 0 0), so the render fills the
+             LEFT of the frame and the photograph shows on the RIGHT. The pills
+             had it the other way round: "After" sat over the untouched photo
+             and "Before" over the new design, at every slider position. */
+          h('div', { className: 'absolute right-3 top-3 text-[10px] px-2 py-1 rounded-full bg-white border border-zinc-200' }, 'Before'),
           state.renderUrl
             /* Opposite corner, no clip.
 
@@ -4059,7 +4072,7 @@ function buildVisualizer() {
                The three Real Homes cards have always put their labels in
                opposite corners with no clipping, and they read correctly at
                every position. Same here. */
-            ? h('div', { className: 'absolute right-3 top-3 text-[10px] px-2 py-1 rounded-full bg-emerald-600 text-white whitespace-nowrap' }, 'After')
+            ? h('div', { className: 'absolute left-3 top-3 text-[10px] px-2 py-1 rounded-full bg-emerald-600 text-white whitespace-nowrap' }, 'After')
             : null,
           slider,
           h('div', { className: 'absolute bottom-3 right-3 text-[10px] px-2 py-1 rounded-full bg-white border border-zinc-200' }, `${state.afterPct}% after`),
