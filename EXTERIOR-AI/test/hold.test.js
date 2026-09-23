@@ -74,9 +74,13 @@ test('the route only asks for it when the door is kept, the windows change and t
   const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
   const line = server.match(/const doorRestore = \(([^?]*)\)/);
   assert.ok(line, 'doorRestore should be decided in one expression in the render route');
-  for (const cond of ['glazingColour', 'windowStyle', '!doorStyle', '!cladding', 'detectionRecord']) {
+  for (const cond of ['glazingColour', 'windowStyle', '!doorStyle', '!cladding']) {
     assert.ok(line[1].includes(cond), `doorRestore no longer checks ${cond}`);
   }
+  /* And it can find the door without a detectionId — the automatic render
+     starts alongside detection and never has one. */
+  const block = server.slice(server.indexOf('const doorRestore = ('), server.indexOf('const doorRestore = (') + 400);
+  assert.match(block, /fingerprint: imageFingerprint\(img\.buffer\)/);
 });
 
 test('a detection box that misses the hinge side still restores the whole door', () => {
