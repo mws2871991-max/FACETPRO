@@ -148,3 +148,34 @@ test('the code is not cached anywhere between us and the browser', async () => {
   });
   assert.match(res.headers.get('cache-control') || '', /no-store/);
 });
+
+test('a code outlives the wait for a dry day', () => {
+  /* Twenty-four hours was written for somebody walking round the house after
+     tea. The actual journey is research on a laptop, then a photograph on the
+     phone — which waits for daylight, dry weather or the weekend. A code that
+     expires overnight fails precisely the customer it exists for.
+
+     Pinned as a lower bound rather than an exact figure: the point is that it
+     survives a week, not that it is any particular number of days. */
+  const DAY = 24 * 60 * 60 * 1000;
+  assert.ok(resume.TTL_MS >= 7 * DAY,
+    `a code lasting ${Math.round(resume.TTL_MS / DAY)} day(s) cannot bridge a laptop and a weekend`);
+
+  /* Built the way the store builds it: expiresAt is stamped at issue as
+     now + TTL, and isExpired reads that field rather than ts. */
+  const issuedSixDaysAgo = Date.now() - 6 * DAY;
+  const row = { ts: new Date(issuedSixDaysAgo).toISOString(),
+    expiresAt: new Date(issuedSixDaysAgo + resume.TTL_MS).toISOString() };
+  assert.strictEqual(resume.isExpired(row, Date.now()), false,
+    'a code made last week is still good');
+});
+
+test('a code still expires', () => {
+  /* The other half. It holds choices and nothing about a person, but "nothing
+     lingers" is a promise in the privacy notice and a code with no end is a
+     row kept forever. */
+  const DAY = 24 * 60 * 60 * 1000;
+  assert.ok(resume.TTL_MS <= 90 * DAY, 'a code should not be kept indefinitely');
+  const ancient = { expiresAt: new Date(Date.now() - 60_000).toISOString() };
+  assert.strictEqual(resume.isExpired(ancient, Date.now()), true);
+});

@@ -28,9 +28,18 @@
 
 const crypto = require('crypto');
 
-// Twenty-four hours. Long enough to walk round the house after tea, short
-// enough that nothing lingers.
-const TTL_MS = 24 * 60 * 60 * 1000;
+/* Thirty days.
+
+   Twenty-four hours was written for somebody walking round the house after
+   tea. That is not the journey: the code exists so a person researching on a
+   laptop can carry their choices to the phone that has the camera, and the
+   photograph often waits for daylight, a dry day, or the weekend. A code that
+   expires overnight fails exactly the customer it was built for, and
+   code_saved has fired twice in thirty days — there is no volume here that
+   short retention protects.
+
+   It still holds choices and nothing else: no photograph, no name, no email. */
+const TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 /* Crockford's base32 without I, L, O and U, so nothing is misread off a
    screen and typed wrong on a phone. Six characters is thirty bits — plenty

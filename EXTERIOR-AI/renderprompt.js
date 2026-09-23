@@ -156,6 +156,17 @@ const HOLDS = {
   trim: 'the fascias, soffits, bargeboards and guttering, in their existing colour',
   roof: 'the existing roof covering — the same tiles, the same colour, the same texture',
   glazing: 'the windows and the front door, including the exact colour of every frame',
+  /* The two halves separately, because "windows and doors" is one control on
+     the page and two different jobs in the picture.
+
+     On the windows journey the door is set to "keep mine", the price honours
+     that, and the render came back with an anthracite front door anyway. The
+     hold above covers both together and was only applied when nothing glazed
+     was changing — so asking for casements left the door named by neither the
+     request nor the hold, and the model recoloured it to match. Measured on
+     semi-before-sm.jpg: frames correct, door changed, nobody asked. */
+  windowsOnly: 'every window, including the exact colour of every frame',
+  doorOnly: 'the front door — its colour, its furniture and its glass',
 };
 
 /* Wall surfaces the model will mistake for a roof if nobody says otherwise.
@@ -262,7 +273,11 @@ function buildRenderPrompt(sel = {}) {
   if (!cladding) holds.push(HOLDS.cladding);
   if (!trim) holds.push(HOLDS.trim);
   if (!roof) holds.push(HOLDS.roof);
+  /* Whichever half of the glazing is not being changed is held by name.
+     Both, when no glazing is changing at all. */
   if (!changingGlazing) holds.push(HOLDS.glazing);
+  else if (!doorStyle) holds.push(HOLDS.doorOnly);
+  else if (!windowStyle) holds.push(HOLDS.windowsOnly);
   // Held whatever was chosen: every change above is to this house only.
   holds.push('every neighbouring or attached house, including its roof, walls and windows');
   holds.push('the garden, path, driveway, fencing, sky and everything beyond the house');

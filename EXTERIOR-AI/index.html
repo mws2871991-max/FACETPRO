@@ -1816,6 +1816,7 @@ const state = {
   // Server tells us whether it can email the homeowner their design, so the
   // form only promises it when it's true.
   resumeCode: null,         // a code we've issued, so they can type it on a phone
+  resumeCodeFor: null,      // the design it stands for — see currentResumeCode()
   // Read back from the server rather than restated here, so the copy that says
   // how long a code lasts cannot drift from resume.TTL_MS.
   resumeExpiresAt: null,
@@ -2463,9 +2464,27 @@ function resumeLifetimeLabel() {
 
    Lands on the upload section, because that is where a code is redeemed and
    where a photograph is wanted. */
+/* The code, but only while it still describes what is on screen.
+
+   A resume code carries choices, not a photograph. Change a colour after
+   taking one and the six characters on the card now restore the design you
+   just moved away from — silently, on a card whose whole promise is "so you
+   don't start again". Cleared rather than regenerated: making a new one is a
+   write nobody asked for, and the offer to make one is right there. */
+function currentResumeCode() {
+  if (!state.resumeCode) return null;
+  if (state.resumeCodeFor !== JSON.stringify(designChoices())) {
+    state.resumeCode = null;
+    state.resumeCodeFor = null;
+    state.resumeExpiresAt = null;
+    return null;
+  }
+  return state.resumeCode;
+}
+
 const resumeLink = () =>
-  state.resumeCode
-    ? `${location.origin}/design?code=${encodeURIComponent(state.resumeCode)}`
+  currentResumeCode()
+    ? `${location.origin}/design?code=${encodeURIComponent(currentResumeCode())}`
     : null;
 
 /* Clipboard access is refused on plenty of ordinary configurations — an iOS
@@ -2497,6 +2516,10 @@ async function getResumeCode(repaint = renderUploadOnly) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'We couldn’t make you a code just now.');
     state.resumeCode = data.code;
+    /* The design this code stands for. A code restores the choices it was made
+       from, so the moment those choices change it restores a superseded design
+       — and the card went on offering it as if it were current. */
+    state.resumeCodeFor = JSON.stringify(designChoices());
     state.resumeExpiresAt = data.expiresAt || null;
     /* Somebody wanted to keep this. While lead capture is off it is the only
        save there is, and design_saved fires on lead submission, so nothing
@@ -3209,7 +3232,7 @@ function buildUploadDetect() {
       h('p', { className: 'mt-1 text-[12px] leading-5 text-zinc-600 max-w-[62ch]' },
         'Carry what you’ve chosen over to your phone and take the photo there. We keep your colours and choices, and nothing else — no photograph, and nothing about you.'),
 
-      state.resumeCode
+      currentResumeCode()
         ? h('div', { className: 'mt-3 rounded-lg bg-white border border-zinc-200 p-3' }, [
             /* Where, not just what. The previous version named the site and
                stopped, leaving somebody to find an unlabelled box called
@@ -6625,7 +6648,7 @@ function buildKeepChoices(hasRender) {
     h('p', { className: 'mt-1 text-[12px] leading-5 text-white/55 max-w-[58ch]' },
       'A six-character code that brings your colours, styles and house type back on any device. It holds those and nothing else — no photograph, no name, no email, nothing to unsubscribe from.'),
 
-    state.resumeCode
+    currentResumeCode()
       ? h('div', { className: 'mt-4 rounded-xl bg-white/10 border border-white/15 p-3' }, [
           /* Naming the site and stopping left somebody to hunt an unlabelled
              box on a long page. Say which box, and where it is. */
