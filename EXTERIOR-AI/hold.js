@@ -29,11 +29,28 @@ const { PNG } = require('pngjs');
 const jpeg = require('jpeg-js');
 
 const MIN_DOOR_CONFIDENCE = 0.6;
-// Out past the detected box, as a fraction of its size: the frame and a
-// little brick, so the seam lands on wall that was never changing.
-const MARGIN = 0.08;
+/* Out past the detected box, as a fraction of its size, so the seam lands
+   on wall that was never changing.
+
+   Wider across than up and down, because that is how the boxes miss. On the
+   first live run (23 September) detection put the door at 66–75% across while
+   the door itself ran 62–74%; an 8% margin restored the right-hand two thirds
+   and left an anthracite strip down the hinge side — a two-tone door, worse
+   than no restore. Render and photograph line up to within a pixel or two
+   (measured: unchanged brick matches best at zero offset and clearly worse
+   at 4px), and this only runs when the walls are not changing, so extra
+   margin pastes brick over identical brick. */
+const MARGIN_X = 0.45;
+const MARGIN_Y = 0.08;
 // Soft edge, as a fraction of the box's shorter side.
 const FEATHER = 0.12;
+
+// Windows are changing, so the restore must never reach into one.
+function windowBoxes(detections) {
+  return (detections || [])
+    .filter(d => d && d.type === 'window' && Number(d.w_pct) > 0 && Number(d.h_pct) > 0)
+    .map(d => ({ x: Number(d.x_pct), y: Number(d.y_pct), w: Number(d.w_pct), h: Number(d.h_pct) }));
+}
 
 function doorBox(detections) {
   const doors = (detections || [])
@@ -88,11 +105,23 @@ function restoreDoor({ render, renderMime, original, originalMime, detections })
     const out = PNG.sync.read(render);
     const W = out.width, H = out.height;
 
-    const mx = box.w * MARGIN, my = box.h * MARGIN;
-    const left = Math.max(0, (box.x - mx) / 100 * W);
-    const top = Math.max(0, (box.y - my) / 100 * H);
-    const right = Math.min(W, (box.x + box.w + mx) / 100 * W);
-    const bottom = Math.min(H, (box.y + box.h + my) / 100 * H);
+    const mx = box.w * MARGIN_X, my = box.h * MARGIN_Y;
+    let left = Math.max(0, (box.x - mx) / 100 * W);
+    let top = Math.max(0, (box.y - my) / 100 * H);
+    let right = Math.min(W, (box.x + box.w + mx) / 100 * W);
+    let bottom = Math.min(H, (box.y + box.h + my) / 100 * H);
+    /* Pull each edge back off any window it reached, towards the door. The
+       door itself is never inside a window, so whichever side the window is
+       on is the side to give up. */
+    const doorCx = (box.x + box.w / 2) / 100 * W, doorCy = (box.y + box.h / 2) / 100 * H;
+    for (const w of windowBoxes(detections)) {
+      const wl = w.x / 100 * W, wr = (w.x + w.w) / 100 * W, wt = w.y / 100 * H, wb = (w.y + w.h) / 100 * H;
+      if (wr <= left || wl >= right || wb <= top || wt >= bottom) continue;
+      if (wr <= doorCx) left = Math.max(left, wr);
+      else if (wl >= doorCx) right = Math.min(right, wl);
+      else if (wb <= doorCy) top = Math.max(top, wb);
+      else bottom = Math.min(bottom, wt);
+    }
     if (right - left < 4 || bottom - top < 4) return untouched('door too small to restore');
     const feather = Math.max(1, Math.min(right - left, bottom - top) * FEATHER);
 

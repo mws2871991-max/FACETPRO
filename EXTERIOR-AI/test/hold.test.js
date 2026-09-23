@@ -52,7 +52,7 @@ test('the door region comes from the photograph and nothing else moves', () => {
 test('the seam is feathered, not a hard edge', () => {
   const out = restoreDoor({ render, renderMime: 'image/png', original, originalMime: 'image/jpeg', detections: [door] });
   // Just inside the left edge of the margin: partway between the two.
-  const left = Math.ceil((60 - 20 * 0.08) / 100 * 400);
+  const left = Math.ceil((60 - 20 * 0.45) / 100 * 400);
   const [r] = pixel(out.buffer, left + 1, 210);
   assert.ok(r > 30 && r < 190, `expected a blend at the edge, got ${r}`);
 });
@@ -77,4 +77,23 @@ test('the route only asks for it when the door is kept, the windows change and t
   for (const cond of ['glazingColour', 'windowStyle', '!doorStyle', '!cladding', 'detectionRecord']) {
     assert.ok(line[1].includes(cond), `doorRestore no longer checks ${cond}`);
   }
+});
+
+test('a detection box that misses the hinge side still restores the whole door', () => {
+  /* 23 September, live: box at 66–75% across, door at 62–74%. The 8% margin
+     left an anthracite strip down the left of a grey door. */
+  const offset = { ...door, x_pct: 64, w_pct: 16 };        // box starts 4% right of the "door"
+  const out = restoreDoor({ render, renderMime: 'image/png', original, originalMime: 'image/jpeg', detections: [offset] });
+  // 60% across is where the real door (60–80%) begins; it must be the photograph.
+  const [r] = pixel(out.buffer, Math.round(0.605 * 400), 210);
+  assert.ok(r > 150, `the hinge side of the door was left as rendered (${r})`);
+});
+
+test('the restore never reaches into a window', () => {
+  // A window immediately left of the door, inside the widened margin.
+  const win = { type: 'window', label: 'Hall window', confidence: 0.9, x_pct: 45, y_pct: 50, w_pct: 12, h_pct: 30 };
+  const out = restoreDoor({ render, renderMime: 'image/png', original, originalMime: 'image/jpeg', detections: [door, win] });
+  assert.ok(out.restored);
+  // Inside the window box: still the render.
+  assert.deepStrictEqual(pixel(out.buffer, Math.round(0.55 * 400), 210), [30, 30, 30]);
 });
