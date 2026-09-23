@@ -2451,6 +2451,32 @@ class RenderNotKept extends Error {}
 const KEEP_ATTEMPTS = 2;
 const KEEP_RETRY_MS = 400;
 
+/* Where the door is, for restoreDoor.
+
+   The first render every customer sees never had a detectionId. The page
+   starts it the moment the photo is read, alongside /api/detect rather than
+   after it (index.html, startAutoRender — twelve seconds off the first
+   picture), so the request carried detectionId: null and the restore skipped
+   every automatic render. Found on the live site on 23 September: a
+   requested render restored the door, the automatic one on the same photo
+   came back with an anthracite door.
+
+   Both calls send the same bytes, so the photograph's fingerprint finds the
+   detection /api/detect is writing. By the time the render is back (~10s)
+   detection has usually landed (~12–18s); wait for it briefly rather than
+   skip. Past the wait, give up and store the render unrestored. */
+const RESTORE_WAIT_MS = 20_000;
+async function detectionsForRestore({ detectionId, fingerprint }, waitMs = RESTORE_WAIT_MS) {
+  const deadline = Date.now() + waitMs;
+  for (;;) {
+    const id = (detectionId && detectionRecords.has(detectionId)) ? detectionId : detectionByImage.get(fingerprint);
+    const record = id ? detectionRecords.get(id) : null;
+    if (record) return record.detections || [];
+    if (Date.now() >= deadline) return null;
+    await new Promise(r => setTimeout(r, 500));
+  }
+}
+
 async function keepRender(replicateUrl, restore = null) {
   let bytes = null;
   let mime = 'image/jpeg';
@@ -2493,7 +2519,10 @@ async function keepRender(replicateUrl, restore = null) {
      prompt problem any more, and for the cases it leaves alone. Before
      storing, so the picture, the share link and the download all agree. */
   if (restore) {
-    const held = restoreDoor({ render: bytes, renderMime: mime, ...restore });
+    const detections = await detectionsForRestore(restore);
+    const held = detections
+      ? restoreDoor({ render: bytes, renderMime: mime, original: restore.original, originalMime: restore.originalMime, detections })
+      : { restored: false, reason: 'no detection record for this photograph' };
     if (held.restored) bytes = held.buffer;
     else obs.record('render', 'kept door not restored', { reason: held.reason });
   }
@@ -2711,10 +2740,13 @@ app.post('/api/render', renderLimiter, async (req, res) => {
   const roofUnsupported = !!roof && !framing.ok;
 
   /* The door is being kept while the windows change, on walls that are not
-     changing: the one case restoreDoor() handles. Read off the server's own
-     detection record, never the client. */
-  const doorRestore = (glazingColour && windowStyle && !doorStyle && !cladding && detectionRecord)
-    ? { original: img.buffer, originalMime: img.mime, detections: detectionRecord.detections || [] }
+     changing: the one case restoreDoor() handles. The door's position comes
+     from the server's own detection record, never the client — found by
+     detectionId, or by the photograph's fingerprint when the render set off
+     before detection finished (see detectionsForRestore). */
+  const doorRestore = (glazingColour && windowStyle && !doorStyle && !cladding)
+    ? { original: img.buffer, originalMime: img.mime, detectionId: detectionId ? String(detectionId) : null,
+        fingerprint: imageFingerprint(img.buffer) }
     : null;
 
   const prompt = buildRenderPrompt({
@@ -4216,4 +4248,4 @@ const ready = start().then((server) => {
    that matters is that fifty thousand of them are fifty thousand distinct
    values, and there is no way to observe that through an endpoint that allows
    five submissions a minute. */
-module.exports = { ready, _internals: { newLeadId, readImage, runRetention, purgeLeadPiiFor, REAR_OPENINGS } };
+module.exports = { ready, _internals: { newLeadId, readImage, runRetention, purgeLeadPiiFor, REAR_OPENINGS, detectionsForRestore, detectionRecords, detectionByImage } };
