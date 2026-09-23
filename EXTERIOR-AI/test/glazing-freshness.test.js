@@ -88,7 +88,12 @@ test('a style with no colour explains itself rather than doing nothing', () => {
 
 test('the two estimates say how they relate', () => {
   // A range and a total on one page, with nothing saying they are additive.
-  assert.match(html, /Separate from the cladding and roof estimate above/);
+  assert.match(html, /Separate from the walls and roof estimate/);
+  /* And only when there is one. On a windows journey walls and roof are
+     declined, and the line pointed at an estimate that was not on the page. */
+  const at = html.indexOf('Separate from the walls and roof estimate');
+  assert.match(html.slice(at - 200, at), /\(state\.price\?\.priced \|\| \[\]\)\.length\s*\?/,
+    'the line should only appear when walls or roof are being priced');
 });
 
 test('the count buttons are big enough to hit', () => {

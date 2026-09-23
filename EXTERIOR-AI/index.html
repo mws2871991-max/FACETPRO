@@ -5460,7 +5460,11 @@ function buildDetailOptions() {
     })),
   ]);
 
-  const chosen = Object.values(state.prefs).filter(Boolean).length;
+  /* 'none' is "keep what I have", not a preference, and a windows journey
+     arrives with three prefs already set — so a visitor who had touched
+     nothing read "3 preferences noted". Count what is actually in the design,
+     and say it is in the design rather than that we noted it. */
+  const chosen = Object.values(state.prefs).filter(v => v && v !== 'none').length;
 
   /* The window and door estimate.
 
@@ -5489,6 +5493,11 @@ function buildDetailOptions() {
     if (!g || !g.price) return needsColour ? pickColour : null;
 
     const counted = g.windowCount;
+    const shown = g.marketRange || g.range;
+    /* Scaled from the front: the photograph showed frontCount, the rest are
+       assumed for the elevations it cannot see. */
+    const scaled = (g.countSource === 'photo_door' || g.countSource === 'photo_count') && g.frontCount && g.frontToTotal;
+    const assumed = scaled ? Math.max(0, counted - g.frontCount) : 0;
     const setCount = (n) => {
       state.windowCount = Math.max(1, Math.min(30, n));
       /* How often the count we showed is not believed — the page invites the
@@ -5507,12 +5516,32 @@ function buildDetailOptions() {
            as the headline would be presenting the smaller uncertainty and
            hiding the bigger one. */
         h('span', { className: 'measured text-[19px] tracking-tight' },
-          g.marketRange
-            ? `${fmtMoney(g.marketRange.low)} – ${fmtMoney(g.marketRange.high)}`
-            : `${fmtMoney(g.range.low)} – ${fmtMoney(g.range.high)}`),
+          `${fmtMoney(shown.low)} – ${fmtMoney(shown.high)}`),
       ]),
+      /* One number to plan around.
+
+         The range is honest and it is wide — £15k to £28k on a detached
+         house — and a homeowner leaves it not knowing what to put aside. The
+         middle is not a claim about what people pay (we have no data that
+         says so), so it is labelled as what it is: the middle, offered as a
+         budgeting figure. */
+      h('p', { className: 'mt-1 text-[12px] leading-5 text-zinc-700' }, [
+        'Middle of the range: ',
+        h('span', { className: 'measured' }, fmtMoney(Math.round((shown.low + shown.high) / 2 / 50) * 50)),
+        ' — a sensible figure to budget around.',
+      ]),
+      /* Lead with what we saw.
+
+         This said "Based on 9 windows — measured from your photo" directly
+         under a detection panel that had just said "We found 3 windows", and
+         the ×3 that reconciles them was a line further down. What a
+         homeowner notices first is being charged for nine windows when they
+         can see three. So: the three we measured, then the six we assumed,
+         then the total. */
       h('p', { className: 'mt-1 text-[11px] leading-5 text-zinc-500' },
-        `Based on ${counted} window${counted === 1 ? '' : 's'} — ${g.sourceLabel}. Includes VAT${g.price.access ? ', and scaffolding or ladder access for the upstairs windows' : ''}.`),
+        scaled && assumed
+          ? `${g.frontCount} window${g.frontCount === 1 ? '' : 's'} on the front, ${g.sourceLabel}, plus ${assumed} we’ve assumed for the back and sides of ${HOUSE_TYPE_ARTICLE(g.houseType)} (×${g.frontToTotal}) — ${counted} in all. Your photo only shows the front, so set the real number below if you know it. Includes VAT${g.price.access ? ', and scaffolding or ladder access for the upstairs windows' : ''}.`
+          : `Based on ${counted} window${counted === 1 ? '' : 's'} — ${g.sourceLabel}. Includes VAT${g.price.access ? ', and scaffolding or ladder access for the upstairs windows' : ''}.`),
 
       /* The arithmetic behind that number, which the photograph cannot show.
 
@@ -5528,10 +5557,8 @@ function buildDetailOptions() {
          and a house-type prior is already a whole-house figure; neither is
          reached this way, and dressing them up as arithmetic would invent a
          derivation. */
-      (g.countSource === 'photo_door' || g.countSource === 'photo_count') && g.frontCount && g.frontToTotal
-        ? h('p', { className: 'mt-1 text-[11px] leading-5 text-zinc-500' },
-            `That is ${g.frontCount} on the front of your house × ${g.frontToTotal} for ${HOUSE_TYPE_ARTICLE(g.houseType)}, because your photo only shows the front. If your home has a different number, set it below.`)
-        : null,
+      /* (The multiplier is published in the line above now, beside the count
+         it produces, rather than in a second sentence under it.) */
 
       /* The window rates are invented, and this is where that has to be said.
 
@@ -5571,8 +5598,14 @@ function buildDetailOptions() {
       ]) : null,
       /* Two money figures on one page, and nothing said how they related.
          Someone could reasonably read the range as the whole job. */
-      h('p', { className: 'mt-1 text-[11px] leading-5 text-zinc-500' },
-        'Separate from the cladding and roof estimate above — windows and doors are quoted and fitted independently.'),
+      /* Only when there is a walls-and-roof estimate to be separate from. On
+         a windows journey those trades are declined, and the page told the
+         visitor this was "separate from the cladding and roof estimate above"
+         when there was no such estimate anywhere. */
+      (state.price?.priced || []).length
+        ? h('p', { className: 'mt-1 text-[11px] leading-5 text-zinc-500' },
+            'Separate from the walls and roof estimate — windows and doors are quoted and fitted independently.')
+        : null,
       // Shown next to the corrector, which is the thing that fixes it.
       g.countNote ? h('p', { className: 'mt-2 text-[11px] leading-5 text-amber-800' }, g.countNote) : null,
 
@@ -5626,7 +5659,9 @@ function buildDetailOptions() {
         h('span', { className: 'text-[12px] text-zinc-600' },
           g.countSource === 'house_type_prior'
             ? `We're assuming ${counted}. Not right?`
-            : `We counted ${counted}. Not right?`),
+            : scaled && assumed
+              ? `We counted ${g.frontCount} on the front and assumed ${counted} in all. Not right?`
+              : `We counted ${counted}. Not right?`),
         h('div', { className: 'flex items-center gap-2' }, [
           h('button', {
             type: 'button', 'aria-label': 'One fewer window',
@@ -5761,7 +5796,7 @@ function buildDetailOptions() {
 
     h('div', { className: 'rounded-xl bg-[#FDFCF9] border border-zinc-200 p-4 flex items-center justify-between gap-3 flex-wrap' }, [
       h('span', { className: 'text-[12px] text-zinc-600' },
-        chosen ? `${chosen} preference${chosen === 1 ? '' : 's'} noted — we’ll pass these on with your design.` : 'Nothing chosen yet. Anything you pick travels with your design.'),
+        chosen ? `${chosen} choice${chosen === 1 ? '' : 's'} in your design — change any of them above, and they travel with it.` : 'Nothing chosen yet. Anything you pick travels with your design.'),
       chosen ? h('button', {
         type: 'button',
         className: 'text-[11px] px-3 min-h-[44px] rounded-full border border-zinc-200 hover:border-zinc-900 transition',

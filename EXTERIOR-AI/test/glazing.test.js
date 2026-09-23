@@ -855,10 +855,16 @@ test('a bay already detected is not uplifted twice when Bay is also chosen', () 
      frontage that is nothing but a bay, so every unit is already uplifted by
      detection: choosing Bay on top of that can then only change the price if
      the uplift is being applied a second time. styleMultipliers.bay is 1, so
-     the style itself contributes nothing to compare against. */
+     the style itself contributes nothing to compare against.
+
+     The count is pinned to the one unit in the photograph. The windows
+     scaled up for the rest of the house are priced at the typical mix, not
+     as copies of the front, so they are not bays — and choosing Bay does
+     rightly uplift them. This test is about the photographed bay alone. */
   const onlyABay = [pane('Bay', 1, 10), pane('Bay', 2, 16), pane('Bay', 3, 22)];
   const priced = (styleId) => estimateGlazing({
     rates: catalogue.glazing, houseType: 'semi', detections: onlyABay, aspectRatio: 0.75,
+    windowCountOverride: 1,
     selections: { windowStyleId: styleId, doorStyleId: 'none', windowDoorColourId: 'white' },
   }).price.supplyFit;
 
@@ -866,6 +872,37 @@ test('a bay already detected is not uplifted twice when Bay is also chosen', () 
     'this test reads the Bay style as carrying no multiplier of its own — recheck if that changed');
   assert.strictEqual(priced('bay'), priced('casement'),
     'the bay uplift is compounding when a bay is both detected and chosen');
+});
+
+test('the front bay is not copied onto the walls nobody photographed', () => {
+  /* 23 September, live: a detached house showing one bay and two upstairs
+     windows scaled to nine, priced as three bays and six large windows —
+     £15,243–£27,715 against the cost page's £946–£1,720 a window. The unseen
+     six are now the house type's typical mix. The count is untouched. */
+  // The boxes /api/detect returned for /assets/work/semi-before-sm.jpg that day.
+  const front = [
+    { type: 'window', label: 'Upper Left Window', confidence: 0.95, x_pct: 27, y_pct: 26, w_pct: 16, h_pct: 21 },
+    { type: 'window', label: 'Upper Right Window', confidence: 0.95, x_pct: 62, y_pct: 26, w_pct: 16, h_pct: 21 },
+    { type: 'window', label: 'Bay Window Left Panel', confidence: 0.9, x_pct: 13, y_pct: 54, w_pct: 13, h_pct: 24 },
+    { type: 'window', label: 'Bay Window Center Panel', confidence: 0.9, x_pct: 27, y_pct: 52, w_pct: 15, h_pct: 26 },
+    { type: 'window', label: 'Bay Window Right Panel', confidence: 0.9, x_pct: 43, y_pct: 54, w_pct: 13, h_pct: 24 },
+    { type: 'door-front', label: 'Front Door', confidence: 0.9, x_pct: 63, y_pct: 57, w_pct: 11, h_pct: 33 },
+  ];
+  const out = estimateGlazing({
+    rates: catalogue.glazing, houseType: 'detached', detections: front, aspectRatio: 600 / 450,
+    selections: { windowStyleId: 'casement', doorStyleId: 'none', windowDoorColourId: 'white' },
+  });
+  const frontCount = out.frontCount;
+  assert.strictEqual(out.windowCount, Math.round(frontCount * out.frontToTotal),
+    'the whole-house count must still be front × frontToTotal');
+  const bays = out.windows.filter(w => w.isBay).length;
+  assert.strictEqual(bays, 1, 'the fixture should read as one bay');
+  // Every unit beyond the photographed ones is priced at the prior mix, which has no xlarge.
+  const xlargeFront = out.windows.filter(w => w.bandId === 'xlarge').length;
+  assert.strictEqual(out.price.byBand.xlarge || 0, xlargeFront,
+    'an extra-large front window was replicated onto the unseen elevations');
+  assert.strictEqual(Object.values(out.price.byBand).reduce((a, n) => a + n, 0), out.windowCount,
+    'the band breakdown must still add up to the headline count');
 });
 
 /* ── One published price per job ── */

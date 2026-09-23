@@ -761,18 +761,49 @@ function priceGlazing({ windows, totalCount, selections, rates, houseType , open
     ? (rates.nonWhiteUplift ?? 1)
     : 1;
 
-  /* The measured windows describe the front elevation. Scale the COUNT to the
-     whole house, keeping the measured mix of bands — a house's rear windows
-     are not the same sizes as its front ones, but the mix is a better guess
-     than assuming they are all standard. */
-  const scale = totalCount / windows.length;
+  /* The windows we have describe the front elevation. The ones we have not
+     seen are priced at the house type's typical mix, not as copies of the
+     front.
+
+     This used to scale every front window by totalCount / front. That copied
+     the front's most distinctive window onto walls nobody photographed: a
+     detached house with one bay and two upstairs windows was priced as three
+     bays and six large windows, £15,243 – £27,715, when bays are almost
+     always a front-elevation feature. The unseen windows are, by definition,
+     the ones we know least about, so they get the typical figure the prior
+     already holds for this house type — the same mix the cost pages price.
+
+     The COUNT is unchanged: frontToTotal still decides how many there are
+     (notes/window-count-and-scaling.md — do not retune it). Only what the
+     unseen ones are assumed to be has moved.
+
+     If the homeowner says there are fewer windows than we saw, the front is
+     scaled down as before; there are no unseen windows to add. */
+  const frontScale = totalCount < windows.length ? totalCount / windows.length : 1;
+  const unseen = Math.max(0, totalCount - windows.length);
+  const priorMix = (HOUSE_TYPE_GLAZING_PRIORS[houseTypeKey(houseType)] || HOUSE_TYPE_GLAZING_PRIORS[DEFAULT_HOUSE_TYPE]).mix;
+  const priorTotal = Object.values(priorMix).reduce((a, n) => a + n, 0);
+  const unseenWindows = unseen > 0
+    ? Object.entries(priorMix).filter(([, n]) => n > 0).map(([bandId, n]) => ({
+        bandId,
+        weight: unseen * n / priorTotal,
+        isBay: false,
+        // Half upstairs, as priorWindows assumes; none on a bungalow.
+        upperShare: houseTypeKey(houseType) === 'bungalow' ? 0 : 0.5,
+      }))
+    : [];
 
   let supplyFit = 0;
   let upperStoreyCount = 0;
   const byBand = {};
 
   if (windowsIncluded) {
-    for (const w of windows) {
+    const priced = [
+      ...windows.map(w => ({ ...w, weight: frontScale, upperShare: w.upperStorey ? 1 : 0 })),
+      ...unseenWindows,
+    ];
+    for (const w of priced) {
+      const scale = w.weight;
       const band = rates.windowBands.find(b => b.id === w.bandId);
       if (!band) throw new Error(`No rate for window band "${w.bandId}" in catalogue.glazing.`);
       /* The uplift follows the window, not only the dropdown.
@@ -788,7 +819,7 @@ function priceGlazing({ windows, totalCount, selections, rates, houseType , open
       const bayHere = w.isBay || isBay;
       const unit = band.supplyFit * styleMult * colourMult * (bayHere ? (rates.bayUplift ?? 1) : 1);
       supplyFit += unit * scale;
-      if (w.upperStorey) upperStoreyCount += scale;
+      upperStoreyCount += scale * w.upperShare;
       byBand[w.bandId] = (byBand[w.bandId] || 0) + scale;
     }
   }

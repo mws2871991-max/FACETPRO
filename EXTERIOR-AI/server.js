@@ -19,6 +19,7 @@ const leadscore = require('./leadscore');
 const { isTestTraffic } = require('./testtraffic');
 
 const { buildRenderPrompt } = require('./renderprompt');
+const { restoreDoor } = require('./hold');
 const geometry = require('./geometry');
 const catalogue = JSON.parse(fs.readFileSync(path.join(__dirname, 'catalogue.json'), 'utf8'));
 
@@ -2441,7 +2442,7 @@ class RenderNotKept extends Error {}
 const KEEP_ATTEMPTS = 2;
 const KEEP_RETRY_MS = 400;
 
-async function keepRender(replicateUrl) {
+async function keepRender(replicateUrl, restore = null) {
   let bytes = null;
   let mime = 'image/jpeg';
   let lastFetchError = null;
@@ -2478,6 +2479,16 @@ async function keepRender(replicateUrl) {
     throw new RenderNotKept('fetch failed');
   }
 
+  /* The front door, put back from the photograph when the homeowner kept it
+     and the model changed it anyway. See hold.js for why this is not a
+     prompt problem any more, and for the cases it leaves alone. Before
+     storing, so the picture, the share link and the download all agree. */
+  if (restore) {
+    const held = restoreDoor({ render: bytes, renderMime: mime, ...restore });
+    if (held.restored) bytes = held.buffer;
+    else obs.record('render', 'kept door not restored', { reason: held.reason });
+  }
+
   const id = crypto.randomBytes(16).toString('hex');
   try {
     await store.putRender(id, bytes, { mime });
@@ -2500,9 +2511,9 @@ async function keepRender(replicateUrl) {
    prediction is cheap to repeat and the two failures behind this are both
    transient more often than not. It deliberately does not say the render
    failed, which would be a lie about the part that went right. */
-async function respondWithRender(res, url, extra = {}) {
+async function respondWithRender(res, url, extra = {}, restore = null) {
   try {
-    return res.json({ ...await keepRender(url), ...extra });
+    return res.json({ ...await keepRender(url, restore), ...extra });
   } catch (err) {
     if (err instanceof RenderNotKept) {
       return res.status(502).json({ error: "We made your image but couldn't save it — please try again." });
@@ -2690,6 +2701,13 @@ app.post('/api/render', renderLimiter, async (req, res) => {
     : { ok: true, reason: null, roofHPct: null, tiledWallHPct: null };
   const roofUnsupported = !!roof && !framing.ok;
 
+  /* The door is being kept while the windows change, on walls that are not
+     changing: the one case restoreDoor() handles. Read off the server's own
+     detection record, never the client. */
+  const doorRestore = (glazingColour && windowStyle && !doorStyle && !cladding && detectionRecord)
+    ? { original: img.buffer, originalMime: img.mime, detections: detectionRecord.detections || [] }
+    : null;
+
   const prompt = buildRenderPrompt({
     cladding, trim, roof: roofUnsupported ? null : roof,
     windowStyle, doorStyle, glazingColour,
@@ -2822,7 +2840,7 @@ app.post('/api/render', renderLimiter, async (req, res) => {
     const pred = await predRes.json();
     if (pred.status === 'succeeded' && pred.output) {
       const url = Array.isArray(pred.output) ? pred.output[0] : pred.output;
-      return respondWithRender(res, url, { roofSkipped: roofUnsupported || undefined });
+      return respondWithRender(res, url, { roofSkipped: roofUnsupported || undefined }, doorRestore);
     }
 
     /* Poll until the deadline.
@@ -2880,7 +2898,7 @@ app.post('/api/render', renderLimiter, async (req, res) => {
 
       if (p.status === 'succeeded') {
         const url = Array.isArray(p.output) ? p.output[0] : p.output;
-        return respondWithRender(res, url, { roofSkipped: roofUnsupported || undefined });
+        return respondWithRender(res, url, { roofSkipped: roofUnsupported || undefined }, doorRestore);
       }
       /* Terminal either way. Waiting out the clock on a prediction that has
          already stopped is ninety seconds of a homeowner watching a spinner. */
