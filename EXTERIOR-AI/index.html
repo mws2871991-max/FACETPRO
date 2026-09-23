@@ -2423,6 +2423,15 @@ function render() {
    must not quietly grow a photograph or an email address the day somebody
    adds a field to state. The server allowlists them again on arrival; this is
    the near half of the same discipline. */
+/* The one figure this site publishes for a priced job — the client's copy of
+   glazing.publishedRange().
+
+   Written out by hand in four places, and the cost pages read a different
+   field entirely, so the same house was quoted two ways within one click of a
+   CTA. Named here so the page, the bar, the reveal and the saved summary
+   cannot drift from each other or from the server. */
+const publishedRange = (g) => (g ? (g.marketRange || g.range || null) : null);
+
 function designChoices() {
   return {
     claddingId: state.cladding?.id, trimId: state.trim?.id, roofId: state.roof?.id,
@@ -4347,7 +4356,7 @@ function buildGlazingLedPanel() {
   }
   if (!g || !g.price) return chooseFirst;
 
-  const spread = g.marketRange || g.range;
+  const spread = publishedRange(g);
   const n = g.windowCount;
   const doorOnly = g.price.windowsIncluded === false;
   /* Which door, in words. Bifolds, sliders and double doors were called "your
@@ -4954,7 +4963,7 @@ async function refreshGlazing({ label } = {}) {
      own example is "+£800–£900", which is exactly this. */
   const beforeSpread = (() => {
     const g = state.glazing;
-    const sp = g?.marketRange || g?.range;
+    const sp = publishedRange(g);
     return sp && Number.isFinite(sp.low) && Number.isFinite(sp.high) ? { low: sp.low, high: sp.high } : null;
   })();
   /* Nothing chosen, or everything actively declined, are the same thing as far
@@ -4986,7 +4995,7 @@ async function refreshGlazing({ label } = {}) {
     if (state.glazing?.price) {
       reachedStage('estimate_viewed');
       reportJourneyTiming();
-      const after = state.glazing.marketRange || state.glazing.range;
+      const after = publishedRange(state.glazing);
       if (label && beforeSpread && after && Number.isFinite(after.low) && Number.isFinite(after.high)) {
         const dLow = after.low - beforeSpread.low;
         const dHigh = after.high - beforeSpread.high;
@@ -5095,7 +5104,7 @@ function buildTotalBar() {
      together disagreeing by thousands about one job. The spread is also the
      honest headline: it is the largest uncertainty in the number, and the one
      nobody tells a homeowner about. */
-  const glazSpread = glaz?.marketRange || glaz?.range;
+  const glazSpread = publishedRange(glaz);
   const glazing = glaz?.price ? `${fmtMoney(glazSpread.low)}–${fmtMoney(glazSpread.high)}` : null;
   if (!cladding && !glazing) return h('div', { id: 'total-bar' });
 

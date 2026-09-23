@@ -867,3 +867,47 @@ test('a bay already detected is not uplifted twice when Bay is also chosen', () 
   assert.strictEqual(priced('bay'), priced('casement'),
     'the bay uplift is compounding when a bay is both detected and chosen');
 });
+
+/* ── One published price per job ── */
+
+test('the cost pages and the tool quote the same job the same way', () => {
+  /* They did not. The pages read `range` and the tool read `marketRange`, so
+     an eight-window semi was £7,054–£10,150 on the page and £7,570–£13,763 in
+     the tool — one click apart, via the page's own CTA. Doors were worse: the
+     page did its own supplyFit x VAT x spread and omitted the disposal line
+     the tool includes and advertises.
+
+     Asserted through publishedRange rather than by comparing two hard-coded
+     numbers, because the failure mode is the two sides reading different
+     fields, not either field being wrong. */
+  const { publishedRange } = require('../glazing');
+
+  for (const d of catalogue.glazing.doors) {
+    const priced = estimateGlazing({
+      rates: catalogue.glazing, houseType: 'semi',
+      selections: { doorStyleId: d.id, windowStyleId: 'none' },
+    });
+    const published = publishedRange(priced);
+    assert.ok(published, `${d.id} publishes no range at all`);
+
+    /* The disposal line is the specific thing the page used to drop. If the
+       published figure were still derived from supplyFit alone it could not
+       exceed a total that includes disposal and VAT. */
+    assert.ok(priced.price.disposal > 0, `${d.id} should carry a disposal line`);
+    assert.ok(published.high > priced.price.supplyFit + priced.price.doors,
+      `${d.id} publishes a figure that cannot include fitting, disposal and VAT`);
+  }
+});
+
+test('publishedRange prefers the market spread and falls back to our own', () => {
+  const { publishedRange } = require('../glazing');
+  assert.deepStrictEqual(
+    publishedRange({ range: { low: 1, high: 2 }, marketRange: { low: 3, high: 4 } }),
+    { low: 3, high: 4 }, 'the market spread is the published one');
+  /* marketRange is deliberately withheld when the job contains windows priced
+     from unsourced bands. The pages still have to publish something then. */
+  assert.deepStrictEqual(
+    publishedRange({ range: { low: 1, high: 2 }, marketRange: null }),
+    { low: 1, high: 2 }, 'our own estimate is the fallback, not nothing');
+  assert.strictEqual(publishedRange(null), null);
+});

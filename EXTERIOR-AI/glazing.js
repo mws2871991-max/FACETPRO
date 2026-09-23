@@ -556,6 +556,29 @@ function frontWindowCount(detections) {
    the houses this matters for: "We found 2 windows" on a frontage with two
    five-pane bays is arithmetically right and looks like a miscount, which is
    the moment a homeowner stops trusting the figure beside it. */
+/* The one figure this site publishes for a priced job.
+
+   The cost pages read `range` and the tool read `marketRange`, so the same
+   house was quoted two different ways within one click of a CTA: an
+   eight-window semi at £7,054-£10,150 on the page and £7,570-£13,763 in the
+   tool. Both were defensible in isolation and the pair is not.
+
+   marketRange is the published one because it is what the product already
+   shows, and because it is the spread the whole "two neighbours, thousands
+   apart" argument rests on — the point of the site is what different firms
+   charge for identical work, and `range` is our own estimate either side of a
+   midpoint, which is a narrower claim.
+
+   Falls back to `range` because marketRange is deliberately withheld when the
+   job contains windows priced from unsourced bands. In that state the pages
+   still have to publish something, and our own estimate is the honest thing to
+   publish. The tool already did exactly this, in four hand-written copies of
+   the same expression; this is that expression with a name. */
+function publishedRange(result) {
+  if (!result) return null;
+  return result.marketRange || result.range || null;
+}
+
 function frontBayCount(detections) {
   return windowCandidates(detections).bays;
 }
@@ -1044,6 +1067,7 @@ module.exports = {
   estimateGlazing,
   frontWindowCount,
   frontBayCount,
+  publishedRange,
   resolveHouseType,
   isSidelight,
   // Exposed for tests and for scripts/validate-*, not for server.js.

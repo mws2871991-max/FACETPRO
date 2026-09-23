@@ -94,7 +94,10 @@ test('window figures come from the pricing engine, not from the copy', () => {
     selections: { windowStyleId: 'casement', windowDoorColourId: null },
   });
   const html = landing.renderCostPage('window-replacement-cost-uk', OPTS);
-  const expected = '£' + Math.round(direct.range.low).toLocaleString('en-GB');
+  /* publishedRange, not range — the page and the tool publish one figure now,
+     and it is the market spread. Reading `range` here is what let the page
+     quote £7,054 while the tool quoted £7,570 for the same house. */
+  const expected = '£' + Math.round(glazing.publishedRange(direct).low).toLocaleString('en-GB');
   assert.ok(html.includes(expected),
     `the page does not show the engine's own figure (${expected})`);
 });
@@ -247,9 +250,19 @@ test('the bifold figures come from the catalogue, not from prose', () => {
   const bifold3m = c.glazing.doors.find(d => d.id === 'bifold-3m');
   const html = landing.renderCostPage('bifold-doors-cost', OPTS);
   /* The lowest figure quoted must be reachable from the rate — proves the page
-     is computed rather than typed, which is the rule the whole file follows. */
-  const spread = require('../glazing').INSTALLER_SPREAD;
-  const low = Math.round(bifold3m.supplyFit * (1 + c.glazing.vatPct / 100) * spread.low);
+     is computed rather than typed, which is the rule the whole file follows.
+
+     Derived through the engine rather than by repeating its arithmetic here.
+     This used to compute supplyFit x VAT x spread by hand, which is what
+     landing.js itself used to do — and both omitted the disposal line the tool
+     includes, so a test written to prove the page matches the product agreed
+     with the page about a figure the product never showed. */
+  const priced = glazing.estimateGlazing({
+    rates: c.glazing, houseType: 'semi',
+    selections: { doorStyleId: 'bifold-3m', windowStyleId: 'none' },
+  });
+  const low = glazing.publishedRange(priced).low;
+  assert.ok(bifold3m, 'the 3 m bifold is no longer in the catalogue');
   assert.ok(html.includes(low.toLocaleString('en-GB')),
     `expected the computed £${low} to appear on the page`);
 });

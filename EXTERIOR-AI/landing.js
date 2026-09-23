@@ -98,25 +98,39 @@ function windowJob(catalogue, { count, houseType = 'semi', colourId = null, styl
     windowCountOverride: count,
     selections: { windowStyleId: styleId, windowDoorColourId: colourId },
   });
+  /* The same figure the tool publishes. These two read different fields until
+     today, so the page and the tool quoted the same house differently within
+     one click of the CTA. */
+  const r = glazing.publishedRange(out);
   return {
     count,
-    low: out.range.low,
-    high: out.range.high,
-    perWindowLow: Math.round(out.range.low / count),
-    perWindowHigh: Math.round(out.range.high / count),
+    low: r.low,
+    high: r.high,
+    perWindowLow: Math.round(r.low / count),
+    perWindowHigh: Math.round(r.high / count),
   };
 }
 
-/* A single door, priced from the catalogue and spread across the market the
-   same way the product spreads it. */
+/* A single door, priced through the engine that prices it in the product.
+
+   This used to do its own arithmetic — supplyFit x VAT x spread — which looks
+   like the same sum and is not. It omitted the disposal line the tool
+   includes and advertises in its own "taking the old door away", so the page
+   under-quoted every door by that much. Re-deriving a price next to the
+   thing that derives prices is how the two drifted; there is one path now. */
 function doorPrices(catalogue) {
-  const spread = glazing.INSTALLER_SPREAD;
-  const vat = vatMult(catalogue.glazing.vatPct ?? 20);
-  return catalogue.glazing.doors.map(d => ({
-    name: d.name,
-    low: Math.round(d.supplyFit * vat * spread.low),
-    high: Math.round(d.supplyFit * vat * spread.high),
-  }));
+  return catalogue.glazing.doors.map(d => {
+    const out = glazing.estimateGlazing({
+      rates: catalogue.glazing,
+      houseType: 'semi',
+      /* Doors only. 'none' is how a caller says the windows are staying —
+         without it every door on this page would carry a whole house of
+         glazing, which is the bug that produced £11,390 for a composite. */
+      selections: { doorStyleId: d.id, windowStyleId: 'none' },
+    });
+    const r = glazing.publishedRange(out);
+    return { name: d.name, low: r.low, high: r.high };
+  });
 }
 
 /* Fascias, soffits and guttering, per metre and for a typical run. The rates
