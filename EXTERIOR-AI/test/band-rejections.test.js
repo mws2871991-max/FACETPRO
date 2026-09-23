@@ -138,3 +138,76 @@ test('a row with no rejection stores nulls, not zeroes', async () => {
   assert.strictEqual(row.rejectedSide, null);
   assert.strictEqual(row.rejectedMethod, null);
 });
+
+/* ── Near misses: held at the edge, not thrown out ──
+
+   23 September: one photograph, two uploads, 94 m² and 86 m² against a
+   detached band of 90–200. 94 was priced at 94; 86 was refused and priced at
+   the typical 130. A smaller reading gave a bigger price. Within NEAR_MISS of
+   the band the reading is now held at the nearest edge. */
+
+// The fixture's wall area goes with the square of its scale (no openings), so
+// solve for the scale that lands on a chosen reading.
+const readingAt = (scale, houseType) => {
+  const r = measure(scale, houseType);
+  return r.observed.frontElevationM2 * r.observed.frontToTotal;
+};
+const scaleFor = (target, houseType) => Math.sqrt(target / readingAt(1, houseType));
+
+test('a reading just under the floor is priced at the floor, not the typical figure', () => {
+  const [lo] = HOUSE_TYPE_PRIORS.detached.band;
+  const r = measure(scaleFor(lo * 0.95, 'detached'), 'detached');
+  assert.strictEqual(r.method, 'door', 'a near miss should still count as measured');
+  assert.strictEqual(r.m2, lo);
+  assert.ok(r.observed.clamped, 'the reading behind the clamp should be kept');
+  assert.strictEqual(r.observed.clamped.side, 'below');
+  assert.ok(r.observed.clamped.m2 < lo && r.observed.clamped.m2 >= lo * 0.8,
+    `the kept reading ${r.observed.clamped.m2} should be the near miss, under ${lo}`);
+  assert.strictEqual(r.observed.rejected, null, 'a clamp is not a rejection');
+  assert.strictEqual(r.confidence, 'rough');
+  assert.ok(r.notes.some(n => /a little under/.test(n)), 'the homeowner should be told');
+});
+
+test('a reading just over the ceiling is priced at the ceiling', () => {
+  const [, hi] = HOUSE_TYPE_PRIORS.semi.band;
+  const r = measure(scaleFor(hi * 1.1, 'semi'), 'semi');
+  assert.strictEqual(r.method, 'door');
+  assert.strictEqual(r.m2, hi);
+  assert.strictEqual(r.observed.clamped.side, 'above');
+});
+
+test('the price no longer jumps up when the reading goes down', () => {
+  /* The whole point. Walking the reading down through the floor, the priced
+     figure must never rise until the reading is far enough out to be a
+     detection failure. */
+  const [lo] = HOUSE_TYPE_PRIORS.detached.band;
+  let last = Infinity;
+  for (const f of [1.2, 1.1, 1.02, 1.0, 0.98, 0.9, 0.82]) {
+    const r = measure(scaleFor(lo * f, 'detached'), 'detached');
+    assert.ok(r.m2 <= last, `reading ${Math.round(lo * f)} m² priced ${r.m2}, above the previous ${last}`);
+    last = r.m2;
+  }
+});
+
+test('far outside the band is still a detection failure', () => {
+  const [lo] = HOUSE_TYPE_PRIORS.detached.band;
+  const r = measure(scaleFor(lo * 0.6, 'detached'), 'detached');
+  assert.strictEqual(r.method, 'prior');
+  assert.strictEqual(r.observed.clamped, null);
+  assert.ok(r.observed.rejected);
+});
+
+test('a clamped reading survives a round trip through the store', async () => {
+  const [lo] = HOUSE_TYPE_PRIORS.detached.band;
+  const r = measure(scaleFor(lo * 0.95, 'detached'), 'detached');
+  await store.recordMeasurement({
+    houseType: r.houseType, method: r.method, m2: r.m2,
+    doorRatio: r.observed.doorRatio, doorHeightPct: r.observed.doorHeightPct,
+    doorBoxes: r.observed.doorBoxes, rejected: r.observed.rejected, clamped: r.observed.clamped,
+  });
+  const row = (await store.readMeasurements(5000))[0];
+  assert.strictEqual(Number(row.m2), lo, 'm2 is what was priced');
+  assert.strictEqual(Number(row.clampedM2), r.observed.clamped.m2, 'clampedM2 is what was read');
+  assert.strictEqual(row.clampedSide, 'below');
+  assert.strictEqual(row.rejectedM2, null);
+});

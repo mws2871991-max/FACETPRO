@@ -173,6 +173,8 @@ module.exports = function measureRoutes({
              because the band's bounds are judgements and this is the only thing
              that could ever revise them — see measure.js. */
           rejected: result.observed?.rejected,
+          // A near miss held at the band edge — measure.js, NEAR_MISS.
+          clamped: result.observed?.clamped,
           /* The working behind m2, which is front elevation times a multiplier.
              Only the product was recorded, so a refused reading could be either
              half being wrong and the table could not say which. See the

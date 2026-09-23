@@ -390,9 +390,10 @@ module.exports = function opsRoutes({
       c.samples += 1;
       c.front.push(num(r.frontElevationM2));
       /* The figure the door method produced, whether or not the band kept it.
-         rejectedM2 is where it lands once the band fires; m2 is where it
-         lands when it does not. */
-      const produced = num(r.rejectedM2) ?? num(r.m2);
+         rejectedM2 is where it lands once the band fires; clampedM2 when it
+         was held at the band edge (m2 is then the edge, not the reading); m2
+         when the band did not fire. */
+      const produced = num(r.clampedM2) ?? num(r.rejectedM2) ?? num(r.m2);
       if (produced !== null) c.total.push(produced);
       const cov = num(r.coverageM2);
       if (cov !== null) c.coverage.push(cov);
