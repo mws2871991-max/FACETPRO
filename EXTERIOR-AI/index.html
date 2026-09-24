@@ -2809,17 +2809,23 @@ async function applyJourney(id) {
    The trade name is kept as a second line rather than dropped: it is what
    their quotes will say, and a homeowner who already knows the term should
    not have to guess we mean the same thing. */
-const TRIAGE = [
-  { id: 'windows',  label: 'Windows' },
-  { id: 'doors',    label: 'A front door' },
-  { id: 'cladding', label: 'Rendering the walls', hint: 'render or cladding' },
-  { id: 'roofline', label: 'The white boards and gutters', hint: 'fascias, soffits & guttering' },
-  { id: 'roof',     label: 'A roof' },
-  /* Not a journey in the pricing sense — a conservatory is a guide band, not
-     priced from the photograph — so this answer takes them to the section that
-     can actually help rather than to an uploader that cannot. */
-  { id: 'conservatory', label: 'A conservatory', href: '#conservatory' },
-  { id: null,       label: 'Everything / not sure yet' },
+/* The product choice on /design, the same six as the homepage boxes — same
+   pictures, names, order and destinations — plus "not sure yet".
+
+   It used to be a second, different opening: seven text chips under "What are
+   you looking for today?", with its own names ("The white boards and
+   gutters", "Rendering the walls") and its own conservatory route. Somebody
+   pressing "Upload a photo" in the header met a different first question from
+   somebody who clicked a box on the homepage. One journey now: whichever way
+   in, you pick a product from the same boxes, choose the look, then the photo.
+   test/one-opening.test.js holds this list to the homepage's. */
+const PRODUCT_TILES = [
+  { id: 'windows',  label: 'Windows', sub: 'Casement, flush, sash, bay', img: '/assets/products/windows.jpg', alt: 'Anthracite bay windows on a brick house' },
+  { id: 'doors',    label: 'Doors', sub: 'Front, back, patio and bifold', img: '/assets/products/doors.jpg', alt: 'A grey composite front door' },
+  { id: 'roofline', label: 'Fascias, soffits & guttering', sub: 'The roofline', img: '/assets/products/roofline.jpg', alt: 'The gable, fascia and bargeboards of a tile-hung house' },
+  { id: 'roof',     label: 'Roofs', sub: 'Slate, tile and clay', img: '/assets/products/roofs.jpg', alt: 'A slate roof with chimneys' },
+  { id: 'cladding', label: 'Render & cladding', sub: 'Change the look of the walls', img: '/assets/products/walls.jpg', alt: 'A house clad in sage-green weatherboard' },
+  { id: 'conservatory', label: 'Conservatories', sub: 'Guide prices by style', img: '/assets/products/conservatory.jpg', alt: 'Illustration of a white uPVC conservatory on a brick house', href: '/cost/conservatory-cost-uk' },
 ];
 
 /* Two sections nobody has ever used, folded rather than deleted.
@@ -2924,10 +2930,16 @@ async function chooserSwatch(sw) {
   render();
 }
 
+/* Whether "Choose the look" is on screen: a product chosen, no photo yet. */
+function chooserShowing() {
+  const j = state.journey;
+  return !!(j && JOURNEYS[j] && !state.uploadedImg && !state.resumedDesign && state.stage === 'landing');
+}
+
 function buildChooser() {
   const empty = h('div', { id: 'mount-choose' });
   const j = state.journey;
-  if (!j || !JOURNEYS[j] || state.uploadedImg || state.resumedDesign || state.stage !== 'landing') return empty;
+  if (!chooserShowing()) return empty;
   const wd = state.catalogue?.windowsDoors;
 
   const card = (active, onClick, children, extra = '') => h('button', {
@@ -3003,7 +3015,7 @@ function buildChooser() {
   }
 
   const typeLabel = (HOUSE_TYPES.find(t => t.id === state.houseType) || {}).label || 'Semi-detached';
-  return h('div', { id: 'mount-choose', className: 'max-w-6xl mx-auto px-6 mt-8' }, [
+  return h('div', { id: 'mount-choose', className: 'max-w-6xl mx-auto px-6 mt-8 scroll-mt-36' }, [
     h('section', { className: 'rounded-2xl bg-white border border-zinc-200 p-6 md:p-8', 'aria-labelledby': 'choose-look-heading' }, [
       h('p', { className: 'text-[11px] tracking-[0.25em] uppercase text-zinc-500' }, journeyLabel(j) || ''),
       h('h2', { id: 'choose-look-heading', className: 'serif mt-1 text-[26px] md:text-[32px] tracking-tight' }, 'Choose the look'),
@@ -3029,13 +3041,20 @@ function buildChooser() {
 
 function buildTriage() {
   if (state.stage !== 'landing') return h('div', { id: 'mount-triage' });
+  // A saved design came back with its choices: they have already answered.
+  if (state.resumedDesign) return h('div', { id: 'mount-triage' });
 
   /* Somebody who searched "house rendering cost" has already told us. Asking
      again — even with their answer pre-selected — is the thing that makes a
      site feel like a sequence of forms rather than one journey. So when the
      intent arrived with them, this states it and offers to change it, and the
      question is only asked of people who have not answered it. */
+  /* "Not sure yet" is answered: the photo is next, not the question again. */
+  if (state.triageAnswered && !state.journey && !state.triageOpen) return h('div', { id: 'mount-triage' });
   const known = JOURNEYS[state.journey];
+  /* "Choose the look" already says which product, in its heading, and the
+     header's product row changes it — so no "Your project" line above it. */
+  if (known && !state.triageOpen && !state.uploadedImg) return h('div', { id: 'mount-triage' });
   if (known && !state.triageOpen) {
     return h('div', { id: 'mount-triage', className: 'max-w-6xl mx-auto px-6 mt-10' }, [
       h('section', { className: 'rounded-2xl border border-zinc-200 bg-white px-6 py-4 flex items-center justify-between gap-4 flex-wrap' }, [
@@ -3053,49 +3072,41 @@ function buildTriage() {
     ]);
   }
 
+  const pick = async (id) => {
+    state.triageOpen = false;   // answered; state it from here rather than ask again
+    state.triageAnswered = true;
+    await applyJourney(id);
+    /* A product goes to "Choose the look", exactly as a homepage box does;
+       "not sure yet" has nothing to choose first and goes to the photo. */
+    setTimeout(() => document.getElementById(id ? 'mount-choose' : 'your-photo')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 40);
+  };
+  const tile = (t) => {
+    const inner = [
+      h('img', { src: t.img, alt: t.alt, width: 640, height: 480, className: 'w-full aspect-[4/3] object-cover', loading: 'eager', decoding: 'async' }),
+      h('span', { className: 'block p-3 sm:p-4 text-left' }, [
+        h('span', { className: 'block text-[15px] font-medium' }, t.label),
+        h('span', { className: 'block mt-0.5 text-[12px] leading-5 text-zinc-500' }, t.sub),
+      ]),
+    ];
+    const cls = 'group block rounded-2xl overflow-hidden border border-zinc-200 bg-white hover:border-zinc-900 transition';
+    return t.href
+      ? h('a', { href: t.href, className: cls }, inner)
+      : h('button', { type: 'button', className: `${cls} w-full`, 'data-journey': t.id, onClick: () => pick(t.id) }, inner);
+  };
+
   return h('div', { id: 'mount-triage', className: 'max-w-6xl mx-auto px-6 mt-10' }, [
-    h('section', { className: 'rounded-2xl border border-zinc-200 bg-white p-6 md:p-7' }, [
-      h('h2', { className: 'serif text-[20px] md:text-[24px] tracking-tight' }, 'What are you looking for today?'),
+    h('section', { className: 'rounded-2xl border border-zinc-200 bg-white p-6 md:p-7', 'aria-labelledby': 'triage-heading' }, [
+      h('h2', { id: 'triage-heading', className: 'serif text-[24px] md:text-[30px] tracking-tight' }, 'What would you like to change?'),
       h('p', { className: 'mt-1 text-[13px] leading-6 text-zinc-600 max-w-[62ch]' },
-        'So the first price you see is for the work you actually want. You can change any of it afterwards, and add the rest whenever you like.'),
-      h('div', { className: 'mt-4 flex flex-wrap gap-2' }, TRIAGE.map(t => {
-        /* "Everything / not sure yet" is an answer, not the absence of one. It
-           showed as chosen on every first visit because no journey and that
-           chip share the same null — so the page claimed an answer nobody had
-           given, above a price that covered the roof and roofline only. */
-        const active = t.id === null
-          ? state.triageAnswered === true && state.journey === null
-          : state.journey === t.id;
-        return h('button', {
-          type: 'button',
-          'aria-pressed': active ? 'true' : 'false',
-          className: `px-4 py-2.5 rounded-full border text-[13px] transition min-h-[44px] ${active
-            ? 'bg-zinc-900 text-white border-zinc-900'
-            : 'bg-white border-zinc-200 hover:border-zinc-900'}`,
-          onClick: async () => {
-            if (t.href) {
-              /* The section it points at may be folded away. Open it first,
-                 or this scrolls to a summary line and looks broken. */
-              if (t.id === 'conservatory' && !state.unfolded.conservatory) {
-                state.unfolded.conservatory = true;
-                reachedStage('conservatory_opened');
-                render();
-              }
-              setTimeout(() => document.querySelector(t.href)?.scrollIntoView({ behavior: 'smooth' }), 40);
-              return;
-            }
-            state.triageOpen = false;   // answered; state it from here rather than ask again
-            state.triageAnswered = true;
-            await applyJourney(t.id);
-            document.getElementById('your-photo')?.scrollIntoView({ behavior: 'smooth' });
-          },
-        }, t.hint
-          ? h('span', { className: 'grid text-left leading-tight' }, [
-              h('span', {}, t.label),
-              h('span', { className: 'text-[10px] opacity-60' }, t.hint),
-            ])
-          : t.label);
-      })),
+        'Pick one. Then upload a photo of your house to see it changed, with a price. You can add the rest afterwards.'),
+      h('div', { className: 'mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4' }, PRODUCT_TILES.map(tile)),
+      /* "Everything / not sure yet" is an answer, not the absence of one. */
+      h('button', {
+        type: 'button',
+        className: 'mt-4 text-[13px] underline underline-offset-2 text-zinc-700 hover:text-zinc-900 min-h-[44px]',
+        onClick: () => pick(null),
+      }, 'Not sure yet? Price everything from your photo →'),
     ]),
   ]);
 }
@@ -3665,7 +3676,7 @@ function buildUploadDetect() {
     ]);
   }
 
-  return h('section', { id: 'your-photo', className: 'rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24' }, [
+  return h('section', { id: 'your-photo', className: 'rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-36' }, [
     h('div', { className: 'flex items-center justify-between flex-wrap gap-3' }, [
       h('div', {}, [
         h('p', { className: 'text-[11px] tracking-widest uppercase text-zinc-400' }, 'Step 1'),
@@ -5424,6 +5435,11 @@ function renderGlazingConsumers() {
   renderDetailsOnly();
   renderEstimatePanelOnly();
   renderTotalBarOnly();
+  /* "Choose the look" prints the window and door price too. Picking Windows
+     from the product boxes on /design left it on "Working it out…": the
+     price arrived after the page had drawn, and this list did not redraw it. */
+  const choose = document.getElementById('mount-choose');
+  if (choose && chooserShowing()) choose.replaceWith(buildChooser());
 }
 
 /* ── WHAT IT COSTS, WITHOUT SCROLLING ──
@@ -5443,6 +5459,11 @@ function buildTotalBar() {
   const price = state.price;
   const glaz = state.glazing;
   if (!price && !glaz?.price) return h('div', { id: 'total-bar' });
+  /* While "Choose the look" is up it shows this same figure, labelled
+     "Typical semi-detached house", and the bar said it again as "Typical
+     home" — one number, two labels, on one screen. The bar comes back with
+     the photo, as their own price. */
+  if (chooserShowing()) return h('div', { id: 'total-bar' });
 
   /* What the figure covers, and only that.
 
