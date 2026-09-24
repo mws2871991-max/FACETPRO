@@ -5928,7 +5928,9 @@ function buildDetailOptions() {
          can see three. So: the three we measured, then the six we assumed,
          then the total. */
       h('p', { className: 'mt-1 text-[11px] leading-5 text-zinc-500' },
-        scaled && assumed
+        g.raisedToTypical
+          ? `We can see ${g.frontCount} window${g.frontCount === 1 ? '' : 's'} on the front, but your photo doesn’t show the whole house, so we’ve priced ${HOUSE_TYPE_ARTICLE(g.houseType)}’s usual ${counted}. Set the real number below if you know it. Includes VAT${g.price.access ? ', and scaffolding or ladder access for the upstairs windows' : ''}.`
+        : scaled && assumed
           ? `${g.frontCount} window${g.frontCount === 1 ? '' : 's'} on the front, ${g.sourceLabel}, plus ${assumed} we’ve assumed for the back and sides of ${HOUSE_TYPE_ARTICLE(g.houseType)} — ${counted} in all. Your photo only shows the front, so set the real number below if you know it. Includes VAT${g.price.access ? ', and scaffolding or ladder access for the upstairs windows' : ''}.`
           : `Based on ${counted} window${counted === 1 ? '' : 's'} — ${g.sourceLabel}. Includes VAT${g.price.access ? ', and scaffolding or ladder access for the upstairs windows' : ''}.`),
 

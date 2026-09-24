@@ -126,7 +126,9 @@ const FRAME_COLOUR_WORDS = {
   anthracite: 'very dark blue-grey, almost black, matte',       // #2B2D42
   'agate-grey': 'mid cool grey, matte',                         // #8A8D8F
   white: 'clean bright white',                                  // #FFFFFF
-  'chartwell-green': 'muted mid sage green',                    // #5B7C5B
+  /* Was 'muted mid sage green': a door-only render on 24 September came out
+     bright lime. Say what it is not, as ink-trim now does. */
+  'chartwell-green': 'muted grey-green sage, soft and dusty, never bright or lime green, matte', // #5B7C5B
   black: 'matte black',                                         // #1C1C1C
   cream: 'soft warm cream',                                     // #F5F0E6
 };

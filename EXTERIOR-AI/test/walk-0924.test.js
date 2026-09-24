@@ -52,3 +52,35 @@ test('a phone is not offered "take the photo on my phone"', () => {
   assert.match(panel, /if \(onPhone\(\) && !currentResumeCode\(\)\)/);
   assert.match(panel, /Started on a computer\?/);
 });
+
+/* The windows price must not fall below the typical house when the photo
+   cuts off part of the front. */
+const glazing = require('../glazing');
+const catalogue = require('../catalogue.json');
+const twoBays = [
+  { type: 'window', label: 'Upper bay', confidence: 0.9, x_pct: 25, y_pct: 12, w_pct: 50, h_pct: 18 },
+  { type: 'window', label: 'Lower bay', confidence: 0.9, x_pct: 25, y_pct: 50, w_pct: 55, h_pct: 22 },
+];
+const estimate = (sides, extra = {}) => glazing.estimateGlazing({
+  detections: [...twoBays, { type: 'analysis', sides }],
+  aspectRatio: 0.75, houseType: 'semi', rates: catalogue.glazing,
+  selections: { windowStyleId: 'casement', windowDoorColourId: 'anthracite' }, ...extra,
+});
+
+test('a photo that cuts off a side never prices fewer windows than the typical house', () => {
+  const r = estimate({ left: 'cut-off', right: 'cut-off' });
+  assert.strictEqual(r.windowCount, 8);
+  assert.strictEqual(r.raisedToTypical, true);
+});
+
+test('with both sides in shot the count stands, even below typical', () => {
+  const r = estimate({ left: 'shared', right: 'gap' });
+  assert.ok(r.windowCount < 8, `expected the photo count, got ${r.windowCount}`);
+  assert.strictEqual(r.raisedToTypical, false);
+});
+
+test('a number the homeowner typed still wins', () => {
+  const r = estimate({ left: 'cut-off', right: 'gap' }, { windowCountOverride: 5 });
+  assert.strictEqual(r.windowCount, 5);
+  assert.strictEqual(r.raisedToTypical, false);
+});
