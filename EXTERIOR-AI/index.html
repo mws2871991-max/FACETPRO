@@ -295,7 +295,7 @@
           "name": "How long does it take?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Detecting the windows, doors, roof and cladding takes a few seconds. Colour changes and prices update instantly. A full photorealistic render of your home can take up to a minute."
+            "text": "Detecting the windows, doors, roof and cladding takes about 30 seconds. Colour changes and prices update instantly. A full photorealistic render of your home can take up to a minute."
           }
         },
         {
@@ -530,7 +530,7 @@
                real_home_cta_click have been trying to tell apart since 19
                September — a reader could not tell them apart either. -->
           <button id="hero-upload" type="button" class="cta w-full sm:w-auto px-7 py-4 rounded-full text-[15px] font-semibold transition min-h-[52px]">Upload my house</button>
-          <a href="#our-work" class="w-full sm:w-auto px-6 py-4 rounded-full border border-white/20 text-[15px] font-medium hover:bg-white/10 transition text-center min-h-[52px] grid place-items-center">See real homes</a>
+          <a href="/#our-work" class="w-full sm:w-auto px-6 py-4 rounded-full border border-white/20 text-[15px] font-medium hover:bg-white/10 transition text-center min-h-[52px] grid place-items-center">See real homes</a>
         </div>
 
         <!-- Brief §1. "One photo" became "No measurements": the photo is
@@ -1017,7 +1017,7 @@
         <p class="text-[14px] font-medium">Also exploring conservatories?</p>
         <p class="mt-1 text-[12px] leading-5 text-zinc-600 max-w-[52ch]">Compare guide price ranges for different styles before you start collecting quotes.</p>
       </div>
-      <a href="#conservatory" class="shrink-0 text-[12px] px-4 rounded-full border border-zinc-300 hover:border-zinc-900 transition min-h-[44px] inline-grid place-items-center">Explore conservatory costs</a>
+      <a href="/cost/conservatory-cost-uk" class="shrink-0 text-[12px] px-4 rounded-full border border-zinc-300 hover:border-zinc-900 transition min-h-[44px] inline-grid place-items-center">Explore conservatory costs</a>
     </div>
   </section>
 
@@ -1114,7 +1114,7 @@
 
       <details class="group">
         <summary class="flex items-center justify-between gap-4 py-4"><h3 class="text-[15px] font-medium">How long does it take?</h3><span class="chev text-zinc-400 transition-transform" aria-hidden="true">⌄</span></summary>
-        <p class="pb-4 text-[13px] leading-6 text-zinc-600 max-w-[72ch]">Finding the windows, doors, roof and cladding takes a few seconds. Colour changes and prices update instantly. A full photorealistic render of your home can take up to a minute.</p>
+        <p class="pb-4 text-[13px] leading-6 text-zinc-600 max-w-[72ch]">Finding the windows, doors, roof and cladding takes about 30 seconds. Colour changes and prices update instantly. A full photorealistic render of your home can take up to a minute.</p>
       </details>
 
       <details class="group">
@@ -1587,10 +1587,10 @@
         <!-- Same four broken anchors as the header carried. A footer link that
              scrolls nowhere is the kind of thing nobody reports and everybody
              notices. -->
-        <a href="#our-work" class="hover:text-zinc-900">Our work</a>
-        <a href="#how-it-works" class="hover:text-zinc-900">How it works</a>
-        <a href="#faq" class="hover:text-zinc-900">Questions</a>
-        <a href="#your-photo" class="hover:text-zinc-900">Start your design</a>
+        <a href="/#our-work" class="hover:text-zinc-900">Our work</a>
+        <a href="/#how-it-works" class="hover:text-zinc-900">How it works</a>
+        <a href="/#faq" class="hover:text-zinc-900">Questions</a>
+        <a href="/design" class="hover:text-zinc-900">Start your design</a>
         <a href="/how-we-price" class="hover:text-zinc-900">How we price</a>
         <!-- /installers, not #trade: the sign-in only exists on that page, so
              from anywhere else the anchor pointed at a hidden element. -->
@@ -1806,6 +1806,12 @@ function readJourney() {
     const j = new URLSearchParams(location.search).get('journey');
     return j && Object.prototype.hasOwnProperty.call(JOURNEYS, j) ? j : null;
   } catch (_) { return null; }
+}
+
+/* A phone: a touch screen at phone width. Used for wording only — "drop a
+   photo" and "take the photo on my phone" are desktop sentences. */
+function onPhone() {
+  try { return matchMedia('(pointer: coarse) and (max-width: 767px)').matches; } catch (_) { return false; }
 }
 
 /* The product row in the header: underline the one they are looking at.
@@ -2958,7 +2964,7 @@ function buildChooser() {
       ]));
     }
     priceRange = publishedRange(state.glazing);
-    what = isWin && state.glazing?.windowCount ? `${state.glazing.windowCount} windows, supplied and fitted` : (isWin ? 'windows, supplied and fitted' : 'supplied and fitted');
+    what = isWin && state.glazing?.windowCount ? `${state.glazing.windowCount} windows, supplied and fitted` : (isWin ? 'Windows, supplied and fitted' : 'One door, supplied and fitted');
   } else {
     const group = { cladding: 'Cladding', roof: 'Roof', roofline: 'Trim' }[j];
     const key = { Cladding: 'cladding', Trim: 'trim', Roof: 'roof' }[group];
@@ -2990,8 +2996,10 @@ function buildChooser() {
         h('div', {}, [
           h('p', { className: 'text-[11px] tracking-widest uppercase text-zinc-500' }, `Typical ${typeLabel.toLowerCase()} house`),
           h('p', { className: 'measured text-[24px] tracking-tight' },
-            priceRange ? `${fmtMoney(priceRange.low)} – ${fmtMoney(priceRange.high)}` : 'Working it out…'),
-          h('p', { className: 'text-[11px] leading-5 text-zinc-500' }, `${what}. Your house will be priced from your photo.`),
+            !priceRange ? 'Working it out…'
+              : priceRange.low === priceRange.high ? fmtMoney(priceRange.low)
+              : `${fmtMoney(priceRange.low)} – ${fmtMoney(priceRange.high)}`),
+          h('p', { className: 'text-[11px] leading-5 text-zinc-500' }, `${what[0].toUpperCase()}${what.slice(1)}. Your house will be priced from your photo.`),
         ]),
         h('button', {
           type: 'button',
@@ -3099,7 +3107,7 @@ function buildUploadDetect() {
     ]));
     dropArea.appendChild(h('div', { className: 'text-center p-8 relative' }, [
       h('div', { className: 'w-12 h-12 mx-auto rounded-full bg-zinc-900 text-white grid place-items-center' }, '↑'),
-      h('div', { className: 'mt-3 text-sm font-medium' }, 'Drop a photo of the front of your house'),
+      h('div', { className: 'mt-3 text-sm font-medium' }, onPhone() ? 'Take or choose a photo of the front of your house' : 'Drop a photo of the front of your house'),
       h('div', { className: 'mt-1 text-xs text-zinc-500' }, 'JPG or PNG — one picture from the pavement is enough'),
       h('ul', { className: 'mt-3 text-[11px] leading-5 text-zinc-500 max-w-[34ch] mx-auto text-left grid gap-1' }, [
         h('li', {}, '• Show as much of the front as possible'),
@@ -3570,6 +3578,26 @@ function buildUploadDetect() {
       onKeyDown: (e) => { if (e.key === 'Enter') { e.preventDefault(); redeemResumeCode(e.target.value); } },
     });
 
+    /* On a phone this panel was offering to "take the photo on my phone" to
+       somebody already holding it — the first thing a phone customer read
+       after choosing their look. There, the only job left is the other half
+       of the bridge: putting in a code from a computer. */
+    if (onPhone() && !currentResumeCode()) {
+      return h('div', { className: 'mt-4 rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4' }, [
+        h('p', { className: 'text-[13px] font-medium' }, 'Started on a computer?'),
+        h('p', { className: 'mt-1 text-[12px] leading-5 text-zinc-600' }, 'Put in the code it gave you and your choices come back.'),
+        h('div', { className: 'mt-3 flex flex-wrap items-center gap-2' }, [
+          codeInput,
+          h('button', {
+            type: 'button',
+            className: 'px-3 rounded-full border border-zinc-200 text-xs hover:border-zinc-900 transition min-h-[44px]',
+            onClick: () => redeemResumeCode(codeInput.value),
+          }, 'Continue'),
+        ]),
+        state.resumeError ? h('p', { className: 'mt-2 text-[12px] text-red-700' }, state.resumeError) : null,
+      ]);
+    }
+
     return h('div', { className: 'mt-4 rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4' }, [
       h('p', { className: 'text-[13px] font-medium' }, 'Not next to your house?'),
       h('p', { className: 'mt-1 text-[12px] leading-5 text-zinc-600 max-w-[62ch]' },
@@ -3586,7 +3614,7 @@ function buildUploadDetect() {
               h('strong', {}, location.host),
               ' and put this in the ',
               h('strong', {}, 'Code'),
-              ' box under “Not next to your house?”, near the top:',
+              ' box under “Started on a computer?”, near the top:',
             ]),
             h('p', { className: 'mt-1 serif text-[28px] tracking-[0.2em] select-all' }, state.resumeCode),
             h('p', { className: 'mt-1 text-[11px] text-zinc-500' }, resumeLifetimeLabel()),
@@ -3627,7 +3655,7 @@ function buildUploadDetect() {
         h('p', { className: 'text-[11px] tracking-widest uppercase text-zinc-400' }, 'Step 1'),
         h('h2', { className: 'mt-1 serif text-[26px] md:text-[32px] tracking-tight' }, 'Let’s see what your home could become'),
       ]),
-      h('span', { className: 'text-[10px] tracking-widest uppercase px-2.5 py-1 rounded-full bg-[#FFF7ED] border border-zinc-200' }, 'Takes a few seconds'),
+      h('span', { className: 'text-[10px] tracking-widest uppercase px-2.5 py-1 rounded-full bg-[#FFF7ED] border border-zinc-200' }, 'Takes about 30 seconds'),
     ]),
     /* Guidance for somebody deciding. Once the photograph is in and being
        read, it is forty-four pixels explaining what is already happening. */
@@ -4249,7 +4277,9 @@ function buildVisualizer() {
         h('div', {}, [
           h('p', { className: 'text-[13px] font-medium' }, 'Now make it yours'),
           h('p', { className: 'mt-0.5 text-[11px] leading-5 text-white/60 max-w-[42ch]' },
-            'That is one look, chosen for you. Change the walls, the roof, the windows and the doors — the estimate moves with every choice.'),
+            state.journey
+              ? 'That is the look you chose, on your house. Try other colours and styles, or add the walls, roof or roofline — the estimate moves with every choice.'
+              : 'That is one look, chosen for you. Change the walls, the roof, the windows and the doors — the estimate moves with every choice.'),
         ]),
         h('button', {
           type: 'button',
@@ -5899,7 +5929,7 @@ function buildDetailOptions() {
          then the total. */
       h('p', { className: 'mt-1 text-[11px] leading-5 text-zinc-500' },
         scaled && assumed
-          ? `${g.frontCount} window${g.frontCount === 1 ? '' : 's'} on the front, ${g.sourceLabel}, plus ${assumed} we’ve assumed for the back and sides of ${HOUSE_TYPE_ARTICLE(g.houseType)} (×${g.frontToTotal}) — ${counted} in all. Your photo only shows the front, so set the real number below if you know it. Includes VAT${g.price.access ? ', and scaffolding or ladder access for the upstairs windows' : ''}.`
+          ? `${g.frontCount} window${g.frontCount === 1 ? '' : 's'} on the front, ${g.sourceLabel}, plus ${assumed} we’ve assumed for the back and sides of ${HOUSE_TYPE_ARTICLE(g.houseType)} — ${counted} in all. Your photo only shows the front, so set the real number below if you know it. Includes VAT${g.price.access ? ', and scaffolding or ladder access for the upstairs windows' : ''}.`
           : `Based on ${counted} window${counted === 1 ? '' : 's'} — ${g.sourceLabel}. Includes VAT${g.price.access ? ', and scaffolding or ladder access for the upstairs windows' : ''}.`),
 
       /* The arithmetic behind that number, which the photograph cannot show.
@@ -7101,7 +7131,7 @@ function buildKeepChoices(hasRender) {
              box on a long page. Say which box, and where it is. */
           h('p', { className: 'text-[12px] leading-5 text-white/70' }, [
             'Come back to ', h('strong', {}, location.host), ' and put this in the ',
-            h('strong', {}, 'Code'), ' box under “Not next to your house?”, in Step 1:',
+            h('strong', {}, 'Code'), ' box in Step 1, near the top:',
           ]),
           h('p', { className: 'mt-1 serif text-[28px] tracking-[0.2em] select-all' }, state.resumeCode),
           h('p', { className: 'mt-1 text-[11px] text-white/50' }, resumeLifetimeLabel()),
