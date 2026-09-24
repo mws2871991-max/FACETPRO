@@ -1019,6 +1019,26 @@ function estimateGlazing({
     : base.method === 'count' ? 'photo_count'
     : 'house_type_prior';
 
+  /* A photo that cuts off a side of the house can only undercount the front.
+
+     Walked live on 24 September: a close crop of a bay-fronted semi showed
+     the two bays and nothing either side. Two front windows scaled to five
+     for the whole house, so the price fell from the "typical semi, 8 windows"
+     the customer had just been shown to less than that — for a house that
+     plainly has more. Detection already says when a side is out of shot
+     ("cut-off", the same evidence houseTypeFromEvidence reads), and then
+     the count is a floor, not a total: never price fewer windows than the
+     typical house of that type. With both sides in shot the count stands,
+     small houses included. A typed number still beats both. */
+  const analysis = detections.find(d => d?.type === 'analysis');
+  const sideCutOff = ['left', 'right'].some(side => String(analysis?.sides?.[side] || '').toLowerCase() === 'cut-off');
+  const typicalCount = (HOUSE_TYPE_GLAZING_PRIORS[key] || HOUSE_TYPE_GLAZING_PRIORS[DEFAULT_HOUSE_TYPE]).windows;
+  let raisedToTypical = false;
+  if (sideCutOff && (base.method === 'door' || base.method === 'count') && totalCount < typicalCount) {
+    totalCount = typicalCount;
+    raisedToTypical = true;
+  }
+
   /* A typed count beats everything, and is bounded for the same reason the
      manual wall area is: there is no honest client that sends 400 windows,
      so answering with 30 would dress a tampered request up as a real one. */
@@ -1026,6 +1046,7 @@ function estimateGlazing({
   if (Number.isFinite(manual) && manual >= MIN_WINDOWS && manual <= MAX_WINDOWS) {
     totalCount = manual;
     countSource = 'manual_entry';
+    raisedToTypical = false;
   } else if (Number.isFinite(manual) && manual > 0) {
     // Out of band: fall back rather than clamp, and say so in the log.
     console.warn(`Ignoring an implausible window count of ${manual} — outside ${MIN_WINDOWS}–${MAX_WINDOWS}.`);
@@ -1069,6 +1090,7 @@ function estimateGlazing({
     houseType: key,
     windowCount: totalCount,
     countCapped,
+    raisedToTypical,
     countNote: countCapped
       ? `We've capped this at ${MAX_WINDOWS} windows. If your home has more, tell us the number and we'll price it properly.`
       : null,
