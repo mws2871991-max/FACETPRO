@@ -80,7 +80,9 @@ const COLOUR_WORDS = {
   'sage-slate': 'muted sage green',
   graphite: 'near-black charcoal grey',
   'coastal-fog': 'pale cool grey',
-  'ink-trim': 'near-black ink blue',
+  /* Was 'near-black ink blue'. The model heard "blue" and painted a bright
+     teal fascia on 24 September. The swatch is #111827: it reads as black. */
+  'ink-trim': 'near-black, reads as black from the street, matte',
   cedar: 'warm mid-brown',
   'slate-roof': 'blue-grey',
   'charcoal-roof': 'very dark charcoal, almost black',
@@ -275,7 +277,21 @@ function buildRenderPrompt(sel = {}) {
       `Change their colour only — their shape, size and position stay exactly as they are.`);
   }
   if (changingGlazing) {
-    changes.push(
+    /* A door on its own is its own sentence. This used to fall through to the
+       windows wording with a door added, so a door-only job (the whole
+       ?journey=doors) was told to "replace the window frames and the front
+       door … every window frame … must visibly take this colour". Walked live
+       on 24 September: the customer chose a door and every window went
+       anthracite. HOLDS.windowsOnly said the opposite further down; the model
+       obeyed the instruction, not the hold. */
+    if (!windowStyle) {
+      changes.push(
+        `Replace the front door only with a photorealistic ${/door/i.test(doorStyle) ? doorStyle : `${doorStyle} front door`}, with its door frame, ` +
+        `in ${glazingColourPhrase}. The door and its frame must visibly take this colour. ` +
+        `Do not change any window: every window frame keeps its existing colour and style exactly. ` +
+        (trim ? '' : 'Do not recolour the fascias, soffits, bargeboards, guttering or downpipes. ') +
+        `The door opening keeps its exact size and position.`);
+    } else changes.push(
       `Replace the window frames${doorStyle ? ' and the front door' : ''} with photorealistic ` +
       `${styleWords ? styleWords : `${windowStyle || 'casement'} windows`}${doorStyle ? ` and a ${doorStyle} front door` : ''}, ` +
       /* "and the door frame" only when the door is changing. This sentence
