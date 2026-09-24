@@ -105,6 +105,21 @@ const COLOUR_WORDS = {
    that is faintly cool rather than a light warm grey, and chartwell-green is
    #5B7C5B, which is a mid green and not a pale one. Describing them the way
    the names sound would reintroduce the same problem one step further along. */
+/* What each window style looks like, because its name alone did not change
+   the picture.
+
+   On 24 September the live P0 test asked for "Sliding Sash windows" and got
+   green frames with the old casement layout: the name was read as a label and
+   "Frame proportions ... must match the existing apertures exactly" was read
+   as "keep the divisions too". Keyed by the style's display name, lower-cased,
+   because that is what the render route receives. A name not in the map falls
+   back to the bare name, as before. */
+const WINDOW_STYLE_WORDS = {
+  casement: 'side-hinged casement windows with slim frames and a single horizontal transom near the top of each window',
+  flush: 'flush casement windows whose opening sashes sit perfectly flat within the outer frame, with a clean, modern, low-profile face',
+  'sliding sash': 'traditional vertical sliding sash windows: each window made of an upper sash and a lower sash, divided by a clearly visible horizontal meeting rail across the middle, in a deeper box frame',
+};
+
 const FRAME_COLOUR_WORDS = {
   anthracite: 'very dark blue-grey, almost black, matte',       // #2B2D42
   'agate-grey': 'mid cool grey, matte',                         // #8A8D8F
@@ -197,6 +212,7 @@ function buildRenderPrompt(sel = {}) {
   const doorStyle = String(sel.doorStyle || '').trim();
   const glazingColour = String(sel.glazingColour || '').trim();
   const changingGlazing = !!(glazingColour && (windowStyle || doorStyle));
+  const styleWords = WINDOW_STYLE_WORDS[windowStyle.toLowerCase()] || null;
   // Bars only mean anything on windows that are being replaced.
   const georgianBars = !!sel.georgianBars && !!windowStyle && changingGlazing;
 
@@ -261,7 +277,7 @@ function buildRenderPrompt(sel = {}) {
   if (changingGlazing) {
     changes.push(
       `Replace the window frames${doorStyle ? ' and the front door' : ''} with photorealistic ` +
-      `${windowStyle || 'casement'} windows${doorStyle ? ` and a ${doorStyle} front door` : ''}, ` +
+      `${styleWords ? styleWords : `${windowStyle || 'casement'} windows`}${doorStyle ? ` and a ${doorStyle} front door` : ''}, ` +
       /* "and the door frame" only when the door is changing. This sentence
          used to say it unconditionally, so a windows-only render with the door
          held was told, in the same prompt, to recolour the door frame and to
@@ -280,10 +296,16 @@ function buildRenderPrompt(sel = {}) {
          only — "every pane" would otherwise put a grid on the door glass too. */
       (georgianBars
         ? `Add Georgian glazing bars to every window: slim bars in the same colour as the frames dividing each pane of ` +
-          `glass into a grid of small rectangular panes, evenly spaced. Do not add bars to the front door. `
+          `glass into a grid of small rectangular panes — at least two across and three down in every pane, clearly ` +
+          `visible even on the smallest window — evenly spaced. Do not add bars to the front door. `
         : '') +
-      `Frame proportions and opening sizes must match the existing ` +
-      `apertures exactly. Glass reflections must stay consistent with the original sky and surroundings.`);
+      /* The outside of each opening is fixed; the inside is the product.
+         "Frame proportions must match exactly" on its own kept the old
+         divisions, so a sash or a Georgian grid was never drawn. */
+      `The outer size and position of every window opening must match the existing apertures exactly, ` +
+      `but the frames inside each opening change to the new style${georgianBars ? ' and its glazing bars' : ''}, ` +
+      `even where the current windows are divided differently. ` +
+      `Glass reflections must stay consistent with the original sky and surroundings.`);
   }
 
   // Nothing to ask for. The caller decides what to do about it; this refuses

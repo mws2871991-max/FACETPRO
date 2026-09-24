@@ -97,3 +97,15 @@ test('a kept roofline is excluded in the frames sentence itself', () => {
   assert.doesNotMatch(trimChanging, /do not recolour the fascias/,
     'asking for a new roofline colour and forbidding it in the same prompt');
 });
+
+test('a window style is described, and allowed to change the divisions', () => {
+  /* 24 September, live: "Sliding Sash windows" came back as green casements.
+     The name alone was read as a label, and "frame proportions must match
+     exactly" as "keep the old divisions". */
+  const sash = buildRenderPrompt({ windowStyle: 'Sliding Sash', glazingColour: 'White', glazingColourId: 'white' });
+  assert.match(sash, /upper sash and a lower sash/);
+  assert.match(sash, /meeting rail/);
+  assert.match(sash, /frames inside each opening change to the new style/);
+  // Unknown names still work, as the bare name.
+  assert.match(buildRenderPrompt({ windowStyle: 'Tilt and Turn', glazingColour: 'White' }), /Tilt and Turn windows/);
+});
