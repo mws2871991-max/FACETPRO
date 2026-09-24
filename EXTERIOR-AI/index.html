@@ -328,7 +328,7 @@
 <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2 focus:rounded-full focus:bg-zinc-900 focus:text-white focus:text-sm">Skip to the main content</a>
 
 <header class="sticky top-0 z-30 backdrop-blur-xl bg-[#FBF8F3]/80 border-b border-zinc-200">
-  <div class="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
+  <div class="max-w-6xl mx-auto px-6 py-2 sm:py-4 flex items-center justify-between">
     <a href="/" class="flex items-center gap-3" aria-label="Facet Pro home">
       <span class="w-8 h-8 rounded-[7px] bg-zinc-900 text-white grid place-items-center serif text-[18px] leading-none" aria-hidden="true">F</span>
       <span class="serif text-[19px] tracking-tight">Facet Pro</span>
@@ -345,19 +345,10 @@
            masthead. -->
     </a>
     <nav class="flex items-center gap-2" aria-label="Primary">
-      <!-- This was five category links: windows, roofline, conservatories,
-           roofs, rendering. Two of those anchors (#roofs, #rendering) existed
-           nowhere in the document, and two more (#roofline, #conservatory) are
-           built by the visualiser only after somebody has uploaded a photo. So
-           for every first-time visitor — which is everyone who matters here —
-           four of the five did nothing at all when clicked.
-
-           They were also the first thing anybody read: a directory of five
-           trades, sitting directly above a headline about being charged fairly
-           for windows. The menu argued with the page. Two links that work, and
-           the whole-exterior story told once, properly, further down. -->
-      <a href="#our-work" class="hidden sm:block text-xs px-3 py-2 rounded-full hover:bg-white transition">Our work</a>
-      <a href="#how-it-works" class="hidden sm:inline-grid place-items-center text-xs px-3 rounded-full hover:bg-white transition min-h-[44px]">How it works</a>
+      <!-- "Our work" and "How it works" were #anchors, so on every page but the
+           homepage they went nowhere. The product row below does their job of
+           getting somebody started, and "How we price" is a real page. -->
+      <a href="/how-we-price" class="hidden sm:inline-grid place-items-center text-xs px-3 rounded-full hover:bg-white transition min-h-[44px]">How we price</a>
       <!-- Brief §8: one primary action, worded the same everywhere. This said
            "Start with a photo", the hero said "See what my house could look
            like" and the close said the same again — three labels for one
@@ -365,6 +356,27 @@
       <a href="/design" class="text-xs px-4 rounded-full bg-zinc-900 text-white hover:bg-zinc-800 transition min-h-[44px] inline-grid place-items-center">Upload a photo</a>
     </nav>
   </div>
+  <!-- The products, on every page, the way the big installers' sites open.
+
+       There was a category menu here once and it was taken out (see the
+       history of this header): four of its five links were #anchors that did
+       nothing before a photo was uploaded. These are real addresses, the same
+       six the homepage boxes use, so each one works from anywhere.
+
+       No drop-downs. The big sites need them for hundreds of product pages;
+       this site has six products, and each leads to the same place. On a phone
+       the row scrolls sideways rather than hiding behind a menu button, so the
+       products stay in view. The current one is marked by markCurrentProduct. -->
+  <nav aria-label="Products" class="border-t border-zinc-200/70">
+    <ul id="product-menu" class="max-w-6xl mx-auto px-3 sm:px-6 flex gap-1 overflow-x-auto whitespace-nowrap text-[13px]">
+      <li><a href="/design?journey=windows" data-journey="windows" class="product-link inline-grid place-items-center min-h-[44px] px-3 border-b-2 border-transparent text-zinc-600 hover:text-zinc-900 transition">Windows</a></li>
+      <li><a href="/design?journey=doors" data-journey="doors" class="product-link inline-grid place-items-center min-h-[44px] px-3 border-b-2 border-transparent text-zinc-600 hover:text-zinc-900 transition">Doors</a></li>
+      <li><a href="/design?journey=roofline" data-journey="roofline" class="product-link inline-grid place-items-center min-h-[44px] px-3 border-b-2 border-transparent text-zinc-600 hover:text-zinc-900 transition">Fascias &amp; guttering</a></li>
+      <li><a href="/design?journey=roof" data-journey="roof" class="product-link inline-grid place-items-center min-h-[44px] px-3 border-b-2 border-transparent text-zinc-600 hover:text-zinc-900 transition">Roofs</a></li>
+      <li><a href="/design?journey=cladding" data-journey="cladding" class="product-link inline-grid place-items-center min-h-[44px] px-3 border-b-2 border-transparent text-zinc-600 hover:text-zinc-900 transition">Render &amp; cladding</a></li>
+      <li><a href="/cost/conservatory-cost-uk" class="product-link inline-grid place-items-center min-h-[44px] px-3 border-b-2 border-transparent text-zinc-600 hover:text-zinc-900 transition">Conservatories</a></li>
+    </ul>
+  </nav>
 </header>
 
 <main id="main" tabindex="-1" class="max-w-6xl mx-auto px-6 py-8 flex flex-col gap-8">
@@ -1796,6 +1808,21 @@ function readJourney() {
   } catch (_) { return null; }
 }
 
+/* The product row in the header: underline the one they are looking at.
+   Only on /design, where a journey means something; elsewhere nothing is
+   marked, because nothing has been chosen. state.journey rather than the
+   address, so answering "What are you looking for today?" moves it too. */
+function markCurrentProduct() {
+  const j = location.pathname === '/design' ? state.journey : null;
+  document.querySelectorAll('#product-menu a[data-journey]').forEach((a) => {
+    const on = a.dataset.journey === j;
+    a.classList.toggle('border-zinc-900', on);
+    a.classList.toggle('text-zinc-900', on);
+    a.classList.toggle('border-transparent', !on);
+    if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+  });
+}
+
 /* Whether this journey starts with a given swatch group left alone. No
    journey means no exclusions — the ordinary page, everything shown. */
 function journeyExcludes(group) {
@@ -2424,6 +2451,7 @@ function applyPage() {
     el.hidden = el.dataset.page !== PAGE;
   }
   if (PAGE_TITLE[PAGE]) document.title = PAGE_TITLE[PAGE];
+  markCurrentProduct();
 }
 
 const MOUNTS = [
@@ -2721,6 +2749,7 @@ function applyDesign(d) {
 async function applyJourney(id) {
   const j = JOURNEYS[id] || null;
   state.journey = j ? id : null;
+  markCurrentProduct();
 
   // Same rule as the initial state: walls only when walls were asked about.
   state.cladding = findSwatch(id === 'cladding' ? 'alabaster' : 'none');
