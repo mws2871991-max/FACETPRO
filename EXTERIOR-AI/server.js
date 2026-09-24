@@ -2482,6 +2482,7 @@ async function detectionsForRestore({ detectionId, fingerprint }, waitMs = RESTO
 }
 
 async function keepRender(replicateUrl, restore = null) {
+  let barsMissing;
   let bytes = null;
   let mime = 'image/jpeg';
   let lastFetchError = null;
@@ -2546,6 +2547,8 @@ async function keepRender(replicateUrl, restore = null) {
         const drawn = drawGeorgianBars({ render: bytes, ...common });
         if (drawn.drawn) bytes = drawn.buffer;
         else obs.record('render', 'georgian bars not drawn', { reason: drawn.reason });
+        // Told to the page, which says so under the picture rather than promising bars.
+        barsMissing = !drawn.drawn;
       }
     }
   }
@@ -2561,7 +2564,7 @@ async function keepRender(replicateUrl, restore = null) {
     console.error('Fetched the render but could not store it:', err.message);
     throw new RenderNotKept('store failed');
   }
-  return { url: `/r/${id}`, renderId: id };
+  return { url: `/r/${id}`, renderId: id, ...(barsMissing !== undefined ? { barsMissing } : {}) };
 }
 
 /* The render succeeded upstream; whether we can hand it over depends on

@@ -238,3 +238,16 @@ test('no window changed, no bars — the render is left as it came', () => {
   assert.strictEqual(out.drawn, false);
   assert.strictEqual(out.buffer, same);
 });
+
+test('same colour as before: nothing found, nothing restored, and the page is told', () => {
+  // White on white — the frames did not change, so there is no window to keep.
+  const same = PNG.sync.write(windowPic(WHITE));
+  const out = restoreSurroundings({ render: same, renderMime: 'image/png', original: photoWithWindow, originalMime: 'image/jpeg', detections: [winBox] });
+  assert.strictEqual(out.restored, false);
+  assert.strictEqual(out.buffer, same);
+  const fs2 = require('fs');
+  const server = fs2.readFileSync(require('path').join(__dirname, '..', 'server.js'), 'utf8');
+  assert.match(server, /barsMissing = !drawn\.drawn/);
+  const html = fs2.readFileSync(require('path').join(__dirname, '..', 'index.html'), 'utf8');
+  assert.match(html, /Georgian bars aren’t shown on this picture/);
+});
