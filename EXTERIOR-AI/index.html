@@ -4206,6 +4206,14 @@ function buildVisualizer() {
                 ? h('p', { className: 'mt-2 text-[11px] leading-4 text-zinc-700 text-center' },
                   'Roof shown unchanged — it sits right at the top edge of your photo, so a new one wouldn’t show. Your estimate still includes the new roof.')
                 : null,
+              /* The Georgian bars are drawn on after the render, by finding the
+                 new frames against the photograph. When the frame colour does
+                 not change (white on white) there is nothing to find, and the
+                 page says so rather than letting the note above promise bars. */
+              (state.renderUrl && !state.rendering && state.barsMissing && state.prefs.windowBarsId === 'georgian')
+                ? h('p', { className: 'mt-2 text-[11px] leading-4 text-zinc-700 text-center' },
+                  'Georgian bars aren’t shown on this picture — we couldn’t pick out your new frames against the old ones. They are included in your estimate.')
+                : null,
               (state.renderUrl && !state.rendering)
                 ? h('p', { className: 'mt-2 text-[11px] leading-4 text-zinc-500 text-center' },
                   'Not what you picked? The picture can miss a change. Your estimate still prices what you chose — try again for a different result.')
@@ -6266,6 +6274,7 @@ async function generateRealRender() {
        for them to notice, and paired with the fact that protects them: the
        estimate still prices the roof they chose. */
     state.roofSkipped = !!data.roofSkipped;
+    state.barsMissing = !!data.barsMissing;
     state.renderUrl = safeRenderUrl(data.url);
     state.renderId = data.renderId || null;
     landed = true;

@@ -288,6 +288,11 @@ function restoreSurroundings({ render, renderMime, original, originalMime, detec
     }
 
     const { changed, windows } = findWindowChanges({ out, orig, W, H, keepBoxes });
+    /* No new window found means the premise failed — most often a colour
+       chosen to match the frames already there (white on white). Restoring
+       "everything else" then put back scattered bits of the frames themselves
+       and left them speckled. Leave the render alone. */
+    if (!windows.length) return untouched('no changed windows found');
     let windowMask = new Uint8Array(N);
     for (const g of windows) for (const k of g.members) windowMask[k] = 1;
     for (let i = 0; i < REGROW; i++) windowMask = dilate(windowMask, W, H);
