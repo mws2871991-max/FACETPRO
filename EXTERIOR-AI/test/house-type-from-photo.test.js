@@ -164,3 +164,29 @@ test('a house type somebody chose is never overwritten by a photograph', () => {
   const picker = page.slice(page.indexOf('function buildHouseTypePicker'), page.indexOf('function priceRow'));
   assert.match(picker, /state\.houseTypeChosen = true/, 'tapping the picker does not count as being told');
 });
+
+/* ── Side evidence (24 September) ── */
+
+test('the house type comes from what each side shows, not the verdict', () => {
+  const { houseTypeFromEvidence } = require('../glazing');
+  const a = (left, right, houseType = 'detached') => houseTypeFromEvidence({ houseType, sides: { left, right } });
+  assert.strictEqual(a('gap', 'gap'), 'detached');
+  assert.strictEqual(a('shared', 'gap'), 'semi');
+  assert.strictEqual(a('gap', 'shared', 'end-terrace'), 'endTerrace');
+  assert.strictEqual(a('shared', 'shared'), 'terrace');
+  // hero-before.jpg: a close crop, neither side in shot, and the model said "detached".
+  assert.strictEqual(a('cut-off', 'cut-off'), null);
+  assert.strictEqual(a('gap', 'cut-off'), null);
+  // A storey count, not a matter of sides.
+  assert.strictEqual(a('cut-off', 'cut-off', 'bungalow'), 'bungalow');
+  // No evidence (an older record): the verdict, as before.
+  assert.strictEqual(houseTypeFromEvidence({ houseType: 'semi-detached' }), 'semi');
+});
+
+test('an unread house type is not presented as a reading', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  assert.match(html, /We couldn't see both sides of the house/);
+  assert.match(html, /state\.houseTypeRead = !!\(data\.houseType/);
+});

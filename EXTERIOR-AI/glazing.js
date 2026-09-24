@@ -257,6 +257,39 @@ function resolveHouseType(input) {
   return TYPE_LOOKUP.get(normaliseType(input)) || null;
 }
 
+/* The house type from what the photograph shows at each side, not from the
+   model's verdict.
+
+   The detection prompt has always said "if the photograph does not show
+   enough of the sides to tell, omit the field". It did not: on 24 September
+   all four of the site's own photographs came back "detached", including
+   hero-before.jpg — a close portrait crop of a bay-fronted semi where neither
+   side is in shot. So the model now reports each side separately — "gap",
+   "shared" or "cut-off" — and the type is decided here, where the rule can be
+   read and tested:
+
+     gap + gap        detached
+     shared + gap     semi-detached (end-terrace if the model says so)
+     shared + shared  mid-terrace
+     any cut-off      unknown — the homeowner is asked
+
+   A bungalow is a storey count, not a matter of sides, so the model's word is
+   taken for it. With no side evidence at all (an older cached record) this
+   falls back to the model's verdict, as before. */
+const SIDE_VALUES = new Set(['gap', 'shared', 'cut-off']);
+function houseTypeFromEvidence(analysis) {
+  const claimed = resolveHouseType(analysis?.houseType);
+  if (claimed === 'bungalow') return 'bungalow';
+  const left = String(analysis?.sides?.left || '').toLowerCase();
+  const right = String(analysis?.sides?.right || '').toLowerCase();
+  if (!SIDE_VALUES.has(left) || !SIDE_VALUES.has(right)) return claimed;
+  if (left === 'cut-off' || right === 'cut-off') return null;
+  const shared = (left === 'shared') + (right === 'shared');
+  if (shared === 0) return 'detached';
+  if (shared === 2) return 'terrace';
+  return claimed === 'endTerrace' ? 'endTerrace' : 'semi';
+}
+
 /* ── SIZING ──
    With W/H the image dimensions in pixels and aspect = W/H:
 
@@ -1104,6 +1137,7 @@ module.exports = {
   frontBayCount,
   publishedRange,
   resolveHouseType,
+  houseTypeFromEvidence,
   isSidelight,
   // Exposed for tests and for scripts/validate-*, not for server.js.
   _internals: {

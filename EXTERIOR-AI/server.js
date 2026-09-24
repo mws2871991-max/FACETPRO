@@ -1221,7 +1221,10 @@ function pruneDetectionRecords() {
      1  original
      2  EXIF orientation honoured — the aspect ratio of a phone photograph
         taken in portrait changed by the square of the frame's proportions */
-const DETECTION_VERSION = 2;
+/* 3: the analysis reports each side of the house (gap/shared/cut-off) and the
+   type is derived from that — glazing.houseTypeFromEvidence. Bumped so every
+   cached reading is taken again once rather than answering without sides. */
+const DETECTION_VERSION = 3;
 
 function imageFingerprint(buffer) {
   return crypto.createHash('sha256')
@@ -1958,7 +1961,7 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
      cached photographs answer too, without invalidating the cache. */
   const houseTypeFrom = (list) => {
     const analysis = (list || []).find(d => d?.type === 'analysis');
-    return glazing.resolveHouseType(analysis?.houseType);
+    return glazing.houseTypeFromEvidence(analysis);
   };
 
   /* Sidelights are priced with the door, so the list says so rather than
@@ -2102,9 +2105,10 @@ Do not add any other keys, and do not describe anything in prose. Only the array
 
 Coordinates: x_pct/y_pct = top-left corner, w_pct/h_pct = width/height, all as % of image dimensions.
 
-Finally add: {"type":"analysis","summary":"2-3 sentence overview of the property","era":"victorian|edwardian|inter-war|post-war|modern|contemporary","wallMaterial":"red-brick|yellow-brick|grey-brick|render|stone|pebbledash|timber|other","houseType":"detached|semi-detached|end-terrace|mid-terrace|bungalow"}
+Finally add: {"type":"analysis","summary":"2-3 sentence overview of the property","era":"victorian|edwardian|inter-war|post-war|modern|contemporary","wallMaterial":"red-brick|yellow-brick|grey-brick|render|stone|pebbledash|timber|other","houseType":"detached|semi-detached|end-terrace|mid-terrace|bungalow","sides":{"left":"gap|shared|cut-off","right":"gap|shared|cut-off"}}
 
-For houseType, judge it from what the photograph shows: a gap on both sides and four visible corners is detached; a shared wall on one side with a neighbour continuing is semi-detached; a run of houses with this one at the end is end-terrace; a run continuing both ways is mid-terrace; a single storey is a bungalow. If the photograph does not show enough of the sides to tell, omit the field rather than guessing.` }
+For sides, look at the left and right edges of THIS house (the one whose front door faces the camera) and report each separately: "gap" if you can see its side wall end with open space, a path or a fence beyond it; "shared" if another house's wall continues directly from it; "cut-off" if the photograph's edge, a tree or anything else hides that side so you cannot tell. Say "cut-off" whenever you are not sure — a wrong "gap" prices the wrong house.
+For houseType, judge it from what the photograph shows: a gap on both sides is detached; a shared wall on one side with a neighbour continuing is semi-detached; a run of houses with this one at the end is end-terrace; a run continuing both ways is mid-terrace; a single storey is a bungalow. If the photograph does not show enough of the sides to tell, omit the field rather than guessing.` }
           ]
         }]
       })
