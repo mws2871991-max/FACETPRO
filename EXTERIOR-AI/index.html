@@ -388,6 +388,76 @@
   </section>
 
 
+  <!-- Product first (24 September 2026).
+
+       After talking to three people the owner asked for the homepage to open
+       the way the big installers' sites do: the products, as pictures, and a
+       choice — then straight on. Six boxes, one per thing we price, each going
+       to the journey that already exists for it (?journey=…), so choosing is
+       the first step of the design rather than a page of reading before it.
+       Everything below stays for anybody who wants it.
+
+       Photographs: our own before/after "after" frames and Pexels-licensed
+       swatches — see assets/products/SOURCES.md. The conservatory is a drawing
+       until there is a photograph of one. -->
+  <section data-page="home" aria-labelledby="choose-heading">
+    <p class="text-[11px] tracking-[0.25em] uppercase text-zinc-500">Home exterior planning &middot; UK</p>
+    <h1 id="choose-heading" class="serif mt-2 text-[30px] sm:text-[40px] leading-tight tracking-tight">What would you like to change?</h1>
+    <p class="mt-2 text-sm leading-6 text-zinc-600 max-w-[62ch]">Pick one. Then upload a photo of your house to see it changed, with a price — no measuring, no sales call.</p>
+    <div class="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+      <a href="/design?journey=windows" class="group rounded-2xl overflow-hidden border border-zinc-200 bg-white hover:border-zinc-900 transition">
+        <img src="/assets/products/windows.jpg" alt="Anthracite bay windows on a brick house" width="640" height="480" class="w-full aspect-[4/3] object-cover" loading="eager" decoding="async">
+        <span class="block p-3 sm:p-4">
+          <span class="block text-[15px] font-medium">Windows</span>
+          <span class="block mt-0.5 text-[12px] leading-5 text-zinc-500">Casement, flush, sash, bay</span>
+        </span>
+      </a>
+      <a href="/design?journey=doors" class="group rounded-2xl overflow-hidden border border-zinc-200 bg-white hover:border-zinc-900 transition">
+        <img src="/assets/products/doors.jpg" alt="A grey composite front door" width="640" height="480" class="w-full aspect-[4/3] object-cover" loading="eager" decoding="async">
+        <span class="block p-3 sm:p-4">
+          <span class="block text-[15px] font-medium">Doors</span>
+          <span class="block mt-0.5 text-[12px] leading-5 text-zinc-500">Front, back, patio and bifold</span>
+        </span>
+      </a>
+      <a href="/design?journey=roofline" class="group rounded-2xl overflow-hidden border border-zinc-200 bg-white hover:border-zinc-900 transition">
+        <img src="/assets/products/roofline.jpg" alt="The gable, fascia and bargeboards of a tile-hung house" width="640" height="480" class="w-full aspect-[4/3] object-cover" loading="eager" decoding="async">
+        <span class="block p-3 sm:p-4">
+          <span class="block text-[15px] font-medium">Fascias, soffits &amp; guttering</span>
+          <span class="block mt-0.5 text-[12px] leading-5 text-zinc-500">The roofline</span>
+        </span>
+      </a>
+      <a href="/design?journey=roof" class="group rounded-2xl overflow-hidden border border-zinc-200 bg-white hover:border-zinc-900 transition">
+        <img src="/assets/products/roofs.jpg" alt="A slate roof with chimneys" width="640" height="480" class="w-full aspect-[4/3] object-cover" loading="eager" decoding="async">
+        <span class="block p-3 sm:p-4">
+          <span class="block text-[15px] font-medium">Roofs</span>
+          <span class="block mt-0.5 text-[12px] leading-5 text-zinc-500">Slate, tile and clay</span>
+        </span>
+      </a>
+      <a href="/design?journey=cladding" class="group rounded-2xl overflow-hidden border border-zinc-200 bg-white hover:border-zinc-900 transition">
+        <img src="/assets/products/walls.jpg" alt="A house clad in sage-green weatherboard" width="640" height="480" class="w-full aspect-[4/3] object-cover" loading="eager" decoding="async">
+        <span class="block p-3 sm:p-4">
+          <span class="block text-[15px] font-medium">Render &amp; cladding</span>
+          <span class="block mt-0.5 text-[12px] leading-5 text-zinc-500">Change the look of the walls</span>
+        </span>
+      </a>
+      <a href="/cost/conservatory-cost-uk" class="group rounded-2xl overflow-hidden border border-zinc-200 bg-white hover:border-zinc-900 transition">
+        <span class="block w-full aspect-[4/3] bg-[#EFE9DF] grid place-items-center" role="img" aria-label="Drawing of a conservatory">
+          <svg viewBox="0 0 160 120" class="w-3/4 h-3/4" fill="none" stroke="#3f3f46" stroke-width="2" stroke-linejoin="round" aria-hidden="true">
+            <path d="M10 40 H70 V110 H10 Z" fill="#d8cfc1"/>
+            <path d="M70 60 L110 38 L150 60 V110 H70 Z" fill="#f6f3ee"/>
+            <path d="M70 60 H150 M90 60 V110 M110 60 V110 M130 60 V110 M110 38 V60 M90 49 L90 60 M130 49 L130 60"/>
+            <path d="M70 84 H150"/>
+            <path d="M5 110 H155"/>
+          </svg>
+        </span>
+        <span class="block p-3 sm:p-4">
+          <span class="block text-[15px] font-medium">Conservatories</span>
+          <span class="block mt-0.5 text-[12px] leading-5 text-zinc-500">Guide prices by style</span>
+        </span>
+      </a>
+    </div>
+  </section>
+
   <section data-page="home" class="rounded-2xl bg-zinc-900 text-[#FBF8F3] overflow-hidden p-6 sm:p-8 md:p-12" aria-labelledby="hero-heading">
     <div class="grid lg:grid-cols-[1.05fr_1fr] gap-8 lg:gap-12 items-center">
       <div>
@@ -403,7 +473,8 @@
              same unsubstantiated number somewhere more prominent. The strip
              keeps "No sales call unless you ask", which is enforced in code
              rather than promised in copy. -->
-        <h1 id="hero-heading" class="mt-4 serif text-[34px] sm:text-[42px] md:text-[52px] leading-[0.98] tracking-[-0.03em]">See your house. See the price. Before anyone comes&nbsp;round.</h1>
+        <!-- h2 since 24 September: the product choice above is the page's h1. -->
+        <h2 id="hero-heading" class="mt-4 serif text-[34px] sm:text-[42px] md:text-[52px] leading-[0.98] tracking-[-0.03em]">See your house. See the price. Before anyone comes&nbsp;round.</h2>
         <!-- Brief §1, verbatim. The line it replaces ended "Windows, doors,
              cladding, roof, fascias. Five trades. One photograph." — accurate,
              and three sentences of specification before the reader has agreed
