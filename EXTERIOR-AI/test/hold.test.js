@@ -171,3 +171,21 @@ test('a thin fascia touching the top of a window frame is still put back', () =>
   assert.ok(far > 170, `the fascia away from the window was kept as rendered (${far})`);
   assert.deepStrictEqual(pixel(out.buffer, 104, 100), [30, 30, 30], 'the frame itself must stay');
 });
+
+test('a fascia strip inside a loose window box is still put back', () => {
+  /* newbuild-before.jpg, live: the upstairs window's box started at 12% down,
+     inside the fascia at 10–13%, so the fascia counted as "window". A strip is
+     not a window, whatever box it sits in. */
+  const p = new PNG({ width: 400, height: 300 });
+  for (let y = 0; y < 300; y++) for (let x = 0; x < 400; x++) {
+    const frame = x >= 100 && x < 180 && y >= 80 && y < 160;          // a solid changed window block
+    const fascia = x >= 20 && x < 380 && y >= 30 && y < 42;           // 12 px strip, well above it
+    p.data.set((frame || fascia) ? [30, 30, 30, 255] : [200, 190, 180, 255], (y * 400 + x) * 4);
+  }
+  // Box drawn far too high: from 8% down, covering the fascia as well.
+  const loose = { type: 'window', label: 'Window', confidence: 0.9, x_pct: 25, y_pct: 8, w_pct: 20, h_pct: 46 };
+  const out = restoreSurroundings({ render: PNG.sync.write(p), renderMime: 'image/png', original: photo, originalMime: 'image/jpeg', detections: [loose] });
+  assert.ok(out.restored, out.reason);
+  assert.ok(pixel(out.buffer, 300, 36)[0] > 170, 'the fascia strip was kept as window');
+  assert.deepStrictEqual(pixel(out.buffer, 140, 120), [30, 30, 30], 'the window block must stay');
+});

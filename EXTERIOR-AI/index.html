@@ -5803,6 +5803,15 @@ function buildDetailOptions() {
         'Pick a style and a colour and we’ll show them on your home and work out a guide price.'),
       h('div', { className: 'mt-4 grid gap-5' }, [
         group('Window style', wd.windowStyles, 'windowStyleId', { optOut: 'windows', anchor: 'window-style' }),
+        /* Said plainly, before they choose. Tested live on 24 September on two
+           houses at customer photo sizes: the picture reliably shows a new
+           frame colour, and did not draw sliding sashes or Georgian bars on
+           either, however the render was asked. The price includes them; the
+           picture is where they may not appear. */
+        state.prefs.windowStyleId && state.prefs.windowStyleId !== 'none'
+          ? h('p', { className: 'text-[11px] leading-5 text-zinc-500 -mt-2' },
+              'The picture shows your frame colour. Styles like sliding sash and Georgian bars may not show on it — they are always in your price.')
+          : null,
         barsRow(wd.windowBars),
         h('div', {}, [
           group('Door style', wd.doorStyles, 'doorStyleId', { optOut: 'front door', anchor: 'door-style' }),
