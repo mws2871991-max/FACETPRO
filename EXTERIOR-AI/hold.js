@@ -354,6 +354,8 @@ function restoreSurroundings({ render, renderMime, original, originalMime, detec
 const BAR_MIN_PANE_PX = 150;   // smaller is a vent or a reflection, not a pane
 const BAR_MIN_PANE_SIDE = 12;  // px
 const BAR_THICKNESS = 0.035;   // of the pane's shorter side, at least 2 px
+const PANE_FRAMED_SHARE = 0.5;   // of each side of a pane that must have frame just beyond it
+const INWARD_SHARE = 0.05;     // of a pane's shorter side: how far inside its edge its own frame may sit
 const FRAME_COLOUR_D2 = 45 * 45;  // squared RGB distance from the frame's colour that still counts as frame
 const FRAME_LINE_SHARE = 0.6;     // a column/row this much frame-coloured is a mullion/transom
 const MAX_MULLION = 0.12;         // of the window's width; wider "frame" is a dark pane
@@ -460,6 +462,34 @@ function drawGeorgianBars({ render, renderMime, original, originalMime, detectio
         for (const [y0, y1] of rows) {
           const pw = x1 - x0 + 1, ph = y1 - y0 + 1;
           if (pw < BAR_MIN_PANE_SIDE || ph < BAR_MIN_PANE_SIDE || pw * ph < BAR_MIN_PANE_PX) continue;
+          /* A pane has frame on all four sides. Walked live on 24 September:
+             on the tile-hung house's lower bay the mullions were not found, the
+             whole bay area — brick and hedge below it included — passed as one
+             wide "pane", and a single 3×2 grid was drawn across four casements
+             and out into the garden. Glass is always framed; anything that is
+             not, on any side, is not a pane. */
+          const reach = Math.max(4, Math.round(Math.min(pw, ph) * 0.15));
+          const INWARD = Math.max(2, Math.round(Math.min(pw, ph) * INWARD_SHARE));
+          const framedAlong = (n0, n1, at) => {
+            let hit = 0, total = 0;
+            for (let t = n0; t <= n1; t += 2) {
+              total++;
+              /* Either side of the edge: a single-pane window's "pane" can take
+                 in its own frame, and then the frame is just inside. */
+              for (let d = -INWARD; d <= reach; d++) {
+                const [qx, qy] = at(t, d);
+                if (qx < 0 || qy < 0 || qx >= W || qy >= H) continue;
+                if (isFrame(qy * W + qx)) { hit++; break; }
+              }
+            }
+            return total ? hit / total : 0;
+          };
+          const enclosedByFrame =
+            framedAlong(x0, x1, (t, d) => [t, y0 - d]) >= PANE_FRAMED_SHARE &&
+            framedAlong(x0, x1, (t, d) => [t, y1 + d]) >= PANE_FRAMED_SHARE &&
+            framedAlong(y0, y1, (t, d) => [x0 - d, t]) >= PANE_FRAMED_SHARE &&
+            framedAlong(y0, y1, (t, d) => [x1 + d, t]) >= PANE_FRAMED_SHARE;
+          if (!enclosedByFrame) continue;
           panes++;
           const nc = pw > ph * 1.2 ? 3 : 2;
           const nr = ph > pw * 1.2 ? 3 : 2;
