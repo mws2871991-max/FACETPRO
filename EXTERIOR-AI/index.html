@@ -3229,9 +3229,12 @@ function buildUploadDetect() {
           /* Straight to the controls that fix it. The count corrector lives in
              the glazing panel and the wall area in the refine section; the
              first is the one people mean nine times out of ten. */
+          /* The counter itself, not the top of the section: 'windows-doors'
+             opens on the style list, and on a phone the "We counted…" row is
+             two screens further down, under the price. */
           setTimeout(() => {
-            (document.getElementById('windows-doors') || document.getElementById('refine-section'))
-              ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            (document.getElementById('window-count') || document.getElementById('windows-doors') || document.getElementById('refine-section'))
+              ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }, 60);
         }),
       ]),
@@ -4268,6 +4271,18 @@ function buildHouseTypePicker({ short } = {}) {
         state.houseTypeChosen = true;
         state.measurement = null;      // prior and multiplier both change
         state.useMeasurement = false;
+        /* And measure the photograph again, as the new type.
+
+           Clearing the measurement was right — the band and the multiplier
+           both key off house type — but nothing re-ran it, so correcting the
+           house type threw the photograph away. Walked live on 24 September:
+           "It looks like a detached house… Anything wrong? Change it below",
+           tap Semi, and the estimate went from photo_door 90 m² to the typical
+           semi's 85 with the bar reading "Typical home". The correction the page
+           invites most directly was the one that stopped pricing their house.
+           autoMeasure returns straight away when there is no photograph or it
+           cannot be scaled, which leaves the typical figure — as before. */
+        await autoMeasure();
         // Glazing too: frontToTotal and the window priors both key off house
         // type, so changing it left a terrace's window count on screen next to
         // a detached house's cladding total.
@@ -5680,7 +5695,7 @@ function buildDetailOptions() {
         onClick: () => generateRealRender(),
       }, state.rendering ? 'Creating your picture…' : 'Show these on my house →') : null,
 
-      h('div', { className: 'mt-3 pt-3 border-t border-zinc-200 flex items-center gap-3 flex-wrap' }, [
+      h('div', { id: 'window-count', className: 'mt-3 pt-3 border-t border-zinc-200 flex items-center gap-3 flex-wrap scroll-mt-24' }, [
         /* "We counted" only when we counted.
 
            This said it whatever the number was — including when it came from
@@ -5691,6 +5706,10 @@ function buildDetailOptions() {
         h('span', { className: 'text-[12px] text-zinc-600' },
           g.countSource === 'house_type_prior'
             ? `We're assuming ${counted}. Not right?`
+            /* Theirs now, so say so — "We counted 10" after they pressed + was
+               claiming a count we never made. */
+            : g.countSource === 'manual_entry'
+              ? `You told us ${counted}. Change it?`
             : scaled && assumed
               ? `We counted ${g.frontCount} on the front and assumed ${counted} in all. Not right?`
               : `We counted ${counted}. Not right?`),
