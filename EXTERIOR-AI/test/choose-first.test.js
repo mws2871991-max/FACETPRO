@@ -53,3 +53,31 @@ test('the price says it is typical, and the button goes to the photo', () => {
   assert.match(body, /Your house will be priced from your photo\./);
   assert.match(body, /getElementById\('your-photo'\)\?\.scrollIntoView/);
 });
+
+test('the homepage has exactly one h1, and it is the homepage’s own', () => {
+  /* One document serves /, /design, /installers and /how-we-price, so every
+     heading in it reaches the homepage's served HTML whether a visitor can see
+     it or not. When /installers and /how-we-price each gained an h1 (PRs #22
+     and #25), the homepage silently went from one h1 to three — and because
+     the installers section comes first in the document, the first h1 a crawler
+     read on the one indexed page on this site was a line recruiting
+     installers.
+
+     Invisible to a customer, which is why a live walk did not catch it. This
+     is the assertion that does.
+
+     The other two headings keep their ids, because aria-labelledby points at
+     them, and both their routes are served noindex — so being h2 costs them
+     nothing they were getting. */
+  const heads = [...html.matchAll(/<h1\b[^>]*>([\s\S]*?)<\/h1>/g)];
+  assert.strictEqual(heads.length, 1,
+    `index.html has ${heads.length} h1s: ${heads.map(m => m[1].replace(/\s+/g, ' ').trim().slice(0, 40)).join(' | ')}`);
+  assert.match(heads[0][0], /id="choose-heading"/,
+    'the single h1 should be the homepage’s "What would you like to change?"');
+
+  /* And the two demoted ones are still there, still labelling their sections. */
+  for (const id of ['installers-heading', 'pricing-heading']) {
+    assert.match(html, new RegExp(`<h2[^>]*id="${id}"`), `${id} should still exist as an h2`);
+    assert.match(html, new RegExp(`aria-labelledby="${id}"`), `${id} is no longer labelling its section`);
+  }
+});

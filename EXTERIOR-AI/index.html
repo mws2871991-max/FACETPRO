@@ -389,7 +389,20 @@
        installer receives when they open, not that leads are flowing. -->
   <section data-page="installers" hidden class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="installers-heading">
     <p class="text-[11px] tracking-[0.25em] uppercase text-zinc-500">For installers</p>
-    <h1 id="installers-heading" class="serif mt-2 text-[28px] sm:text-[34px] leading-tight tracking-tight">Homeowners who have already seen the job</h1>
+    <!-- h2, not h1, and the reason is the homepage rather than this page.
+
+         One document serves /, /design, /installers and /how-we-price, so
+         every heading in it is in the homepage's served HTML whether or not a
+         visitor can see it. When /installers and /how-we-price each gained an
+         h1, the homepage went from one h1 to three — and because this section
+         comes first in the document, the first h1 a crawler read on the one
+         indexed page on the site was a line recruiting installers.
+
+         Nothing changes for a reader: same classes, same size, and the id
+         stays because aria-labelledby points at it. This page and
+         /how-we-price are both served noindex, follow, so demoting their
+         headings costs them nothing they were getting. -->
+    <h2 id="installers-heading" class="serif mt-2 text-[28px] sm:text-[34px] leading-tight tracking-tight">Homeowners who have already seen the job</h2>
     <p class="mt-3 text-sm leading-6 text-zinc-600 max-w-[62ch]">
       Homeowners use Facet Pro to see new windows, doors, walls, roofline and roof on a photograph of their own house, with an itemised planning estimate, before anybody visits.
     </p>
@@ -473,7 +486,10 @@
        index; this route is noindex like /design. -->
   <section data-page="pricing" hidden aria-labelledby="pricing-heading">
     <p class="text-[11px] tracking-[0.25em] uppercase text-zinc-500">How we price</p>
-    <h1 id="pricing-heading" class="serif mt-2 text-[30px] sm:text-[40px] leading-tight tracking-tight">Where your price comes from</h1>
+    <!-- h2 for the same reason as installers-heading above: this text lives in
+         the homepage's HTML, /how-we-price is noindex, and the homepage should
+         have exactly one h1. -->
+    <h2 id="pricing-heading" class="serif mt-2 text-[30px] sm:text-[40px] leading-tight tracking-tight">Where your price comes from</h2>
     <p class="mt-2 text-sm leading-6 text-zinc-600 max-w-[62ch]">Real UK supplier and labour rates, your photograph, and nothing about how well you negotiate. Everything below is here for anyone who wants the working.</p>
   </section>
 
