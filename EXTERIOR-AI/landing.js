@@ -661,6 +661,22 @@ const CAVEAT = 'These are estimates for planning, from real supplier and labour 
 
 const BETA_NOTICE = 'Facet Pro is in beta. Our measurement of wall area from a photograph is still being calibrated against surveyed properties, so treat wall and roof figures as indicative and window figures as a guide.';
 
+/* The same six products as the homepage boxes and the main site's header, so
+   somebody who searched "conservatory cost" can get to windows without going
+   back to the homepage. Plain links: these pages run no script. */
+const PRODUCTS = [
+  ['Windows', '/design?journey=windows'],
+  ['Doors', '/design?journey=doors'],
+  ['Fascias & guttering', '/design?journey=roofline'],
+  ['Roofs', '/design?journey=roof'],
+  ['Render & cladding', '/design?journey=cladding'],
+  ['Conservatories', '/cost/conservatory-cost-uk'],
+];
+const productMenu = (siteUrl, slug) => `<nav class="products" aria-label="Products"><ul>${
+  PRODUCTS.map(([label, href]) => `<li><a href="${escapeHtml(siteUrl + href)}"${
+    href === `/cost/${slug}` ? ' aria-current="page"' : ''}>${escapeHtml(label)}</a></li>`).join('')
+}</ul></nav>`;
+
 function page({ title, description, h1, canonical, body, siteUrl, siteMode, related, faq, slug }) {
   const beta = siteMode === 'beta';
   return `<!doctype html><html lang="en-GB"><head>
@@ -679,7 +695,7 @@ ${faq ? `<script type="application/ld+json">${JSON.stringify(faq)}</script>` : '
 <header class="site"><div class="wrap">
   <a class="logo" href="${escapeHtml(siteUrl)}/">Facet Pro</a>
   <a href="${escapeHtml(ctaHref(siteUrl, slug))}">See my house &rarr;</a>
-</div></header>
+</div>${productMenu(siteUrl, slug)}</header>
 <main class="wrap">
 <h1>${escapeHtml(h1)}</h1>
 ${body}

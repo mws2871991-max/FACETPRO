@@ -280,7 +280,11 @@ test('pages with no priced journey get no hero', () => {
 test('the whole-exterior page carries no journey, because it is the default', () => {
   /* Absence is the answer here, not a sixth value. An exterior visitor wants
      the ordinary page: everything shown, nothing pre-declined. */
-  const html = landing.renderCostPage('house-exterior-renovation-cost', OPTS);
+  /* The product row in the header links each product by its journey on every
+     page — that is a menu, not this page pre-declaring anything — so it is
+     taken out before looking. */
+  const html = landing.renderCostPage('house-exterior-renovation-cost', OPTS)
+    .replace(/<nav class="products"[\s\S]*?<\/nav>/, '');
   assert.ok(!/\?journey=/.test(html), 'the whole-exterior page should not pre-declare a trade');
   /* The whole-exterior page has no journey — but it does carry `from`, so
      the href is no longer bare. What matters is the absence of a journey. */
@@ -449,4 +453,15 @@ test('the pages still have their styling once the CSP has had its say', () => {
   const onDisk = path.join(__dirname, '..', href.replace(/^\//, ''));
   assert.ok(fs.existsSync(onDisk), `${href} is linked but not present on disk`);
   assert.ok(fs.readFileSync(onDisk, 'utf8').length > 500, `${href} exists but is nearly empty`);
+});
+
+test('every cost page carries the six products, and marks the one it is about', () => {
+  const html = landing.renderCostPage('conservatory-cost-uk', OPTS);
+  const menu = (html.match(/<nav class="products"[\s\S]*?<\/nav>/) || [''])[0];
+  for (const j of ['windows', 'doors', 'roofline', 'roof', 'cladding']) {
+    assert.ok(menu.includes(`/design?journey=${j}"`), `the menu is missing ${j}`);
+  }
+  assert.match(menu, /href="[^"]*\/cost\/conservatory-cost-uk" aria-current="page">Conservatories/);
+  assert.ok(!landing.renderCostPage('new-roof-cost', OPTS).includes('aria-current'),
+    'a page about something else marks nothing');
 });
