@@ -171,6 +171,8 @@ const MIN_CORE_PX = 200;      // a window group, after erosion, is at least this
 const KEEP_GROW = 0.15;       // how far past a window's box its group may start
 const ERODE = 2;              // px shrunk before grouping: thin lines vanish, frames survive
 const REGROW = 4;             // px grown back so the whole frame is kept
+const STRIP_ASPECT = 6;       // wider than this per unit height is a strip (fascia), not a window
+const MIN_FILL = 0.12;        // sparser than this is an outline (bargeboards), not a window
 const MAX_RESTORE_SHARE = 0.35;
 const SOFT_R = 2;             // px of feathering at a restored edge
 
@@ -263,7 +265,16 @@ function restoreSurroundings({ render, renderMime, original, originalMime, detec
         if (y < H - 1 && cores[k + W] && !label[k + W]) { label[k + W] = next; stack[sp++] = k + W; }
       }
       if (count < MIN_CORE_PX) continue;
-      if (keepZones.some(z => l < z.r && r > z.l && t < z.b && b > z.t)) {
+      /* Shape as well as place. The boxes are loose enough to overlap the
+         roofline — on newbuild-before.jpg the upstairs window's box started at
+         12% down, inside the fascia at 10–13% — so "touches a window box" kept
+         the fascia strip and the gable's bargeboards as window. A window's
+         change is a compact block: under STRIP_ASPECT times as wide as it is
+         tall, and at least MIN_FILL of its bounding box. A fascia is a long
+         strip (13:1 there); bargeboards are a sparse inverted V (6% fill). */
+      const bw = r - l + 1, bh = b - t + 1;
+      const compact = bw / bh <= STRIP_ASPECT && count / (bw * bh) >= MIN_FILL;
+      if (compact && keepZones.some(z => l < z.r && r > z.l && t < z.b && b > z.t)) {
         for (const k of members) windowMask[k] = 1;
       }
     }
