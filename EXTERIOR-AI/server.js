@@ -19,7 +19,7 @@ const leadscore = require('./leadscore');
 const { isTestTraffic } = require('./testtraffic');
 
 const { buildRenderPrompt } = require('./renderprompt');
-const { restoreDoor, restoreSurroundings, drawGeorgianBars } = require('./hold');
+const { restoreDoor, restoreSurroundings, drawGeorgianBars, changedShare } = require('./hold');
 const geometry = require('./geometry');
 const catalogue = JSON.parse(fs.readFileSync(path.join(__dirname, 'catalogue.json'), 'utf8'));
 
@@ -2641,6 +2641,195 @@ app.use(require('./routes/measure')({
 /* ── POST /api/render ──
    Real AI render via Replicate FLUX Kontext Pro. Requires REPLICATE_API_TOKEN.
    Accepts { image: 'data:image/...;base64,...', mimeType, claddingName, trimName, roofName } */
+/* One FLUX Kontext call, polled to a deadline. Returns { ok, url } or
+   { ok: false, status, error } for the route to send. It never writes to the
+   response itself, so a render can be tried twice (see MISS_CHECKS). */
+async function runFlux({ prompt, inputImage, deadlineAt, replicateKey }) {
+  // Never ask Replicate to hold the request past the deadline: a retry starts with less time left.
+  const waitSeconds = Math.max(1, Math.min(60, Math.floor((deadlineAt - Date.now()) / 1000)));
+  const controller = new AbortController();
+  const renderTimeout = setTimeout(() => controller.abort(), 120000);
+
+  /* clearTimeout in a finally, not after the await. A throw from the fetch
+     skipped it and left a 120-second timer holding the process, pointed at
+     an AbortController nobody was listening to any more. */
+  let predRes;
+  try {
+    predRes = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-kontext-pro/predictions', {
+      method: 'POST',
+      signal: controller.signal,
+      /* wait=60, not 90. Replicate caps this header at 60 and rejects
+         anything higher with a 422 before it looks at the request at all:
+
+         Prefer: wait=x header must specify a value between 1 and 60
+
+       So every render this application has ever attempted was refused, and
+       the failure was invisible from outside — the endpoint answered
+       "Render failed (422)", which reads like a bad photograph rather than
+       a header we control. It surfaced only because the live host finally
+       had a Replicate token, got far enough to be rejected on merit, and
+       logged Replicate's own reason.
+
+       Nothing is lost by asking for less: the polling loop below covers a
+       further 90 seconds, so a render slower than the wait is picked up
+       there exactly as it always was. */
+      headers: { 'Authorization': `Bearer ${replicateKey}`, 'Content-Type': 'application/json', 'Prefer': `wait=${waitSeconds}` },
+      /* output_format: png, which is also the model's own default — 'jpg'
+         was an override, and it cost the one thing this render is for.
+
+         The photograph is already re-encoded once before it gets here: the
+         client downscales to 1600px and writes JPEG at 0.85. Asking for JPEG
+         back put a second lossy pass on top, and this model has no
+         output_quality input — the whole schema is prompt, input_image,
+         aspect_ratio, seed, safety_tolerance, prompt_upsampling and this —
+         so there was no quality dial to raise instead. PNG or artefacts.
+
+         They land on exactly the surfaces being sold: mortar lines, render
+         grain, roof tile edges. A homeowner deciding between anthracite and
+         sage is looking at texture, and JPEG spends its bit budget on the
+         smooth sky above it.
+
+         Costs storage. Roughly 500KB becomes a few MB per render, in a table
+         holding renders for 183 days (retention.PERIODS.orphanRenderDays)
+         with DAILY_RENDER_LIMIT at 50. Worth watching rather than worth
+         refusing — and the render is the product.
+
+         aspect_ratio stays unset because its default is match_input_image,
+         which is what a before-and-after needs. prompt_upsampling stays off:
+         it lets the model rewrite the prompt, and this prompt's whole job is
+         telling it what not to change. */
+      body: JSON.stringify({ input: { prompt, input_image: inputImage, output_format: 'png', safety_tolerance: RENDER_SAFETY_TOLERANCE } })
+    });
+  } finally {
+    clearTimeout(renderTimeout);
+  }
+
+  if (!predRes.ok) {
+    const err = await predRes.json().catch(() => ({}));
+    obs.record('render', 'Replicate refused the render', { status: predRes.status, detail: err?.detail });
+    console.error('Replicate render error:', predRes.status, err);
+    /* Not the upstream status. "Render failed (422)" reads to a homeowner
+       as though their photograph was rejected, and it was nothing of the
+       sort — it was a header this code sent. The number belongs in the log
+       line above, which is where it was eventually found. */
+    return { ok: false, status: 502, error: "We couldn't create that image just now — please try again." };
+  }
+
+  const pred = await predRes.json();
+  if (pred.status === 'succeeded' && pred.output) {
+    return { ok: true, url: Array.isArray(pred.output) ? pred.output[0] : pred.output };
+  }
+
+  /* Poll until the deadline.
+
+     Three things went unchecked here. The poll had no timeout of its own —
+     Node's fetch has no default, so one hung connection held the whole
+     request until the socket died. Nothing looked at poll.ok, so a 429 or a
+     500 parsed into an object with no status field, matched neither branch,
+     and the loop went round again for the full ninety seconds against a
+     provider that was refusing us — silently, and nowhere in the logs. And a
+     cancelled prediction is a terminal state that was treated as "not
+     finished yet", so it also ran the clock out.
+
+     A run of upstream failures is now given up on rather than ridden out:
+     three in a row is Replicate having a bad time, and telling somebody to
+     try again is more honest than making them wait for the timeout. */
+  let consecutiveFailures = 0;
+
+  while (Date.now() < deadlineAt) {
+    await new Promise(r => setTimeout(r, 2000));
+
+    const pollController = new AbortController();
+    const pollTimeout = setTimeout(() => pollController.abort(), 10000);
+    let poll;
+    try {
+      poll = await fetch(`https://api.replicate.com/v1/predictions/${pred.id}`, {
+        headers: { 'Authorization': `Bearer ${replicateKey}` },
+        signal: pollController.signal,
+      });
+    } catch (err) {
+      /* A refused or hung poll is not a failed render — the prediction is
+         still running at the other end — so this retries rather than giving
+         up on the first one. */
+      if (++consecutiveFailures >= 3) {
+        obs.record('render', 'could not reach Replicate while polling', { attempts: consecutiveFailures });
+        return { ok: false, status: 502, error: "We couldn't create that image just now — please try again." };
+      }
+      continue;
+    } finally {
+      clearTimeout(pollTimeout);
+    }
+
+    if (!poll.ok) {
+      if (++consecutiveFailures >= 3) {
+        obs.record('render', 'Replicate kept refusing the status check', { status: poll.status });
+        console.error('Replicate poll error:', poll.status);
+        return { ok: false, status: 502, error: "We couldn't create that image just now — please try again." };
+      }
+      continue;
+    }
+    consecutiveFailures = 0;
+
+    const p = await poll.json().catch(() => null);
+    if (!p) continue;
+
+    if (p.status === 'succeeded') {
+      return { ok: true, url: Array.isArray(p.output) ? p.output[0] : p.output };
+    }
+    /* Terminal either way. Waiting out the clock on a prediction that has
+       already stopped is ninety seconds of a homeowner watching a spinner. */
+    if (p.status === 'failed' || p.status === 'canceled') {
+      obs.record('render', 'the render did not complete', { status: p.status, detail: p.error });
+      return { ok: false, status: 502, error: 'Render failed — try again.' };
+    }
+  }
+  return { ok: false, status: 504, error: 'Render timed out — try again.' };
+}
+
+/* Did the render change what it was asked to? See changedShare in hold.js.
+
+   Only the big surfaces, where a miss is obvious and measurable: the roof
+   and the walls. Frames are handled by the restores, and a fascia box is too
+   thin to judge. Thresholds sit between what a real change and a miss
+   measured on live renders (roof 0.42–0.66 vs 0.13–0.25; walls 0.43 vs
+   0.04–0.16). */
+const MISS_CHECKS = {
+  roof: { types: ['roof'], min: 0.35 },
+  cladding: { types: ['cladding'], min: 0.30 },
+};
+/* Leave room after a retry to store the image and answer. */
+const RETRY_NEEDS_MS = 30_000;
+
+async function judgeRender(url, trades, original) {
+  let bytes, mime;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+    try {
+      const r = await fetch(url, { signal: controller.signal });
+      if (!r.ok) return null;
+      bytes = Buffer.from(await r.arrayBuffer());
+      mime = r.headers.get('content-type') || 'image/png';
+    } finally { clearTimeout(timer); }
+  } catch (_) { return null; }
+  // An image we cannot read is not worth waiting on detection for.
+  const probe = [{ x_pct: 0, y_pct: 0, w_pct: 1, h_pct: 1 }];
+  if (changedShare({ render: bytes, renderMime: mime, original: original.buffer, originalMime: original.mime, boxes: probe }) === null) return null;
+  const detections = await detectionsForRestore(original, 15_000);
+  if (!detections) return null;
+  const missed = [];
+  let worst = Infinity;
+  for (const trade of trades) {
+    const check = MISS_CHECKS[trade];
+    const boxes = detections.filter(d => d && check.types.includes(d.type) && Number(d.w_pct) > 0 && Number(d.h_pct) > 0);
+    const share = changedShare({ render: bytes, renderMime: mime, original: original.buffer, originalMime: original.mime, boxes });
+    if (share === null) continue;
+    worst = Math.min(worst, share / check.min);
+    if (share < check.min) missed.push(trade);
+  }
+  return { missed, score: worst };
+}
+
 app.post('/api/render', renderLimiter, async (req, res) => {
   const { image, mimeType, claddingName, trimName, roofName,
           windowStyleName, doorStyleName, doorStyleId, windowDoorColourName,
@@ -2847,146 +3036,44 @@ app.post('/api/render', renderLimiter, async (req, res) => {
   const RENDER_DEADLINE_MS = 100_000;
 
   try {
-    const controller = new AbortController();
-    const renderTimeout = setTimeout(() => controller.abort(), 120000);
+    const deadlineAt = renderStartedAt + RENDER_DEADLINE_MS;
+    const first = await runFlux({ prompt, inputImage, deadlineAt, replicateKey });
+    if (!first.ok) return res.status(first.status).json({ error: first.error });
+    let url = first.url;
 
-    /* clearTimeout in a finally, not after the await. A throw from the fetch
-       skipped it and left a 120-second timer holding the process, pointed at
-       an AbortController nobody was listening to any more. */
-    let predRes;
-    try {
-      predRes = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-kontext-pro/predictions', {
-        method: 'POST',
-        signal: controller.signal,
-        /* wait=60, not 90. Replicate caps this header at 60 and rejects
-           anything higher with a 422 before it looks at the request at all:
-
-           Prefer: wait=x header must specify a value between 1 and 60
-
-         So every render this application has ever attempted was refused, and
-         the failure was invisible from outside — the endpoint answered
-         "Render failed (422)", which reads like a bad photograph rather than
-         a header we control. It surfaced only because the live host finally
-         had a Replicate token, got far enough to be rejected on merit, and
-         logged Replicate's own reason.
-
-         Nothing is lost by asking for less: the polling loop below covers a
-         further 90 seconds, so a render slower than the wait is picked up
-         there exactly as it always was. */
-        headers: { 'Authorization': `Bearer ${replicateKey}`, 'Content-Type': 'application/json', 'Prefer': 'wait=60' },
-        /* output_format: png, which is also the model's own default — 'jpg'
-           was an override, and it cost the one thing this render is for.
-
-           The photograph is already re-encoded once before it gets here: the
-           client downscales to 1600px and writes JPEG at 0.85. Asking for JPEG
-           back put a second lossy pass on top, and this model has no
-           output_quality input — the whole schema is prompt, input_image,
-           aspect_ratio, seed, safety_tolerance, prompt_upsampling and this —
-           so there was no quality dial to raise instead. PNG or artefacts.
-
-           They land on exactly the surfaces being sold: mortar lines, render
-           grain, roof tile edges. A homeowner deciding between anthracite and
-           sage is looking at texture, and JPEG spends its bit budget on the
-           smooth sky above it.
-
-           Costs storage. Roughly 500KB becomes a few MB per render, in a table
-           holding renders for 183 days (retention.PERIODS.orphanRenderDays)
-           with DAILY_RENDER_LIMIT at 50. Worth watching rather than worth
-           refusing — and the render is the product.
-
-           aspect_ratio stays unset because its default is match_input_image,
-           which is what a before-and-after needs. prompt_upsampling stays off:
-           it lets the model rewrite the prompt, and this prompt's whole job is
-           telling it what not to change. */
-        body: JSON.stringify({ input: { prompt, input_image: inputImage, output_format: 'png', safety_tolerance: RENDER_SAFETY_TOLERANCE } })
-      });
-    } finally {
-      clearTimeout(renderTimeout);
-    }
-
-    if (!predRes.ok) {
-      const err = await predRes.json().catch(() => ({}));
-      obs.record('render', 'Replicate refused the render', { status: predRes.status, detail: err?.detail });
-      console.error('Replicate render error:', predRes.status, err);
-      /* Not the upstream status. "Render failed (422)" reads to a homeowner
-         as though their photograph was rejected, and it was nothing of the
-         sort — it was a header this code sent. The number belongs in the log
-         line above, which is where it was eventually found. */
-      return res.status(502).json({ error: "We couldn't create that image just now — please try again." });
-    }
-
-    const pred = await predRes.json();
-    if (pred.status === 'succeeded' && pred.output) {
-      const url = Array.isArray(pred.output) ? pred.output[0] : pred.output;
-      return respondWithRender(res, url, { roofSkipped: roofUnsupported || undefined }, doorRestore);
-    }
-
-    /* Poll until the deadline.
-
-       Three things went unchecked here. The poll had no timeout of its own —
-       Node's fetch has no default, so one hung connection held the whole
-       request until the socket died. Nothing looked at poll.ok, so a 429 or a
-       500 parsed into an object with no status field, matched neither branch,
-       and the loop went round again for the full ninety seconds against a
-       provider that was refusing us — silently, and nowhere in the logs. And a
-       cancelled prediction is a terminal state that was treated as "not
-       finished yet", so it also ran the clock out.
-
-       A run of upstream failures is now given up on rather than ridden out:
-       three in a row is Replicate having a bad time, and telling somebody to
-       try again is more honest than making them wait for the timeout. */
-    let consecutiveFailures = 0;
-
-    while (Date.now() - renderStartedAt < RENDER_DEADLINE_MS) {
-      await new Promise(r => setTimeout(r, 2000));
-
-      const pollController = new AbortController();
-      const pollTimeout = setTimeout(() => pollController.abort(), 10000);
-      let poll;
-      try {
-        poll = await fetch(`https://api.replicate.com/v1/predictions/${pred.id}`, {
-          headers: { 'Authorization': `Bearer ${replicateKey}` },
-          signal: pollController.signal,
-        });
-      } catch (err) {
-        /* A refused or hung poll is not a failed render — the prediction is
-           still running at the other end — so this retries rather than giving
-           up on the first one. */
-        if (++consecutiveFailures >= 3) {
-          obs.record('render', 'could not reach Replicate while polling', { attempts: consecutiveFailures });
-          return res.status(502).json({ error: "We couldn't create that image just now — please try again." });
+    /* Checked, and tried once more on a miss. Live on 24 September the
+       same prompt left a brick house's main roof brown on one run and
+       changed it on the next; the customer was being priced for a roof the
+       picture did not show. If the second try misses too, the better of the
+       two is kept and the page says so, rather than implying it is there. */
+    let missedChanges = [];
+    const trades = [
+      ...(roof && !roofUnsupported ? ['roof'] : []),
+      ...(cladding ? ['cladding'] : []),
+    ];
+    if (trades.length) {
+      const original = { buffer: img.buffer, mime: img.mime,
+        detectionId: detectionId ? String(detectionId) : null, fingerprint: imageFingerprint(img.buffer) };
+      const verdict = await judgeRender(url, trades, original);
+      if (verdict && verdict.missed.length) {
+        missedChanges = verdict.missed;
+        if (deadlineAt - Date.now() > RETRY_NEEDS_MS) {
+          const second = await runFlux({ prompt, inputImage, deadlineAt, replicateKey });
+          const again = second.ok ? await judgeRender(second.url, trades, original) : null;
+          if (second.ok && (!again || again.score >= verdict.score)) {
+            url = second.url;
+            missedChanges = again ? again.missed : [];
+          }
+          obs.record('render', 'retried a render that missed a change',
+            { missed: verdict.missed.join(','), fixed: !missedChanges.length });
         }
-        continue;
-      } finally {
-        clearTimeout(pollTimeout);
-      }
-
-      if (!poll.ok) {
-        if (++consecutiveFailures >= 3) {
-          obs.record('render', 'Replicate kept refusing the status check', { status: poll.status });
-          console.error('Replicate poll error:', poll.status);
-          return res.status(502).json({ error: "We couldn't create that image just now — please try again." });
-        }
-        continue;
-      }
-      consecutiveFailures = 0;
-
-      const p = await poll.json().catch(() => null);
-      if (!p) continue;
-
-      if (p.status === 'succeeded') {
-        const url = Array.isArray(p.output) ? p.output[0] : p.output;
-        return respondWithRender(res, url, { roofSkipped: roofUnsupported || undefined }, doorRestore);
-      }
-      /* Terminal either way. Waiting out the clock on a prediction that has
-         already stopped is ninety seconds of a homeowner watching a spinner. */
-      if (p.status === 'failed' || p.status === 'canceled') {
-        obs.record('render', 'the render did not complete', { status: p.status, detail: p.error });
-        return res.status(502).json({ error: 'Render failed — try again.' });
       }
     }
-    return res.status(504).json({ error: 'Render timed out — try again.' });
 
+    return respondWithRender(res, url, {
+      roofSkipped: roofUnsupported || undefined,
+      ...(missedChanges.length ? { missedChanges } : {}),
+    }, doorRestore);
   } catch (err) {
     console.error('Render error:', err);
     return res.status(502).json({ error: "Couldn't reach the render service." });
