@@ -151,3 +151,23 @@ test('nothing to keep, or nothing changed, leaves the render as it came', () => 
   assert.strictEqual(quiet.restored, false);
   assert.strictEqual(quiet.buffer, same);
 });
+
+test('a thin fascia touching the top of a window frame is still put back', () => {
+  /* 24 September, live: the fascia is a line a few px tall whose lower edge
+     sits level with the upstairs frames, so the two joined and the whole
+     fascia was kept as "part of the window". */
+  const p = new PNG({ width: 400, height: 300 });
+  for (let y = 0; y < 300; y++) for (let x = 0; x < 400; x++) {
+    const frame = x >= 100 && x < 180 && y >= 60 && y < 140 && (x < 110 || x >= 170 || y < 70 || y >= 130);
+    const fascia = x >= 20 && x < 380 && y >= 56 && y < 60;           // 4 px tall, touching the frame's top
+    const dark = frame || fascia;
+    p.data.set(dark ? [30, 30, 30, 255] : [200, 190, 180, 255], (y * 400 + x) * 4);
+  }
+  const render = PNG.sync.write(p);
+  const box = { type: 'window', label: 'Window', confidence: 0.9, x_pct: 25, y_pct: 22, w_pct: 20, h_pct: 26 };
+  const out = restoreSurroundings({ render, renderMime: 'image/png', original: photo, originalMime: 'image/jpeg', detections: [box] });
+  assert.ok(out.restored, out.reason);
+  const [far] = pixel(out.buffer, 300, 58);                        // fascia, well away from the window
+  assert.ok(far > 170, `the fascia away from the window was kept as rendered (${far})`);
+  assert.deepStrictEqual(pixel(out.buffer, 104, 100), [30, 30, 30], 'the frame itself must stay');
+});
