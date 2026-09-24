@@ -19,7 +19,7 @@ const leadscore = require('./leadscore');
 const { isTestTraffic } = require('./testtraffic');
 
 const { buildRenderPrompt } = require('./renderprompt');
-const { restoreDoor, restoreSurroundings } = require('./hold');
+const { restoreDoor, restoreSurroundings, drawGeorgianBars } = require('./hold');
 const geometry = require('./geometry');
 const catalogue = JSON.parse(fs.readFileSync(path.join(__dirname, 'catalogue.json'), 'utf8'));
 
@@ -2541,6 +2541,12 @@ async function keepRender(replicateUrl, restore = null) {
         if (held.restored) bytes = held.buffer;
         else obs.record('render', 'kept surroundings not restored', { reason: held.reason });
       }
+      // Last, on the finished frames.
+      if (restore.bars) {
+        const drawn = drawGeorgianBars({ render: bytes, ...common });
+        if (drawn.drawn) bytes = drawn.buffer;
+        else obs.record('render', 'georgian bars not drawn', { reason: drawn.reason });
+      }
     }
   }
 
@@ -2768,14 +2774,19 @@ app.post('/api/render', renderLimiter, async (req, res) => {
   const doorRestore = (glazingColour && windowStyle && !cladding)
     ? { original: img.buffer, originalMime: img.mime, detectionId: detectionId ? String(detectionId) : null,
         fingerprint: imageFingerprint(img.buffer),
-        door: !doorStyle, surroundings: !trim && !(roof && !roofUnsupported) }
+        door: !doorStyle, surroundings: !trim && !(roof && !roofUnsupported),
+        bars: windowBarsId === 'georgian' }
     : null;
 
   const prompt = buildRenderPrompt({
     cladding, trim, roof: roofUnsupported ? null : roof,
     windowStyle, doorStyle, glazingColour,
     glazingColourId: windowDoorColourId,
-    georgianBars: windowBarsId === 'georgian',
+    /* The model will not draw the grid (live, 24 September), so when the
+       walls are staying the bars are drawn after the render (drawGeorgianBars)
+       and not asked for — never a grid over a grid. With new walls the
+       windows can't be found by comparison, so the model is asked, as before. */
+    georgianBars: windowBarsId === 'georgian' && !!cladding,
     wallMaterials,
   });
 

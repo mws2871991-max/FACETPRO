@@ -144,6 +144,91 @@ function restoreDoor({ render, renderMime, original, originalMime, detections })
   }
 }
 
+/* The pixels the model changed, and which groups of them are the windows we
+   asked for. Shared by restoreSurroundings (everything else goes back) and
+   drawGeorgianBars (the bars go inside these). See restoreSurroundings for why
+   each rule is there. */
+function erode(A, W, H) {
+  const B = new Uint8Array(W * H);
+  for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+    const k = y * W + x;
+    B[k] = (A[k] && A[k - 1] && A[k + 1] && A[k - W] && A[k + W]) ? 1 : 0;
+  }
+  return B;
+}
+function dilate(A, W, H) {
+  const B = new Uint8Array(W * H);
+  for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+    const k = y * W + x;
+    B[k] = (A[k] || A[k - 1] || A[k + 1] || A[k - W] || A[k + W]) ? 1 : 0;
+  }
+  return B;
+}
+function findWindowChanges({ out, orig, W, H, keepBoxes }) {
+  const N = W * H;
+  const changed = new Uint8Array(N);
+  for (let k = 0; k < N; k++) {
+    let d = 0;
+    for (let c = 0; c < 3; c++) d = Math.max(d, Math.abs(out.data[k * 4 + c] - orig[k * 3 + c]));
+    changed[k] = d > CHANGE_T ? 1 : 0;
+  }
+
+  const keepZones = keepBoxes.map(d => {
+    const l = Number(d.x_pct) / 100 * W, t = Number(d.y_pct) / 100 * H;
+    const w = Number(d.w_pct) / 100 * W, h = Number(d.h_pct) / 100 * H;
+    return { l: l - w * KEEP_GROW, t: t - h * KEEP_GROW, r: l + w * (1 + KEEP_GROW), b: t + h * (1 + KEEP_GROW) };
+  });
+
+  /* Which changes are the windows.
+
+     First version grouped the raw changes and kept any group touching a
+     window. Live on 24 September that left half the fascia anthracite: the
+     fascia is a line a few pixels tall whose lower edge sits level with the
+     upstairs frames, so the two joined into one group and the whole thing
+     was kept. Frames are thick and a fascia is thin, so the changes are
+     first shrunk by ERODE px — which wipes out thin lines and leaves frames —
+     the window groups are found in what is left, and then grown back by
+     REGROW px so the whole frame is kept. Every other change is put back. */
+  let cores = changed;
+  for (let i = 0; i < ERODE; i++) cores = erode(cores, W, H);
+
+  const label = new Int32Array(N);
+  const stack = new Int32Array(N);
+  const windows = [];
+  let next = 0;
+  for (let s0 = 0; s0 < N; s0++) {
+    if (!cores[s0] || label[s0]) continue;
+    next++;
+    let sp = 0, count = 0, l = W, t = H, r = 0, b = 0;
+    const members = [];
+    stack[sp++] = s0; label[s0] = next;
+    while (sp) {
+      const k = stack[--sp];
+      members.push(k); count++;
+      const x = k % W, y = (k - x) / W;
+      if (x < l) l = x; if (x > r) r = x; if (y < t) t = y; if (y > b) b = y;
+      if (x > 0 && cores[k - 1] && !label[k - 1]) { label[k - 1] = next; stack[sp++] = k - 1; }
+      if (x < W - 1 && cores[k + 1] && !label[k + 1]) { label[k + 1] = next; stack[sp++] = k + 1; }
+      if (y > 0 && cores[k - W] && !label[k - W]) { label[k - W] = next; stack[sp++] = k - W; }
+      if (y < H - 1 && cores[k + W] && !label[k + W]) { label[k + W] = next; stack[sp++] = k + W; }
+    }
+    if (count < MIN_CORE_PX) continue;
+    /* Shape as well as place. The boxes are loose enough to overlap the
+       roofline — on newbuild-before.jpg the upstairs window's box started at
+       12% down, inside the fascia at 10–13% — so "touches a window box" kept
+       the fascia strip and the gable's bargeboards as window. A window's
+       change is a compact block: under STRIP_ASPECT times as wide as it is
+       tall, and at least MIN_FILL of its bounding box. A fascia is a long
+       strip (13:1 there); bargeboards are a sparse inverted V (6% fill). */
+    const bw = r - l + 1, bh = b - t + 1;
+    const compact = bw / bh <= STRIP_ASPECT && count / (bw * bh) >= MIN_FILL;
+    if (compact && keepZones.some(z => l < z.r && r > z.l && t < z.b && b > z.t)) {
+      windows.push({ l, t, r, b, members });
+    }
+  }
+  return { changed, windows };
+}
+
 /* Everything the homeowner kept, on a windows-only job.
 
    When the walls, the roof and the roofline are all staying, nothing in the
@@ -202,83 +287,10 @@ function restoreSurroundings({ render, renderMime, original, originalMime, detec
       }
     }
 
-    const changed = new Uint8Array(N);
-    for (let k = 0; k < N; k++) {
-      let d = 0;
-      for (let c = 0; c < 3; c++) d = Math.max(d, Math.abs(out.data[k * 4 + c] - orig[k * 3 + c]));
-      changed[k] = d > CHANGE_T ? 1 : 0;
-    }
-
-    const keepZones = keepBoxes.map(d => {
-      const l = Number(d.x_pct) / 100 * W, t = Number(d.y_pct) / 100 * H;
-      const w = Number(d.w_pct) / 100 * W, h = Number(d.h_pct) / 100 * H;
-      return { l: l - w * KEEP_GROW, t: t - h * KEEP_GROW, r: l + w * (1 + KEEP_GROW), b: t + h * (1 + KEEP_GROW) };
-    });
-
-    /* Which changes are the windows.
-
-       First version grouped the raw changes and kept any group touching a
-       window. Live on 24 September that left half the fascia anthracite: the
-       fascia is a line a few pixels tall whose lower edge sits level with the
-       upstairs frames, so the two joined into one group and the whole thing
-       was kept. Frames are thick and a fascia is thin, so the changes are
-       first shrunk by ERODE px — which wipes out thin lines and leaves frames —
-       the window groups are found in what is left, and then grown back by
-       REGROW px so the whole frame is kept. Every other change is put back. */
-    const erode = (A) => {
-      const B = new Uint8Array(N);
-      for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
-        const k = y * W + x;
-        B[k] = (A[k] && A[k - 1] && A[k + 1] && A[k - W] && A[k + W]) ? 1 : 0;
-      }
-      return B;
-    };
-    const dilate = (A) => {
-      const B = new Uint8Array(N);
-      for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
-        const k = y * W + x;
-        B[k] = (A[k] || A[k - 1] || A[k + 1] || A[k - W] || A[k + W]) ? 1 : 0;
-      }
-      return B;
-    };
-    let cores = changed;
-    for (let i = 0; i < ERODE; i++) cores = erode(cores);
-
-    const label = new Int32Array(N);
-    const stack = new Int32Array(N);
+    const { changed, windows } = findWindowChanges({ out, orig, W, H, keepBoxes });
     let windowMask = new Uint8Array(N);
-    let next = 0;
-    for (let s0 = 0; s0 < N; s0++) {
-      if (!cores[s0] || label[s0]) continue;
-      next++;
-      let sp = 0, count = 0, l = W, t = H, r = 0, b = 0;
-      const members = [];
-      stack[sp++] = s0; label[s0] = next;
-      while (sp) {
-        const k = stack[--sp];
-        members.push(k); count++;
-        const x = k % W, y = (k - x) / W;
-        if (x < l) l = x; if (x > r) r = x; if (y < t) t = y; if (y > b) b = y;
-        if (x > 0 && cores[k - 1] && !label[k - 1]) { label[k - 1] = next; stack[sp++] = k - 1; }
-        if (x < W - 1 && cores[k + 1] && !label[k + 1]) { label[k + 1] = next; stack[sp++] = k + 1; }
-        if (y > 0 && cores[k - W] && !label[k - W]) { label[k - W] = next; stack[sp++] = k - W; }
-        if (y < H - 1 && cores[k + W] && !label[k + W]) { label[k + W] = next; stack[sp++] = k + W; }
-      }
-      if (count < MIN_CORE_PX) continue;
-      /* Shape as well as place. The boxes are loose enough to overlap the
-         roofline — on newbuild-before.jpg the upstairs window's box started at
-         12% down, inside the fascia at 10–13% — so "touches a window box" kept
-         the fascia strip and the gable's bargeboards as window. A window's
-         change is a compact block: under STRIP_ASPECT times as wide as it is
-         tall, and at least MIN_FILL of its bounding box. A fascia is a long
-         strip (13:1 there); bargeboards are a sparse inverted V (6% fill). */
-      const bw = r - l + 1, bh = b - t + 1;
-      const compact = bw / bh <= STRIP_ASPECT && count / (bw * bh) >= MIN_FILL;
-      if (compact && keepZones.some(z => l < z.r && r > z.l && t < z.b && b > z.t)) {
-        for (const k of members) windowMask[k] = 1;
-      }
-    }
-    for (let i = 0; i < REGROW; i++) windowMask = dilate(windowMask);
+    for (const g of windows) for (const k of g.members) windowMask[k] = 1;
+    for (let i = 0; i < REGROW; i++) windowMask = dilate(windowMask, W, H);
 
     const restoreMask = new Uint8Array(N);
     let restoredPx = 0;
@@ -318,4 +330,157 @@ function restoreSurroundings({ render, renderMime, original, originalMime, detec
   }
 }
 
-module.exports = { restoreDoor, restoreSurroundings, doorBox };
+/* Georgian bars, drawn rather than requested.
+
+   The model would not draw them. Live on 24 September, at 600 px and at
+   1200 px, "add Georgian glazing bars … at least two across and three down"
+   came back as plain casements every time, while the frame colour always
+   changed. So the render is left to do the frames, and the bars are drawn
+   here: inside each window found by findWindowChanges, every pane of glass —
+   an unchanged region enclosed by the new frame — gets a grid of slim bars in
+   the colour the frames actually rendered at (sampled, not the swatch hex, so
+   they sit in the same light). Two across by three down, or three by two on a
+   wide pane, like a Georgian casement.
+
+   Only when the walls are not changing: the windows are found by comparing
+   with the photograph, which needs the walls to match it. The render route
+   stops asking the model for bars in exactly that case, so there is never a
+   grid drawn over a grid. */
+const BAR_MIN_PANE_PX = 150;   // smaller is a vent or a reflection, not a pane
+const BAR_MIN_PANE_SIDE = 12;  // px
+const BAR_THICKNESS = 0.035;   // of the pane's shorter side, at least 2 px
+const FRAME_COLOUR_D2 = 45 * 45;  // squared RGB distance from the frame's colour that still counts as frame
+const FRAME_LINE_SHARE = 0.6;     // a column/row this much frame-coloured is a mullion/transom
+const MAX_MULLION = 0.12;         // of the window's width; wider "frame" is a dark pane
+const EDGE_PANE_SHARE = 0.25;     // a run touching the window's edge this wide is glass, not a sliver of brick
+
+function drawGeorgianBars({ render, renderMime, original, originalMime, detections }) {
+  const untouched = (reason) => ({ buffer: render, drawn: false, reason, panes: 0 });
+  try {
+    if (!/png/i.test(renderMime || '')) return untouched('render is not a PNG');
+    const src = decode(original, originalMime || '');
+    if (!src) return untouched('photograph type not handled');
+    const keepBoxes = (detections || [])
+      .filter(d => d && d.type === 'window' && Number(d.w_pct) > 0 && Number(d.h_pct) > 0);
+    if (!keepBoxes.length) return untouched('no windows detected');
+
+    const out = PNG.sync.read(render);
+    const W = out.width, H = out.height, N = W * H;
+    const sx = src.width / W, sy = src.height / H;
+    const orig = new Uint8ClampedArray(N * 3);
+    const px = [0, 0, 0];
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      sample(src, (x + 0.5) * sx - 0.5, (y + 0.5) * sy - 0.5, px);
+      const i = (y * W + x) * 3;
+      orig[i] = px[0]; orig[i + 1] = px[1]; orig[i + 2] = px[2];
+    }
+    const { changed, windows } = findWindowChanges({ out, orig, W, H, keepBoxes });
+    if (!windows.length) return untouched('no new windows found in the render');
+
+    let panes = 0;
+    for (const w of windows) {
+      /* The frame's own colour, as rendered: the median of the window's changed
+         pixels along its outer edge. All of its changed pixels was the first
+         try, and on a window whose glass the model had also redrawn dark, the
+         median slid towards the glass — which then read as frame. */
+      const rs = [], gs = [], bs = [];
+      const EDGE = 6;
+      for (const k of w.members) {
+        const kx = k % W, ky = (k - kx) / W;
+        if (kx - w.l > EDGE && w.r - kx > EDGE && ky - w.t > EDGE && w.b - ky > EDGE) continue;
+        rs.push(out.data[k * 4]); gs.push(out.data[k * 4 + 1]); bs.push(out.data[k * 4 + 2]);
+      }
+      if (!rs.length) continue;
+      const med = (a) => a.sort((m, n) => m - n)[a.length >> 1];
+      const colour = [med(rs), med(gs), med(bs)];
+
+      /* Frame is frame-coloured; everything else inside the window is glass.
+         "Unchanged" was the first test for glass, and it missed every pane
+         whose reflections the model had also redrawn — a window came back with
+         bars in one pane and not the next. */
+      /* And frame is what the render changed. Colour alone cannot tell an
+         anthracite mullion from the dark glass beside it — on the semi the
+         bay's facets and the upstairs-right window's two panes merged into
+         one — but glass the render left alone was never frame. */
+      const isFrame = (q) => {
+        if (!changed[q]) return false;
+        const dr = out.data[q * 4] - colour[0], dg = out.data[q * 4 + 1] - colour[1], db = out.data[q * 4 + 2] - colour[2];
+        return dr * dr + dg * dg + db * db < FRAME_COLOUR_D2;
+      };
+      /* The panes, from the frame's structure rather than a flood fill.
+
+         Flood-filling the glass split a pane wherever a dark reflection came
+         close to the frame colour, and the bars came out in fragments. Frames
+         run the full height (mullions) or full width (transoms) of what they
+         divide, so: the columns of the window that are mostly frame are the
+         mullions, the gaps between them are pane columns, and within each the
+         rows that are mostly frame are transoms. What is left are the panes. */
+      const runs = (len, isBar) => {
+        const out2 = []; let start = -1;
+        for (let i = 0; i <= len; i++) {
+          const bar = i === len || isBar(i);
+          if (!bar && start < 0) start = i;
+          if (bar && start >= 0) { out2.push([start, i - 1]); start = -1; }
+        }
+        return out2;
+      };
+      const colFrac = (x, y0, y1) => { let f = 0; for (let y = y0; y <= y1; y++) f += isFrame(y * W + x); return f / (y1 - y0 + 1); };
+      const rowFrac = (y, x0, x1) => { let f = 0; for (let x = x0; x <= x1; x++) f += isFrame(y * W + x); return f / (x1 - x0 + 1); };
+      /* A mullion is narrow. A "frame" run wider than MAX_MULLION of the window
+         is a pane whose dark reflection matched the frame colour — the middle
+         pane of the newbuild's upstairs-left window — and is a pane. */
+      const winW = w.r - w.l + 1, winH = w.b - w.t + 1;
+      // Frame lines along one axis, with any run too wide to be a frame put back as glass.
+      const frameLines = (len, frac, maxRun) => {
+        const raw = Array.from({ length: len }, (_, i) => frac(i) > FRAME_LINE_SHARE);
+        for (let i = 0; i < len;) {
+          if (!raw[i]) { i++; continue; }
+          let j = i; while (j < len && raw[j]) j++;
+          if (j - i > maxRun) for (let k = i; k < j; k++) raw[k] = false;
+          i = j;
+        }
+        return raw;
+      };
+      const colLines = frameLines(winW, (i) => colFrac(w.l + i, w.t, w.b), winW * MAX_MULLION);
+      /* A pane is enclosed by frame. A run reaching the edge of the window's
+         area has no frame on that side: it is the brick between a loose box
+         and the real frame (a stray bar was drawn on the semi's brickwork) —
+         unless it is wide: a single-pane window's glass fills its whole area
+         (the newbuild's small window lost its bars without this). */
+      const enclosed = (len) => ([a0, a1]) => (a0 > 0 && a1 < len - 1) || (a1 - a0 + 1) >= len * EDGE_PANE_SHARE;
+      const cols = runs(winW, (i) => colLines[i]).filter(enclosed(winW)).map(([a0, a1]) => [w.l + a0, w.l + a1]);
+      for (const [x0, x1] of cols) {
+        const rowLines = frameLines(winH, (i) => rowFrac(w.t + i, x0, x1), winH * MAX_MULLION);
+        const rows = runs(winH, (i) => rowLines[i]).filter(enclosed(winH)).map(([a0, a1]) => [w.t + a0, w.t + a1]);
+        for (const [y0, y1] of rows) {
+          const pw = x1 - x0 + 1, ph = y1 - y0 + 1;
+          if (pw < BAR_MIN_PANE_SIDE || ph < BAR_MIN_PANE_SIDE || pw * ph < BAR_MIN_PANE_PX) continue;
+          panes++;
+          const nc = pw > ph * 1.2 ? 3 : 2;
+          const nr = ph > pw * 1.2 ? 3 : 2;
+          const thick = Math.max(2, Math.round(Math.min(pw, ph) * BAR_THICKNESS));
+          const lo = -Math.floor(thick / 2), hi = Math.ceil(thick / 2);
+          const put = (qx, qy) => {
+            if (qx < x0 || qx > x1 || qy < y0 || qy > y1) return;
+            const q = qy * W + qx;
+            for (let c = 0; c < 3; c++) out.data[q * 4 + c] = colour[c];
+          };
+          for (let i = 1; i < nc; i++) {
+            const cx = Math.round(x0 + pw * i / nc);
+            for (let yy = y0; yy <= y1; yy++) for (let d = lo; d < hi; d++) put(cx + d, yy);
+          }
+          for (let j = 1; j < nr; j++) {
+            const cy = Math.round(y0 + ph * j / nr);
+            for (let xx = x0; xx <= x1; xx++) for (let d = lo; d < hi; d++) put(xx, cy + d);
+          }
+        }
+      }
+    }
+    if (!panes) return untouched('no panes of glass found inside the new frames');
+    return { buffer: PNG.sync.write(out), drawn: true, reason: null, panes };
+  } catch (err) {
+    return untouched(`bars failed: ${err.message}`);
+  }
+}
+
+module.exports = { restoreDoor, restoreSurroundings, drawGeorgianBars, doorBox };

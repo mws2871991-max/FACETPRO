@@ -189,3 +189,52 @@ test('a fascia strip inside a loose window box is still put back', () => {
   assert.ok(pixel(out.buffer, 300, 36)[0] > 170, 'the fascia strip was kept as window');
   assert.deepStrictEqual(pixel(out.buffer, 140, 120), [30, 30, 30], 'the window block must stay');
 });
+
+/* ── drawGeorgianBars: the grid the model would not draw ── */
+
+const { drawGeorgianBars } = require('../hold');
+
+// A 400×300 wall with one two-pane window at x 100–220, y 80–180: white frame
+// in the photograph, green in the render. Glass (grey-blue) is unchanged.
+const BRICK = [180, 110, 90], GLASS = [120, 140, 160], WHITE = [240, 240, 240], GREEN = [60, 90, 60];
+const windowPic = (frame) => {
+  const p = new PNG({ width: 400, height: 300 });
+  for (let y = 0; y < 300; y++) for (let x = 0; x < 400; x++) {
+    const inWin = x >= 100 && x < 220 && y >= 80 && y < 180;
+    const isFrame = inWin && (x < 108 || x >= 212 || y < 88 || y >= 172 || (x >= 156 && x < 164));
+    const c = !inWin ? BRICK : isFrame ? frame : GLASS;
+    p.data.set([...c, 255], (y * 400 + x) * 4);
+  }
+  return p;
+};
+const photoWithWindow = (() => {
+  const p = windowPic(WHITE);
+  return jpeg.encode({ width: 400, height: 300, data: p.data }, 100).data;
+})();
+const greenRender = PNG.sync.write(windowPic(GREEN));
+const winBox = { type: 'window', label: 'Window', confidence: 0.9, x_pct: 25, y_pct: 27, w_pct: 30, h_pct: 33 };
+const near = (a, b, tol = 30) => a.every((v, i) => Math.abs(v - b[i]) <= tol);
+
+test('Georgian bars are drawn inside each pane, in the frame colour', () => {
+  const out = drawGeorgianBars({ render: greenRender, renderMime: 'image/png', original: photoWithWindow, originalMime: 'image/jpeg', detections: [winBox] });
+  assert.ok(out.drawn, out.reason);
+  assert.strictEqual(out.panes, 2, 'two panes either side of the mullion');
+  // Left pane spans x 108–155: its vertical bar sits at the middle, ~132.
+  assert.ok(near(pixel(out.buffer, 132, 110), GREEN), 'no vertical bar in the left pane');
+  // Glass away from the bars stays glass.
+  assert.ok(near(pixel(out.buffer, 118, 100), GLASS), 'glass between the bars was painted');
+});
+
+test('no bars on the wall, only inside the window', () => {
+  const out = drawGeorgianBars({ render: greenRender, renderMime: 'image/png', original: photoWithWindow, originalMime: 'image/jpeg', detections: [winBox] });
+  for (const [x, y] of [[60, 130], [300, 130], [160, 40], [160, 250]]) {
+    assert.ok(near(pixel(out.buffer, x, y), BRICK), `a bar was drawn on the wall at ${x},${y}`);
+  }
+});
+
+test('no window changed, no bars — the render is left as it came', () => {
+  const same = PNG.sync.write(windowPic(WHITE));
+  const out = drawGeorgianBars({ render: same, renderMime: 'image/png', original: photoWithWindow, originalMime: 'image/jpeg', detections: [winBox] });
+  assert.strictEqual(out.drawn, false);
+  assert.strictEqual(out.buffer, same);
+});
