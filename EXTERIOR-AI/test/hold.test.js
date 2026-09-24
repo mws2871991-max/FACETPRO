@@ -251,3 +251,23 @@ test('same colour as before: nothing found, nothing restored, and the page is to
   const html = fs2.readFileSync(require('path').join(__dirname, '..', 'index.html'), 'utf8');
   assert.match(html, /Georgian bars aren’t shown on this picture/);
 });
+
+test('no bars in a "pane" that is not framed on every side', () => {
+  /* The tile-hung bay, 24 September: the mullions were missed, brick and hedge
+     below the bay passed as one wide pane, and a grid was drawn across the
+     casements and down into the garden. Here the frame has no bottom rail —
+     the glass runs straight into the wall — so nothing is a closed pane. */
+  const openPic = (frame) => {
+    const p = new PNG({ width: 400, height: 300 });
+    for (let y = 0; y < 300; y++) for (let x = 0; x < 400; x++) {
+      const inWin = x >= 100 && x < 220 && y >= 80 && y < 180;
+      const isFrame = inWin && (x < 114 || x >= 206 || y < 94);
+      const c = !inWin ? BRICK : isFrame ? frame : GLASS;
+      p.data.set([...c, 255], (y * 400 + x) * 4);
+    }
+    return p;
+  };
+  const photo = jpeg.encode({ width: 400, height: 300, data: openPic(WHITE).data }, 100).data;
+  const out = drawGeorgianBars({ render: PNG.sync.write(openPic(GREEN)), renderMime: 'image/png', original: photo, originalMime: 'image/jpeg', detections: [winBox] });
+  assert.strictEqual(out.panes, 0, `bars were drawn in ${out.panes} unframed pane(s)`);
+});
