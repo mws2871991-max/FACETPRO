@@ -4536,7 +4536,12 @@ function buildVisualizer() {
                 ? h('p', { className: 'mt-2 text-[11px] leading-4 text-zinc-700 text-center' },
                   'Georgian bars aren’t shown on this picture — we couldn’t pick out your new frames against the old ones. They are included in your estimate.')
                 : null,
-              (state.renderUrl && !state.rendering)
+              /* Named, when the server measured it: we tried twice and the
+                 picture still does not show the new roof or walls clearly. */
+              (state.renderUrl && !state.rendering && state.missedChanges?.length)
+                ? h('p', { className: 'mt-2 text-[11px] leading-4 text-zinc-700 text-center' },
+                  `The picture may not show your new ${state.missedChanges.map(t => (t === 'roof' ? 'roof' : 'walls')).join(' or ')} clearly — ${state.missedChanges.length > 1 ? 'they are' : 'it is'} still in your estimate. Try this look again for another picture.`)
+                : (state.renderUrl && !state.rendering)
                 ? h('p', { className: 'mt-2 text-[11px] leading-4 text-zinc-500 text-center' },
                   'Not what you picked? The picture can miss a change. Your estimate still prices what you chose — try again for a different result.')
                 : null,
@@ -6599,6 +6604,9 @@ async function generateRealRender() {
        estimate still prices the roof they chose. */
     state.roofSkipped = !!data.roofSkipped;
     state.barsMissing = !!data.barsMissing;
+    /* The server checks the roof and walls changed and retries once; this is
+       what is still missing after that. */
+    state.missedChanges = Array.isArray(data.missedChanges) ? data.missedChanges.filter(t => t === 'roof' || t === 'cladding') : [];
     state.renderUrl = safeRenderUrl(data.url);
     state.renderId = data.renderId || null;
     landed = true;

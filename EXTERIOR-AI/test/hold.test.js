@@ -271,3 +271,26 @@ test('no bars in a "pane" that is not framed on every side', () => {
   const out = drawGeorgianBars({ render: PNG.sync.write(openPic(GREEN)), renderMime: 'image/png', original: photo, originalMime: 'image/jpeg', detections: [winBox] });
   assert.strictEqual(out.panes, 0, `bars were drawn in ${out.panes} unframed pane(s)`);
 });
+
+/* ── changedShare: did the render change what it was asked to? ── */
+
+const { changedShare } = require('../hold');
+
+test('changedShare: a box the render repainted reads high, an untouched one low', () => {
+  const photo = jpeg.encode({ width: 400, height: 300, data: windowPic(WHITE).data }, 100).data;
+  const box = { x_pct: 0, y_pct: 0, w_pct: 20, h_pct: 20 };   // brick, top-left
+  const same = changedShare({ render: PNG.sync.write(windowPic(WHITE)), renderMime: 'image/png', original: photo, originalMime: 'image/jpeg', boxes: [box] });
+  assert.ok(same < 0.05, `untouched brick read ${same}`);
+
+  const repainted = windowPic(WHITE);
+  for (let y = 0; y < 60; y++) for (let x = 0; x < 80; x++) repainted.data.set([40, 50, 70, 255], (y * 400 + x) * 4);
+  const hit = changedShare({ render: PNG.sync.write(repainted), renderMime: 'image/png', original: photo, originalMime: 'image/jpeg', boxes: [box] });
+  assert.ok(hit > 0.9, `a repainted box read ${hit}`);
+});
+
+test('changedShare: nothing to judge is null, not zero', () => {
+  const photo = jpeg.encode({ width: 400, height: 300, data: windowPic(WHITE).data }, 100).data;
+  const render = PNG.sync.write(windowPic(WHITE));
+  assert.strictEqual(changedShare({ render, renderMime: 'image/png', original: photo, originalMime: 'image/jpeg', boxes: [] }), null);
+  assert.strictEqual(changedShare({ render: Buffer.from([1, 2, 3]), renderMime: 'image/png', original: photo, originalMime: 'image/jpeg', boxes: [{ x_pct: 0, y_pct: 0, w_pct: 10, h_pct: 10 }] }), null);
+});

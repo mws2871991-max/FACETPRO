@@ -37,6 +37,12 @@ test('the render call asks Replicate to wait within the range it allows', () => 
   const waits = [...code.matchAll(/['"]?Prefer['"]?\s*:\s*[`'"]wait=(\d+)[`'"]/g)]
     .map(m => Number(m[1]));
 
+  /* The render call works its wait out from the time left (a retry has less),
+     so it is a variable — held to the same range by its clamp. */
+  if (/['"]?Prefer['"]?\s*:\s*`wait=\$\{waitSeconds\}`/.test(code)) {
+    assert.match(code, /waitSeconds = Math\.max\(1, Math\.min\(60,/, 'waitSeconds is not clamped to 1..60');
+    waits.push(1, 60);
+  }
   assert.ok(waits.length > 0, 'no Prefer: wait header found on the render call');
   for (const w of waits) {
     assert.ok(w >= 1 && w <= 60,

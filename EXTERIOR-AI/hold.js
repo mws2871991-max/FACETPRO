@@ -518,4 +518,50 @@ function drawGeorgianBars({ render, renderMime, original, originalMime, detectio
   }
 }
 
-module.exports = { restoreDoor, restoreSurroundings, drawGeorgianBars, doorBox };
+/* ── changedShare: did the render change what it was asked to? ──
+
+   FLUX Kontext misses a roof now and then with the same prompt that gets it
+   right on the next run (tested live, 24 September: one brick house, one
+   prompt, a miss then a hit). So the route asks this after each render, and
+   tries once more on a miss rather than showing a picture that silently
+   leaves out something the customer chose and is being priced for.
+
+   The share of pixels in the middle of the detected boxes that differ from
+   the photograph by more than CHANGE_PIXEL_D. Measured on real renders:
+   a roof that changed read 0.42–0.66, one that was missed 0.13–0.25, and
+   walls nobody touched 0.04–0.16 — resampling and the model's re-encoding
+   move every pixel a little. The middle 70% of each box, because detection
+   boxes are loose and their edges are sky, fascia or the next surface.
+   Null when it cannot judge: no boxes, or an image it cannot read. */
+const CHANGE_PIXEL_D = 40;
+const CHANGE_INSET = 0.15;
+function changedShare({ render, renderMime, original, originalMime, boxes }) {
+  try {
+    if (!boxes || !boxes.length) return null;
+    const out = decode(render, renderMime || '');
+    const src = decode(original, originalMime || '');
+    if (!out || !src) return null;
+    const W = out.width, H = out.height;
+    const sx = src.width / W, sy = src.height / H;
+    const px = [0, 0, 0];
+    let changed = 0, total = 0;
+    for (const b of boxes) {
+      const x0 = Math.max(0, Math.floor((b.x_pct + b.w_pct * CHANGE_INSET) / 100 * W));
+      const x1 = Math.min(W - 1, Math.ceil((b.x_pct + b.w_pct * (1 - CHANGE_INSET)) / 100 * W));
+      const y0 = Math.max(0, Math.floor((b.y_pct + b.h_pct * CHANGE_INSET) / 100 * H));
+      const y1 = Math.min(H - 1, Math.ceil((b.y_pct + b.h_pct * (1 - CHANGE_INSET)) / 100 * H));
+      for (let y = y0; y <= y1; y += 2) for (let x = x0; x <= x1; x += 2) {
+        sample(src, (x + 0.5) * sx - 0.5, (y + 0.5) * sy - 0.5, px);
+        const i = (y * W + x) * 4;
+        const d = Math.max(Math.abs(out.data[i] - px[0]), Math.abs(out.data[i + 1] - px[1]), Math.abs(out.data[i + 2] - px[2]));
+        total++;
+        if (d > CHANGE_PIXEL_D) changed++;
+      }
+    }
+    return total ? changed / total : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+module.exports = { restoreDoor, restoreSurroundings, drawGeorgianBars, doorBox, changedShare };
