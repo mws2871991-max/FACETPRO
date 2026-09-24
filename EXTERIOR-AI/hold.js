@@ -144,4 +144,121 @@ function restoreDoor({ render, renderMime, original, originalMime, detections })
   }
 }
 
-module.exports = { restoreDoor, doorBox };
+/* Everything the homeowner kept, on a windows-only job.
+
+   When the walls, the roof and the roofline are all staying, nothing in the
+   picture should change except the windows (and the door, when it is being
+   replaced). The model disagrees: on 23 September a windows-only render turned
+   white fascias and the roof's corner returns anthracite to match the frames,
+   and a sentence in the prompt saying not to (renderprompt.js) held on one
+   render and not the next.
+
+   The detection boxes cannot be used to cut the roofline out — they are loose
+   (the upstairs windows' real tops sat 9% above their boxes), and restoring
+   the fascia strip by its box bled the old white frames onto the new window.
+   So the render itself says what changed: every pixel that differs from the
+   photograph by more than CHANGE_T, grouped into connected patches. A patch
+   that reaches any window we are replacing is the change that was asked for
+   and is kept whole — frame, reveal and all, wherever its box really sits.
+   Every other patch is a change nobody asked for, and is put back from the
+   photograph with a soft edge.
+
+   Deliberately narrow, like restoreDoor: only when the surroundings are held,
+   and any failure returns the render untouched. */
+const CHANGE_T = 60;          // max channel difference, 0–255
+const MIN_PATCH_PX = 500;     // smaller is re-encoding noise, not a change
+const KEEP_GROW = 0.15;       // how far past a window's box its patch may start
+const SOFT_R = 3;             // px of feathering at a patch's edge
+
+function restoreSurroundings({ render, renderMime, original, originalMime, detections, keepDoor = false }) {
+  const untouched = (reason) => ({ buffer: render, restored: false, reason, patches: 0 });
+  try {
+    if (!/png/i.test(renderMime || '')) return untouched('render is not a PNG');
+    const src = decode(original, originalMime || '');
+    if (!src) return untouched('photograph type not handled');
+    const keepTypes = keepDoor ? new Set(['window', 'door-front']) : new Set(['window']);
+    const keepBoxes = (detections || [])
+      .filter(d => d && keepTypes.has(d.type) && Number(d.w_pct) > 0 && Number(d.h_pct) > 0);
+    if (!keepBoxes.length) return untouched('no windows to keep');
+
+    const out = PNG.sync.read(render);
+    const W = out.width, H = out.height, N = W * H;
+    const sx = src.width / W, sy = src.height / H;
+
+    // The photograph, resampled to the render's grid.
+    const orig = new Uint8ClampedArray(N * 3);
+    const px = [0, 0, 0];
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        sample(src, (x + 0.5) * sx - 0.5, (y + 0.5) * sy - 0.5, px);
+        const i = (y * W + x) * 3;
+        orig[i] = px[0]; orig[i + 1] = px[1]; orig[i + 2] = px[2];
+      }
+    }
+
+    const changed = new Uint8Array(N);
+    for (let k = 0; k < N; k++) {
+      let d = 0;
+      for (let c = 0; c < 3; c++) d = Math.max(d, Math.abs(out.data[k * 4 + c] - orig[k * 3 + c]));
+      changed[k] = d > CHANGE_T ? 1 : 0;
+    }
+
+    const keepZones = keepBoxes.map(d => {
+      const l = Number(d.x_pct) / 100 * W, t = Number(d.y_pct) / 100 * H;
+      const w = Number(d.w_pct) / 100 * W, h = Number(d.h_pct) / 100 * H;
+      return { l: l - w * KEEP_GROW, t: t - h * KEEP_GROW, r: l + w * (1 + KEEP_GROW), b: t + h * (1 + KEEP_GROW) };
+    });
+
+    // Connected patches of change, 4-connected, iterative.
+    const label = new Int32Array(N);
+    const restoreMask = new Uint8Array(N);
+    const stack = new Int32Array(N);
+    let next = 0, patches = 0;
+    for (let s0 = 0; s0 < N; s0++) {
+      if (!changed[s0] || label[s0]) continue;
+      next++;
+      let sp = 0, count = 0, l = W, t = H, r = 0, b = 0;
+      const members = [];
+      stack[sp++] = s0; label[s0] = next;
+      while (sp) {
+        const k = stack[--sp];
+        members.push(k); count++;
+        const x = k % W, y = (k - x) / W;
+        if (x < l) l = x; if (x > r) r = x; if (y < t) t = y; if (y > b) b = y;
+        if (x > 0 && changed[k - 1] && !label[k - 1]) { label[k - 1] = next; stack[sp++] = k - 1; }
+        if (x < W - 1 && changed[k + 1] && !label[k + 1]) { label[k + 1] = next; stack[sp++] = k + 1; }
+        if (y > 0 && changed[k - W] && !label[k - W]) { label[k - W] = next; stack[sp++] = k - W; }
+        if (y < H - 1 && changed[k + W] && !label[k + W]) { label[k + W] = next; stack[sp++] = k + W; }
+      }
+      if (count < MIN_PATCH_PX) continue;
+      const asked = keepZones.some(z => l < z.r && r > z.l && t < z.b && b > z.t);
+      if (asked) continue;
+      patches++;
+      for (const k of members) restoreMask[k] = 1;
+    }
+    if (!patches) return untouched('nothing outside the windows changed');
+
+    // Soft edge: the mask's local average, so a patch fades in over SOFT_R px.
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        let sum = 0, n = 0;
+        for (let dy = -SOFT_R; dy <= SOFT_R; dy++) {
+          const yy = y + dy; if (yy < 0 || yy >= H) continue;
+          for (let dx = -SOFT_R; dx <= SOFT_R; dx++) {
+            const xx = x + dx; if (xx < 0 || xx >= W) continue;
+            sum += restoreMask[yy * W + xx]; n++;
+          }
+        }
+        const a = sum / n;
+        if (!a) continue;
+        const i = y * W + x;
+        for (let c = 0; c < 3; c++) out.data[i * 4 + c] = Math.round(out.data[i * 4 + c] * (1 - a) + orig[i * 3 + c] * a);
+      }
+    }
+    return { buffer: PNG.sync.write(out), restored: true, reason: null, patches };
+  } catch (err) {
+    return untouched(`restore failed: ${err.message}`);
+  }
+}
+
+module.exports = { restoreDoor, restoreSurroundings, doorBox };

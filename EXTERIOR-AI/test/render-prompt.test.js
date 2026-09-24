@@ -238,7 +238,8 @@ test('glazing changes only when a colour and a style were both chosen', () => {
     'a colour with no style is not a coherent request');
 
   const both = buildRenderPrompt({ ...base, glazingColour: 'Anthracite', windowStyle: 'Casement' });
-  assert.match(both, /Replace the window frames with photorealistic Casement windows.*Anthracite/is);
+  // The style is described, not just named (WINDOW_STYLE_WORDS) — see renderprompt.js.
+  assert.match(both, /Replace the window frames with photorealistic side-hinged casement windows.*Anthracite/is);
   assert.doesNotMatch(both, /Leave the following[\s\S]*including the exact colour of every frame/i,
     'the frames cannot be both replaced and held');
 });

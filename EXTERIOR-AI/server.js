@@ -19,7 +19,7 @@ const leadscore = require('./leadscore');
 const { isTestTraffic } = require('./testtraffic');
 
 const { buildRenderPrompt } = require('./renderprompt');
-const { restoreDoor } = require('./hold');
+const { restoreDoor, restoreSurroundings } = require('./hold');
 const geometry = require('./geometry');
 const catalogue = JSON.parse(fs.readFileSync(path.join(__dirname, 'catalogue.json'), 'utf8'));
 
@@ -2520,11 +2520,24 @@ async function keepRender(replicateUrl, restore = null) {
      storing, so the picture, the share link and the download all agree. */
   if (restore) {
     const detections = await detectionsForRestore(restore);
-    const held = detections
-      ? restoreDoor({ render: bytes, renderMime: mime, original: restore.original, originalMime: restore.originalMime, detections })
-      : { restored: false, reason: 'no detection record for this photograph' };
-    if (held.restored) bytes = held.buffer;
-    else obs.record('render', 'kept door not restored', { reason: held.reason });
+    const common = { renderMime: mime, original: restore.original, originalMime: restore.originalMime, detections };
+    if (!detections) {
+      obs.record('render', 'kept door not restored', { reason: 'no detection record for this photograph' });
+    } else {
+      if (restore.door) {
+        const held = restoreDoor({ render: bytes, ...common });
+        if (held.restored) bytes = held.buffer;
+        else obs.record('render', 'kept door not restored', { reason: held.reason });
+      }
+      /* After the door, so a restored door is already the photograph and
+         reads as unchanged. When the door is being replaced it is one of the
+         things asked for, and is kept like the windows. */
+      if (restore.surroundings) {
+        const held = restoreSurroundings({ render: bytes, ...common, keepDoor: !restore.door });
+        if (held.restored) bytes = held.buffer;
+        else obs.record('render', 'kept surroundings not restored', { reason: held.reason });
+      }
+    }
   }
 
   const id = crypto.randomBytes(16).toString('hex');
@@ -2744,9 +2757,14 @@ app.post('/api/render', renderLimiter, async (req, res) => {
      from the server's own detection record, never the client — found by
      detectionId, or by the photograph's fingerprint when the render set off
      before detection finished (see detectionsForRestore). */
-  const doorRestore = (glazingColour && windowStyle && !doorStyle && !cladding)
+  /* Two restores, both only when windows are changing on walls that are not:
+     the kept door (restoreDoor), and — when the roof and roofline are kept
+     too — every other patch the model changed without being asked
+     (restoreSurroundings: the fascia it recoloured to match the frames). */
+  const doorRestore = (glazingColour && windowStyle && !cladding)
     ? { original: img.buffer, originalMime: img.mime, detectionId: detectionId ? String(detectionId) : null,
-        fingerprint: imageFingerprint(img.buffer) }
+        fingerprint: imageFingerprint(img.buffer),
+        door: !doorStyle, surroundings: !trim && !(roof && !roofUnsupported) }
     : null;
 
   const prompt = buildRenderPrompt({
