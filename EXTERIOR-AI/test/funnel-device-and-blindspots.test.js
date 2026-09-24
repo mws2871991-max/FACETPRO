@@ -140,9 +140,6 @@ test('a rate spanning two different histories is reported, and flagged as one', 
      quiet stage looked young. The number goes out with the caveat attached
      instead. This pins both halves: the flag is false, and the rate is still
      there to be read. */
-  const fs = require('fs');
-  const path = require('path');
-  const { DATA_DIR } = require('./helpers/data-dir');
 
   const day = (back) => new Date(Date.now() - back * 86400000).toISOString().slice(0, 10);
   const older = day(6);
@@ -152,11 +149,10 @@ test('a rate spanning two different histories is reported, and flagged as one', 
      countStage only ever writes today's bucket, so a two-day fixture cannot be
      produced through the public path. Last test in the file, because this
      replaces everything the earlier ones recorded. */
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(path.join(DATA_DIR, 'funnel.json'), JSON.stringify({
+  await require('./helpers/backend').seedFunnel({
     [older]: { render_shown: 20 },
     [today]: { render_shown: 11, render_started: 8 },
-  }));
+  });
 
   const res = await realFetch(`${BASE}/api/funnel?days=30`, { headers: { Authorization: 'Bearer the-installer-password' } });
   const body = await res.json();

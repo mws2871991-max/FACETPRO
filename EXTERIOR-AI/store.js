@@ -1029,5 +1029,9 @@ module.exports = {
   countStage, readFunnel, readFunnelDays, recordMeasurement, readMeasurements,
   // Exported for tests: scraping these out of the source with a regex broke
   // the moment another table was added after leads.
-  _internals: { INSERT_PARAMS, INSERT_SQL, SELECT_SQL, FILE_NAMES, checkServerIdentity },
+  _internals: {
+    INSERT_PARAMS, INSERT_SQL, SELECT_SQL, FILE_NAMES, checkServerIdentity, SCHEMA_NAME,
+    // For test fixtures that must seed a past day, which no public path can.
+    get pool() { return pool; },
+  },
 };

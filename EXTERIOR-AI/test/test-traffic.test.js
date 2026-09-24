@@ -76,6 +76,8 @@ test('with no token configured, nothing is excluded', () => {
 /* ── counting photographs rather than rows ── */
 
 test('one photograph measured five times is one sample', async () => {
+  // Every file shares one Postgres database: count from an empty table.
+  await require('./helpers/backend').clearMeasurements();
   const row = {
     houseType: 'semi', method: 'prior', m2: 85,
     doorRatio: 2.3, doorHeightPct: 12, doorBoxes: 1,

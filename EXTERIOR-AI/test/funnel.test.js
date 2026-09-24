@@ -256,20 +256,16 @@ test('the funnel can be read a day at a time, not only as a month total', async 
      Seeded by writing the file directly, because countStage always writes
      TODAY's bucket: a two-day fixture cannot be produced through the public
      path, which is exactly why nobody noticed the reader was lossy. */
-  const fs = require('fs');
-  const path = require('path');
-  const { DATA_DIR } = require('./helpers/data-dir');
 
   const day = (back) => new Date(Date.now() - back * 86400000).toISOString().slice(0, 10);
   const today = day(0), yesterday = day(1);
 
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(path.join(DATA_DIR, 'funnel.json'), JSON.stringify({
+  await require('./helpers/backend').seedFunnel({
     [yesterday]: { landing: 10, upload_completed: 4, detection_confirmed: 0 },
     [today]:     { landing: 5,  upload_completed: 3, detection_confirmed: 3 },
     // Well outside the window, and must not appear at any grain.
     '2020-01-01': { landing: 999 },
-  }));
+  });
 
   const byDay = await store.readFunnelDays(30);
   assert.ok(byDay[today], 'today is missing');
