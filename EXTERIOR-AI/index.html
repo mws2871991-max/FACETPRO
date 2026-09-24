@@ -456,9 +456,22 @@
         </span>
       </a>
     </div>
+    <!-- The promise, in one line, under the choice rather than above it. -->
+    <p class="mt-4 text-[12px] leading-5 text-zinc-600">Free &middot; No measuring &middot; No sales call &middot; See the price before anyone visits &middot; <a href="/how-we-price" class="underline underline-offset-2">How we price</a></p>
   </section>
 
-  <section data-page="home" class="rounded-2xl bg-zinc-900 text-[#FBF8F3] overflow-hidden p-6 sm:p-8 md:p-12" aria-labelledby="hero-heading">
+  <!-- /how-we-price (24 September). The homepage now opens with the product
+       choice; the long-form case — the hero, the two-neighbours argument, what
+       the estimate includes and how one photo is enough — lives here. Same
+       document, so the text is still in the homepage's served HTML for the
+       index; this route is noindex like /design. -->
+  <section data-page="pricing" hidden aria-labelledby="pricing-heading">
+    <p class="text-[11px] tracking-[0.25em] uppercase text-zinc-500">How we price</p>
+    <h1 id="pricing-heading" class="serif mt-2 text-[30px] sm:text-[40px] leading-tight tracking-tight">Where your price comes from</h1>
+    <p class="mt-2 text-sm leading-6 text-zinc-600 max-w-[62ch]">Real UK supplier and labour rates, your photograph, and nothing about how well you negotiate. Everything below is here for anyone who wants the working.</p>
+  </section>
+
+  <section data-page="pricing" class="rounded-2xl bg-zinc-900 text-[#FBF8F3] overflow-hidden p-6 sm:p-8 md:p-12" aria-labelledby="hero-heading">
     <div class="grid lg:grid-cols-[1.05fr_1fr] gap-8 lg:gap-12 items-center">
       <div>
         <p class="text-[11px] tracking-[0.25em] uppercase text-white/50">Home exterior planning &middot; UK</p>
@@ -700,7 +713,7 @@
        shipped in five places, and reintroducing a second wording here is the
        exact rotation that rule exists to stop. The copy above the button is
        the handoff's. -->
-  <section data-page="home" class="rounded-2xl bg-zinc-900 text-[#FBF8F3] p-6 md:p-8 text-center" aria-labelledby="proof-cta-heading">
+  <section data-page="pricing" class="rounded-2xl bg-zinc-900 text-[#FBF8F3] p-6 md:p-8 text-center" aria-labelledby="proof-cta-heading">
     <h2 id="proof-cta-heading" class="serif text-[24px] md:text-[30px] tracking-tight">That could be your house.</h2>
     <p class="mt-3 text-[14px] leading-7 text-white/70 max-w-[46ch] mx-auto">Upload one photo and start exploring what your home could look like.</p>
     <!-- Counted separately from the hero CTA. Both land in the same upload
@@ -745,7 +758,9 @@
          it into "upload" described the software's structure rather than the
          customer's experience, and left the one part that feels like magic
          unmentioned on the page that has to sell it. -->
-    <ol class="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <!-- Two across on a phone (24 September): stacked, four steps were a
+         screen and a half of a homepage that now opens with the choice. -->
+    <ol class="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
       <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
         <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-xs font-medium" aria-hidden="true">1</span>
         <h3 class="mt-4 text-[15px] font-medium">Upload your home</h3>
@@ -807,12 +822,13 @@
        invitations landing in one upload box otherwise say only "somebody
        started" — and the question this has to answer is whether a third
        position earns uploads or merely moves them. -->
-  <section data-page="home" class="rounded-2xl bg-zinc-900 text-[#FBF8F3] p-6 md:p-8 text-center" aria-labelledby="steps-cta-heading">
+  <section data-page="pricing" class="rounded-2xl bg-zinc-900 text-[#FBF8F3] p-6 md:p-8 text-center" aria-labelledby="steps-cta-heading">
     <h2 id="steps-cta-heading" class="serif text-[24px] md:text-[30px] tracking-tight">See it on your home.</h2>
     <p class="mt-3 text-[14px] leading-7 text-white/70 max-w-[46ch] mx-auto">Upload one photo and we&rsquo;ll show you what we found.</p>
     <button type="button" class="mt-6 cta px-7 py-4 rounded-full text-[15px] font-semibold transition min-h-[52px]" onclick="reachedStage('steps_cta_click'); goToUpload()">Upload my house</button>
   </section>
 
+  <div data-page="design" id="mount-choose"></div>
   <div data-page="design" id="mount-upload"></div>
   <div data-page="design" id="mount-triage"></div>
 
@@ -972,7 +988,7 @@
        came out on an earlier brief; this is what remains of that section,
        folded in here because a list of six trades is not an argument and does
        not need a section to itself. -->
-  <section data-page="home" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="vision-heading">
+  <section data-page="pricing" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="vision-heading">
     <!-- Copy-edit handoff §6. Conservatories were a chip in this row with a
          footnote underneath explaining that they are not, in fact, priced from
          the photo — a caveat cancelling the heading directly above it. They
@@ -1129,7 +1145,7 @@
        indexed markup on the page that ranks, and folding frees the same 585px
        without betting the homepage's standing on a guess about what it
        earns. -->
-  <details data-page="home" class="rounded-2xl bg-white border border-zinc-200 px-6 md:px-8 py-4" aria-labelledby="stats-heading">
+  <details data-page="pricing" class="rounded-2xl bg-white border border-zinc-200 px-6 md:px-8 py-4" aria-labelledby="stats-heading">
     <summary class="cursor-pointer flex items-baseline justify-between gap-4 flex-wrap">
       <span class="serif text-[20px] md:text-[24px] tracking-tight">By the numbers</span>
       <span class="text-[12px] text-zinc-500">Rates, coverage and what has been measured</span>
@@ -1212,7 +1228,7 @@
        twice — keep the substance, move it out of the way. If it later turns
        out to be earning nothing, deleting it is one commit; putting it back
        after an indexing loss is not. -->
-  <details data-page="home" class="rounded-2xl bg-white border border-zinc-200 px-6 md:px-8 py-4" aria-labelledby="fairness-heading">
+  <details data-page="pricing" class="rounded-2xl bg-white border border-zinc-200 px-6 md:px-8 py-4" aria-labelledby="fairness-heading">
     <summary class="cursor-pointer flex items-baseline justify-between gap-4 flex-wrap">
       <span class="serif text-[20px] md:text-[24px] tracking-tight">Why two neighbours pay thousands apart</span>
       <span class="text-[12px] text-zinc-500">What the estimate protects you from</span>
@@ -1337,7 +1353,7 @@
   </details>
 
 
-  <details data-page="home" class="rounded-2xl bg-white border border-zinc-200 px-6 md:px-8 py-4" aria-labelledby="honest-heading">
+  <details data-page="pricing" class="rounded-2xl bg-white border border-zinc-200 px-6 md:px-8 py-4" aria-labelledby="honest-heading">
     <summary class="cursor-pointer flex items-baseline justify-between gap-4 flex-wrap">
       <span class="serif text-[20px] md:text-[24px] tracking-tight">What your estimate actually includes</span>
       <span class="text-[12px] text-zinc-500">Materials, labour, access, waste, VAT</span>
@@ -1414,7 +1430,7 @@
        "accuracy / calibration" as the expandable material, and §14 forbids
        deleting it. 1,000px, and the honest limits it states are the most
        credible thing on the page; they are kept in full, one tap away. -->
-  <details data-page="home" class="rounded-2xl bg-white border border-zinc-200 px-6 md:px-8 py-4" aria-labelledby="tech-heading">
+  <details data-page="pricing" class="rounded-2xl bg-white border border-zinc-200 px-6 md:px-8 py-4" aria-labelledby="tech-heading">
     <summary class="cursor-pointer flex items-baseline justify-between gap-4 flex-wrap">
       <span class="serif text-[20px] md:text-[24px] tracking-tight">How can one photo be enough?</span>
       <span class="text-[12px] text-zinc-500">Detection, measurement and where it is still being calibrated</span>
@@ -1569,7 +1585,10 @@
         <a href="#how-it-works" class="hover:text-zinc-900">How it works</a>
         <a href="#faq" class="hover:text-zinc-900">Questions</a>
         <a href="#your-photo" class="hover:text-zinc-900">Start your design</a>
-        <a href="#trade" class="hover:text-zinc-900">For installers</a>
+        <a href="/how-we-price" class="hover:text-zinc-900">How we price</a>
+        <!-- /installers, not #trade: the sign-in only exists on that page, so
+             from anywhere else the anchor pointed at a hidden element. -->
+        <a href="/installers" class="hover:text-zinc-900">For installers</a>
         <a href="/privacy" class="hover:text-zinc-900">Privacy notice</a>
         <a href="/terms" class="hover:text-zinc-900">Terms</a>
       </nav>
@@ -2382,6 +2401,7 @@ const PAGE = (() => {
   const path = location.pathname.replace(/\/+$/, '') || '/';
   if (path === '/design') return 'design';
   if (path === '/installers') return 'installers';
+  if (path === '/how-we-price') return 'pricing';
   return 'home';
 })();
 
@@ -2402,6 +2422,7 @@ const PAGE = (() => {
 const PAGE_TITLE = {
   design: 'Design your home — Facet Pro',
   installers: 'For installers — Facet Pro',
+  pricing: 'How we price — Facet Pro',
 };
 
 function applyPage() {
@@ -2413,6 +2434,7 @@ function applyPage() {
 
 const MOUNTS = [
   ['mount-triage',     buildTriage],
+  ['mount-choose',     buildChooser],
   ['mount-upload',     buildUploadDetect],
   ['mount-visualizer', buildVisualizer],
   ['mount-wholehouse', () => foldedSection('wholehouse',
@@ -2794,6 +2816,166 @@ function foldedSection(key, summary, sub, build) {
     h('summary', { className: 'cursor-pointer flex items-baseline justify-between gap-4 flex-wrap' }, [
       h('span', { className: 'text-[15px] font-medium' }, summary),
       h('span', { className: 'text-[12px] text-zinc-500' }, sub),
+    ]),
+  ]);
+}
+
+/* ── CHOOSE FIRST, THEN THE PHOTO ──
+
+   24 September, after the owner spoke to three people: arrive, pick the
+   product from pictures, choose the look, see a price — and only then ask for
+   the photograph. The upload is where people stop (they are not at the house,
+   it feels like effort, and nothing has told them yet why it is worth it), so
+   it becomes the reward: "see it on your house, priced for your house".
+
+   Shown on /design when somebody arrived with a journey (from the homepage
+   boxes or a cost page) and has not uploaded yet. It sets the same state the
+   rest of the page uses — prefs for windows and doors, the swatch for walls,
+   roof and roofline — so the first render after upload draws what they chose
+   (applyHouseTypePreset already leaves the journey's own trade alone). The
+   price is the typical figure for the house type, and says so; the photograph
+   is what turns it into theirs. */
+const WINDOW_STYLE_ICONS = {
+  casement: 'M4 4h40v40H4z M24 4v40 M4 16h40',
+  flush: 'M4 4h40v40H4z M24 4v40',
+  'sliding-sash': 'M4 4h40v40H4z M4 24h40 M24 4v20',
+  bay: 'M2 44 L10 6 H38 L46 44 M10 6 V44 M38 6 V44 M24 6 V44',
+};
+
+/* h() makes HTML elements; an <svg> made that way is never drawn. */
+function styleIcon(d) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 48 48');
+  svg.setAttribute('class', 'w-10 h-10');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '2');
+  svg.setAttribute('aria-hidden', 'true');
+  const path = document.createElementNS(NS, 'path');
+  path.setAttribute('d', d);
+  svg.appendChild(path);
+  return svg;
+}
+
+async function chooserPref(key, id, label) {
+  if (state.prefs[key] === id) return;
+  state.prefs[key] = id;
+  state.renderUrl = null; state.renderId = null;
+  reachedStage('design_changed');
+  render();
+  await refreshGlazing({ label });
+  render();
+}
+
+async function chooserSwatch(sw) {
+  const key = { Cladding: 'cladding', Trim: 'trim', Roof: 'roof' }[sw.group];
+  if (!key || state[key]?.id === sw.id) return;
+  state[key] = sw;
+  state.renderUrl = null; state.renderId = null;
+  reachedStage('design_changed');
+  render();
+  await refreshPrice();
+  render();
+}
+
+function buildChooser() {
+  const empty = h('div', { id: 'mount-choose' });
+  const j = state.journey;
+  if (!j || !JOURNEYS[j] || state.uploadedImg || state.resumedDesign || state.stage !== 'landing') return empty;
+  const wd = state.catalogue?.windowsDoors;
+
+  const card = (active, onClick, children, extra = '') => h('button', {
+    type: 'button', 'aria-pressed': active ? 'true' : 'false',
+    className: `text-left rounded-xl border transition p-3 min-h-[44px] ${active ? 'border-zinc-900 ring-1 ring-zinc-900 bg-white' : 'border-zinc-200 bg-white hover:border-zinc-400'} ${extra}`,
+    onClick,
+  }, children);
+  const heading = (t) => h('h3', { className: 'text-[11px] tracking-widest uppercase text-zinc-500' }, t);
+
+  const blocks = [];
+  let priceRange = null;
+  let what = '';
+
+  if (j === 'windows' || j === 'doors') {
+    const isWin = j === 'windows';
+    const styles = isWin ? (wd?.windowStyles || []) : (wd?.doorStyles || []);
+    const key = isWin ? 'windowStyleId' : 'doorStyleId';
+    blocks.push(h('div', {}, [
+      heading(isWin ? '1. Pick a style' : '1. Pick a door'),
+      h('div', { className: 'mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2' }, styles.map(st => card(
+        state.prefs[key] === st.id,
+        () => chooserPref(key, st.id, st.name),
+        [
+          isWin && WINDOW_STYLE_ICONS[st.id] ? styleIcon(WINDOW_STYLE_ICONS[st.id]) : null,
+          h('span', { className: 'block mt-1 text-[14px] font-medium' }, st.name),
+          h('span', { className: 'block text-[11px] text-zinc-500' }, st.detail || ''),
+        ]))),
+    ]));
+    blocks.push(h('div', {}, [
+      heading('2. Pick a colour'),
+      h('div', { className: 'mt-2 flex flex-wrap gap-2' }, (wd?.colours || []).map(c => {
+        const active = state.prefs.windowDoorColourId === c.id;
+        return h('button', {
+          type: 'button', 'aria-pressed': active ? 'true' : 'false', 'aria-label': c.name,
+          className: `flex items-center gap-2 px-3.5 min-h-[44px] rounded-full border text-xs transition ${active ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-400'}`,
+          onClick: () => chooserPref('windowDoorColourId', c.id, c.name),
+        }, [h('span', { className: 'w-4 h-4 rounded-full border border-black/20', style: { background: c.hex } }), c.name]);
+      })),
+    ]));
+    if (isWin && (wd?.windowBars || []).length) {
+      const g = wd.windowBars[0];
+      blocks.push(h('div', {}, [
+        heading('3. Glass'),
+        h('div', { className: 'mt-2 grid grid-cols-2 gap-2 max-w-md' }, [
+          card(!state.prefs.windowBarsId, () => chooserPref('windowBarsId', null, 'Plain glass'),
+            [h('span', { className: 'block text-[14px] font-medium' }, 'Plain glass')]),
+          card(state.prefs.windowBarsId === g.id, () => chooserPref('windowBarsId', g.id, g.name),
+            [h('span', { className: 'block text-[14px] font-medium' }, g.name), h('span', { className: 'block text-[11px] text-zinc-500' }, g.detail)]),
+        ]),
+      ]));
+    }
+    priceRange = publishedRange(state.glazing);
+    what = isWin && state.glazing?.windowCount ? `${state.glazing.windowCount} windows, supplied and fitted` : (isWin ? 'windows, supplied and fitted' : 'supplied and fitted');
+  } else {
+    const group = { cladding: 'Cladding', roof: 'Roof', roofline: 'Trim' }[j];
+    const key = { Cladding: 'cladding', Trim: 'trim', Roof: 'roof' }[group];
+    const list = SWATCHES.filter(sw => sw.group === group);
+    blocks.push(h('div', {}, [
+      heading({ Cladding: '1. Pick a finish for the walls', Roof: '1. Pick a roof', Trim: '1. Pick a colour for the roofline' }[group]),
+      h('div', { className: 'mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2' }, list.map(sw => card(
+        state[key]?.id === sw.id,
+        () => chooserSwatch(sw),
+        [
+          sw.image
+            ? h('img', { src: sw.image, alt: '', className: 'w-full aspect-[4/3] object-cover rounded-lg', loading: 'lazy' })
+            : h('span', { className: 'block w-full aspect-[4/3] rounded-lg border border-black/10', style: { background: sw.hex } }),
+          h('span', { className: 'block mt-2 text-[14px] font-medium' }, sw.name),
+          h('span', { className: 'block text-[11px] text-zinc-500' }, sw.materialLabel || ''),
+        ]))),
+    ]));
+    priceRange = state.price?.range || (state.price?.total ? { low: state.price.total, high: state.price.total } : null);
+    what = 'materials, labour, scaffolding and VAT';
+  }
+
+  const typeLabel = (HOUSE_TYPES.find(t => t.id === state.houseType) || {}).label || 'Semi-detached';
+  return h('div', { id: 'mount-choose', className: 'max-w-6xl mx-auto px-6 mt-8' }, [
+    h('section', { className: 'rounded-2xl bg-white border border-zinc-200 p-6 md:p-8', 'aria-labelledby': 'choose-look-heading' }, [
+      h('p', { className: 'text-[11px] tracking-[0.25em] uppercase text-zinc-500' }, journeyLabel(j) || ''),
+      h('h2', { id: 'choose-look-heading', className: 'serif mt-1 text-[26px] md:text-[32px] tracking-tight' }, 'Choose the look'),
+      h('div', { className: 'mt-5 grid gap-6' }, blocks),
+      h('div', { className: 'mt-6 pt-5 border-t border-zinc-200 flex items-end justify-between gap-4 flex-wrap' }, [
+        h('div', {}, [
+          h('p', { className: 'text-[11px] tracking-widest uppercase text-zinc-500' }, `Typical ${typeLabel.toLowerCase()} house`),
+          h('p', { className: 'measured text-[24px] tracking-tight' },
+            priceRange ? `${fmtMoney(priceRange.low)} – ${fmtMoney(priceRange.high)}` : 'Working it out…'),
+          h('p', { className: 'text-[11px] leading-5 text-zinc-500' }, `${what}. Your house will be priced from your photo.`),
+        ]),
+        h('button', {
+          type: 'button',
+          className: 'cta px-6 rounded-full text-[15px] font-semibold min-h-[52px]',
+          onClick: () => { reachedStage('cta_clicked'); document.getElementById('your-photo')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); },
+        }, 'See it on your house →'),
+      ]),
     ]),
   ]);
 }
