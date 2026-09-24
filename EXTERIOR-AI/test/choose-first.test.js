@@ -29,7 +29,7 @@ test('the homepage opens with six product boxes, each to a journey', () => {
     '/design?journey=windows', '/design?journey=doors', '/design?journey=roofline',
     '/design?journey=roof', '/design?journey=cladding', '/cost/conservatory-cost-uk',
   ]);
-  for (const img of ['windows', 'doors', 'roofline', 'roofs', 'walls']) {
+  for (const img of ['windows', 'doors', 'roofline', 'roofs', 'walls', 'conservatory']) {
     assert.ok(fs.existsSync(path.join(__dirname, '..', 'assets', 'products', `${img}.jpg`)), `${img}.jpg is missing`);
   }
 });
