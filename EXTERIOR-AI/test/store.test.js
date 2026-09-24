@@ -108,3 +108,65 @@ test('a sparse lead still maps without throwing', () => {
   // duplicate rather than letting one lead silently overwrite another.
   assert.strictEqual(params[10], 'LD-1');
 });
+
+/* ── Every table that can be written must be writable ── */
+
+test('every INSERT_SQL table has a parameter builder', () => {
+  /* The structural guard, and the reason this test exists rather than one
+     about lead events specifically.
+
+     leadEvents had INSERT_SQL and SELECT_SQL and no INSERT_PARAMS entry, so
+     record('leadEvents', …) threw "INSERT_PARAMS[table] is not a function" on
+     every write with DATABASE_URL set. It went unseen for two reasons that
+     will both recur: the file backend used in development writes by a
+     different path and was always fine, and leadEvent() swallows its failures
+     on purpose, because an audit trail that can fail a lead is worse than one
+     with a gap in it.
+
+     So the next table added to INSERT_SQL without its builder fails here,
+     loudly, on a machine with no Postgres. */
+  const { INSERT_SQL, INSERT_PARAMS, FILE_NAMES } = _internals;
+  for (const table of Object.keys(INSERT_SQL)) {
+    assert.strictEqual(typeof INSERT_PARAMS[table], 'function',
+      `${table} can be written on the file backend and would throw on Postgres`);
+    assert.ok(FILE_NAMES[table], `${table} has no file-backend name either`);
+  }
+});
+
+test('a parameter builder supplies exactly what its SQL asks for', () => {
+  /* The other half: present but wrong arity is the same outage, later. */
+  const { INSERT_SQL, INSERT_PARAMS } = _internals;
+  const sample = {
+    ts: '2026-09-24T00:00:00.000Z', eventId: 'e1', leadId: 'l1', type: 'consent.recorded',
+    detail: {}, id: 'x', design: {}, record: {}, name: 'n', email: 'e', phone: 'p',
+    postcode: 'pc', message: 'm', source: 's', status: 'new', action: 'a',
+    installerId: 'i', sessionId: 'sess', rating: 5, elementCount: 1, mimeType: 'image/jpeg',
+    comment: 'c', role: 'r', products: [], notes: '', timeline: 't', type_: 't',
+  };
+  for (const [table, sql] of Object.entries(INSERT_SQL)) {
+    const wanted = new Set((sql.match(/\$\d+/g) || []));
+    const built = INSERT_PARAMS[table](sample);
+    assert.strictEqual(built.length, wanted.size,
+      `${table}: SQL takes ${wanted.size} parameters, the builder returns ${built.length}`);
+  }
+});
+
+test('a consent event carries the lawful basis it is evidence of', () => {
+  /* Not a shape test for its own sake. This row is what answers "what did
+     this person agree to" — the detail must survive the trip, not be dropped
+     the way thirteen lead fields once were. */
+  const { INSERT_PARAMS } = _internals;
+  const detail = { shareWithInstallers: true, wording: 'v2', ip: undefined };
+  const row = INSERT_PARAMS.leadEvents({
+    ts: '2026-09-24T00:00:00.000Z', eventId: 'e1', leadId: 'l1',
+    type: 'consent.recorded', detail,
+  });
+  assert.strictEqual(row[3], 'consent.recorded');
+  assert.deepStrictEqual(JSON.parse(row[4]), { shareWithInstallers: true, wording: 'v2' });
+
+  /* An event with no lead yet — routing withheld before one exists — still
+     writes, with a null rather than a crash. */
+  const orphan = INSERT_PARAMS.leadEvents({ ts: 't', eventId: 'e2', type: 'routing.withheld' });
+  assert.strictEqual(orphan[2], null);
+  assert.strictEqual(orphan[4], '{}');
+});

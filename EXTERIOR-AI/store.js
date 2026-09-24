@@ -475,7 +475,30 @@ const INSERT_PARAMS = {
   accessLog: o => [o.ts, o.endpoint || null, o.ipHash || null, JSON.stringify(o)],
   deliveries: o => [o.ts, o.leadId || null, o.delivered | 0, o.failed | 0, JSON.stringify(o)],
   notificationFailures: o => [o.ts, o.leadId || null, o.kind || null, JSON.stringify(o)],
-  leadResponses: o => [o.ts, o.leadId || null, o.installerId || null, o.action || null, JSON.stringify(o)]
+  leadResponses: o => [o.ts, o.leadId || null, o.installerId || null, o.action || null, JSON.stringify(o)],
+  /* The audit trail, which had SQL and no way to build its parameters.
+
+     INSERT_SQL.leadEvents and SELECT_SQL.leadEvents both existed; this entry
+     did not, so record('leadEvents', …) threw "INSERT_PARAMS[table] is not a
+     function" on every write with DATABASE_URL set — which is production.
+
+     leadEvent() swallows its failures on purpose, because an audit trail that
+     can fail a lead is worse than one with a gap in it. That is the right
+     call and it is why this went unseen: consent.recorded, routing.decided,
+     routing.withheld and every delivery outcome threw, were logged, and the
+     lead succeeded anyway. On Postgres the table would simply have stayed
+     empty, silently, while the file backend used in development wrote it
+     correctly the whole time.
+
+     It matters because of what the table is for. The comment above
+     leadEvent() names it: the half an installer disputing an invoice, or the
+     ICO asking what somebody agreed to, needs. Consent is the lawful basis
+     for sharing a homeowner's details, and the record of it is the evidence
+     that basis existed.
+
+     Nothing has been lost yet — LEAD_CAPTURE is off and no lead has ever been
+     taken. This has to be right before it goes on, not after. */
+  leadEvents: o => [o.ts, o.eventId, o.leadId || null, o.type, JSON.stringify(o.detail || {})]
 };
 
 const SELECT_SQL = {
