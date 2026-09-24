@@ -117,8 +117,12 @@ test('the tool and the argument do not overlap', () => {
   assert.ok(marked.includes('home'), 'nothing is marked as the argument');
   assert.ok(marked.includes('design'), 'nothing is marked as the tool');
   assert.ok(marked.includes('installers'), 'the staff door is not marked');
-  assert.deepStrictEqual([...new Set(marked)].sort(), ['design', 'home', 'installers'],
+  // 'pricing' since 24 September: /how-we-price, the explainers moved off the homepage.
+  assert.deepStrictEqual([...new Set(marked)].sort(), ['design', 'home', 'installers', 'pricing'],
     'a data-page value nobody routes has appeared — it would hide that section everywhere');
+  const pages = require('fs').readFileSync(require('path').join(__dirname, '..', 'routes', 'pages.js'), 'utf8');
+  assert.match(pages, /router\.get\('\/how-we-price'/, "'pricing' is marked but /how-we-price is not routed");
+  assert.match(indexHtml, /if \(path === '\/how-we-price'\) return 'pricing';/);
 });
 
 test('the tool and the installer door get their own tab titles', () => {

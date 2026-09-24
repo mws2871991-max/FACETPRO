@@ -200,6 +200,10 @@ module.exports = function pageRoutes({
   };
   router.get('/design', perMinute(120, 'Too many requests — please wait a moment.'), appPage);
   router.get('/installers', perMinute(120, 'Too many requests — please wait a moment.'), appPage);
+  /* The long-form explainers, moved off the homepage on 24 September. Same
+     document, and noindex like /design: the text is still in the homepage's
+     served HTML, so indexing this route too would be the same page twice. */
+  router.get('/how-we-price', perMinute(120, 'Too many requests — please wait a moment.'), appPage);
 
   /* Gated — see requireInvestorPassword. noindex and robots.txt remain, but
      they were never the control; they only keep it out of search results.

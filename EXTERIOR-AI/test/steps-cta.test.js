@@ -45,14 +45,16 @@ test('it comes after the explanation, not before it', () => {
   assert.ok(cta > fiveTrades, 'the invitation has moved inside the four steps rather than after them');
 });
 
-test('it is on the homepage only', () => {
+test('it is never on the tool page', () => {
   /* /design is where somebody is already doing this. An "upload my house"
      block on the tool page, above the upload box, is the thing 579b193 was
-     written to stop. */
+     written to stop. Since 24 September it lives on /how-we-price, with the
+     other long-form content the homepage no longer opens with. */
   const cta = page.indexOf('id="steps-cta-heading"');
   const open = page.lastIndexOf('<section', cta);
-  assert.match(page.slice(open, cta), /data-page="home"/,
-    'the steps CTA is not scoped to the homepage');
+  assert.match(page.slice(open, cta), /data-page="(home|pricing)"/,
+    'the steps CTA is not scoped to a content page');
+  assert.doesNotMatch(page.slice(open, cta), /data-page="design"/);
 });
 
 test('the stage it fires is one the server will accept', () => {
