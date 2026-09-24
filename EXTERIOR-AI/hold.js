@@ -166,9 +166,13 @@ function restoreDoor({ render, renderMime, original, originalMime, detections })
    Deliberately narrow, like restoreDoor: only when the surroundings are held,
    and any failure returns the render untouched. */
 const CHANGE_T = 60;          // max channel difference, 0–255
-const MIN_PATCH_PX = 500;     // smaller is re-encoding noise, not a change
-const KEEP_GROW = 0.15;       // how far past a window's box its patch may start
-const SOFT_R = 3;             // px of feathering at a patch's edge
+const MIN_PATCH_PX = 500;     // fewer changed px outside the windows is noise
+const MIN_CORE_PX = 200;      // a window group, after erosion, is at least this
+const KEEP_GROW = 0.15;       // how far past a window's box its group may start
+const ERODE = 2;              // px shrunk before grouping: thin lines vanish, frames survive
+const REGROW = 4;             // px grown back so the whole frame is kept
+const MAX_RESTORE_SHARE = 0.35;
+const SOFT_R = 2;             // px of feathering at a restored edge
 
 function restoreSurroundings({ render, renderMime, original, originalMime, detections, keepDoor = false }) {
   const untouched = (reason) => ({ buffer: render, restored: false, reason, patches: 0 });
@@ -209,13 +213,41 @@ function restoreSurroundings({ render, renderMime, original, originalMime, detec
       return { l: l - w * KEEP_GROW, t: t - h * KEEP_GROW, r: l + w * (1 + KEEP_GROW), b: t + h * (1 + KEEP_GROW) };
     });
 
-    // Connected patches of change, 4-connected, iterative.
+    /* Which changes are the windows.
+
+       First version grouped the raw changes and kept any group touching a
+       window. Live on 24 September that left half the fascia anthracite: the
+       fascia is a line a few pixels tall whose lower edge sits level with the
+       upstairs frames, so the two joined into one group and the whole thing
+       was kept. Frames are thick and a fascia is thin, so the changes are
+       first shrunk by ERODE px — which wipes out thin lines and leaves frames —
+       the window groups are found in what is left, and then grown back by
+       REGROW px so the whole frame is kept. Every other change is put back. */
+    const erode = (A) => {
+      const B = new Uint8Array(N);
+      for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+        const k = y * W + x;
+        B[k] = (A[k] && A[k - 1] && A[k + 1] && A[k - W] && A[k + W]) ? 1 : 0;
+      }
+      return B;
+    };
+    const dilate = (A) => {
+      const B = new Uint8Array(N);
+      for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+        const k = y * W + x;
+        B[k] = (A[k] || A[k - 1] || A[k + 1] || A[k - W] || A[k + W]) ? 1 : 0;
+      }
+      return B;
+    };
+    let cores = changed;
+    for (let i = 0; i < ERODE; i++) cores = erode(cores);
+
     const label = new Int32Array(N);
-    const restoreMask = new Uint8Array(N);
     const stack = new Int32Array(N);
-    let next = 0, patches = 0;
+    let windowMask = new Uint8Array(N);
+    let next = 0;
     for (let s0 = 0; s0 < N; s0++) {
-      if (!changed[s0] || label[s0]) continue;
+      if (!cores[s0] || label[s0]) continue;
       next++;
       let sp = 0, count = 0, l = W, t = H, r = 0, b = 0;
       const members = [];
@@ -225,18 +257,29 @@ function restoreSurroundings({ render, renderMime, original, originalMime, detec
         members.push(k); count++;
         const x = k % W, y = (k - x) / W;
         if (x < l) l = x; if (x > r) r = x; if (y < t) t = y; if (y > b) b = y;
-        if (x > 0 && changed[k - 1] && !label[k - 1]) { label[k - 1] = next; stack[sp++] = k - 1; }
-        if (x < W - 1 && changed[k + 1] && !label[k + 1]) { label[k + 1] = next; stack[sp++] = k + 1; }
-        if (y > 0 && changed[k - W] && !label[k - W]) { label[k - W] = next; stack[sp++] = k - W; }
-        if (y < H - 1 && changed[k + W] && !label[k + W]) { label[k + W] = next; stack[sp++] = k + W; }
+        if (x > 0 && cores[k - 1] && !label[k - 1]) { label[k - 1] = next; stack[sp++] = k - 1; }
+        if (x < W - 1 && cores[k + 1] && !label[k + 1]) { label[k + 1] = next; stack[sp++] = k + 1; }
+        if (y > 0 && cores[k - W] && !label[k - W]) { label[k - W] = next; stack[sp++] = k - W; }
+        if (y < H - 1 && cores[k + W] && !label[k + W]) { label[k + W] = next; stack[sp++] = k + W; }
       }
-      if (count < MIN_PATCH_PX) continue;
-      const asked = keepZones.some(z => l < z.r && r > z.l && t < z.b && b > z.t);
-      if (asked) continue;
-      patches++;
-      for (const k of members) restoreMask[k] = 1;
+      if (count < MIN_CORE_PX) continue;
+      if (keepZones.some(z => l < z.r && r > z.l && t < z.b && b > z.t)) {
+        for (const k of members) windowMask[k] = 1;
+      }
     }
-    if (!patches) return untouched('nothing outside the windows changed');
+    for (let i = 0; i < REGROW; i++) windowMask = dilate(windowMask);
+
+    const restoreMask = new Uint8Array(N);
+    let restoredPx = 0;
+    for (let k = 0; k < N; k++) {
+      if (changed[k] && !windowMask[k]) { restoreMask[k] = 1; restoredPx++; }
+    }
+    if (restoredPx < MIN_PATCH_PX) return untouched('nothing outside the windows changed');
+    /* A guard, not a tuning knob: if most of the picture would be put back,
+       the windows were not found where we think they are, and restoring
+       would undo the change that was asked for. */
+    if (restoredPx > N * MAX_RESTORE_SHARE) return untouched('too much of the picture would be restored');
+    const patches = restoredPx;
 
     // Soft edge: the mask's local average, so a patch fades in over SOFT_R px.
     for (let y = 0; y < H; y++) {
@@ -249,7 +292,10 @@ function restoreSurroundings({ render, renderMime, original, originalMime, detec
             sum += restoreMask[yy * W + xx]; n++;
           }
         }
-        const a = sum / n;
+        /* Restored pixels are the photograph exactly; the softening is only
+           in the ring just outside them. Averaging inside as well left a thin
+           fascia at ~80% — a grey smear where a white board should be. */
+        const a = restoreMask[y * W + x] ? 1 : sum / n;
         if (!a) continue;
         const i = y * W + x;
         for (let c = 0; c < 3; c++) out.data[i * 4 + c] = Math.round(out.data[i * 4 + c] * (1 - a) + orig[i * 3 + c] * a);
