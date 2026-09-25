@@ -150,8 +150,28 @@ test('every page carries the estimate caveat, in one wording', () => {
 
 test('every page drives to the visualiser with the same call to action', () => {
   for (const { slug, html } of allPages()) {
-    assert.ok(html.includes('Upload a photo of your house'),
+    /* One primary action per page, and it has to be one the product can
+       actually perform for that page's reader.
+
+       The conservatory guide is the single exception, and it is the rule
+       working rather than bending: a conservatory cannot be priced from a
+       photograph — size, glazing, groundworks and access decide it — so
+       "Upload a photo of your house" was a promise that page could not keep,
+       and it landed on the cold-visitor URL, where the reader was asked what
+       they were looking for after a page of telling us. Its action is to
+       compare the styles, and it still has exactly one.
+
+       A priced page carries two CTAs on purpose — the hero's "Show me my
+       windows" is a more specific promise, not a second name for the same
+       one — so the count is not what is asserted here. What matters is that
+       the action a page offers is one it can carry out. */
+    const conservatory = /conservator/.test(slug);
+    assert.ok(html.includes(conservatory ? 'Compare the styles' : 'Upload a photo of your house'),
       `${slug} is missing the primary CTA`);
+    if (conservatory) {
+      assert.ok(!html.includes('Upload a photo'),
+        'the conservatory page offers an upload it cannot price');
+    }
     /* The destination moved on 20 September: the tool is /design, and these
        pages used to drop a reader of a cost guide into a 30-screen homepage
        and ask them to find the uploader in it. Still asserting what this

@@ -620,6 +620,21 @@ function journeyForSlug(slug) {
    to write next. `from` carries the slug, and the server checks it against
    landing.allPaths() before recording anything, so it is an allowlist rather
    than free text — the same rule the stage name follows. */
+/* The one page whose reader cannot be sent to the uploader.
+
+   journeyForSlug has no pattern for a conservatory, correctly — it is a guide
+   band, not a trade priced from the photograph — so the CTA resolved to
+   /design with no journey, which is the cold-visitor URL. A reader who had
+   just spent a page on conservatory prices arrived at "What are you looking
+   for today?" and had to answer it again. The homepage box points here too,
+   so the whole conservatory route ended in that question.
+
+   /design already has the right destination: the conservatory section, eight
+   styles with their guide bands, and a way to say which one appeals. The
+   triage chip for it has scrolled there all along. This points the page at the
+   same place. */
+const isConservatory = (slug) => !!slug && /conservator/.test(slug);
+
 const ctaHref = (siteUrl, slug) => {
   const journey = slug ? journeyForSlug(slug) : null;
   const q = [];
@@ -630,10 +645,25 @@ const ctaHref = (siteUrl, slug) => {
      30-screen page and asked them to find the uploader in it. `/design` is the
      tool and nothing else; the anchor is gone because the upload box is at the
      top of it. Old links still work — see the redirect in server.js. */
-  return `${siteUrl}/design${q.length ? `?${q.join('&')}` : ''}`;
+  return `${siteUrl}/design${q.length ? `?${q.join('&')}` : ''}${isConservatory(slug) ? '#conservatory' : ''}`;
 };
 
-const cta = (siteUrl, slug) => `<div class="cta-block">
+/* The conservatory page gets its own, because the standard one promises to
+   find their windows, doors, roof and walls in a photograph — true, and not
+   what this reader asked about. Offering it as the next step after a page of
+   conservatory prices reads as not having listened. */
+const conservatoryCta = (siteUrl, slug) => `<div class="cta-block">
+  <h2>Which style are you after?</h2>
+  <p>A conservatory is the one job here we cannot price from a photograph — size,
+     glazing, groundworks and access decide it, and none of those are in a picture
+     of the front of a house. What we can do is show the eight styles side by side
+     with what people pay for each, and note which one appeals so it is on the
+     table when somebody talks to you.</p>
+  <p><a class="cta" href="${escapeHtml(ctaHref(siteUrl, slug))}">Compare the styles</a></p>
+  <p class="muted">Free to try &middot; No measurements &middot; No sales call unless you ask</p>
+</div>`;
+
+const cta = (siteUrl, slug) => (isConservatory(slug) ? conservatoryCta(siteUrl, slug) : `<div class="cta-block">
   <h2>See it on your own house</h2>
   <p>Every figure above is a typical house. Yours is not typical — nobody's is.
      Upload one photograph and we will find your windows, doors, roof and walls,
@@ -651,7 +681,7 @@ const cta = (siteUrl, slug) => `<div class="cta-block">
        promise, not a second name for this one. -->
   <p><a class="cta" href="${escapeHtml(ctaHref(siteUrl, slug))}">Upload a photo</a></p>
   <p class="muted">Free to try &middot; No measurements &middot; No sales call unless you ask</p>
-</div>`;
+</div>`);
 
 
 /* Every page carries the same two caveats, in the same words as the product.

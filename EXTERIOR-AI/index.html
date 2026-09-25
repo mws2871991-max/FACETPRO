@@ -2055,6 +2055,10 @@ const state = {
   /* Which of the folded-away sections this visitor has opened. Per visit, so
      a render never re-folds something somebody is reading. */
   unfolded: {},
+  /* They arrived from the conservatory guide. Not a journey — a conservatory
+     is a guide band, not a trade priced from the photograph — but it is an
+     answer to the triage question all the same. See buildTriage. */
+  conservatoryIntent: false,
   /* A resumed design has no photograph — the code carries choices, not the
      image — so "have they got a house on screen" is not the same question as
      "have they uploaded". See gateUntilSubject(). */
@@ -3144,6 +3148,24 @@ function buildTriage() {
      state.resumedDesign in its guard. Same treatment here: state what they
      have and keep it changeable, rather than asking a question they answered
      the day they saved it. */
+  /* A conservatory is an answer, even though it is not a journey. */
+  if (state.conservatoryIntent && !state.triageOpen) {
+    return h('div', { id: 'mount-triage', className: 'max-w-6xl mx-auto px-6 mt-10' }, [
+      h('section', { className: 'rounded-2xl border border-zinc-200 bg-white px-6 py-4 flex items-center justify-between gap-4 flex-wrap' }, [
+        h('p', { className: 'text-[13px] leading-6 text-zinc-700' }, [
+          h('span', { className: 'text-zinc-500' }, 'Your project: '),
+          h('strong', { className: 'font-medium text-zinc-900' }, 'A conservatory'),
+          h('span', { className: 'text-zinc-500' }, ' — guide prices are below. Windows, doors and the rest of the house can be priced from a photo whenever you like.'),
+        ]),
+        h('button', {
+          type: 'button',
+          className: 'text-[12px] px-4 rounded-full border border-zinc-200 hover:border-zinc-900 transition min-h-[44px] inline-grid place-items-center',
+          onClick: () => { state.triageOpen = true; render(); },
+        }, 'Price something else'),
+      ]),
+    ]);
+  }
+
   if (state.resumedDesign && !state.triageOpen) {
     return h('div', { id: 'mount-triage', className: 'max-w-6xl mx-auto px-6 mt-10' }, [
       h('section', { className: 'rounded-2xl border border-zinc-200 bg-white px-6 py-4 flex items-center justify-between gap-4 flex-wrap' }, [
@@ -9020,6 +9042,30 @@ document.getElementById('hero-upload')?.addEventListener('click', () => {
      refreshGlazing itself. Two ways in, one of them priced. */
   await Promise.all([refreshPrice(), refreshGlazing(), refreshWholeHouse()]);
   render();
+
+  /* #conservatory has to open the fold, or it scrolls to nothing.
+
+     The section only carries that id once state.unfolded.conservatory is true;
+     until then it is a <details> called #fold-conservatory. So a link to
+     /design#conservatory — which is what the conservatory cost guide now sends,
+     and it is the only route this site has for that reader — found no element,
+     scrolled nowhere, and left them at the top of the page facing the triage
+     question they had just answered by reading a page about conservatories.
+
+     Same three steps the triage chip has always taken: open it, count it,
+     scroll to it. After the render above, because the section does not exist
+     to scroll to until then. */
+  if (location.hash === '#conservatory' && !state.unfolded.conservatory) {
+    state.unfolded.conservatory = true;
+    /* And they have answered the triage question by getting here. Without
+       this they scroll past "What are you looking for today?" on the way
+       down, having just spent a page telling us. */
+    state.conservatoryIntent = true;
+    state.triageOpen = false;
+    reachedStage('conservatory_opened');
+    render();
+    setTimeout(() => document.getElementById('conservatory')?.scrollIntoView({ behavior: 'smooth' }), 40);
+  }
 
   /* A code arriving in the address bar redeems itself.
 

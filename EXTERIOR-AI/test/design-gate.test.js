@@ -174,3 +174,52 @@ test('the restored design says so, and stays changeable', () => {
   assert.match(body, /What are you looking for today\?/,
     'the triage question has gone entirely');
 });
+
+/* ── The conservatory route ── */
+
+test('the conservatory guide sends its reader somewhere that exists', () => {
+  /* journeyForSlug has no pattern for a conservatory, correctly — it is a
+     guide band, not a trade priced from a photograph — so the CTA resolved to
+     /design with no journey, which is the cold-visitor URL. A reader who had
+     just spent a page on conservatory prices arrived at "What are you looking
+     for today?" and had to answer it again. The homepage box points at that
+     guide too, so the whole conservatory route ended in that question. */
+  const landing = require('../landing');
+  const catalogue = require('../catalogue.json');
+  const OPTS = { siteUrl: 'https://www.facetpro.co.uk', catalogue, siteMode: 'beta', recipients: [] };
+  const html = landing.renderCostPage('conservatory-cost-uk', OPTS);
+
+  assert.match(html, /\/design\?from=conservatory-cost-uk#conservatory/,
+    'the conservatory CTA does not point at the conservatory section');
+
+  /* And it stops promising what a photograph cannot do for this reader. */
+  assert.doesNotMatch(html, /Upload one photograph and we will find your windows/,
+    'the standard CTA copy is still on the conservatory page');
+  assert.match(html, /cannot price from a photograph/i);
+
+  /* Every other page is untouched — this is one page's exception, not a new
+     rule for all of them. */
+  const windows = landing.renderCostPage('window-replacement-cost-uk', OPTS);
+  assert.match(windows, /\/design\?journey=windows&amp;from=window-replacement-cost-uk"/);
+  assert.doesNotMatch(windows, /#conservatory/);
+});
+
+test('arriving at #conservatory opens the fold it points at', () => {
+  /* The section only carries that id once state.unfolded.conservatory is true;
+     until then it is a <details> called #fold-conservatory. So the link found
+     no element, scrolled nowhere, and left them at the top of the page. */
+  const boot = page.slice(page.lastIndexOf("location.hash === '#conservatory'"));
+  const block = boot.slice(0, 700);
+  assert.match(block, /state\.unfolded\.conservatory = true/,
+    'the fold is not opened, so the anchor scrolls to nothing');
+  assert.match(block, /reachedStage\('conservatory_opened'\)/,
+    'this route is not counted, so nobody can tell whether it is used');
+  assert.match(block, /state\.triageOpen = false/,
+    'they still scroll past a question they answered by getting here');
+
+  /* And the triage has somewhere to put that answer. */
+  const triage = page.slice(page.indexOf('function buildTriage'));
+  const body = triage.slice(0, triage.indexOf('\nfunction '));
+  assert.match(body, /state\.conservatoryIntent && !state\.triageOpen/,
+    'a conservatory arrival falls through to the full question');
+});
