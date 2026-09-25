@@ -387,25 +387,25 @@
       {
         "id": "casement",
         "name": "Casement",
-        "detail": "Cross bar",
+        "detail": "Opens outwards on hinges",
         "description": "Side-hinged opening pane with a classic cross-bar divide. The most common UK window style."
       },
       {
         "id": "flush",
         "name": "Flush",
-        "detail": "Flat",
+        "detail": "Sits flat in the frame, like old wooden windows",
         "description": "Flat, flush-fitting sash that sits within the frame for a clean, modern, low-profile look."
       },
       {
         "id": "sliding-sash",
         "name": "Sliding Sash",
-        "detail": "2 panels",
+        "detail": "Slides up and down",
         "description": "Two vertically sliding panels in a traditional box frame — period character with modern double glazing."
       },
       {
         "id": "bay",
         "name": "Bay",
-        "detail": "Angled",
+        "detail": "Sticks out from the wall",
         "description": "Angled multi-pane projection that adds floor space and lets in light from three directions."
       }
     ],
@@ -413,7 +413,7 @@
       {
         "id": "georgian",
         "name": "Georgian bars",
-        "detail": "A grid on each pane",
+        "detail": "Small squares across the glass",
         "description": "Slim bars dividing each pane of glass into small squares, as on a Georgian or Victorian house. Sealed into the double glazing or fixed on the surface, depending on the installer."
       }
     ],
@@ -421,37 +421,37 @@
       {
         "id": "upvc",
         "name": "uPVC door",
-        "detail": "Front or back",
+        "detail": "Plastic door, front or back",
         "description": "The everyday front or back door — uPVC frame and panel, weather-sealed and low maintenance. The most common choice, and the least expensive."
       },
       {
         "id": "composite",
         "name": "Composite Door",
-        "detail": "Solid panel",
+        "detail": "Solid, strong front door",
         "description": "Solid, high-security composite panel door — durable, low-maintenance, and available in any colour."
       },
       {
         "id": "double",
         "name": "Double doors",
-        "detail": "Two opening leaves",
+        "detail": "Two doors that open together",
         "description": "A pair of doors opening from the middle, usually onto a garden or a patio."
       },
       {
         "id": "sliding",
         "name": "Sliding patio door",
-        "detail": "Slides on a track",
+        "detail": "Glass door that slides open",
         "description": "Two or more panels sliding past each other. Takes no floor space to open, which suits a smaller room."
       },
       {
         "id": "bifold",
         "name": "Bifold, up to 2.4 m",
-        "detail": "3-panel fold",
+        "detail": "Glass doors that fold back",
         "description": "Folding panels that stack to one side, opening the full width onto a garden or patio."
       },
       {
         "id": "bifold-3m",
         "name": "Bifold, 3 m",
-        "detail": "Wider fold",
+        "detail": "Wider glass doors that fold back",
         "description": "The same folding doors across a wider opening. Priced separately because width is most of the cost."
       }
     ],

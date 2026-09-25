@@ -9,13 +9,13 @@
 
 :root{color-scheme:light}
   *{box-sizing:border-box}
-  body{font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#FBF8F3;color:#0F1012;margin:0;padding:0}
+  body{font:18px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#FBF8F3;color:#0F1012;margin:0;padding:0}
   .wrap{max-width:760px;margin:0 auto;padding:24px 18px 64px}
   header.site{border-bottom:1px solid #e4e4e7;background:#FBF8F3}
   header.site .wrap{padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px}
   /* Product row: one line, scrolls sideways on a phone rather than wrapping. */
   nav.products{border-top:1px solid #e4e4e7}
-  nav.products ul{max-width:760px;margin:0 auto;padding:0 10px;list-style:none;display:flex;gap:4px;overflow-x:auto;white-space:nowrap;font-size:14px}
+  nav.products ul{max-width:760px;margin:0 auto;padding:0 10px;list-style:none;display:flex;gap:4px;overflow-x:auto;white-space:nowrap;font-size:16px}
   nav.products a{display:inline-flex;align-items:center;min-height:44px;padding:0 8px;color:#52525b;text-decoration:none;border-bottom:2px solid transparent}
   nav.products a:hover{color:#0F1012}
   nav.products a[aria-current]{color:#0F1012;border-bottom-color:#0F1012}
@@ -24,11 +24,11 @@
   h2{font-size:20px;line-height:1.25;margin:36px 0 10px}
   p{margin:12px 0;color:#27272a}
   .answer{margin-top:18px;padding:18px 20px;background:#fff;border:1px solid #e4e4e7;border-left:3px solid #0F1012;border-radius:12px}
-  .answer strong{display:block;font-size:13px;text-transform:uppercase;letter-spacing:.14em;color:#6B6E78;font-weight:600;margin-bottom:6px}
+  .answer strong{display:block;font-size:16px;color:#3f3f46;font-weight:600;margin-bottom:6px}
   .answer span{font-size:19px;line-height:1.4}
-  table{width:100%;border-collapse:collapse;margin:14px 0;background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;font-size:15px}
+  table{width:100%;border-collapse:collapse;margin:14px 0;background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;font-size:17px}
   th,td{text-align:left;padding:11px 14px;border-bottom:1px solid #f1f1f3}
-  thead th{background:#F6F3EE;font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:#52525b}
+  thead th{background:#F6F3EE;font-size:16px;color:#3f3f46}
   tbody th{font-weight:500}
   /* A price range must not break across two lines.
 
@@ -47,7 +47,7 @@
   .cta-block h2{margin-top:0;color:#fff}
   .cta-block p{color:rgba(255,255,255,.72)}
   a.cta{display:block;margin:18px 0 0;padding:16px 20px;background:#fff;color:#0F1012;text-decoration:none;border-radius:999px;text-align:center;font-weight:600}
-  .muted{color:#6B6E78;font-size:13px}
+  .muted{color:#52525b;font-size:16px}
   .cta-block .muted{color:rgba(255,255,255,.55)}
   /* The journey hero, above the guide: the action first for somebody who came
      to see it on their own house, and out of the way in a second for somebody
@@ -59,14 +59,14 @@
   .journey-hero p{margin:8px 0 0;color:#52525b}
   .journey-hero a.cta{margin:16px 0 0;background:#0F1012;color:#fff}
   .journey-hero .muted{margin-top:10px;text-align:center}
-  .notice{margin-top:20px;padding:14px 16px;border-radius:12px;background:#FFFBEB;border:1px solid #FDE68A;font-size:13px;line-height:1.6;color:#78350F}
-  .caveat{margin-top:28px;padding-top:18px;border-top:1px solid #e4e4e7;font-size:13px;line-height:1.6;color:#52525b}
-  nav.related{margin-top:32px;font-size:14px}
+  .notice{margin-top:20px;padding:14px 16px;border-radius:12px;background:#FFFBEB;border:1px solid #FDE68A;font-size:16px;line-height:1.6;color:#78350F}
+  .caveat{margin-top:28px;padding-top:18px;border-top:1px solid #e4e4e7;font-size:16px;line-height:1.6;color:#52525b}
+  nav.related{margin-top:32px;font-size:16px}
   nav.related ul{padding-left:18px;margin:8px 0}
   nav.related li{margin:5px 0}
   /* The reason to follow one of these links, said quietly beside it. */
-  nav.related .rel-note{color:#6b7280;font-size:13px}
+  nav.related .rel-note{color:#52525b;font-size:16px}
   footer.site{border-top:1px solid #e4e4e7;margin-top:48px}
-  footer.site .wrap{padding:20px 18px;font-size:13px;color:#6B6E78}
+  footer.site .wrap{padding:20px 18px;font-size:16px;color:#52525b}
   a{color:#0F1012}
   @media(min-width:640px){h1{font-size:38px}.wrap{padding:32px 24px 80px}}
