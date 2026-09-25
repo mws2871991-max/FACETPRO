@@ -56,6 +56,12 @@ services:
       - key: SITE_URL
         value: https://www.facetpro.co.uk
 
+      # "Stuck? Call us on …" on every step of /design and the quote form.
+      # Not a secret, so it lives here rather than in the dashboard. It is the
+      # same number the terms page gives.
+      - key: CONTACT_PHONE
+        value: "07856 701852"
+
       # Required. Without this the installer area returns 503 and serves nothing.
       - key: INSTALLER_PASSWORD
         sync: false

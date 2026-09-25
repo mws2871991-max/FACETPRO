@@ -2431,6 +2431,14 @@ function h(tag, attrs = {}, children = []) {
 /* Trade colour names say nothing to most people: "Agate Grey" is a shade on
    a supplier's card. Plain word first, the trade name after it, because the
    installer and the render still need the real one. */
+/* Who gets their details, at the moment they decide whether to hand them
+   over. Scoped to windows and doors on purpose: FENSA is the scheme for
+   replacement windows and doors, and it says nothing about a roofer or a
+   renderer, so the line must not read as if it covers every trade. Keep it
+   true: if an installer who is not FENSA registered is ever added to
+   LEAD_RECIPIENTS for glazing, this sentence has to change first. */
+const INSTALLER_VETTING = 'Our window and door installers are FENSA registered.';
+
 const PLAIN_COLOURS = { anthracite: 'Dark grey', 'agate-grey': 'Mid grey', 'chartwell-green': 'Soft green' };
 function plainColour(c) {
   const plain = PLAIN_COLOURS[c.id];
@@ -4546,6 +4554,7 @@ function buildVisualizer() {
         }, state.designPackEmail ? 'Email me this picture' : 'Save my design'),
         h('p', { className: 'text-base leading-7 text-white/85' },
           'No calls unless you ask · At most 3 installers · Nothing is sent until the last step'),
+        h('p', { className: 'text-base leading-7 text-white font-semibold' }, INSTALLER_VETTING),
         h('button', {
           type: 'button',
           className: 'justify-self-start underline underline-offset-4 text-base text-white/85 min-h-[44px]',
@@ -7936,6 +7945,7 @@ function buildSaveFraming() {
     h('p', { className: 'mt-3 text-lg leading-7 text-white/85 max-w-[60ch]' }, state.designPackEmail
       ? 'We’ll email you your picture and your estimate to keep. If you want quotes, up to 3 local installers get your design, so they already know what you want. No obligation — you can stop at any time.'
       : 'We’ll keep your picture and your estimate together. If you want quotes, up to 3 local installers get your design, so they already know what you want. No obligation — you can stop at any time.'),
+    h('p', { className: 'mt-3 text-base leading-7 text-white font-semibold' }, INSTALLER_VETTING),
     helpLine(true),
     /* A real form, so Enter submits.
 
