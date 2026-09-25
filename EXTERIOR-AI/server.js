@@ -1453,6 +1453,9 @@ app.get('/healthz', (req, res) => {
   });
 });
 
+const CONTACT_PHONE = /^\+?[0-9 ]{6,20}$/.test((process.env.CONTACT_PHONE || '').trim())
+  ? process.env.CONTACT_PHONE.trim() : null;
+
 app.get('/api/config', (req, res) => {
   res.json({
     designPackEmail: DESIGN_PACK_ENABLED,
@@ -1462,6 +1465,10 @@ app.get('/api/config', (req, res) => {
     installerQuotes: HOMEOWNER_EMAIL_ENABLED,
     beta: SITE_MODE === 'beta',
     leadCapture: LEAD_CAPTURE,
+    /* A number a person can ring when they are stuck. Shown on every step of
+       /design when set; nothing is shown when it is not, rather than a
+       placeholder. Digits, spaces and a leading + only. */
+    contactPhone: CONTACT_PHONE,
   });
 });
 

@@ -2097,6 +2097,7 @@ async function loadConfig() {
     state.installerQuotesAvailable = !!cfg.installerQuotes;
     state.beta = !!cfg.beta;
     state.leadCapture = cfg.leadCapture !== false;
+    state.contactPhone = typeof cfg.contactPhone === 'string' ? cfg.contactPhone : null;
   } catch (err) {
     state.designPackEmail = false;   // promise nothing if we can't tell
     state.installerQuotesAvailable = false;
@@ -2434,6 +2435,17 @@ const PLAIN_COLOURS = { anthracite: 'Dark grey', 'agate-grey': 'Mid grey', 'char
 function plainColour(c) {
   const plain = PLAIN_COLOURS[c.id];
   return plain ? `${plain} (${c.name})` : c.name;
+}
+
+/* "Stuck? Call us" on every step, for the person who would rather ask than
+   guess. Only when a real number is configured (CONTACT_PHONE). */
+function helpLine(dark = false) {
+  if (!state.contactPhone) return null;
+  const tel = state.contactPhone.replace(/\s+/g, '');
+  return h('p', { className: `mt-4 text-lg ${dark ? 'text-white/85' : 'text-zinc-700'}` }, [
+    'Stuck? Call us on ',
+    h('a', { href: `tel:${tel}`, className: 'font-semibold underline underline-offset-4' }, state.contactPhone),
+  ]);
 }
 
 function fmtMoney(n) { return "£" + Math.round(n || 0).toLocaleString('en-GB'); }
@@ -3126,6 +3138,13 @@ function buildChooser() {
 
   const typeLabel = (HOUSE_TYPES.find(t => t.id === state.houseType) || {}).label || 'Semi-detached';
   if (state.chooserStepFor !== j) { state.chooserStep = 0; state.chooserStepFor = j; }
+  /* Remember the typical figure they were shown, so the estimate can say why
+     their own house came out differently. Without it the number just moves:
+     £8,085–£14,701 became £8,686–£15,792 in the 25 September test, and
+     nothing on screen said why. */
+  if ((j === 'windows' || j === 'doors') && priceRange) {
+    state.typicalGlazingSeen = { low: priceRange.low, high: priceRange.high, typeLabel };
+  }
   const step = Math.max(0, Math.min(state.chooserStep || 0, blocks.length - 1));
   const last = step === blocks.length - 1;
   /* After Next or Back the new question has to be where their eyes are, not
@@ -3165,6 +3184,7 @@ function buildChooser() {
           },
         }, 'Choose a photo of my house →'),
       ]),
+      helpLine(),
       h('div', { className: 'mt-6 pt-5 border-t border-zinc-200 flex items-end justify-between gap-4 flex-wrap' }, [
         h('div', {}, [
           /* "Typical bungalow house" is not a thing anyone says. Every other
@@ -3698,9 +3718,9 @@ function buildUploadDetect() {
 
     return h('div', { className: 'rounded-xl bg-white/5 border border-white/10 p-3' }, [
       h('p', {
-        className: 'text-base text-white/80 mb-2 font-semibold',
+        className: `${detecting ? 'text-xl text-white' : 'text-base text-white/80'} mb-2 font-semibold`,
         role: 'status', 'aria-live': 'polite',
-      }, detecting ? 'Analysing your house…' : 'We found your home'),
+      }, detecting ? 'Looking at your house — this takes about 20 seconds' : 'We found your home'),
       detecting
         ? h('p', { className: 'mb-2 text-base text-emerald-300' }, '✓ Photo received')
         : null,
@@ -3907,9 +3927,9 @@ function buildUploadDetect() {
             'A straight-on photo from across the road usually gives the best result — we size your house against your front door, so the whole front needs to be in shot.'),
           h('p', { className: 'mt-2 text-base text-zinc-600 font-semibold' },
             'No measurements · No email · No phone number'),
+          helpLine(),
         ]),
     capNotice,
-    resumePanel(),
     h('div', { className: 'mt-6 grid md:grid-cols-[1.1fr_0.9fr] gap-6' }, [
       h('div', { className: 'rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-4' }, [
         fileInput,
@@ -4090,6 +4110,10 @@ function buildUploadDetect() {
             ]),
       ]),
     ]),
+    /* Below the upload, not above it. For most people the photo is the next
+       step; carrying the design to a phone is the exception, and its code box
+       sat between them and the upload button. */
+    resumePanel(),
   ]);
 }
 
@@ -4497,7 +4521,40 @@ function buildVisualizer() {
      Only over a finished render, and only before they have started changing
      things: once a swatch has been touched they have found the controls and
      an invitation to find them is noise. */
-  const makeItYours = (state.renderUrl && state.revealed && !state.hasCustomised)
+  const customise = () => {
+    state.hasCustomised = true;
+    document.getElementById('windows-doors')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    renderVisualizerOnly();
+  };
+  /* The ask, where the decision happens. With lead capture on, the first
+     thing under a finished render is how to get real prices for it, and the
+     reassurance sits right next to the button rather than a page further down.
+     It stays after they start customising: the question does not go away
+     because they changed a colour. */
+  const askAtRender = (state.leadCapture && state.renderUrl && state.revealed)
+    ? h('div', { id: 'ask-at-render', className: 'mx-4 mb-4 rounded-xl bg-zinc-900 text-white p-5 grid gap-3' }, [
+        h('p', { className: 'text-xl font-semibold' }, 'Like it? Get real prices for this'),
+        h('button', {
+          type: 'button',
+          className: 'cta w-full sm:w-auto px-6 py-3 rounded-full text-lg font-semibold min-h-[52px]',
+          onClick: () => startSave('quotes'),
+        }, 'Get prices from up to 3 local installers'),
+        h('button', {
+          type: 'button',
+          className: 'w-full sm:w-auto px-6 py-3 rounded-full border border-white/40 text-lg font-medium min-h-[52px]',
+          onClick: () => startSave('save'),
+        }, state.designPackEmail ? 'Email me this picture' : 'Save my design'),
+        h('p', { className: 'text-base leading-7 text-white/85' },
+          'No calls unless you ask · At most 3 installers · Nothing is sent until the last step'),
+        h('button', {
+          type: 'button',
+          className: 'justify-self-start underline underline-offset-4 text-base text-white/85 min-h-[44px]',
+          onClick: customise,
+        }, 'Or change the colours and styles first'),
+      ])
+    : null;
+
+  const makeItYours = (!state.leadCapture && state.renderUrl && state.revealed && !state.hasCustomised)
     ? h('div', { className: 'mx-4 mb-4 rounded-xl bg-zinc-900 text-white p-4 flex items-center justify-between gap-3 flex-wrap' }, [
         h('div', {}, [
           h('p', { className: 'text-lg font-medium' }, 'Now make it yours'),
@@ -4509,11 +4566,7 @@ function buildVisualizer() {
         h('button', {
           type: 'button',
           className: 'cta px-5 rounded-full text-lg font-semibold min-h-[44px] shrink-0',
-          onClick: () => {
-            state.hasCustomised = true;
-            document.getElementById('windows-doors')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            renderVisualizerOnly();
-          },
+          onClick: customise,
         }, 'Start customising'),
       ])
     : null;
@@ -4678,6 +4731,7 @@ function buildVisualizer() {
               ])
             : null,
         ]),
+        askAtRender,
         makeItYours,
         lightingControls,
         h('div', { className: 'p-4 grid gap-4' }, groupsRow),
@@ -4775,7 +4829,7 @@ function buildVisualizer() {
                 ? h('div', { className: 'mt-2 text-base text-zinc-600 text-center' }, 'Add a photo above first')
                 : state.rendering
                   ? h('div', {
-                      className: 'mt-2 text-base text-zinc-600 text-center',
+                      className: 'mt-2 text-lg text-zinc-800 text-center',
                       role: 'status', 'aria-live': 'polite',
                     }, [
                       'Working on your picture — ',
@@ -4922,6 +4976,22 @@ const pricedIncludes = (priced) => [
    The house type picker stays, and is doing real work here: with no photograph
    the window count comes from the house type prior, so it is the one control
    that moves this figure. */
+/* Why the figure moved after the photo, in one sentence. The typical figure
+   is for a typical house of that type; the photo gives us their windows, their
+   sizes and their bay. Said once, plainly, so the number never changes
+   without a reason on screen. */
+function photoChangedPriceLine(spread, n, doorOnly) {
+  const was = state.typicalGlazingSeen;
+  if (!was || !spread || !state.uploadedImg || !state.detectionId || doorOnly) return null;
+  const moved = spread.high - was.high;
+  if (Math.abs(moved) < 50) return null;
+  const typical = `${fmtMoney(was.low)} – ${fmtMoney(was.high)}`;
+  const houseWord = `a typical ${String(was.typeLabel || 'house').toLowerCase()}${/bungalow/i.test(was.typeLabel || '') ? '' : ' house'}`;
+  return h('p', { className: 'mt-2 text-base leading-7 text-white/85' },
+    `${moved > 0 ? 'Up' : 'Down'} from ${typical} for ${houseWord}, because this is priced from your photo: ` +
+    `the ${n} window${n === 1 ? '' : 's'} we found, at their real sizes and styles.`);
+}
+
 function buildGlazingLedPanel() {
   const g = state.glazing;
   const label = journeyLabel(state.journey);
@@ -4983,6 +5053,7 @@ function buildGlazingLedPanel() {
         doorOnly
           ? `Your ${doorNoun}, supplied and fitted`
           : [`${n} window${n === 1 ? '' : 's'}`, hasDoor ? ` and ${isRearOpening(doorId) ? 'garden doors' : 'a front door'}` : '', ', supplied and fitted'].join('')),
+      photoChangedPriceLine(spread, n, doorOnly),
       /* What the last choice cost, under the number it moved. Both ends of the
          range shift, so both are shown — collapsing them to one figure would
          invent a precision the range does not have. */
@@ -5855,10 +5926,13 @@ function buildTotalBar() {
   }, [
     expanded,
     deltaStrip,
+    /* "Get quotes" rides in the bar once there is a render, so the ask is one
+       tap away at every scroll position, not only at the bottom of the page. */
+    h('div', { className: 'max-w-6xl mx-auto flex items-center' }, [
     h('button', {
       type: 'button',
       'aria-expanded': state.barOpen ? 'true' : 'false',
-      className: 'w-full max-w-6xl mx-auto px-6 py-2.5 flex items-center justify-between gap-3 text-left min-h-[52px]',
+      className: 'flex-1 min-w-0 pl-4 pr-2 sm:px-6 py-2.5 flex items-center justify-between gap-2 sm:gap-3 text-left min-h-[52px]',
       onClick: () => {
         state.barOpen = !state.barOpen;
         // Funnel event 8 — see the analytics note on FUNNEL_STAGES.
@@ -5908,9 +5982,18 @@ function buildTotalBar() {
         h('span', { className: 'hidden lg:inline text-base text-zinc-600 truncate' }, composition),
       ]),
       h('span', { className: 'text-base text-zinc-600 whitespace-nowrap flex items-center gap-1.5 shrink-0' }, [
-        h('span', {}, state.barOpen ? 'Hide' : 'Breakdown'),
+        /* The word gives way to "Get quotes" on a phone; the chevron stays. */
+        h('span', { className: (state.leadCapture && state.renderUrl && !state.savedLead && !(state.quote?.step > 0)) ? 'hidden sm:inline' : '' }, state.barOpen ? 'Hide' : 'Breakdown'),
         h('span', { className: `chev transition-transform ${state.barOpen ? 'rotate-180' : ''}`, 'aria-hidden': 'true' }, '⌄'),
       ]),
+    ]),
+    (state.leadCapture && state.renderUrl && !state.savedLead && !(state.quote?.step > 0))
+      ? h('button', {
+          type: 'button',
+          className: 'cta shrink-0 mr-3 sm:mr-4 px-4 sm:px-5 rounded-full text-lg font-semibold min-h-[48px] whitespace-nowrap',
+          onClick: () => startSave('quotes'),
+        }, 'Get quotes')
+      : null,
     ]),
   ]);
 }
@@ -7190,20 +7273,30 @@ function buildSaveMoment() {
   if (price?.total) rows.push(['Walls, roof & trim', fmtMoney(price.total)]);
   if (glaz?.price) rows.push(['Windows & doors', `${fmtMoney(glaz.range.low)}–${fmtMoney(glaz.range.high)}`]);
 
-  const go = (intent) => {
-    state.quote.intent = intent;
-    /* Step 1 for quotes, and straight to the contact step for a plain save.
-       Somebody who only wants their design kept should not be asked when they
-       are hoping to start work — we would be collecting an answer we have no
-       use for, which is the whole of data minimisation in one sentence. */
-    state.quote.step = intent === 'quotes' ? 1 : 4;
-    if (intent === 'quotes') reachedStage('quote_started');
-    render();
-    /* After the render, so the section we are scrolling to is the one the new
-       state produced rather than the one it replaced. */
-    requestAnimationFrame(() => document.getElementById('save-design')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-  };
+  return buildSaveMomentSection(rows, startSave);
+}
 
+/* Starting a save or a quote request, from wherever the homeowner is.
+
+   It lived inside buildSaveMoment, which is about 3,500px below the render on
+   a windows journey. The render is the moment people decide; the ask has to
+   be reachable from there, and from the sticky bar, without scrolling past
+   every other trade first. */
+function startSave(intent) {
+  state.quote.intent = intent;
+  /* Step 1 for quotes, and straight to the contact step for a plain save.
+     Somebody who only wants their design kept should not be asked when they
+     are hoping to start work — we would be collecting an answer we have no
+     use for, which is the whole of data minimisation in one sentence. */
+  state.quote.step = intent === 'quotes' ? 1 : 4;
+  if (intent === 'quotes') reachedStage('quote_started');
+  render();
+  /* After the render, so the section we are scrolling to is the one the new
+     state produced rather than the one it replaced. */
+  requestAnimationFrame(() => document.getElementById('save-design')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+}
+
+function buildSaveMomentSection(rows, go) {
   return h('section', { id: 'save-moment', className: 'rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24' }, [
     h('div', { className: 'grid md:grid-cols-[1.1fr_0.9fr] gap-6 items-center' }, [
       h('div', {}, [
@@ -7662,6 +7755,7 @@ function buildSaveFraming() {
             onClick: () => goStep(step - 1),
           }, '← Back') : null,
         ]),
+        helpLine(true),
       ]);
 
     if (step === 1) {
@@ -7669,7 +7763,7 @@ function buildSaveFraming() {
          priced together, so forcing one answer would contradict it. */
       const items = [
         ['windows', 'Windows'], ['doors', 'Doors'], ['roof', 'Roof'],
-        ['cladding', 'Cladding or render'], ['roofline', 'Fascias, soffits, guttering'],
+        ['cladding', 'Walls (render or cladding)'], ['roofline', 'Roof edge and gutters (fascias, soffits, guttering)'],
         ['multiple', 'Several of these'], ['whole-exterior', 'The whole exterior'],
       ];
       const toggle = (id) => {
@@ -7838,9 +7932,11 @@ function buildSaveFraming() {
     ]),
     h('h2', { className: 'mt-2 serif text-[26px] md:text-[32px] tracking-tight' },
       askingForQuotes ? 'Where should we send your quotes?' : 'Ready for real numbers?'),
-    h('p', { className: 'mt-3 text-lg leading-6 text-white/80 max-w-[60ch]' }, state.designPackEmail
-      ? 'We’ll email you your before-and-after and your itemised estimate to keep. If you’d like quotes, installers work from the design you’ve already made — so nobody arrives with a folder, nobody prices something you didn’t ask for, and nobody needs your evening. No obligation, and you can walk away at any point.'
-      : 'We’ll keep your before-and-after and your itemised estimate together. If you’d like quotes, installers work from the design you’ve already made — so nobody arrives with a folder, and nobody needs your evening. No obligation, and you can walk away at any point.'),
+    /* Shortened for older readers: the same promises, in about half the words. */
+    h('p', { className: 'mt-3 text-lg leading-7 text-white/85 max-w-[60ch]' }, state.designPackEmail
+      ? 'We’ll email you your picture and your estimate to keep. If you want quotes, up to 3 local installers get your design, so they already know what you want. No obligation — you can stop at any time.'
+      : 'We’ll keep your picture and your estimate together. If you want quotes, up to 3 local installers get your design, so they already know what you want. No obligation — you can stop at any time.'),
+    helpLine(true),
     /* A real form, so Enter submits.
 
        This was a div with a type="button" inside it. Pressing Enter in the
