@@ -81,3 +81,23 @@ test('the homepage has exactly one h1, and it is the homepage’s own', () => {
     assert.match(html, new RegExp(`aria-labelledby="${id}"`), `${id} is no longer labelling its section`);
   }
 });
+
+test('the picture of their house comes before the catalogue', () => {
+  /* Measured live on a windows journey before this changed: upload at 170px,
+     then 2,843px — three and a third phone screens — of window styles and
+     frame colours, and only at 4,739px the first sight of their own house.
+
+     orderForJourney() hoisted the catalogue above the visualiser for glazing
+     journeys. That was right when /design opened cold and a windows customer
+     landed among wall swatches. The chooser (#26) removed the reason: they now
+     pick style, colour and bars before the photograph and see a price for
+     them, so the catalogue below is the same choices a second time, standing
+     between them and the thing they waited thirty seconds for. */
+  const body = fnBody('orderForJourney');
+  assert.match(body, /const glazingFirst = false/,
+    'the catalogue is being hoisted above the visualiser again');
+  /* The other branch still has a job: putting the section back where the
+     markup wants it, after the walls-only calculator. */
+  assert.match(body, /insertBefore\(glazing, wholeHouse\.nextSibling\)/,
+    'the non-glazing branch has gone, so the section will drift');
+});

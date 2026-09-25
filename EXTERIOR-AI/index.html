@@ -2516,7 +2516,25 @@ const MOUNTS = [
    the check keeps it from touching the tree at all — moving a <details> that
    somebody has open would collapse it mid-interaction. */
 function orderForJourney() {
-  const glazingFirst = state.journey === 'windows' || state.journey === 'doors';
+  /* The picture of their house comes first, on every journey.
+
+     This used to hoist the window and door catalogue above the visualiser for
+     glazing journeys, which was right when /design opened cold: a windows
+     customer landed on a page of wall swatches and had to hunt for frames.
+
+     The chooser removed that reason. Since #26 a windows customer picks their
+     style, colour and glazing bars BEFORE the photograph, sees a price for
+     them, and only then uploads. The catalogue below is now the same choices a
+     second time — and measured live on a windows journey it is 2,843px, three
+     and a third phone screens, sitting between the upload and the first sight
+     of their own house at 4,739px.
+
+     That is the wrong way round for a product whose promise is "see your
+     house, see the price". The house is what they came for and what they
+     waited thirty seconds for; the catalogue is refinement and belongs after
+     it. The function stays because the non-glazing branch still puts the
+     section back where the markup wants it. */
+  const glazingFirst = false;
   const glazing = document.getElementById('windows-doors');
   const swatches = document.getElementById('mount-visualizer');
   const wholeHouse = document.getElementById('mount-wholehouse');
