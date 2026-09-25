@@ -573,7 +573,7 @@
              retention promise we do not implement is the exact failure this
              line is meant to reassure people about, so it makes the claim
              privacy.html already makes and links to the detail. -->
-        <p class="mt-2 text-base text-white/80">Your original photo isn&rsquo;t saved &mdash; we keep the image we generate, not your photograph. <a href="#tech-heading" class="underline underline-offset-2 hover:text-white/85">How your photo is used</a></p>
+        <p class="mt-2 text-base text-white/80">Your original photo isn&rsquo;t saved &mdash; we keep the image we generate, not your photograph. <a href="#tech-heading" class="inline-block py-3 underline underline-offset-2 hover:text-white/85">How your photo is used</a></p>
 
         <!-- The fairness line stays in the hero as a hook; the full section
              lives further down the page.
@@ -901,7 +901,7 @@
            so one env var still controls whether it appears at all. -->
       <strong>Priced from real UK supplier and labour rates.</strong>
       And honest about what the estimate covers &mdash;
-      <a href="#honest-heading" class="underline">what your estimate includes</a>.
+      <a href="#honest-heading" class="inline-block py-3 underline">what your estimate includes</a>.
     </p>
   </aside>
   <div data-page="design" id="mount-visualizer"></div>
@@ -1301,7 +1301,7 @@
              wondered about beside the figure. The spread between what two
              firms quote for identical work is the thing this section is about,
              so the range is evidence for the argument rather than a caveat. -->
-        <p class="mt-4 text-lg leading-6 text-white/80">It is why your estimate arrives as a range rather than one number. The lower end is close to what the keener of the two national installers settles at; the higher end is what the same job goes out at elsewhere. Same windows, same house, same work.</p>
+        <p class="mt-4 text-lg leading-6 text-white/80">It is why your estimate is a range rather than one number. Companies charge different prices for the same job: the lower figure is what a keen installer typically charges, and the higher figure is what others charge for exactly the same windows.</p>
         <button type="button" class="mt-6 cta px-6 py-3.5 rounded-full text-lg font-semibold transition min-h-[48px]" onclick="goToUpload()">Upload a photo</button>
         <p class="mt-3 text-base text-white/80">Free to try &nbsp;&bull;&nbsp; No sales call unless you ask</p>
       </div>
@@ -1678,7 +1678,7 @@
            be made explicitly, and it is the sentence that makes §13 land: a
            range is not hedging, it is the width of what a photograph can tell
            you before somebody stands in front of the house. -->
-      <strong>Beta.</strong> We continually calibrate how we measure a house from a photo against
+      <strong>Beta.</strong> We are starting to check how we measure a house from a photo against
       surveyed properties. Your estimate is shown as a range rather than a single figure because
       that is the uncertainty still left until a physical survey — an installer confirms
       everything on site.
@@ -2450,9 +2450,15 @@ function plainColour(c) {
 function helpLine(dark = false) {
   if (!state.contactPhone) return null;
   const tel = state.contactPhone.replace(/\s+/g, '');
-  return h('p', { className: `mt-4 text-lg ${dark ? 'text-white/85' : 'text-zinc-700'}` }, [
-    'Stuck? Call us on ',
-    h('a', { href: `tel:${tel}`, className: 'font-semibold underline underline-offset-4' }, state.contactPhone),
+  /* A button-sized target: the number is for the person who is already
+     struggling, on a phone, and a 23px underlined link was the smallest thing
+     on the page to hit. */
+  return h('div', { className: 'mt-4 flex items-center gap-3 flex-wrap' }, [
+    h('span', { className: `text-lg ${dark ? 'text-white/85' : 'text-zinc-700'}` }, 'Stuck? Call us'),
+    h('a', {
+      href: `tel:${tel}`,
+      className: `inline-flex items-center gap-2 min-h-[48px] px-5 rounded-full border text-lg font-semibold ${dark ? 'border-white/40 text-white' : 'border-zinc-300 bg-white text-zinc-900'}`,
+    }, [h('span', { 'aria-hidden': 'true' }, '\u260E'), state.contactPhone]),
   ]);
 }
 
@@ -3179,7 +3185,14 @@ function buildChooser() {
         !last ? h('button', {
           type: 'button',
           className: 'cta w-full sm:w-auto px-8 rounded-full text-lg font-semibold min-h-[52px]',
-          onClick: () => { state.chooserStep = step + 1; render(); showQuestion(); },
+          onClick: () => {
+            /* Next on the house question is an answer: they looked at "What
+               kind of house is it?" with Semi picked and agreed. Without this
+               the photo step told them "we've assumed a semi-detached house"
+               about the answer they had just given. */
+            if (step === 0) state.houseTypeChosen = true;
+            state.chooserStep = step + 1; render(); showQuestion();
+          },
         }, 'Next →') : h('button', {
           type: 'button',
           className: 'cta w-full sm:w-auto px-6 py-2 rounded-full text-lg font-semibold min-h-[52px]',
@@ -3620,16 +3633,20 @@ function buildUploadDetect() {
       const bays = state.frontBayCount || 0;
       if (windows) {
         const noun = `${windows} window${windows === 1 ? '' : 's'}`;
-        parts.push(bays === 0 ? noun
-          : bays === windows && windows === 1 ? 'a bay window'
-          : bays === windows ? `${windows} bay windows`
+        /* "At the front", because the price goes on to say 8 and the photo
+           showed 3. Without it the two numbers read as a contradiction. */
+        parts.push(bays === 0 ? `${noun} at the front`
+          : bays === windows && windows === 1 ? 'a bay window at the front'
+          : bays === windows ? `${windows} bay windows at the front`
           /* In brackets, not after a comma: join() below adds "and a front
              door", and "3 windows, one of them a bay and a front door" read
              as the door being one of the windows. */
-          : `${noun} (${bays === 1 ? 'one of them a bay' : `${bays} of them bays`})`);
+          : `${noun} at the front (${bays === 1 ? 'one of them a bay' : `${bays} of them bays`})`);
       }
       if (hits(/door/i).length) parts.push('a front door');
-      if (measured && state.price?.footprintM2) parts.push(`about ${state.price.footprintM2} m² of wall`);
+      if (measured && state.price?.footprintM2 && state.journey !== 'windows' && state.journey !== 'doors') {
+        parts.push(`about ${state.price.footprintM2} m² of wall`);
+      }
 
       /* And what kind of house we think it is, which is now the most
          consequential thing on this list.
@@ -3703,7 +3720,7 @@ function buildUploadDetect() {
           ? ' — straight on, from across the road — or carry on and correct the numbers below.'
           /* One instruction, not two. With the house type named above, the old
              tail repeated "correct it below" in the same breath. */
-          : 'Anything wrong? Change it below — your number is the one we price.',
+          : '',
       ].filter(Boolean));
     };
 
@@ -3766,7 +3783,7 @@ function buildUploadDetect() {
     }
     if (state.detectionOk === 'flagged') {
       return h('p', { className: 'mt-3 text-base leading-7 text-amber-200/90' },
-        'Thanks — the controls below take your number over ours. Yours is the one we price.');
+        'Thanks. Change the number of windows below with the − and + buttons, and we’ll price your number instead of ours.');
     }
 
     const btn = (label, cls, onClick) => h('button', {
@@ -4014,14 +4031,14 @@ function buildUploadDetect() {
            and what is kept is the image we generate. */
         h('p', { className: 'mt-3 text-base leading-7 text-zinc-600' }, [
           'Your original photo isn’t saved — we keep the image we generate, not your photograph. ',
-          h('a', { href: '#tech-heading', className: 'underline underline-offset-2' }, 'How your photo is used'),
+          h('a', { href: '#tech-heading', className: 'inline-block py-3 underline underline-offset-2' }, 'How your photo is used'),
         ]),
         /* Hidden while the photo is being read. "Choose a photo" would throw
            away a request already in flight and "Start again" is a decision
            nobody makes four seconds in — and on a phone these forty-four
            pixels are the difference between seeing the narration and not. */
         state.detectionStatus === 'detecting' ? null : h('div', { className: 'mt-3 flex gap-2' }, [
-          h('button', { type: 'button', className: 'cta flex-1 px-3 rounded-full text-base min-h-[44px]', onClick: () => sharedRefs.fileInput?.click() }, 'Choose a photo'),
+          state.uploadedImg ? null : h('button', { type: 'button', className: 'cta flex-1 px-3 rounded-full text-base min-h-[44px]', onClick: () => sharedRefs.fileInput?.click() }, 'Choose a photo'),
           /* Only once there is a photo to replace.
 
              This rendered whenever detection was not running, so it sat there
@@ -4070,7 +4087,7 @@ function buildUploadDetect() {
           'Not ready to upload? ',
           h('a', {
             href: '#whole-house',
-            className: 'underline underline-offset-2',
+            className: 'inline-block py-3 underline underline-offset-2',
             onClick: (e) => { e.preventDefault(); document.getElementById('mount-wholehouse')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); },
           }, 'Get a rough figure from your house type instead'),
           ' — no photo needed.',
@@ -4996,9 +5013,14 @@ function photoChangedPriceLine(spread, n, doorOnly) {
   if (Math.abs(moved) < 50) return null;
   const typical = `${fmtMoney(was.low)} – ${fmtMoney(was.high)}`;
   const houseWord = `a typical ${String(was.typeLabel || 'house').toLowerCase()}${/bungalow/i.test(was.typeLabel || '') ? '' : ' house'}`;
+  /* Counted versus allowed for. The photo shows the front; the rest of the
+     house is an allowance, and this line must not claim we found it. */
+  const front = state.glazing?.frontCount;
+  const how = front && front !== n
+    ? `we counted ${front} window${front === 1 ? '' : 's'} at the front and allowed for about ${n} in all, at the sizes and styles in your photo.`
+    : `we counted ${n} window${n === 1 ? '' : 's'}, at the sizes and styles in your photo.`;
   return h('p', { className: 'mt-2 text-base leading-7 text-white/85' },
-    `${moved > 0 ? 'Up' : 'Down'} from ${typical} for ${houseWord}, because this is priced from your photo: ` +
-    `the ${n} window${n === 1 ? '' : 's'} we found, at their real sizes and styles.`);
+    `${moved > 0 ? 'Up' : 'Down'} from ${typical} for ${houseWord}, because this is priced from your photo: ${how}`);
 }
 
 function buildGlazingLedPanel() {
@@ -5111,7 +5133,7 @@ function buildGlazingLedPanel() {
        explanation the windows section gives, shortened: the spread is which
        company quotes you, not how roughly we measured. */
     h('p', { className: 'mt-4 text-base leading-7 text-white/85' },
-      `That range is which company quotes you — the lower end is close to what the keener of the two national installers settles at, the higher end what the same job goes out at elsewhere. Same ${doorOnly ? (isRearOpening(doorId) ? 'doors' : 'door') : hasDoor ? 'windows and door' : 'windows'}, same house, same work.`),
+      `Why a range? Companies charge different prices for the same job. The lower figure is what a keen installer typically charges; the higher figure is what others charge for exactly the same ${doorOnly ? (isRearOpening(doorId) ? 'doors' : 'door') : hasDoor ? 'windows and door' : 'windows'}.`),
 
     h('p', { className: 'mt-3 text-base leading-7 text-white/80' },
       'Walls, roof and roofline aren’t in this — you told us they’re staying as they are. Turn any of them back on above and they’ll be priced here too.'),
@@ -6319,7 +6341,7 @@ function buildDetailOptions() {
          offering a second opinion. */
       g.marketRange ? h('div', { className: 'mt-3 pt-3 border-t border-zinc-200' }, [
         h('p', { className: 'text-base leading-7 text-zinc-600' },
-          'That range is which company quotes you. The lower end is close to what the keener of the two national installers settles at, the higher end what the same job goes out at elsewhere — same windows, same house, same work, and nothing about the product changing between them.'),
+          'Why a range? Companies charge different prices for the same job. The lower figure is what a keen installer typically charges; the higher figure is what others charge for exactly the same windows.'),
         /* The second number, and the one the whole company exists because of.
            Not another installer: the same installer, and a customer who did
            not push. Shown as what it costs rather than as a discount you
@@ -7228,15 +7250,24 @@ function renderRefineOnly() {
 /* One consent checkbox. Identical markup and styling for all three, so the
    optional ones carry no visual nudge relative to the required one. */
 function consentBox(key, label, { required = false } = {}) {
-  return h('label', { className: 'flex items-start gap-3 cursor-pointer' }, [
+  /* The box and its row are both the target: 24px boxes on a 48px row.
+     16px boxes were the smallest controls on the site, on the step that
+     matters most. */
+  return h('label', { className: 'flex items-start gap-3 cursor-pointer py-2' }, [
     h('input', {
       type: 'checkbox',
       id: 'consent-' + key,
       checked: state.consent[key],
-      className: 'mt-0.5 w-4 h-4 shrink-0 accent-zinc-900',
+      className: 'mt-0.5 w-6 h-6 shrink-0 accent-zinc-900',
       onChange: (e) => {
         state.consent[key] = e.target.checked;
         document.getElementById('consent-error')?.remove();
+        /* The button and the note under it depend on this box; the typed
+           fields are already in state, so rebuilding loses nothing. */
+        if (key === 'installerQuotes') {
+          renderSaveFramingOnly();
+          requestAnimationFrame(() => document.getElementById('consent-installerQuotes')?.focus());
+        }
       },
     }),
     h('span', { className: 'text-base leading-7 text-zinc-600' }, [
@@ -7678,7 +7709,7 @@ function buildSaveFraming() {
           hasRender
             ? 'We keep the picture we generated, so your link keeps working; your original photograph isn’t saved. '
             : 'Your original photograph isn’t saved. ',
-          h('a', { href: '/privacy', className: 'underline underline-offset-2 hover:text-white/80' }, 'How your photo is used'),
+          h('a', { href: '/privacy', className: 'inline-block py-3 underline underline-offset-2 hover:text-white/80' }, 'How your photo is used'),
         ]),
       ]),
     ]);
@@ -7843,7 +7874,7 @@ function buildSaveFraming() {
           q.homeowner ? 'border-white bg-white/10' : 'border-white/20 bg-white/5 hover:border-white/40'}`,
       }, [
         h('input', {
-          type: 'checkbox', checked: q.homeowner, className: 'mt-0.5 w-4 h-4 accent-white',
+          type: 'checkbox', checked: q.homeowner, className: 'mt-0.5 w-6 h-6 shrink-0 accent-white',
           onChange: (e) => { q.homeowner = e.target.checked; render(); },
         }),
         h('span', { className: 'text-lg leading-6 text-white/85' },
@@ -7981,7 +8012,20 @@ function buildSaveFraming() {
         /* Hidden rather than shown and refused. Without email we cannot send
            the withdrawal link, so the server turns this consent down — and a
            box that cannot be honoured should not be on the page. */
-        state.installerQuotesAvailable ? consentBox('installerQuotes', [CONSENT_WORDING.installerQuotes]) : null,
+        /* They pressed "Get prices from up to 3 local installers" to get here.
+           The consent box has to start unticked, so the page says plainly that
+           this is the box that does what they asked for. Missing it means a
+           saved design and no quotes, which is exactly the outcome nobody who
+           clicked that button wanted. */
+        state.installerQuotesAvailable
+          ? (state.quote?.intent === 'quotes'
+              ? h('div', { className: `rounded-xl border-2 p-3 ${state.consent.installerQuotes ? 'border-emerald-600 bg-emerald-50' : 'border-amber-500 bg-amber-50'}` }, [
+                  h('p', { className: 'text-lg font-semibold text-zinc-900' },
+                    state.consent.installerQuotes ? '\u2713 Your quotes will be requested' : 'To get your prices, tick this box:'),
+                  consentBox('installerQuotes', [CONSENT_WORDING.installerQuotes]),
+                ])
+              : consentBox('installerQuotes', [CONSENT_WORDING.installerQuotes]))
+          : null,
         /* They checked their postcode and nobody covers it. The box stays —
            they can still ask, and we still record that they did — but saying
            nothing here and then emailing "we've sent your enquiry on" is the
@@ -8003,6 +8047,10 @@ function buildSaveFraming() {
         state.installerQuotesAvailable
           ? 'You don\u2019t have to tick either of the first two. Your visualisation and estimate work the same way without them.'
           : 'You don\u2019t have to tick the first one. Your visualisation and estimate work the same way without it.'),
+      (state.installerQuotesAvailable && state.quote?.intent === 'quotes' && !state.consent.installerQuotes)
+        ? h('p', { className: 'mt-3 text-base leading-7 text-amber-800 font-semibold' },
+            'You haven\u2019t ticked \u201cYes, I\u2019d like quotes\u201d yet, so nothing will go to installers \u2014 we\u2019ll only save your design.')
+        : null,
       h('button', {
         type: 'submit',
         className: `mt-4 w-full py-3 rounded-full text-lg font-medium ${state.sendingLead ? 'bg-zinc-300 text-zinc-600' : 'cta'}`,
