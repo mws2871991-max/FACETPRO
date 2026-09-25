@@ -223,3 +223,37 @@ test('arriving at #conservatory opens the fold it points at', () => {
   assert.match(body, /state\.conservatoryIntent && !state\.triageOpen/,
     'a conservatory arrival falls through to the full question');
 });
+
+/* ── No price for a trade nobody chose ── */
+
+test('the bar withholds a figure until the visitor has said something', () => {
+  /* With no journey the swatches default to a roof and a trim — cladding is
+     the only one starting at "none" — so /design opened without a topic showed
+     "Typical home £15,000 – £21,000 roof & trim", fixed to the bottom of a
+     phone, as the largest number on screen, to somebody who may only want
+     windows. The 25 September review: no visitor should see a price for a
+     trade they did not choose. */
+  const bar = page.slice(page.indexOf('const typicalTag'));
+  const body = bar.slice(0, 6000);
+  assert.match(body, /const nothingChosenYet/, 'the bar prices a guess again');
+
+  /* "Have they told us anything", not "is there a journey". Answering the
+     triage with "Everything / not sure yet" leaves journey null and sets
+     triageAnswered, and a whole-house figure is exactly right for them. */
+  assert.match(body, /!state\.journey[\s\S]{0,120}!state\.triageAnswered/,
+    'answering "everything" would be treated as having chosen nothing');
+
+  /* An upload or a restored design is an answer too — both carry choices. */
+  assert.match(body, /!state\.uploadedBase64/, 'a photo would still show the prompt');
+  assert.match(body, /!state\.resumedDesign/, 'a restored design would still show the prompt');
+});
+
+test('prices are formatted for the reader, not for their browser', () => {
+  /* fmtMoney called toLocaleString() with no locale, so a browser set to
+     German rendered £12,500 as "£12.500" — which a British reader sees as
+     twelve pounds fifty. Every price on this site goes through this one
+     function, and every one of them is in pounds. */
+  assert.match(page, /toLocaleString\('en-GB'\)/, 'fmtMoney no longer pins the locale');
+  const fmt = page.slice(page.indexOf('function fmtMoney'), page.indexOf('function fmtMoney') + 200);
+  assert.doesNotMatch(fmt, /toLocaleString\(\)/, 'fmtMoney formats to the browser locale');
+});

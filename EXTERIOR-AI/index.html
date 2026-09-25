@@ -2416,7 +2416,14 @@ function h(tag, attrs = {}, children = []) {
   return el;
 }
 
-function fmtMoney(n) { return "£" + Math.round(n || 0).toLocaleString(); }
+/* en-GB, not the browser's idea of it.
+
+   Bare toLocaleString() formats to whatever locale the browser is set to, so
+   a German one rendered £12,500 as "£12.500" — which a British reader sees as
+   twelve pounds fifty. Every price on this site is in pounds and grouped the
+   British way whoever is looking at it, and this is the function all of them
+   go through. */
+function fmtMoney(n) { return "£" + Math.round(n || 0).toLocaleString('en-GB'); }
 
 // ---------- render ----------
 
@@ -5674,6 +5681,28 @@ function buildTotalBar() {
     ? null
     : h('span', { className: 'bar-typical text-[10px] uppercase tracking-[0.14em] text-zinc-500 whitespace-nowrap' }, 'Typical home');
 
+  /* Nobody has said what they want yet, so do not put a price on a guess.
+
+     With no journey the swatches default to a roof and a trim — cladding is
+     the only one that starts at "none" — so /design opened without a topic
+     showed "Typical home £15,000 – £21,000 roof & trim", fixed to the bottom
+     of a phone, as the largest number on screen, to somebody who may only
+     want windows. The 25 September review put it plainly: no visitor should
+     see a price for a trade they did not choose.
+
+     The test is "have they told us anything", not "is there a journey".
+     Answering the triage with "Everything / not sure yet" leaves journey null
+     and sets triageAnswered, and a whole-house figure is exactly right for
+     that person — so they keep it.
+
+     Only the figure is withheld. The swatches stay as they are, because the
+     first automatic render is built from them and a blank bar is a smaller
+     loss than no picture at all. */
+  const nothingChosenYet = !state.journey
+    && !state.triageAnswered
+    && !state.uploadedBase64
+    && !state.resumedDesign;
+
   /* The label names what the number covers. It read "walls, roof & trim"
      always, which stopped being true the moment a trade could be left out —
      £8,100 sat under a label promising three trades when it had been asked to
@@ -5815,7 +5844,10 @@ function buildTotalBar() {
          panel, which is one tap away and labels both properly. A bar that
          overflows tells you nothing; a bar showing the larger figure and
          saying there is more tells you what to do about it. */
-      h('span', { className: 'flex items-baseline gap-2 min-w-0 overflow-hidden' }, [
+      nothingChosenYet
+        ? h('span', { className: 'text-[13px] text-zinc-600 min-w-0 truncate' },
+          'Tell us what you’d like to change and we’ll price it')
+        : h('span', { className: 'flex items-baseline gap-2 min-w-0 overflow-hidden' }, [
         typicalTag,
         cladding ? h('span', { className: 'whitespace-nowrap' }, [
           h('span', { className: 'measured text-[15px] sm:text-[18px]' }, cladding),
