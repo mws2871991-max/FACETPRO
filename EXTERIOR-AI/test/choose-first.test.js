@@ -35,8 +35,9 @@ test('the homepage opens with six product boxes, each to a journey', () => {
 });
 
 test('the chooser shows only for a journey, before any photo', () => {
-  const body = fnBody('buildChooser');
-  assert.match(body, /if \(!j \|\| !JOURNEYS\[j\] \|\| state\.uploadedImg \|\| state\.resumedDesign \|\| state\.stage !== 'landing'\) return empty;/);
+  // The rule lives in chooserShowing(), which the price bar reads too.
+  assert.match(fnBody('buildChooser'), /if \(!chooserShowing\(\)\) return empty;/);
+  assert.match(fnBody('chooserShowing'), /j && JOURNEYS\[j\] && !state\.uploadedImg && !state\.resumedDesign && state\.stage === 'landing'/);
   assert.match(html, /\['mount-choose',\s+buildChooser\]/);
   assert.ok(html.indexOf('id="mount-choose"') < html.indexOf('id="mount-upload"'), 'the choice must come before the upload');
 });
