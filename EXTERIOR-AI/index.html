@@ -3161,7 +3161,7 @@ function buildChooser() {
          Next on its own is always a valid move. */
       h('p', { className: 'mt-4 text-base text-zinc-700' }, `Question ${step + 1} of ${blocks.length}`),
       h('div', { className: 'mt-3' }, blocks[step]),
-      h('p', { className: 'mt-4 text-base leading-7 text-zinc-700' }, 'Not sure? Just press Next — we have picked the most popular choice for you.'),
+      h('p', { className: 'mt-4 text-base leading-7 text-zinc-700' }, 'Not sure? We’ve picked the most popular — you can change it later.'),
       h('div', { className: 'mt-5 flex flex-col-reverse sm:flex-row sm:items-center gap-3' }, [
         step > 0 ? h('button', {
           type: 'button',
