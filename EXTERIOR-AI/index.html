@@ -2472,9 +2472,35 @@ const PAGE_TITLE = {
   pricing: 'How we price — Facet Pro',
 };
 
+/* The heading each route leads with. One document serves four of them, so the
+   markup can only carry one h1 — and it has to be the homepage's, because that
+   is the one indexed page and the served HTML is all a crawler reads.
+
+   Yesterday's fix for that took it too far: demoting the other two to h2 left
+   /installers and /how-we-price with no h1 at all. The 25 September journey
+   review noticed from the outside, reading /installers and finding the
+   homepage's heading — "What would you like to change?" — because it had
+   become the document's only one.
+
+   So the tag is the homepage's, and the level is the route's. Both of the
+   other routes are served noindex, so no crawler needs an h1 there; what does
+   need one is a screen reader, and aria-level is exactly the tool for saying
+   "this heading is the top of this page" without a second h1 in the markup. */
+const PAGE_HEADING = {
+  home: 'choose-heading',
+  installers: 'installers-heading',
+  pricing: 'pricing-heading',
+};
+
 function applyPage() {
   for (const el of document.querySelectorAll('[data-page]')) {
     el.hidden = el.dataset.page !== PAGE;
+  }
+  for (const [page, id] of Object.entries(PAGE_HEADING)) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    if (page === PAGE && el.tagName !== 'H1') el.setAttribute('aria-level', '1');
+    else el.removeAttribute('aria-level');
   }
   if (PAGE_TITLE[PAGE]) document.title = PAGE_TITLE[PAGE];
   markCurrentProduct();
@@ -3798,7 +3824,11 @@ function buildUploadDetect() {
     h('div', { className: 'flex items-center justify-between flex-wrap gap-3' }, [
       h('div', {}, [
         h('p', { className: 'text-[11px] tracking-widest uppercase text-zinc-400' }, 'Step 1'),
-        h('h2', { className: 'mt-1 serif text-[26px] md:text-[32px] tracking-tight' }, 'Let’s see what your home could become'),
+        /* The design page's own top heading. /design is served noindex and
+           this is built by script, so it needs no h1 in the markup — but a
+           screen reader arriving here should still be told where the top of
+           the page is, and before this nothing did. */
+        h('h2', { id: 'design-heading', 'aria-level': '1', className: 'mt-1 serif text-[26px] md:text-[32px] tracking-tight' }, 'Let’s see what your home could become'),
       ]),
       h('span', { className: 'text-[10px] tracking-widest uppercase px-2.5 py-1 rounded-full bg-[#FFF7ED] border border-zinc-200' }, 'Takes about 30 seconds'),
     ]),

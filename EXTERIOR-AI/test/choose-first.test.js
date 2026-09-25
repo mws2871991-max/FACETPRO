@@ -82,6 +82,34 @@ test('the homepage has exactly one h1, and it is the homepage’s own', () => {
   }
 });
 
+test('every route leads with a heading, not just the homepage', () => {
+  /* Demoting those two to h2 fixed the homepage and broke the other routes:
+     /installers and /how-we-price were left with no top-level heading at all.
+     The 25 September journey review found it from the outside — it read
+     /installers and reported the homepage's "What would you like to change?",
+     because that had become the document's only h1.
+
+     One h1 in the markup is right and stays: it is the indexed page's, and the
+     served HTML is all a crawler reads. What each of the other routes needs is
+     a heading a screen reader will announce as the top of the page, which is
+     what aria-level says without a second h1 in the source. */
+  const body = fnBody('applyPage');
+  assert.match(body, /PAGE_HEADING/, 'no route heading is promoted at all');
+  assert.match(body, /setAttribute\('aria-level', '1'\)/,
+    'the active route is not given a top-level heading');
+  assert.match(body, /removeAttribute\('aria-level'\)/,
+    'an inactive route keeps its promotion, so two headings claim the top');
+
+  /* Every page that can be routed to needs an entry, or it has none. */
+  for (const id of ['choose-heading', 'installers-heading', 'pricing-heading']) {
+    assert.match(html, new RegExp(`['"]${id}['"]`), `${id} is not in the heading map`);
+  }
+  /* /design builds its own, because it is rendered by script rather than
+     sitting in the markup. */
+  assert.match(html, /id: 'design-heading', 'aria-level': '1'/,
+    '/design has no top-level heading');
+});
+
 test('the picture of their house comes before the catalogue', () => {
   /* Measured live on a windows journey before this changed: upload at 170px,
      then 2,843px — three and a third phone screens — of window styles and
