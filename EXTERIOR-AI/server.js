@@ -345,7 +345,10 @@ const detectLimiter = rateLimit({
   message: { error: 'Too many requests — please wait a minute and try again.' }
 });
 const renderLimiter = rateLimit({
-  windowMs: 60 * 1000, max: 5,
+  /* Tunable for the same reason detect is: the suite needs its own budget to
+     reach the daily cap, and a test about the day should not be refused by the
+     minute. Unset everywhere else, which is where it should stay. */
+  windowMs: 60 * 1000, max: envLimit('RENDER_RATE_LIMIT', 5),
   standardHeaders: true, legacyHeaders: false,
   message: { error: 'Too many renders — please wait a minute.' }
 });
@@ -441,6 +444,48 @@ function readUsageFile() {
 
 let usage = readUsageFile() || { day: utcDay(), detect: 0, render: 0 };
 
+/* No single visitor may take the whole day's allowance.
+
+   The global cap bounds the bill and nothing else. At five renders a minute
+   one address can spend all of them in half an hour, for free, and every
+   homeowner after that is told the site is busy until midnight UTC — a denial
+   of service on the one step this product exists for, costing the person doing
+   it nothing.
+
+   So a second, smaller cap per address. Generous on purpose: twenty renders is
+   a dozen looks and a change of mind, and the busiest day this site has had
+   was twenty-eight uploads across everybody. It is tunable because the number
+   that matters is whether it ever catches a real customer, and the honest
+   answer today is that nobody knows.
+
+   The case it could get wrong is mobile. UK carriers put many customers behind
+   one address, and this product is used on phones, so a busy CGNAT pool is the
+   way a real person meets this cap. At current volume that needs twenty
+   renders from one carrier's pool in a day against twenty-eight uploads from
+   everybody — unlikely rather than impossible. If it ever bites, raise
+   DAILY_RENDER_PER_IP; it takes effect on the next deploy and costs nothing.
+
+   Held in memory and dropped at the day boundary. This is a counter, not a
+   record, and it is the one place a raw address could accumulate — so the key
+   is hashed with a salt made at boot, which means the map cannot be read back
+   into addresses and cannot be correlated across restarts. Deliberately
+   stricter than the ipHash written into lead records, which has to stay stable
+   to be worth anything; this one does not.
+
+   Bounded, because somebody with many addresses would otherwise grow it
+   without limit. Past the bound it stops enforcing rather than stops working:
+   the global cap is what protects the money, and this only protects fairness. */
+const DAILY_PER_IP = {
+  detect: envLimit('DAILY_DETECT_PER_IP', 25),
+  render: envLimit('DAILY_RENDER_PER_IP', 20),
+};
+const PER_IP_MAX_KEYS = 5000;
+const PER_IP_SALT = crypto.randomBytes(16).toString('hex');
+const perIpKey = (req) => crypto.createHash('sha256')
+  .update(PER_IP_SALT).update(String((req && req.ip) || 'unknown'))
+  .digest('hex').slice(0, 16);
+let perIpUsage = new Map();
+
 function persistUsage() {
   try {
     fs.mkdirSync(path.dirname(USAGE_FILE), { recursive: true });
@@ -460,10 +505,11 @@ function secondsUntilUtcMidnight() {
 
 // Reserves one call against today's allowance. Returns false when the cap is
 // already spent, in which case the caller must not contact the provider.
-function consumeDailyQuota(kind, res) {
+function consumeDailyQuota(kind, res, req) {
   const today = utcDay();
   if (usage.day !== today) {
     usage = { day: today, detect: 0, render: 0 };
+    perIpUsage = new Map();        // a new day is a new allowance for everybody
     persistUsage();
   }
 
@@ -486,6 +532,22 @@ function consumeDailyQuota(kind, res) {
   const limit = DAILY_LIMITS[kind];
   res.setHeader('X-Daily-Limit', String(limit));
 
+  /* Their own allowance first, so somebody already over it cannot spend the
+     shared one on the way to being refused. Skipped when the map is full —
+     see PER_IP_MAX_KEYS — because the global cap below is what holds the
+     money and this only decides who gets to spend it. */
+  const perIpLimit = DAILY_PER_IP[kind];
+  const key = req ? perIpKey(req) : null;
+  let mine = null;
+  if (key && perIpLimit > 0 && (perIpUsage.size < PER_IP_MAX_KEYS || perIpUsage.has(key))) {
+    mine = perIpUsage.get(key) || { detect: 0, render: 0 };
+    if (mine[kind] >= perIpLimit) {
+      res.setHeader('Retry-After', String(secondsUntilUtcMidnight()));
+      console.warn(`Daily ${kind} allowance for one address is spent (${mine[kind]}/${perIpLimit}) — refusing without calling the provider.`);
+      return false;
+    }
+  }
+
   if (usage[kind] >= limit) {
     res.setHeader('X-Daily-Remaining', '0');
     res.setHeader('Retry-After', String(secondsUntilUtcMidnight()));
@@ -494,6 +556,7 @@ function consumeDailyQuota(kind, res) {
   }
 
   usage[kind] += 1;
+  if (mine) { mine[kind] += 1; perIpUsage.set(key, mine); }
   persistUsage();
   res.setHeader('X-Daily-Remaining', String(limit - usage[kind]));
   return true;
@@ -2054,7 +2117,7 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
   if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set — see .env.example.' });
 
   // Checked last, after validation, so a malformed request doesn't spend quota.
-  if (!consumeDailyQuota('detect', res)) return res.status(429).json(dailyLimitBody('detect'));
+  if (!consumeDailyQuota('detect', res, req)) return res.status(429).json(dailyLimitBody('detect'));
 
   let anthropicRes;
   try {
@@ -3017,7 +3080,7 @@ app.post('/api/render', renderLimiter, async (req, res) => {
      render". It used to sit above the prompt, so a request that asked for no
      change still spent one of the fifty renders a day before anything looked
      at what it was asking for. */
-  if (!consumeDailyQuota('render', res)) return res.status(429).json(dailyLimitBody('render'));
+  if (!consumeDailyQuota('render', res, req)) return res.status(429).json(dailyLimitBody('render'));
 
   // Rebuilt from what the bytes are, so a client-supplied data: URL is never
   // forwarded to Replicate verbatim.
@@ -3057,7 +3120,16 @@ app.post('/api/render', renderLimiter, async (req, res) => {
       const verdict = await judgeRender(url, trades, original);
       if (verdict && verdict.missed.length) {
         missedChanges = verdict.missed;
-        if (deadlineAt - Date.now() > RETRY_NEEDS_MS) {
+        /* The retry is a second call to Replicate and has to be paid for like
+           the first. Without this, DAILY_RENDER_LIMIT bounded requests and
+           not spend: a cap reading 150 could settle 300 calls, and anyone
+           reading the knob would have been wrong by double.
+
+           Asked for after the picture exists, so a spent allowance costs them
+           a retry rather than the render they already have. The verdict below
+           still says what was missed, and the page still says so — a retry is
+           an improvement on a picture we can show, never a condition of it. */
+        if (deadlineAt - Date.now() > RETRY_NEEDS_MS && consumeDailyQuota('render', res, req)) {
           const second = await runFlux({ prompt, inputImage, deadlineAt, replicateKey });
           const again = second.ok ? await judgeRender(second.url, trades, original) : null;
           if (second.ok && (!again || again.score >= verdict.score)) {
