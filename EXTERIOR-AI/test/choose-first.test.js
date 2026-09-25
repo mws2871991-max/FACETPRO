@@ -101,3 +101,30 @@ test('the picture of their house comes before the catalogue', () => {
   assert.match(body, /insertBefore\(glazing, wholeHouse\.nextSibling\)/,
     'the non-glazing branch has gone, so the section will drift');
 });
+
+test('the chooser asks which house, instead of assuming a semi', () => {
+  /* The chooser quoted "Typical semi-detached house" whichever house they
+     live in, because state.houseType defaults to semi until a photograph says
+     otherwise — and a semi sits at the small end. Measured live on the
+     cladding journey: Alabaster read £6,500–£10,000 before the photo and
+     £9,000–£11,500 after it. Same finish, +38% on the bottom.
+
+     Nothing was concealed — the line under it says the house will be priced
+     from the photo — but anchoring low and then rising is the shape people
+     read as bait, and it lands the moment they have just handed over a photo
+     of their home. They know which house they live in, so ask. */
+  const body = fnBody('buildChooser');
+  assert.match(body, /chooserHouseType\(/, 'the chooser no longer offers a house type');
+  assert.match(body, /HOUSE_TYPES\.map/, 'the row should offer every type, not a hard-coded few');
+
+  /* Their answer has to outrank ours, or detection quietly overrules them
+     the moment a photograph lands — houseTypeChosen is the same flag the
+     picker further down the page sets. */
+  const setter = fnBody('chooserHouseType');
+  assert.match(setter, /state\.houseTypeChosen = true/,
+    'a chosen type must survive detection');
+  assert.match(setter, /refreshPrice\(\)/, 'the price has to follow the choice');
+
+  /* "Typical bungalow house" is not a thing anyone says. */
+  assert.match(body, /bungalow/i, 'the noun-vs-adjective case has gone');
+});

@@ -2931,6 +2931,37 @@ async function chooserPref(key, id, label) {
   render();
 }
 
+/* Their house type, chosen before the photograph.
+
+   The chooser quoted "Typical semi-detached house" whether or not that is what
+   they live in, because state.houseType defaults to semi until a photograph
+   says otherwise. A semi sits at the small end of the range, so the number
+   they were anchored on was the low one — and measured live on the cladding
+   journey, Alabaster went £6,500–£10,000 before the photo and £9,000–£11,500
+   after it. Same finish, +38% on the bottom of the range.
+
+   Nothing was concealed: the line underneath says the house will be priced
+   from the photo, and the estimate relabels itself "Sized to your home". But
+   anchoring low and then rising is the shape people recognise as bait even
+   when it is honest, and it happens at the exact moment they have just handed
+   over a photograph of their home.
+
+   They know the answer, so ask. One tap turns our guess into their statement,
+   and the figure that follows reads as a refinement of their own number
+   rather than a correction of ours. Marks houseTypeChosen so detection does
+   not quietly overrule them later — the same flag the picker further down the
+   page sets. */
+async function chooserHouseType(id) {
+  if (state.houseType === id) return;
+  state.houseType = id;
+  state.houseTypeChosen = true;
+  state.renderUrl = null; state.renderId = null;
+  render();
+  await refreshPrice();
+  await refreshGlazing({});
+  render();
+}
+
 async function chooserSwatch(sw) {
   const key = { Cladding: 'cladding', Trim: 'trim', Roof: 'roof' }[sw.group];
   if (!key || state[key]?.id === sw.id) return;
@@ -2958,6 +2989,18 @@ function buildChooser() {
   const blocks = [];
   let priceRange = null;
   let what = '';
+
+  /* First, because it is the one that moves the number most and the one they
+     can answer without thinking. Every other row on this card is a choice
+     about taste; this is a fact they already know, and until they say it we
+     are quoting a semi at them regardless. */
+  blocks.push(h('div', {}, [
+    heading('Your house'),
+    h('div', { className: 'mt-2 grid grid-cols-2 sm:grid-cols-5 gap-2' }, HOUSE_TYPES.map(t => card(
+      state.houseType === t.id,
+      () => chooserHouseType(t.id),
+      [h('span', { className: 'block text-[14px] font-medium' }, t.short)]))),
+  ]));
 
   if (j === 'windows' || j === 'doors') {
     const isWin = j === 'windows';
@@ -3028,7 +3071,12 @@ function buildChooser() {
       h('div', { className: 'mt-5 grid gap-6' }, blocks),
       h('div', { className: 'mt-6 pt-5 border-t border-zinc-200 flex items-end justify-between gap-4 flex-wrap' }, [
         h('div', {}, [
-          h('p', { className: 'text-[11px] tracking-widest uppercase text-zinc-500' }, `Typical ${typeLabel.toLowerCase()} house`),
+          /* "Typical bungalow house" is not a thing anyone says. Every other
+             label in HOUSE_TYPES is an adjective that wants the noun after it
+             — detached, semi-detached, mid-terrace — and bungalow is already
+             the noun. */
+          h('p', { className: 'text-[11px] tracking-widest uppercase text-zinc-500' },
+            `Typical ${typeLabel.toLowerCase()}${/bungalow/i.test(typeLabel) ? '' : ' house'}`),
           h('p', { className: 'measured text-[24px] tracking-tight' },
             !priceRange ? 'Working it out…'
               : priceRange.low === priceRange.high ? fmtMoney(priceRange.low)
