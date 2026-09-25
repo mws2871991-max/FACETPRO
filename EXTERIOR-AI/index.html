@@ -2739,6 +2739,17 @@ async function redeemResumeCode(code) {
     applyDesign(data.design || {});
     /* They have something to design with, even without a photograph. */
     state.resumedDesign = true;
+    /* And they have answered the triage question, by saving a design.
+
+       triageOpen starts as !readJourney(), which is right for a cold visitor
+       and wrong here: /design?code=XXXX carries no journey, so the question
+       opens, and redeeming the code never closed it. The result, walked live,
+       was "Your design is back — now take a photo" with "What are you looking
+       for today?" directly underneath, above their own restored choices.
+
+       Closed here rather than guarded in buildTriage alone, because the state
+       is what is wrong: the question is not open, it has been answered. */
+    state.triageOpen = false;
     U('Your design is back — now take a photo of the front of your house');
   } catch (err) {
     state.resumeError = err.message;
@@ -3115,6 +3126,36 @@ function buildTriage() {
           className: 'text-[12px] px-4 rounded-full border border-zinc-200 hover:border-zinc-900 transition min-h-[44px] inline-grid place-items-center',
           onClick: () => { state.triageOpen = true; render(); },
         }, 'Change'),
+      ]),
+    ]);
+  }
+
+  /* A restored design is an answer, and a better one than the question.
+
+     A resume code carries choices, not intent — redeemResumeCode brings back
+     the swatches and never sets state.journey — so a returning customer fell
+     through to the full seven-way question. Walked live: the page says "Your
+     design is back — now take a photo of the front of your house" and asks
+     "What are you looking for today?" immediately underneath, above the
+     choices they made last time.
+
+     Asking again is precisely what the comment above exists to prevent, and
+     buildChooser already declines to render for this same reason — see
+     state.resumedDesign in its guard. Same treatment here: state what they
+     have and keep it changeable, rather than asking a question they answered
+     the day they saved it. */
+  if (state.resumedDesign && !state.triageOpen) {
+    return h('div', { id: 'mount-triage', className: 'max-w-6xl mx-auto px-6 mt-10' }, [
+      h('section', { className: 'rounded-2xl border border-zinc-200 bg-white px-6 py-4 flex items-center justify-between gap-4 flex-wrap' }, [
+        h('p', { className: 'text-[13px] leading-6 text-zinc-700' }, [
+          h('span', { className: 'text-zinc-500' }, 'Your saved design is back'),
+          h('span', { className: 'text-zinc-500' }, ' — the choices below are the ones you kept, and you can add the rest any time.'),
+        ]),
+        h('button', {
+          type: 'button',
+          className: 'text-[12px] px-4 rounded-full border border-zinc-200 hover:border-zinc-900 transition min-h-[44px] inline-grid place-items-center',
+          onClick: () => { state.triageOpen = true; render(); },
+        }, 'Price something else'),
       ]),
     ]);
   }

@@ -130,3 +130,47 @@ test('the gate does not fight applyPage over the same attribute', () => {
   assert.match(fn[0], /if \(el\.dataset\.page && el\.dataset\.page !== PAGE\) continue;/,
     'the gate no longer stands aside for applyPage — it will re-show tool sections on the homepage');
 });
+
+/* ── A returning customer is not asked what they came for ── */
+
+test('redeeming a code closes the triage question it never answered', () => {
+  /* triageOpen starts as !readJourney(), which is right for a cold visitor
+     and wrong for a returning one: /design?code=XXXX carries no journey, so
+     the question opens, and redeeming the code never closed it.
+
+     Walked live before this: "Your design is back — now take a photo of the
+     front of your house", with "What are you looking for today?" directly
+     underneath, above the very choices they had saved. A resume code carries
+     choices, not intent, so state.journey is null and it fell all the way
+     through to the seven-way question.
+
+     Fixed in the state rather than only in the view, because the question is
+     not open — it has been answered, by them, the day they saved. */
+  const redeem = page.slice(page.indexOf('async function redeemResumeCode'));
+  const body = redeem.slice(0, redeem.indexOf('\n}'));
+  assert.match(body, /state\.resumedDesign = true/);
+  assert.match(body, /state\.triageOpen = false/,
+    'redeeming a code leaves the triage question open above the restored design');
+});
+
+test('the restored design says so, and stays changeable', () => {
+  const triage = page.slice(page.indexOf('function buildTriage'));
+  const body = triage.slice(0, triage.indexOf('\nfunction '));
+
+  /* Its own branch, before the full question. */
+  assert.match(body, /state\.resumedDesign && !state\.triageOpen/,
+    'a restored design has no branch of its own, so it falls to the question');
+
+  /* And the way back. Somebody who saved a windows design may have come back
+     about a roof, so the answer has to be reopenable — the same affordance
+     the known-journey branch gives. */
+  const at = body.indexOf('state.resumedDesign && !state.triageOpen');
+  const branch = body.slice(at, at + 1400);
+  assert.match(branch, /state\.triageOpen = true/,
+    'there is no way to reopen the question from a restored design');
+
+  /* The cold visitor still gets asked — this narrows who is asked, it does
+     not remove the question. */
+  assert.match(body, /What are you looking for today\?/,
+    'the triage question has gone entirely');
+});
