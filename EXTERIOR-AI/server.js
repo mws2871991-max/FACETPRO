@@ -1289,17 +1289,61 @@ function pruneDetectionRecords() {
    cached reading is taken again once rather than answering without sides. */
 const DETECTION_VERSION = 3;
 
-function imageFingerprint(buffer) {
+/* What to ask of a photograph of the back of a house.
+
+   Not the front prompt reworded. The front prompt asks three things that are
+   wrong at the back: it hunts a pedestrian front door as the 1.98 m scale
+   reference, it reads the left and right edges for gap/shared/cut-off, and it
+   names a house type from them. A garden shot answers none of those — the
+   sides are usually a fence, and the door is as likely to be a patio slider
+   or a bifold as something a person walks through.
+
+   It asks for a count, not a measurement, and that is deliberate. Scaling
+   needs a reference of known height; a patio door and a bifold are not the
+   1.98 m a front door is, and inventing a rear scale would be precisely the
+   assumption that "measure it, or label it an estimate" exists to stop. A
+   count the homeowner can check against their own house is worth more than a
+   measurement nobody can. */
+const REAR_PROMPT = `Detect every exterior element on this photograph of the BACK of a UK home. Return ONLY a JSON array, no markdown.
+
+- "window": any window, including the panes of a conservatory
+- "door-rear": a pedestrian back door, the kind a person walks through. Box the door leaf only.
+- "door-patio": a sliding patio door, a bifold, or French doors — a wide glazed opening onto the garden. One box for the whole opening, however many panels it has.
+- "roof": a main roof surface
+- "cladding": exterior wall surface
+- "conservatory": a conservatory or glazed garden room attached to the house
+- "extension": a rear extension, where it reads as an addition rather than the original house
+
+Each item must have exactly: {"type":"one of above","label":"short human label e.g. Kitchen Window","confidence":0.0-1.0,"x_pct":0-100,"y_pct":0-100,"w_pct":1-100,"h_pct":1-100}
+Do not add any other keys, and do not describe anything in prose. Only the array.
+
+Coordinates: x_pct/y_pct = top-left corner, w_pct/h_pct = width/height, all as % of image dimensions.
+
+Count a bay, or a run of panes sharing one opening, as ONE window — the way a fitter would quote it.
+Do not count a greenhouse, a shed, a detached garage, or a neighbouring property.
+
+Finally add: {"type":"analysis","summary":"2-3 sentence overview of the back of the property","storeys":1,"hasConservatory":false,"hasExtension":false}`;
+
+
+function imageFingerprint(buffer, elevation = 'front') {
+  /* The elevation is part of the key.
+
+     The cache answers from the bytes, and the same bytes read as a front and
+     as a back are two different readings — the rear prompt does not look for
+     a front door, for sides, or for a house type. Without this, somebody who
+     used one photograph for both would be handed the front's answer for the
+     back, out of cache, with no call made and nothing to show for it. */
   return crypto.createHash('sha256')
-    .update(`v${DETECTION_VERSION}:`)
+    .update(`v${DETECTION_VERSION}:${elevation}:`)
     .update(buffer)
     .digest('hex');
 }
 
-function saveDetectionRecord(detections, size) {
+function saveDetectionRecord(detections, size, elevation = 'front') {
   const id = crypto.randomUUID();
   detectionRecords.set(id, {
     at: Date.now(),
+    elevation,
     detections,
     aspectRatio: size && size.height > 0 ? size.width / size.height : null,
     measurement: null,
@@ -2032,6 +2076,17 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
   });
 
   const { image, mimeType, sessionId } = req.body || {};
+  /* Which face of the house this photograph shows.
+
+     The front is the default, and everything written before this is the
+     front: the door scale reference, the sides evidence, the house type. The
+     back is a different question, so it gets its own prompt rather than the
+     front's with hopeful wording — see REAR_PROMPT.
+
+     Anything that is not 'rear' is the front, deliberately. An unrecognised
+     value should read the photograph the way the whole product already does,
+     not refuse and not guess. */
+  const elevation = String(req.body?.elevation || '').toLowerCase() === 'rear' ? 'rear' : 'front';
   if (!image || !mimeType) return res.status(400).json({ error: 'Missing image or mimeType.' });
   const img = readImage(image, mimeType);
   if (!img.ok) return res.status(img.status).json({ error: img.error, ...(img.reason ? { reason: img.reason } : {}) });
@@ -2055,7 +2110,7 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
      or simply after we shipped something, was quoted a different number for
      the same house. On a real photograph that was seven windows before a
      deploy and six after. */
-  const fingerprint = imageFingerprint(img.buffer);
+  const fingerprint = imageFingerprint(img.buffer, elevation);
   /* What kind of house the photograph shows, where the model could tell.
 
      state.houseType has always defaulted to 'semi' and only moved if somebody
@@ -2199,7 +2254,7 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
           role: 'user',
           content: [
             { type: 'image', source: { type: 'base64', media_type: img.mime, data: img.payload } },
-            { type: 'text', text: `Detect every exterior architectural element on this UK home. Return ONLY a JSON array, no markdown. Detect ALL of these element types if visible:
+            { type: 'text', text: elevation === 'rear' ? REAR_PROMPT : `Detect every exterior architectural element on this UK home. Return ONLY a JSON array, no markdown. Detect ALL of these element types if visible:
 
 - "window": any window
 - "door-front": the main front door, and only a pedestrian front door — never a
@@ -2299,7 +2354,7 @@ For houseType, judge it from what the photograph shows: a gap on both sides is d
   // Aspect ratio comes from the image itself, never from the client — and it
   // was already read at the gate above, so there is nothing left to fail here.
   const size = { width: img.width, height: img.height };
-  const detectionId = saveDetectionRecord(detections, size);
+  const detectionId = saveDetectionRecord(detections, size, elevation);
   detectionByImage.set(fingerprint, detectionId);
 
   /* Kept so a restart does not change the answer. Awaited rather than fired
@@ -2320,7 +2375,30 @@ For houseType, judge it from what the photograph shows: a gap on both sides is d
   const hasDoor = detections.some(d => d.type === 'door-front');
   const hasWall = detections.some(d => d.type === 'cladding');
 
+  /* The back answers a smaller question, and says only what it looked for.
+
+     canMeasure, scaleReference, subjectBox and houseType are all front-
+     elevation findings: they come from the front door as a 1.98 m rule and
+     from reading the sides of the house. The rear prompt asks for none of
+     them, so reporting them here would be inventing them — and houseType in
+     particular would then overwrite a good front reading with a guess made
+     from a garden. What the back is for is a count the homeowner can check.
+
+     doorCount is reported because a back door or a patio door is a priced
+     item in its own right, and the homeowner should be told what we saw. */
+  if (elevation === 'rear') {
+    return res.json({
+      elevation: 'rear',
+      detections: forDisplay(detections), detectionId,
+      rearWindowCount: glazing.frontWindowCount(detections),
+      rearDoorCount: detections.filter(d => d.type === 'door-rear' || d.type === 'door-patio').length,
+      hasConservatory: detections.some(d => d.type === 'conservatory'),
+      canMeasure: false, scaleReference: false,
+    });
+  }
+
   res.json({
+    elevation: 'front',
     detections: forDisplay(detections), detectionId, canMeasure: hasWall, scaleReference: hasDoor && !!size,
     frontWindowCount: glazing.frontWindowCount(detections),
     frontBayCount: glazing.frontBayCount(detections),
