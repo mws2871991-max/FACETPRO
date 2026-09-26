@@ -1978,6 +1978,13 @@ const state = {
   // form only promises it when it's true.
   resumeCode: null,         // a code we've issued, so they can type it on a phone
   resumeCodeFor: null,      // the design it stands for — see currentResumeCode()
+  /* The back of the house, when a photograph answered rather than a stepper.
+     backCount holds the number either way; this says where it came from, so
+     the page can tell the homeowner which of the two it is and the lead can
+     tell the installer. */
+  backFromPhoto: false,
+  rearBusy: false,
+  rearError: null,
   // Read back from the server rather than restated here, so the copy that says
   // how long a code lasts cannot drift from resume.TTL_MS.
   resumeExpiresAt: null,
@@ -6380,19 +6387,49 @@ function buildDetailOptions() {
           h('p', { className: 'text-lg font-semibold text-zinc-900' }, 'Back and sides of the house'),
           g.backCount === null
             ? h('div', { className: 'mt-1 grid gap-2' }, [
-                h('p', { className: 'text-base leading-7 text-zinc-700' }, 'Not priced yet — your photo only shows the front. How many windows are there at the back and sides?'),
+                h('p', { className: 'text-base leading-7 text-zinc-700' }, 'Not priced yet — your photo only shows the front. Add a photo of the back, or tell us how many windows are there.'),
+                /* The camera first, because it is the easier answer and the
+                   better evidence: the installer can be told the number came
+                   from a photograph rather than a guess. The two typed
+                   answers stay underneath for anyone who cannot get round the
+                   back, or does not want to. */
+                h('input', {
+                  type: 'file', accept: 'image/*', className: 'hidden',
+                  'aria-label': 'Add a photo of the back of your house',
+                  /* An id rather than a ref: h() has no ref support — it
+                     would setAttribute a function and the button would do
+                     nothing — and this panel is rebuilt on every price
+                     change, so a captured variable would go stale anyway. */
+                  id: 'rear-photo-input',
+                  onChange: (e) => { const f = e.target.files?.[0]; if (f) handleRearUpload(f); e.target.value = ''; },
+                }),
+                h('p', { className: 'text-base leading-7 text-zinc-600' },
+                  'Stand in the garden, far enough back to get the whole back of the house in, with the back door or patio door in shot.'),
                 h('div', { className: 'flex gap-2 flex-wrap' }, [
-                  h('button', { type: 'button', className: 'cta px-5 rounded-full text-lg font-semibold min-h-[48px]', onClick: () => setBack(state.glazing?.frontCount || 3, false) }, 'Add them'),
+                  h('button', {
+                    type: 'button', disabled: state.rearBusy,
+                    className: 'cta px-5 rounded-full text-lg font-semibold min-h-[48px]',
+                    onClick: () => document.getElementById('rear-photo-input')?.click(),
+                  }, state.rearBusy ? 'Reading your photo…' : 'Add a photo of the back'),
+                  h('button', { type: 'button', className: 'px-5 rounded-full border border-zinc-300 bg-white text-lg min-h-[48px]', onClick: () => setBack(state.glazing?.frontCount || 3, false) }, 'Tell us the number'),
                   h('button', { type: 'button', className: 'px-5 rounded-full border border-zinc-300 bg-white text-lg min-h-[48px]', onClick: () => setBack(0) }, 'Just the front'),
                 ]),
+                /* A failed rear photo must not cost them anything. The two
+                   typed answers are still right there above this line. */
+                state.rearError
+                  ? h('p', { className: 'text-base leading-7 text-amber-800' },
+                    state.rearError + ' You can tell us the number instead.')
+                  : null,
               ])
             : h('div', { className: 'mt-1 flex items-center justify-between gap-3 flex-wrap' }, [
-                h('p', { className: 'text-base text-zinc-700' }, g.backCount === 0 ? 'None — just the front' : `${g.backCount} window${g.backCount === 1 ? '' : 's'}`),
+                h('p', { className: 'text-base text-zinc-700' }, g.backCount === 0
+                  ? 'None — just the front'
+                  : `${g.backCount} window${g.backCount === 1 ? '' : 's'}${state.backFromPhoto ? ', from your photo of the back' : ''}`),
                 stepper(g.backCount, setBack, 'window at the back'),
               ]),
             /* "Add them" starts at the front's count, as a guess to adjust,
                not as something they told us. Say so until they touch it. */
-            (g.backCount !== null && !state.backTouched)
+            (g.backCount !== null && !state.backTouched && !state.backFromPhoto)
               ? h('p', { className: 'mt-1 text-base leading-7 text-zinc-700' }, 'We’ve started at the same number as the front. Change it with − and + if that’s not right.')
               : null,
         ]),
@@ -8728,6 +8765,54 @@ function startAnalysisNarration() {
 }
 function stopAnalysisNarration() {
   if (analysisTimer) { clearInterval(analysisTimer); analysisTimer = null; }
+}
+
+/* A photograph of the back, read for a count and then let go of.
+
+   Stage 2 of front-and-back. Stage 1 asks the homeowner to type how many
+   windows are round the back; this lets the camera answer instead, which is
+   both easier and better evidence — the installer can be told the number came
+   from a photograph rather than a guess.
+
+   Deliberately smaller than the front. It does not measure: the rear prompt
+   asks for a count because a patio door and a bifold are not the 1.98 m a
+   front door is, and a rear scale would be an invented assumption. It does
+   not render: one picture per elevation is the next piece of work, and it
+   doubles the render spend, so it is not smuggled in here.
+
+   The photograph is not kept, exactly as the front is not kept. It goes up,
+   it is counted, and what remains is a number the homeowner can check.
+
+   A failure here must never cost them the estimate they already have — the
+   typed stepper is still on screen underneath, so any error falls back to it
+   with a line saying so. */
+async function handleRearUpload(file) {
+  state.rearBusy = true;
+  state.rearError = null;
+  render();
+  try {
+    const { base64, mimeType } = await fileToBase64(file);
+    const res = await fetch('/api/detect', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64, mimeType, elevation: 'rear' }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'We couldn’t read that photo.');
+    const n = Number(data.rearWindowCount);
+    if (!Number.isFinite(n)) throw new Error('We couldn’t find any windows in that photo.');
+    state.backCount = Math.max(0, Math.min(30, n));
+    state.backTouched = true;
+    state.backFromPhoto = true;
+    state.rearDoorCount = Number(data.rearDoorCount) || 0;
+    reachedStage('count_corrected');
+    U(n === 1 ? 'We found 1 window at the back' : `We found ${n} windows at the back`);
+    await refreshGlazing();
+  } catch (err) {
+    state.rearError = err.message || 'We couldn’t read that photo.';
+  } finally {
+    state.rearBusy = false;
+    render();
+  }
 }
 
 async function handleUpload(file) {
