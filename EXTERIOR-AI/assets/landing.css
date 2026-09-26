@@ -38,7 +38,15 @@
      which on a page whose whole purpose is telling somebody what a job costs
      is the one thing it must not do. These are the SEO pages: for a search
      visitor they are the first and often only screen. */
-  td{font-variant-numeric:tabular-nums;white-space:nowrap}
+  td{font-variant-numeric:tabular-nums}
+  /* Only the price column. This was nowrap on every td, so a description
+     like "1200 x 1200 — most bedroom and lounge windows" could not wrap
+     either, and the table forced the page to 523-559px on a 390px phone.
+     The browser then zoomed the whole page out to fit, cancelling the larger
+     text. Prices are always the last column on these pages; checked across
+     all 18 at 360px and 390px, with no price split onto two lines. */
+  td:last-child{white-space:nowrap}
+  @media(max-width:480px){th,td{padding:10px 10px}}
   /* The label column gives way instead, because a style name wrapping is
      harmless and a price wrapping is not. */
   tbody th{overflow-wrap:anywhere}
