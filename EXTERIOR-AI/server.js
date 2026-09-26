@@ -1720,6 +1720,50 @@ function computePrice({ claddingId, trimId, roofId, footprintM2, trimLengthM }) 
 
    Returns the source as well, so the lead records how the figure was arrived
    at rather than presenting an estimate as if it were measured. */
+/* ── SEEN, TOLD, OR ESTIMATED ──
+
+   The rule the product is built on (Mike, 26 September): if Facet Pro can see
+   it, measure it; if it cannot, do not pretend; if it needs an assumption,
+   label it as one. This says, for every quantity behind a price, which of the
+   three it is, so the page can print it next to the number.
+
+     walls   the front elevation is measured when the door method ran; the rest
+             of the house is front × a plan-geometry multiplier that has never
+             been checked against a survey, so it is an estimate. A typed area
+             is the homeowner's. No photo reading: a house-type figure.
+     roof    always an estimate: wall area × 0.55 (notes/roof-area-needs-a-
+             source.md). No photo from the ground shows the rear slope.
+     trim    the homeowner's figure when they gave one; otherwise the catalogue
+             default for a typical house. Never measured.
+
+   `kind` is one of 'measured', 'told', 'estimated'. */
+function seenOrEstimated({ footprint, price, trimLengthM }) {
+  const round = (n) => Math.round(n);
+  const observed = footprint?.measurement?.observed || {};
+  const front = Number(observed.frontElevationM2);
+  const ratio = Number(observed.frontToTotal);
+  let walls = null;
+  if (price.priced.includes('cladding')) {
+    if (footprint.source === 'manual_entry') {
+      walls = [{ part: 'walls', kind: 'told', m2: round(price.footprintM2) }];
+    } else if (footprint.source === 'photo_door' && Number.isFinite(front) && front > 0 && Number.isFinite(ratio) && ratio > 1) {
+      walls = [
+        { part: 'front wall', kind: 'measured', m2: round(front) },
+        { part: 'back and side walls', kind: 'estimated', m2: Math.max(0, round(price.footprintM2 - front)) },
+      ];
+    } else {
+      walls = [{ part: 'walls', kind: 'estimated', m2: round(price.footprintM2), from: String(footprint.source || '') }];
+    }
+  }
+  const told = Number(trimLengthM);
+  const trimTold = Number.isFinite(told) && told >= TRIM_LENGTH_MIN_M && told <= TRIM_LENGTH_MAX_M;
+  return {
+    walls,
+    roof: price.priced.includes('roof') && price.roofM2 ? { kind: 'estimated', m2: price.roofM2 } : null,
+    trim: price.priced.includes('trim') ? { kind: trimTold ? 'told' : 'estimated', m: price.trimLengthM } : null,
+  };
+}
+
 function resolveFootprint({ footprintM2, detectionId, houseType }) {
   const manual = Number(footprintM2);
   if (Number.isFinite(manual) && manual >= MANUAL_AREA_MIN_M2 && manual <= MANUAL_AREA_MAX_M2) {
@@ -1827,6 +1871,7 @@ app.post('/api/quote', (req, res) => {
   const price = computePrice({ claddingId, trimId, roofId, footprintM2: footprint.m2, trimLengthM });
   res.json({
     ...price,
+    basis: seenOrEstimated({ footprint, price, trimLengthM }),
     footprintSource: footprint.source,
     measurement: footprint.measurement,
     houseType: footprint.houseType || null,
@@ -3241,6 +3286,9 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
      had always passed it; this one never had. */
   const footprint = resolveFootprint({ footprintM2, detectionId, houseType });
   const price = computePrice({ claddingId, trimId, roofId, footprintM2: footprint.m2, trimLengthM });
+  /* The installer sees the same labels the homeowner saw: which quantities
+     were measured from the photo and which are estimates to check on survey. */
+  price.basis = seenOrEstimated({ footprint, price, trimLengthM });
 
   /* A lead can be real and carry no priced work.
 

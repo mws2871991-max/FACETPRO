@@ -1,5 +1,17 @@
 # FACET PRO - START HERE
 
+## The rule every change is checked against
+
+> **If Facet Pro can see it → detect it and measure it.**
+> **If Facet Pro can't see it → don't pretend it can.**
+> **If it needs an assumption → label it clearly as an estimate.**
+
+(Mike, 26 September 2026.) In practice:
+
+- Windows: the front is priced from the photo. The back and sides are "Not priced yet" until the homeowner gives a number (and, in stage 2, a photo of the back). No front × multiplier. See `glazing.js` `seenOnly`.
+- Walls, roof and roof edge: every quantity behind a price is returned as `measured`, `told` or `estimated` (`seenOrEstimated` in `server.js`), and the page prints which. The front wall can be measured; the back and sides, the roof and the roof edge are estimates and say so.
+- Anything new that prices, draws or describes part of a house must say which of the three it is. A figure that can't say is not ready to ship.
+
 The complete Home Exterior Journey build (Phases 1-5 done + gaps fixed).
 
 ## Quick Start

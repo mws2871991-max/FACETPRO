@@ -3647,8 +3647,12 @@ function buildUploadDetect() {
           : `${noun} at the front (${bays === 1 ? 'one of them a bay' : `${bays} of them bays`})`);
       }
       if (hits(/door/i).length) parts.push('a front door');
-      if (measured && state.price?.footprintM2 && state.journey !== 'windows' && state.journey !== 'doors') {
-        parts.push(`about ${state.price.footprintM2} m² of wall`);
+      /* Only the wall we measured: the front. The whole-house figure is front
+         × an unchecked multiplier, and "we found about 109 m² of wall" claimed
+         the back and sides were found too. */
+      const frontWall = (state.price?.basis?.walls || []).find(w => w.kind === 'measured');
+      if (measured && frontWall && state.journey !== 'windows' && state.journey !== 'doors') {
+        parts.push(`about ${frontWall.m2} m² of front wall`);
       }
 
       /* And what kind of house we think it is, which is now the most
@@ -5351,6 +5355,67 @@ function chosenSentence() {
   return parts.length ? parts.join(', ') : 'its finishes unchanged';
 }
 
+/* What each number was sized on, and how we know it.
+
+   The rule: measure what the photo shows, never pretend about what it does
+   not, and label every assumption. The server says, per quantity, whether it
+   was measured from the photo, told to us by the homeowner, or estimated
+   (price.basis, from seenOrEstimated in server.js). This prints that, one line
+   each, so "about 74 m² of back and side walls" is never read as something we
+   measured. */
+/* The one-line version, beside the total, so nobody has to open "See what's
+   included" to find out which parts of the price are measured and which are
+   estimates. */
+function basisSummary(price) {
+  const b = price?.basis;
+  if (!b) return null;
+  const measured = [], estimated = [];
+  for (const w of b.walls || []) {
+    if (w.kind === 'measured') measured.push('the front wall');
+    else if (w.kind === 'estimated') estimated.push(w.part === 'back and side walls' ? 'the back and side walls' : 'the walls');
+  }
+  if (b.roof) estimated.push('the roof');
+  if (b.trim?.kind === 'estimated') estimated.push('the roof edge');
+  if (!estimated.length && !measured.length) return null;
+  const list = (a) => a.length === 1 ? a[0] : `${a.slice(0, -1).join(', ')} and ${a[a.length - 1]}`;
+  const text = measured.length && estimated.length
+    ? `Measured from your photo: ${list(measured)}. Estimated: ${list(estimated)} — an installer confirms these on survey.`
+    : estimated.length
+      ? `Estimated: ${list(estimated)} — an installer confirms these on survey.`
+      : `Measured from your photo: ${list(measured)}.`;
+  return h('p', { className: 'mt-3 text-base leading-7 text-white/90' }, text);
+}
+
+function basisList(price) {
+  const b = price?.basis;
+  if (!b) return null;
+  const typical = (price.houseTypeLabel || HOUSE_TYPES.find(t => t.id === state.houseType)?.label || 'typical').toLowerCase();
+  const house = `a typical ${typical}${/bungalow/i.test(typical) ? '' : ' house'}`;
+  const rows = [];
+  const row = (kind, what, qty, why) => rows.push(h('li', { className: 'grid gap-0.5' }, [
+    h('span', { className: kind === 'measured' ? 'text-emerald-300 font-semibold' : kind === 'told' ? 'text-white font-semibold' : 'text-amber-200 font-semibold' },
+      kind === 'measured' ? '\u2713 Measured from your photo' : kind === 'told' ? 'Your figure' : 'Estimate'),
+    h('span', { className: 'text-white/90' }, [what, ': ', h('span', { className: 'measured' }, qty)]),
+    why ? h('span', { className: 'text-white/80' }, why) : null,
+  ]));
+  for (const w of b.walls || []) {
+    if (w.kind === 'measured') row('measured', 'Front wall', `${w.m2} m²`);
+    else if (w.kind === 'told') row('told', 'Walls', `${w.m2} m²`);
+    else if (w.part === 'back and side walls') row('estimated', 'Back and side walls', `about ${w.m2} m²`, `Not in your photo — worked out for ${house}.`);
+    else row('estimated', 'Walls', `about ${w.m2} m²`, `Worked out for ${house}, not measured from your photo.`);
+  }
+  if (b.roof) row('estimated', 'Roof, front and back', `about ${b.roof.m2} m²`, 'Worked out from the size of the house. A roof can’t be measured from the ground — your roofer will measure it.');
+  if (b.trim) {
+    if (b.trim.kind === 'told') row('told', 'Roof edge (fascias, soffits and gutters)', `${b.trim.m} m`);
+    else row('estimated', 'Roof edge (fascias, soffits and gutters)', `about ${b.trim.m} m`, `Typical for ${house.replace(/^a typical /, 'a ')}, not measured.`);
+  }
+  if (!rows.length) return null;
+  return h('div', { className: 'mt-3' }, [
+    h('p', { className: 'text-base font-semibold text-white' }, 'What this price is based on'),
+    h('ul', { className: 'mt-2 grid gap-3 text-base leading-6' }, rows),
+  ]);
+}
+
 function areaBasis(price) {
   const priced = price?.priced || [];
   const qty = (value, unit, what) =>
@@ -5576,6 +5641,7 @@ function buildPricePanel(price, priceRow) {
        picture. The reveal is the product, and a validation gate in front of it
        would undo the thing every brief since 1 September has asked for. */
     photoNotUsedNotice('mt-2'),
+    basisSummary(price),
 
     h('details', { className: 'mt-4 border-t border-white/10 pt-3' }, [
       /* An explicit marker, because this file sets `details > summary
@@ -5622,7 +5688,7 @@ function buildPricePanel(price, priceRow) {
          The rear slope is said out loud because it is the first thing anyone
          who knows roofs will ask, and the photograph only ever shows the
          front. */
-      h('p', { className: 'mt-3 text-base leading-6 text-white/80' },
+      basisList(price) || h('p', { className: 'mt-3 text-base leading-6 text-white/80' },
         ['Based on ', ...areaBasis(price), '.']),
       /* The reviewer asked whether the roof figure includes the rear slope.
          It is meant to — it is derived from the whole house, not from the
@@ -5630,7 +5696,7 @@ function buildPricePanel(price, priceRow) {
          so saying more than that would be inventing precision. Better to be
          plainly uncertain than confidently wrong; a roofer measures the roof
          and this does not. */
-      price.roofM2
+      (price.roofM2 && !price.basis)
         ? h('p', { className: 'mt-1 text-base leading-6 text-white/80' },
             'That roof area is the whole roof, front and back, worked out from the size of the house rather than measured — the photograph only shows the front. Treat it as a starting point and expect a roofer to measure it.')
         : null,
