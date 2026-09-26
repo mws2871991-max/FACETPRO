@@ -2009,6 +2009,7 @@ const state = {
   glazing: null,            // the window and door estimate, once we have one
   glazingLoading: false,
   windowCount: null,        // the homeowner's own count, which beats ours
+  backCount: null,          // windows at the back and sides, as they told us; null = not priced yet
   prefs: { windowStyleId: null, doorStyleId: null, windowDoorColourId: null, windowBarsId: null,
            fasciaId: null, soffitId: null, gutteringId: null, rooflineCladdingId: null,
            /* A journey pre-declines the glazing it did not come for. Both are
@@ -2708,6 +2709,7 @@ function designChoices() {
     conservatoryStyleId: state.conservatoryId,
     footprintM2: state.footprint?.area, trimLengthM: state.trimLengthM,
     windowCount: state.windowCount,
+    backCount: state.backCount,
   };
 }
 
@@ -2857,6 +2859,7 @@ function applyDesign(d) {
   if (d.footprintM2 > 0) state.footprint = { area: d.footprintM2 };
   if (d.trimLengthM > 0) state.trimLengthM = d.trimLengthM;
   if (d.windowCount > 0) state.windowCount = d.windowCount;
+  if (Number.isFinite(d.backCount) && d.backCount >= 0) state.backCount = d.backCount;
   refreshPrice();
   refreshGlazing();
 }
@@ -4060,7 +4063,7 @@ function buildUploadDetect() {
                first one got rather than an empty frame and a button. It is one
                more render against the daily cap, spent on somebody who has
                demonstrably not given up. */
-            onClick: () => { state.uploadedImg = null; state.uploadedBase64 = null; state.detections = []; state.stage = 'landing'; state.detectionStatus = 'idle'; state.renderUrl = null; state.renderId = null; state.windowCount = null; state.frontWindowCount = null; state.glazing = null; state.hasCustomised = false; state.revealed = false; state.lastPriceDelta = null; autoRenderDone = false; U('Photo removed — add another whenever you like'); render(); }
+            onClick: () => { state.uploadedImg = null; state.uploadedBase64 = null; state.detections = []; state.stage = 'landing'; state.detectionStatus = 'idle'; state.renderUrl = null; state.renderId = null; state.windowCount = null; state.backCount = null; state.frontWindowCount = null; state.glazing = null; state.hasCustomised = false; state.revealed = false; state.lastPriceDelta = null; autoRenderDone = false; U('Photo removed — add another whenever you like'); render(); }
           /* Screen 3: "allow replace photo without restarting the journey".
 
            The behaviour was already right — this clears the photograph, the
@@ -5009,6 +5012,12 @@ const pricedIncludes = (priced) => [
 function photoChangedPriceLine(spread, n, doorOnly) {
   const was = state.typicalGlazingSeen;
   if (!was || !spread || !state.uploadedImg || !state.detectionId || doorOnly) return null;
+  /* Front only: the typical figure was a whole house, so comparing the two
+     would read as a saving that is not one. Say what this covers instead. */
+  if (state.glazing?.seenOnly && state.glazing.backCount === null) {
+    return h('p', { className: 'mt-2 text-base leading-7 text-white/85' },
+      `This is the front only. The typical figure (${fmtMoney(was.low)} – ${fmtMoney(was.high)}) was for a whole ${String(was.typeLabel || 'house').toLowerCase()}${/bungalow/i.test(was.typeLabel || '') ? '' : ' house'}.`);
+  }
   const moved = spread.high - was.high;
   if (Math.abs(moved) < 50) return null;
   const typical = `${fmtMoney(was.low)} – ${fmtMoney(was.high)}`;
@@ -5016,7 +5025,10 @@ function photoChangedPriceLine(spread, n, doorOnly) {
   /* Counted versus allowed for. The photo shows the front; the rest of the
      house is an allowance, and this line must not claim we found it. */
   const front = state.glazing?.frontCount;
-  const how = front && front !== n
+  const told = state.glazing?.seenOnly ? state.glazing.backCount : null;
+  const how = front && told !== null && told !== undefined
+    ? `we counted ${front} window${front === 1 ? '' : 's'} at the front, plus ${told} at the back and sides.`
+    : front && front !== n
     ? `we counted ${front} window${front === 1 ? '' : 's'} at the front and allowed for about ${n} in all, at the sizes and styles in your photo.`
     : `we counted ${n} window${n === 1 ? '' : 's'}, at the sizes and styles in your photo.`;
   return h('p', { className: 'mt-2 text-base leading-7 text-white/85' },
@@ -5083,8 +5095,15 @@ function buildGlazingLedPanel() {
       h('div', { className: 'mt-2 text-base text-white/80' },
         doorOnly
           ? `Your ${doorNoun}, supplied and fitted`
-          : [`${n} window${n === 1 ? '' : 's'}`, hasDoor ? ` and ${isRearOpening(doorId) ? 'garden doors' : 'a front door'}` : '', ', supplied and fitted'].join('')),
+          : [`${n} window${n === 1 ? '' : 's'}`, g.seenOnly && g.backCount === null ? ' at the front' : '', hasDoor ? ` and ${isRearOpening(doorId) ? 'garden doors' : 'a front door'}` : '', ', supplied and fitted'].join('')),
       photoChangedPriceLine(spread, n, doorOnly),
+      (g.seenOnly && g.backCount === null && !doorOnly)
+        ? h('button', {
+            type: 'button',
+            className: 'mt-2 text-left underline underline-offset-4 text-base text-amber-200 min-h-[44px]',
+            onClick: () => document.getElementById('window-count')?.scrollIntoView({ behavior: 'smooth', block: 'center' }),
+          }, 'Back and sides not priced yet — add them')
+        : null,
       /* What the last choice cost, under the number it moved. Both ends of the
          range shift, so both are shown — collapsing them to one figure would
          invent a precision the range does not have. */
@@ -5692,6 +5711,10 @@ async function refreshGlazing({ label } = {}) {
         windowBarsId: state.prefs.windowBarsId,
         windowCount: state.windowCount,
         openerCount: state.openerCount,
+        /* Price the front the photo shows; the back and sides only when the
+           homeowner has told us how many. No more front × 2.6. */
+        seenOnly: true,
+        backCount: state.backCount,
       }),
     });
     const data = await res.json();
@@ -5764,7 +5787,9 @@ function buildTotalBar() {
   const parts = [];
   if (glaz?.price) {
     const n = glaz.windowCount;
-    if (glaz.price.windowsIncluded !== false) parts.push(`${n} window${n === 1 ? '' : 's'}`);
+    if (glaz.price.windowsIncluded !== false) {
+      parts.push(`${n} window${n === 1 ? '' : 's'}${glaz.seenOnly && glaz.backCount === null ? ' (front only)' : ''}`);
+    }
     /* 'none' is a string, and a truthy one. Declining the door — which the
        windows journey does for everybody who arrives on it — still counted as
        choosing one, so the bar read "8 windows · 1 door" under a figure that
@@ -6256,6 +6281,57 @@ function buildDetailOptions() {
        assumed for the elevations it cannot see. */
     const scaled = (g.countSource === 'photo_door' || g.countSource === 'photo_count') && g.frontCount && g.frontToTotal;
     const assumed = scaled ? Math.max(0, counted - g.frontCount) : 0;
+    /* Front and back, priced separately.
+
+       The photo shows the front, so that line is ours. The back and sides are
+       the homeowner's to tell us — or to leave unpriced, which the page says
+       plainly rather than filling in with a multiplier. A stage 2 rear photo
+       will fill the second line from a picture instead of a number. */
+    const frontAndBack = (g) => {
+      const setBack = (n, touched = true) => {
+        state.backCount = Math.max(0, Math.min(30, n));
+        state.backTouched = touched;
+        reachedStage('count_corrected');
+        refreshGlazing();
+      };
+      const stepper = (value, set, label) => h('div', { className: 'flex items-center gap-2' }, [
+        h('button', { type: 'button', 'aria-label': `One fewer ${label}`, className: 'w-12 h-12 rounded-full border border-zinc-300 hover:border-zinc-900 transition text-xl leading-none', onClick: () => set(value - 1) }, '−'),
+        h('span', { className: 'measured text-lg min-w-[2ch] text-center' }, String(value)),
+        h('button', { type: 'button', 'aria-label': `One more ${label}`, className: 'w-12 h-12 rounded-full border border-zinc-300 hover:border-zinc-900 transition text-xl leading-none', onClick: () => set(value + 1) }, '+'),
+      ]);
+      return h('div', { id: 'window-count', className: 'mt-3 pt-3 border-t border-zinc-200 grid gap-3 scroll-mt-24' }, [
+        h('div', { className: 'flex items-center justify-between gap-3 flex-wrap' }, [
+          h('div', {}, [
+            h('p', { className: 'text-lg font-semibold text-zinc-900' }, 'Front of the house'),
+            h('p', { className: 'text-base text-zinc-600' }, `${g.frontCount} window${g.frontCount === 1 ? '' : 's'}, from your photo`),
+          ]),
+          h('span', { className: 'text-lg text-emerald-700 font-semibold' }, '\u2713 Priced'),
+        ]),
+        g.frontCutOff
+          ? h('p', { className: 'text-base leading-7 text-amber-800' }, 'Part of the front was cut off in your photo, so there may be more windows at the front. Add them to the back-and-sides number below, or try another photo.')
+          : null,
+        h('div', { className: 'rounded-xl border-2 p-3 ' + (g.backCount === null ? 'border-amber-500 bg-amber-50' : 'border-zinc-200 bg-white') }, [
+          h('p', { className: 'text-lg font-semibold text-zinc-900' }, 'Back and sides of the house'),
+          g.backCount === null
+            ? h('div', { className: 'mt-1 grid gap-2' }, [
+                h('p', { className: 'text-base leading-7 text-zinc-700' }, 'Not priced yet — your photo only shows the front. How many windows are there at the back and sides?'),
+                h('div', { className: 'flex gap-2 flex-wrap' }, [
+                  h('button', { type: 'button', className: 'cta px-5 rounded-full text-lg font-semibold min-h-[48px]', onClick: () => setBack(state.glazing?.frontCount || 3, false) }, 'Add them'),
+                  h('button', { type: 'button', className: 'px-5 rounded-full border border-zinc-300 bg-white text-lg min-h-[48px]', onClick: () => setBack(0) }, 'Just the front'),
+                ]),
+              ])
+            : h('div', { className: 'mt-1 flex items-center justify-between gap-3 flex-wrap' }, [
+                h('p', { className: 'text-base text-zinc-700' }, g.backCount === 0 ? 'None — just the front' : `${g.backCount} window${g.backCount === 1 ? '' : 's'}`),
+                stepper(g.backCount, setBack, 'window at the back'),
+              ]),
+            /* "Add them" starts at the front's count, as a guess to adjust,
+               not as something they told us. Say so until they touch it. */
+            (g.backCount !== null && !state.backTouched)
+              ? h('p', { className: 'mt-1 text-base leading-7 text-zinc-700' }, 'We’ve started at the same number as the front. Change it with − and + if that’s not right.')
+              : null,
+        ]),
+      ]);
+    };
     const setCount = (n) => {
       state.windowCount = Math.max(1, Math.min(30, n));
       /* How often the count we showed is not believed — the page invites the
@@ -6297,7 +6373,11 @@ function buildDetailOptions() {
          can see three. So: the three we measured, then the six we assumed,
          then the total. */
       h('p', { className: 'mt-1 text-base leading-7 text-zinc-600' },
-        g.raisedToTypical
+        g.seenOnly && g.countSource !== 'manual_entry'
+          ? (g.backCount === null
+              ? `The front only: the ${g.frontCount} window${g.frontCount === 1 ? '' : 's'} in your photo. The back and sides aren’t priced yet — add them below. Includes VAT${g.price.access ? ', and access for the upstairs windows' : ''}.`
+              : `${g.frontCount} at the front from your photo, plus ${g.backCount} at the back and sides — ${counted} in all. Includes VAT${g.price.access ? ', and access for the upstairs windows' : ''}.`)
+        : g.raisedToTypical
           ? `We can see ${g.frontCount} window${g.frontCount === 1 ? '' : 's'} on the front, but your photo doesn’t show the whole house, so we’ve priced ${HOUSE_TYPE_ARTICLE(g.houseType)}’s usual ${counted}. Set the real number below if you know it. Includes VAT${g.price.access ? ', and scaffolding or ladder access for the upstairs windows' : ''}.`
         : scaled && assumed
           ? `${g.frontCount} window${g.frontCount === 1 ? '' : 's'} on the front, ${g.sourceLabel}, plus ${assumed} we’ve assumed for the back and sides of ${HOUSE_TYPE_ARTICLE(g.houseType)} — ${counted} in all. Your photo only shows the front, so set the real number below if you know it. Includes VAT${g.price.access ? ', and scaffolding or ladder access for the upstairs windows' : ''}.`
@@ -6408,6 +6488,7 @@ function buildDetailOptions() {
         onClick: () => generateRealRender(),
       }, state.rendering ? 'Creating your picture…' : 'Show these on my house →') : null,
 
+      (g.seenOnly && g.countSource !== 'manual_entry') ? frontAndBack(g) :
       h('div', { id: 'window-count', className: 'mt-3 pt-3 border-t border-zinc-200 flex items-center gap-3 flex-wrap scroll-mt-24' }, [
         /* "We counted" only when we counted.
 
@@ -9017,6 +9098,10 @@ async function sendDesignPack() {
         // What the homeowner was actually shown for windows and doors, and
         // their own corrected count if they gave us one.
         windowCount: state.windowCount,
+        // Priced the same way the page priced it, so the lead carries the
+        // figure they saw: front from the photo, back and sides as told.
+        seenOnly: true,
+        backCount: state.backCount,
         claddingId: state.cladding.id,
         trimId: state.trim.id,
         roofId: state.roof.id,

@@ -86,6 +86,10 @@ const NUMBER_FIELDS = {
   footprintM2: { min: L.MANUAL_AREA_MIN_M2, max: L.MANUAL_AREA_MAX_M2 },
   trimLengthM: { min: L.TRIM_LENGTH_MIN_M, max: L.TRIM_LENGTH_MAX_M },
   windowCount: { min: L.MIN_WINDOWS, max: L.MAX_WINDOWS },
+  // Windows at the back and sides, as the homeowner told us. Zero is a real
+  // answer ("none"), which is why the loop below skips absent values rather
+  // than letting Number(null) turn "not told" into "none".
+  backCount: { min: 0, max: L.MAX_WINDOWS },
 };
 
 const cleanId = (v) => {
@@ -100,6 +104,7 @@ function buildPayload(body) {
     if (value) design[field] = value;
   }
   for (const [field, { min, max }] of Object.entries(NUMBER_FIELDS)) {
+    if (body?.[field] === null || body?.[field] === undefined || body?.[field] === '') continue;
     const n = Number(body?.[field]);
     if (Number.isFinite(n) && n >= min && n <= max) design[field] = n;
   }

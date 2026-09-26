@@ -2329,6 +2329,11 @@ function resolveGlazing(body) {
       },
       rates: catalogue.glazing,
       windowCountOverride: body.windowCount,
+      /* The lead must carry the figure the homeowner saw, so it is priced the
+         same way the page priced it: the front from the photo, and the back
+         and sides only if they told us how many. */
+      seenOnly: body.seenOnly === true,
+      backCount: body.backCount,
     });
     // The per-window geometry is ours to work with, not the installer's to
     // read — they get the count, the bands and the money.

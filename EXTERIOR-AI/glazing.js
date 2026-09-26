@@ -956,6 +956,8 @@ function priceGlazing({ windows, totalCount, selections, rates, houseType , open
      selections,          // { windowStyleId, doorStyleId, windowDoorColourId, windowBarsId }
      rates,               // catalogue.glazing
      windowCountOverride, // the homeowner corrected the count by hand
+     seenOnly,            // price the front the photo shows, not front × a multiplier
+     backCount,           // windows at the back and sides, as the homeowner told us
    }
 
    Always returns an object. There is no failure mode that produces nothing:
@@ -970,6 +972,8 @@ function estimateGlazing({
   selections = {},
   rates,
   windowCountOverride = null,
+  seenOnly = false,
+  backCount = null,
 } = {}) {
   if (!rates || !Array.isArray(rates.windowBands) || !rates.windowBands.length) {
     throw new Error('estimateGlazing needs catalogue.glazing with windowBands.');
@@ -1010,10 +1014,24 @@ function estimateGlazing({
   const frontToTotal = rates.frontToTotal?.[key] ?? FRONT_TO_TOTAL_WINDOWS[key];
 
   /* Both photo-derived counts describe the front elevation and need scaling to
-     the whole house. The prior is already a whole-house figure. */
-  let totalCount = (base.method === 'door' || base.method === 'count')
-    ? base.frontCount * frontToTotal
-    : base.frontCount;
+     the whole house. The prior is already a whole-house figure.
+
+     Unless the page asks for what was seen (seenOnly). Then the photograph
+     prices the front it shows, and the back and sides are either the number
+     the homeowner gave us or not priced at all, and the response says which.
+     The front × 2.6 multiplier was never checked against a survey, and a
+     rear window nobody has seen is not something to put a price on. */
+  const fromPhoto = base.method === 'door' || base.method === 'count';
+  const back = Number(backCount);
+  // Number(null) is 0, and "not told" must not become "none at the back".
+  const backGiven = backCount !== null && backCount !== undefined && backCount !== '';
+  const backKnown = backGiven && Number.isFinite(back) && back >= 0 && back <= MAX_WINDOWS;
+  const frontOnly = seenOnly && fromPhoto;
+  let totalCount = frontOnly
+    ? base.frontCount + (backKnown ? back : 0)
+    : fromPhoto
+      ? base.frontCount * frontToTotal
+      : base.frontCount;
 
   let countSource = base.method === 'door' ? 'photo_door'
     : base.method === 'count' ? 'photo_count'
@@ -1034,7 +1052,7 @@ function estimateGlazing({
   const sideCutOff = ['left', 'right'].some(side => String(analysis?.sides?.[side] || '').toLowerCase() === 'cut-off');
   const typicalCount = (HOUSE_TYPE_GLAZING_PRIORS[key] || HOUSE_TYPE_GLAZING_PRIORS[DEFAULT_HOUSE_TYPE]).windows;
   let raisedToTypical = false;
-  if (sideCutOff && (base.method === 'door' || base.method === 'count') && totalCount < typicalCount) {
+  if (!frontOnly && sideCutOff && fromPhoto && totalCount < typicalCount) {
     totalCount = typicalCount;
     raisedToTypical = true;
   }
@@ -1095,7 +1113,13 @@ function estimateGlazing({
       ? `We've capped this at ${MAX_WINDOWS} windows. If your home has more, tell us the number and we'll price it properly.`
       : null,
     frontCount: (base.method === 'door' || base.method === 'count') ? base.frontCount : null,
-    frontToTotal: (base.method === 'door' || base.method === 'count') ? frontToTotal : null,
+    frontToTotal: (fromPhoto && !frontOnly) ? frontToTotal : null,
+    /* Only meaningful when the page asked for seenOnly and the count came from
+       the photo: how many at the back and sides we priced (null = none, not
+       priced yet), and whether the front was cut off at a side. */
+    seenOnly: frontOnly,
+    backCount: frontOnly && countSource !== 'manual_entry' ? (backKnown ? back : null) : null,
+    frontCutOff: frontOnly ? sideCutOff : false,
     windows: base.windows,
     discarded: base.discarded,
     price,
