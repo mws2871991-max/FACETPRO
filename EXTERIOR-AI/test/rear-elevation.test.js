@@ -134,3 +134,62 @@ test('the lead tells the installer which counts are photographs', () => {
   assert.match(block, /body\.backCountSource === 'photo' \? 'photo' : 'told'/,
     'the source is taken from the client without being narrowed');
 });
+
+/* ── From a code review of 27 September ── */
+
+test('a cached reading answers in the shape of the elevation it read', () => {
+  /* answer() always replied in the front's shape — frontWindowCount,
+     houseType, subjectBox — whatever the record held. A rear photograph
+     served from cache therefore came back with no rearWindowCount, the page
+     did Number(undefined), and the homeowner was told "We couldn't find any
+     windows in that photo" about one that had been read fine a minute
+     earlier. Reachable by re-adding the same rear photo after replacing the
+     front one. */
+  const at = source.indexOf('const answer = (record, id) =>');
+  assert.ok(at > 0, 'the cache reply helper has gone');
+  const helper = source.slice(at, at + 900);
+  assert.match(helper, /record\.elevation === 'rear'/, 'the cached reply ignores the elevation');
+  assert.match(helper, /rearWindowCount/, 'a cached rear reading carries no count');
+
+  /* And the record rebuilt from the persistent cache has to remember which
+     face it was, or the next reply is wrong for the same reason. */
+  assert.match(source, /stored\.aspectRatio \|\| stored\.aspectRatio !== null[\s\S]{0,120}elevation\)|height: 1 \} : null, elevation\)/,
+    'a record rebuilt from cache forgets its elevation');
+});
+
+test('a rear reading can be cached at all', () => {
+  /* cacheComplete asked for houseType unconditionally, and the rear analysis
+     has none and never will. So no rear reading could ever be served from the
+     persistent cache: every rear photograph paid for a fresh Anthropic call
+     and a slot of the shared fifty-a-day detect budget the front funnel
+     depends on, and the log claimed the cache "predates the house-type field"
+     every single time. */
+  const at = source.indexOf('const cacheComplete =');
+  const block = source.slice(at, at + 200);
+  assert.match(block, /elevation === 'rear' \|\| 'houseType' in cachedAnalysis/,
+    'the rear is still judged incomplete for lacking a front-only field');
+});
+
+test('answering the back question is not the same as correcting a count', () => {
+  /* count_corrected means "the number we showed was not believed". The first
+     answer to the back-and-sides question is not that — nothing was shown to
+     disbelieve — so it turned the one measure of whether the count is trusted
+     into a measure of how many people answered a question. */
+  const page = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const at = page.indexOf('const setBack = (n, touched = true)');
+  const body = page.slice(at, at + 900);
+  assert.match(body, /const wasAnswered = state\.backCount !== null/,
+    'the first answer is still recorded as a correction');
+  assert.match(body, /if \(wasAnswered\) reachedStage\('count_corrected'\)/,
+    'count_corrected fires unconditionally');
+});
+
+test('a back count the homeowner adjusted is not certified as a photograph', () => {
+  /* A count read as 3 and stepped to 5 is two windows they added. Telling an
+     installer the whole figure came from a photograph is the over-claim this
+     field exists to prevent. */
+  const page = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const hits = page.match(/state\.backFromPhoto && state\.backCount === state\.backPhotoCount\) \? 'photo' : 'told'/g) || [];
+  assert.strictEqual(hits.length, 3,
+    `all three send sites must narrow the claim; ${hits.length} do`);
+});

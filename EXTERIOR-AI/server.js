@@ -2151,7 +2151,28 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
     return b;
   };
 
-  const answer = (record, id) => res.json({
+  /* A cached reading must come back in the shape of the elevation it read.
+
+     This always answered in the front's shape — frontWindowCount, houseType,
+     subjectBox — whatever the record held. A rear photograph served from
+     cache therefore came back with no rearWindowCount, the page did
+     Number(undefined), and the homeowner was told "We couldn't find any
+     windows in that photo" about a photograph that had been read perfectly
+     well a minute earlier. Reachable by re-adding the same rear photo after
+     replacing the front one. */
+  const answer = (record, id) => (
+    (record.elevation === 'rear')
+      ? res.json({
+        elevation: 'rear',
+        detections: forDisplay(record.detections),
+        detectionId: id,
+        rearWindowCount: glazing.frontWindowCount(record.detections),
+        rearDoorCount: record.detections.filter(d => d.type === 'door-rear' || d.type === 'door-patio').length,
+        hasConservatory: record.detections.some(d => d.type === 'conservatory'),
+        canMeasure: false, scaleReference: false,
+      })
+      : res.json({
+    elevation: 'front',
     detections: forDisplay(record.detections),
     detectionId: id,
     canMeasure: record.detections.some(d => d.type === 'cladding'),
@@ -2174,7 +2195,7 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
        every upload, against upload_completed, so the page work is decided by
        what real photographs look like rather than by these two. */
     subjectBox: subjectBoxFor(record.detections),
-  });
+  }));
 
   const seenId = detectionByImage.get(fingerprint);
   const seen = seenId ? detectionRecords.get(seenId) : null;
@@ -2208,11 +2229,21 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
      analysis object rather than a version number in the row, so it keeps
      working for whatever the next field is. */
   const cachedAnalysis = stored && (stored.detections || []).find(d => d?.type === 'analysis');
-  const cacheComplete = !!cachedAnalysis && 'houseType' in cachedAnalysis;
+  /* houseType is a front finding, so only the front can be missing it.
+
+     This asked for it unconditionally, and the rear analysis
+     ({summary, storeys, hasConservatory, hasExtension}) has no houseType and
+     never will — so no rear reading could ever be served from the persistent
+     cache. Every rear photograph paid for a fresh Anthropic call and a slot
+     of the shared fifty-a-day detect budget the front funnel depends on, the
+     awaited putDetectionCache write was dead weight, and the log said the
+     cache "predates the house-type field" every single time. */
+  const cacheComplete = !!cachedAnalysis
+    && (elevation === 'rear' || 'houseType' in cachedAnalysis);
 
   if (stored && cacheComplete) {
     const id = saveDetectionRecord(stored.detections, stored.aspectRatio !== null
-      ? { width: stored.aspectRatio, height: 1 } : null);
+      ? { width: stored.aspectRatio, height: 1 } : null, elevation);
     detectionByImage.set(fingerprint, id);
     return answer(detectionRecords.get(id), id);
   }

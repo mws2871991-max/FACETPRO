@@ -2723,9 +2723,15 @@ function designChoices() {
     frontCount: state.frontCountOverride,
     /* Not just how many, but how we know. Restored without this, a count read
        from a photograph comes back looking like a typed guess. */
+    /* 'photo' only where the photograph's number is the one being priced. A
+       count read as 3 and then stepped to 5 is two windows the homeowner
+       added, and telling an installer the whole figure came from a photograph
+       is the over-claim this field exists to prevent. The per-elevation lines
+       in countBasis carry the detail; this is the coarse label, so it errs
+       towards the weaker claim. */
     backCountSource: state.backCount === null || state.backCount === undefined
       ? undefined
-      : (state.backFromPhoto ? 'photo' : 'told'),
+      : ((state.backFromPhoto && state.backCount === state.backPhotoCount) ? 'photo' : 'told'),
     backPhotoCount: state.backFromPhoto && Number.isFinite(state.backPhotoCount) ? state.backPhotoCount : undefined,
     sideCount: sidesTold() ?? undefined,
   };
@@ -5840,9 +5846,15 @@ async function refreshGlazing({ label } = {}) {
         frontCount: state.frontCountOverride,
     /* Not just how many, but how we know. Restored without this, a count read
        from a photograph comes back looking like a typed guess. */
+    /* 'photo' only where the photograph's number is the one being priced. A
+       count read as 3 and then stepped to 5 is two windows the homeowner
+       added, and telling an installer the whole figure came from a photograph
+       is the over-claim this field exists to prevent. The per-elevation lines
+       in countBasis carry the detail; this is the coarse label, so it errs
+       towards the weaker claim. */
     backCountSource: state.backCount === null || state.backCount === undefined
       ? undefined
-      : (state.backFromPhoto ? 'photo' : 'told'),
+      : ((state.backFromPhoto && state.backCount === state.backPhotoCount) ? 'photo' : 'told'),
     backPhotoCount: state.backFromPhoto && Number.isFinite(state.backPhotoCount) ? state.backPhotoCount : undefined,
     sideCount: sidesTold() ?? undefined,
       }),
@@ -6427,9 +6439,16 @@ function buildDetailOptions() {
         refreshGlazing();
       };
       const setBack = (n, touched = true) => {
+        /* count_corrected means "the number we showed was not believed". The
+           first answer to the back-and-sides question is not that — nothing
+           was shown to disbelieve — so pressing "Tell us the number" or "Just
+           the front" is not a correction. Firing it there turned the one
+           measure of whether the count is trusted into a measure of how many
+           people answered a question. */
+        const wasAnswered = state.backCount !== null && state.backCount !== undefined;
         state.backCount = Math.max(0, Math.min(30, n));
         state.backTouched = touched;
-        reachedStage('count_corrected');
+        if (wasAnswered) reachedStage('count_corrected');
         refreshGlazing();
       };
       const stepper = (value, set, label) => h('div', { className: 'flex items-center gap-2' }, [
@@ -6550,7 +6569,13 @@ function buildDetailOptions() {
               ])
             : h('div', { className: 'mt-1 flex items-center justify-between gap-3 flex-wrap' }, [
                 h('p', { className: 'text-base text-zinc-700' }, backOnly(g.backCount) === 0
-                  ? (state.backFromPhoto ? 'None found in your photo of the back' : 'None — just the front')
+                  ? (state.backFromPhoto
+                      /* Only if the photograph genuinely found none. Stepping a
+                         count of 3 down to 0 was being reported as the photo
+                         finding nothing, which is a different statement about
+                         a different thing. */
+                      ? (state.backPhotoCount === 0 ? 'None found in your photo of the back' : 'None — you took them all off')
+                      : 'None — just the front')
                   : backFromPhotoText(backOnly(g.backCount))),
                 stepper(backOnly(g.backCount), (n) => setBack(Math.max(0, n) + (sidesTold() || 0)), 'window at the back'),
               ]),
@@ -9428,9 +9453,15 @@ async function sendDesignPack() {
         frontCount: state.frontCountOverride,
     /* Not just how many, but how we know. Restored without this, a count read
        from a photograph comes back looking like a typed guess. */
+    /* 'photo' only where the photograph's number is the one being priced. A
+       count read as 3 and then stepped to 5 is two windows the homeowner
+       added, and telling an installer the whole figure came from a photograph
+       is the over-claim this field exists to prevent. The per-elevation lines
+       in countBasis carry the detail; this is the coarse label, so it errs
+       towards the weaker claim. */
     backCountSource: state.backCount === null || state.backCount === undefined
       ? undefined
-      : (state.backFromPhoto ? 'photo' : 'told'),
+      : ((state.backFromPhoto && state.backCount === state.backPhotoCount) ? 'photo' : 'told'),
     backPhotoCount: state.backFromPhoto && Number.isFinite(state.backPhotoCount) ? state.backPhotoCount : undefined,
     sideCount: sidesTold() ?? undefined,
         claddingId: state.cladding.id,
