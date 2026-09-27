@@ -1214,8 +1214,87 @@ function estimateGlazing({
   };
 }
 
+/* What an installer is quoting against, part by part, in words.
+
+   The lead carries counts and a range. Neither says which windows were
+   measured and which are a typical size for the house type, and an installer
+   who quotes a typical size as if it were measured finds out on survey, in
+   front of the homeowner. Mike's rule: if we saw it, say so; if we did not,
+   do not pretend; if it is an assumption, label it.
+
+   Pure, so it can be tested, and derived server-side from the re-priced
+   estimate rather than from anything the client says about itself — except
+   where the back count came from, which only the page knows, and which
+   server.js already reduces to 'photo', 'told' or 'not priced'. */
+function windowBasis(summary, { backCountSource = null, backPhotoCount = null, sideCount = null } = {}) {
+  if (!summary) return null;
+  const w = (n) => `${n} window${n === 1 ? '' : 's'}`;
+  const lines = [];
+  const fromPhoto = summary.countSource === 'photo_door' || summary.countSource === 'photo_count';
+  const front = Number(summary.frontCount);
+
+  if (!fromPhoto || !Number.isFinite(front)) {
+    const n = Number(summary.windowCount);
+    lines.push(`${Number.isFinite(n) ? w(n) : 'Windows'} in all: typical for the house type. Not counted or measured from a photo.`);
+    return { front: { counted: 'estimated', sizes: 'typical' }, back: null, sides: 'not seen', lines };
+  }
+
+  const frontSizes = summary.countSource === 'photo_door' ? 'measured' : 'typical';
+  const frontCounted = summary.frontTold ? 'told' : 'photo';
+  lines.push(`Front: ${w(front)}, ${frontCounted === 'told' ? 'number corrected by the homeowner' : 'counted from the photo'}. ` +
+    (frontSizes === 'measured'
+      ? (frontCounted === 'told' ? 'Sizes measured from the photo where seen, typical for any others.' : 'Sizes measured from the photo, using the front door for scale.')
+      : 'Sizes typical, not measured (no front door in shot to measure from).'));
+
+  if (!summary.seenOnly) {
+    const rest = Number(summary.windowCount) - front;
+    if (rest > 0) lines.push(`Back and sides: ${w(rest)} assumed for the house type. Not seen.`);
+    return { front: { counted: frontCounted, sizes: frontSizes }, back: { counted: 'estimated', sizes: 'typical' }, sides: 'not seen', lines };
+  }
+
+  const back = Number(summary.backCount);
+  if (backCountSource === 'not priced' || summary.backCount === null || summary.backCount === undefined) {
+    lines.push('Back and sides: not priced. The homeowner did not say how many.');
+    return { front: { counted: frontCounted, sizes: frontSizes }, back: null, sides: 'not priced', lines };
+  }
+  if (backCountSource === 'photo') {
+    /* Side windows the homeowner told us about are inside backCount; the back
+       on its own is what is left. null means they were not asked or did not
+       answer, which is not the same as none. */
+    const sides = sideCount !== null && sideCount !== undefined && Number.isFinite(Number(sideCount))
+      ? Math.min(Number(sideCount), back) : null;
+    const backAlone = back - (sides || 0);
+    const seen = Number.isFinite(Number(backPhotoCount)) && backPhotoCount !== null ? Number(backPhotoCount) : backAlone;
+    const extra = backAlone - seen;
+    lines.push(`Back: ${w(backAlone)}, ` +
+      (extra > 0 ? `${seen} counted from a photo of the back plus ${extra} added by the homeowner`
+        : extra < 0 ? `${seen} counted from a photo of the back, less ${-extra} the homeowner took off`
+        : 'counted from a photo of the back') +
+      (backAlone > 0 ? '. Sizes typical, not measured.' : '.'));
+    lines.push(sides > 0
+      ? `Sides: ${w(sides)}, number given by the homeowner (not in either photo). Sizes typical, not measured.`
+      : sides === 0
+        ? 'Sides: none, as the homeowner told us (not in either photo).'
+        : extra > 0
+          ? 'Sides: not in either photo. Any side windows are among the ones the homeowner added.'
+          : 'Sides: not in either photo, and not priced.');
+    return {
+      front: { counted: frontCounted, sizes: frontSizes },
+      back: { counted: 'photo', sizes: 'typical', photoCount: seen },
+      sides: sides > 0 ? 'told' : sides === 0 ? 'none' : extra > 0 ? 'added by homeowner' : 'not priced',
+      sideCount: sides,
+      lines,
+    };
+  }
+  lines.push(back === 0
+    ? 'Back and sides: none, as the homeowner told us.'
+    : `Back and sides: ${w(back)}, number given by the homeowner. Sizes typical, not measured.`);
+  return { front: { counted: frontCounted, sizes: frontSizes }, back: { counted: 'told', sizes: 'typical' }, sides: 'in homeowner count', lines };
+}
+
 module.exports = {
   estimateGlazing,
+  windowBasis,
   frontWindowCount,
   frontBayCount,
   publishedRange,

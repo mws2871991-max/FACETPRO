@@ -98,6 +98,10 @@ const NUMBER_FIELDS = {
   // answer ("none"), which is why the loop below skips absent values rather
   // than letting Number(null) turn "not told" into "none".
   backCount: { min: 0, max: L.MAX_WINDOWS },
+  // How many of those the back photo read; the rest were added with +.
+  backPhotoCount: { min: 0, max: L.MAX_WINDOWS },
+  // Side windows they told us about after a back photo; in backCount too.
+  sideCount: { min: 0, max: L.MAX_WINDOWS },
 };
 
 const cleanId = (v) => {

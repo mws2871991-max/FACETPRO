@@ -54,6 +54,18 @@ const selectionsLine = (price) => {
   return named.length ? named.join(' / ') : 'No wall, roof or roofline work chosen';
 };
 
+/* The windows, part by part: what was counted, what was measured, what is a
+   typical size. Whoever forwards this lead needs to know which sizes to
+   check on survey before the installer quotes them as measured. */
+const windowsRow = (lead) => {
+  const g = lead.glazing;
+  if (!g) return '';
+  const lines = Array.isArray(g.countBasis?.lines) ? g.countBasis.lines : [];
+  const range = g.range ? ` · ${money(g.range.low)}–${money(g.range.high)}` : '';
+  const head = Number.isFinite(g.windowCount) ? `<strong>${escapeHtml(g.windowCount)} in all</strong>${range}` : '';
+  return row('Windows', [head, ...lines.map(escapeHtml)].filter(Boolean).join('<br>'));
+};
+
 function leadNotificationHtml(lead, price) {
   const conservatory = lead.conservatory
     ? `${lead.conservatory.name} (guide ${money(lead.conservatory.priceMin)}–${money(lead.conservatory.priceMax)})`
@@ -71,6 +83,7 @@ function leadNotificationHtml(lead, price) {
       ${price ? row('Wall area', `${escapeHtml(price.footprintM2)} m² (${escapeHtml(lead.measurementSource)})`) : ''}
       ${price ? row('Quote total', `<strong>${money(price.total)}</strong>`) : ''}
       ${conservatory ? row('Conservatory', escapeHtml(conservatory)) : ''}
+      ${windowsRow(lead)}
     </table>
   </div>`;
 }

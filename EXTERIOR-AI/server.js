@@ -2480,10 +2480,21 @@ function resolveGlazing(body) {
     const frontSource = summary.frontTold ? 'told'
       : (summary.countSource === 'photo_door' || summary.countSource === 'photo_count') ? 'photo'
       : 'estimated';
+    /* How many the back photo read, so the installer can be told which of
+       the back windows were counted and which the homeowner added with +
+       (side windows, usually). Bounded like the count itself. */
+    const bpc = Number(body.backPhotoCount);
+    const backPhotoCount = backCountSource === 'photo' && body.backPhotoCount !== null && body.backPhotoCount !== undefined && body.backPhotoCount !== ''
+      && Number.isInteger(bpc) && bpc >= 0 && bpc <= glazing.MAX_WINDOWS ? bpc : null;
+    const sc = Number(body.sideCount);
+    const sideCount = backCountSource === 'photo' && body.sideCount !== null && body.sideCount !== undefined && body.sideCount !== ''
+      && Number.isInteger(sc) && sc >= 0 && sc <= glazing.MAX_WINDOWS ? sc : null;
     return {
       ...summary,
       ratesSourced: GLAZING_RATES_SOURCED,
       counts: { front: frontSource, backAndSides: backCountSource },
+      // Part by part, what was counted, what was measured, what is typical.
+      countBasis: glazing.windowBasis(summary, { backCountSource, backPhotoCount, sideCount }),
     };
   } catch (err) {
     console.error('Could not attach a glazing estimate to the lead:', err.message);

@@ -113,7 +113,7 @@ test('the lead tells the installer which counts are photographs', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
   const at = source.indexOf('const backCountSource =');
   assert.ok(at > 0, 'the lead does not say where the counts came from');
-  const block = source.slice(at, at + 1400);
+  const block = source.slice(at, at + 2600);
 
   assert.match(block, /'not priced'/, 'an unanswered back is not distinguished');
   assert.match(block, /counts: \{ front: frontSource, backAndSides: backCountSource \}/,

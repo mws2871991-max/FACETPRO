@@ -2726,6 +2726,8 @@ function designChoices() {
     backCountSource: state.backCount === null || state.backCount === undefined
       ? undefined
       : (state.backFromPhoto ? 'photo' : 'told'),
+    backPhotoCount: state.backFromPhoto && Number.isFinite(state.backPhotoCount) ? state.backPhotoCount : undefined,
+    sideCount: sidesTold() ?? undefined,
   };
 }
 
@@ -2881,6 +2883,8 @@ function applyDesign(d) {
        to be nudged — and if a photograph gave it, say so again. */
     state.backTouched = true;
     state.backFromPhoto = d.backCountSource === 'photo';
+    state.backPhotoCount = state.backFromPhoto && Number.isFinite(d.backPhotoCount) ? d.backPhotoCount : null;
+    state.sideCount = state.backFromPhoto && Number.isFinite(d.sideCount) ? d.sideCount : null;
   }
   refreshPrice();
   refreshGlazing();
@@ -4089,7 +4093,7 @@ function buildUploadDetect() {
                first one got rather than an empty frame and a button. It is one
                more render against the daily cap, spent on somebody who has
                demonstrably not given up. */
-            onClick: () => { state.uploadedImg = null; state.uploadedBase64 = null; state.detections = []; state.stage = 'landing'; state.detectionStatus = 'idle'; state.renderUrl = null; state.renderId = null; state.windowCount = null; state.backCount = null; state.backFromPhoto = false; state.backPhotoCount = null; state.frontWindowCount = null; state.glazing = null; state.hasCustomised = false; state.revealed = false; state.lastPriceDelta = null; autoRenderDone = false; U('Photo removed — add another whenever you like'); render(); }
+            onClick: () => { state.uploadedImg = null; state.uploadedBase64 = null; state.detections = []; state.stage = 'landing'; state.detectionStatus = 'idle'; state.renderUrl = null; state.renderId = null; state.windowCount = null; state.backCount = null; state.backFromPhoto = false; state.backPhotoCount = null; state.sideCount = null; state.frontWindowCount = null; state.glazing = null; state.hasCustomised = false; state.revealed = false; state.lastPriceDelta = null; autoRenderDone = false; U('Photo removed — add another whenever you like'); render(); }
           /* Screen 3: "allow replace photo without restarting the journey".
 
            The behaviour was already right — this clears the photograph, the
@@ -5054,7 +5058,7 @@ function photoChangedPriceLine(spread, n, doorOnly) {
   const told = state.glazing?.seenOnly ? state.glazing.backCount : null;
   const how = front && told !== null && told !== undefined
     ? (state.backFromPhoto
-      ? `we counted ${front} window${front === 1 ? '' : 's'} at the front and ${backSeen()} at the back from your photos${told > backSeen() ? `, plus ${told - backSeen()} you added` : told < backSeen() ? `, less ${backSeen() - told} you took off` : ''}. Windows on the sides aren’t in either photo${told > backSeen() ? ', apart from any you added' : ', so they aren’t priced'}.${told > 0 ? ' The back ones are priced at typical sizes, not measured.' : ''}`
+      ? `${front} window${front === 1 ? '' : 's'} at the front and ${backOnly(told)} at the back${sidesTold() ? `, plus ${sidesTold()} on the sides` : ''}.${sidesTold() === null ? ' Side windows aren’t priced yet.' : ''}${told > 0 ? ' The back' + (sidesTold() ? ' and sides are' : ' is') + ' at typical sizes, not measured.' : ''}`
       : `we counted ${front} window${front === 1 ? '' : 's'} at the front, plus ${told} at the back and sides, priced at typical sizes.`)
     : front && front !== n
     ? `we counted ${front} window${front === 1 ? '' : 's'} at the front and allowed for about ${n} in all. The ones we couldn’t see are priced at typical sizes.`
@@ -5392,6 +5396,17 @@ function chosenSentence() {
    estimates. */
 /* "2 windows, from your photo of the back", and once they have used − or +,
    which part came from the photo and which from them. */
+/* The sides, asked as a question once a back photo is in: neither photo shows
+   them. null is "not answered" and is not priced; 0 is "none". Side windows
+   ride in state.backCount, which is what the server prices, so the back on
+   its own is the total less these. A typed count without a back photo is
+   "back and sides" together, and this stays null. */
+function sidesTold() {
+  return state.backFromPhoto && Number.isFinite(state.sideCount) ? state.sideCount : null;
+}
+function backOnly(total) {
+  return Math.max(0, (total || 0) - (sidesTold() || 0));
+}
 function backSeen() {
   return Number.isFinite(state.backPhotoCount) ? state.backPhotoCount : (state.backCount || 0);
 }
@@ -5828,6 +5843,8 @@ async function refreshGlazing({ label } = {}) {
     backCountSource: state.backCount === null || state.backCount === undefined
       ? undefined
       : (state.backFromPhoto ? 'photo' : 'told'),
+    backPhotoCount: state.backFromPhoto && Number.isFinite(state.backPhotoCount) ? state.backPhotoCount : undefined,
+    sideCount: sidesTold() ?? undefined,
       }),
     });
     const data = await res.json();
@@ -6420,6 +6437,44 @@ function buildDetailOptions() {
         h('span', { className: 'measured text-lg min-w-[2ch] text-center' }, String(value)),
         h('button', { type: 'button', 'aria-label': `One more ${label}`, className: 'w-12 h-12 rounded-full border border-zinc-300 hover:border-zinc-900 transition text-xl leading-none', onClick: () => set(value + 1) }, '+'),
       ]);
+      /* One question rather than an instruction. "If you have any, add them
+         with + above" asked a homeowner to work out which counter the sides
+         belonged to; Yes / No is something anyone can answer. */
+      const sidesBlock = (g) => {
+        const sides = sidesTold();
+        const back = backOnly(g.backCount);
+        const setSides = (n) => {
+          state.sideCount = Math.max(0, Math.min(30, n));
+          setBack(back + state.sideCount);
+        };
+        const wrap = (kids, amber) => h('div', { className: 'mt-2 pt-2 border-t border-zinc-200' + (amber ? ' text-amber-800' : '') }, kids);
+        if (sides === null) {
+          return wrap([
+            h('p', { className: 'text-lg font-semibold' }, 'Any windows on the sides of the house?'),
+            h('p', { className: 'text-base leading-7' }, 'They aren’t in either photo, so they aren’t priced yet.'),
+            h('div', { className: 'mt-2 flex gap-2 flex-wrap' }, [
+              h('button', { type: 'button', className: 'px-5 rounded-full border border-zinc-300 bg-white text-zinc-900 text-lg min-h-[48px]', onClick: () => { state.sideCount = 0; render(); } }, 'No'),
+              h('button', { type: 'button', className: 'px-5 rounded-full border border-zinc-300 bg-white text-zinc-900 text-lg min-h-[48px]', onClick: () => setSides(1) }, 'Yes'),
+            ]),
+          ], true);
+        }
+        if (sides === 0) {
+          return wrap([
+            h('div', { className: 'flex items-center justify-between gap-3 flex-wrap' }, [
+              h('p', { className: 'text-base text-zinc-700' }, [h('strong', { className: 'text-zinc-900' }, 'Sides: '), 'no windows, as you told us']),
+              h('button', { type: 'button', className: 'text-base underline text-zinc-700 min-h-[44px]', onClick: () => { state.sideCount = null; render(); } }, 'Change'),
+            ]),
+          ]);
+        }
+        return wrap([
+          h('p', { className: 'text-lg font-semibold text-zinc-900' }, 'Sides of the house'),
+          h('div', { className: 'mt-1 flex items-center justify-between gap-3 flex-wrap' }, [
+            h('p', { className: 'text-base text-zinc-700' }, `${sides} window${sides === 1 ? '' : 's'}, as you told us`),
+            stepper(sides, setSides, 'window on the sides'),
+          ]),
+          h('p', { className: 'text-base text-zinc-600' }, 'Sizes: typical, not measured'),
+        ]);
+      };
       return h('div', { id: 'window-count', className: 'mt-3 pt-3 border-t border-zinc-200 grid gap-3 scroll-mt-24' }, [
         h('div', { className: 'flex items-center justify-between gap-3 flex-wrap' }, [
           h('div', {}, [
@@ -6429,8 +6484,8 @@ function buildDetailOptions() {
                front door gives the photo a scale; without one the count is
                real but the sizes are the house type's typical ones. */
             h('p', { className: 'text-base text-zinc-600' }, MEASURED_FROM_PHOTO.includes(g.countSource)
-              ? 'Sizes measured from your photo'
-              : `Sizes not measured — typical for ${HOUSE_TYPE_ARTICLE(g.houseType)}`),
+              ? 'Sizes: measured from your photo'
+              : 'Sizes: typical, not measured'),
           ]),
           /* Their way to disagree with the front count.
 
@@ -6494,37 +6549,34 @@ function buildDetailOptions() {
                   : null,
               ])
             : h('div', { className: 'mt-1 flex items-center justify-between gap-3 flex-wrap' }, [
-                h('p', { className: 'text-base text-zinc-700' }, g.backCount === 0
+                h('p', { className: 'text-base text-zinc-700' }, backOnly(g.backCount) === 0
                   ? (state.backFromPhoto ? 'None found in your photo of the back' : 'None — just the front')
-                  : backFromPhotoText(g.backCount)),
-                stepper(g.backCount, setBack, 'window at the back'),
+                  : backFromPhotoText(backOnly(g.backCount))),
+                stepper(backOnly(g.backCount), (n) => setBack(Math.max(0, n) + (sidesTold() || 0)), 'window at the back'),
               ]),
             /* A number of windows is not their sizes. Neither a typed count
                nor the back photo (no front door in it, so no scale) measures
                anything: every back window is priced at the house type's
                typical mix. Say so, so nobody thinks they were measured. */
-            (g.backCount !== null && g.backCount > 0)
-              ? h('p', { className: 'mt-1 text-base leading-7 text-zinc-700' },
-                  `Sizes not measured — priced at typical sizes for ${HOUSE_TYPE_ARTICLE(g.houseType)}. Your installer will measure them.`)
+            (g.backCount !== null && backOnly(g.backCount) > 0)
+              ? h('p', { className: 'text-base text-zinc-600' }, 'Sizes: typical, not measured')
               : null,
             /* The sides are in neither photo. A back photo answers for the
                back, and the rule is not to let it answer for anything else:
                say plainly that side windows are not priced, and how to add
                them. */
-            state.backFromPhoto
-              ? h('p', { className: 'mt-2 pt-2 border-t border-zinc-200 text-base leading-7 text-amber-800' }, [
-                  h('strong', {}, 'Sides of the house: not seen. '),
-                  g.backCount > backSeen()
-                    ? 'They aren’t in either photo. Any side windows you’ve added with + are counted above.'
-                    : 'They aren’t in either photo, so side windows aren’t priced. If you have any, add them with + above.',
-                ])
-              : null,
+            state.backFromPhoto ? sidesBlock(g) : null,
             /* "Add them" starts at the front's count, as a guess to adjust,
                not as something they told us. Say so until they touch it. */
             (g.backCount !== null && !state.backTouched && !state.backFromPhoto)
               ? h('p', { className: 'mt-1 text-base leading-7 text-zinc-700' }, 'We’ve started at the same number as the front. Change it with − and + if that’s not right.')
               : null,
         ]),
+        /* Said once for the whole panel rather than under every row: where a
+           size is typical, it is the installer's survey that settles it. */
+        (!MEASURED_FROM_PHOTO.includes(g.countSource) || (g.backCount || 0) > 0)
+          ? h('p', { className: 'text-base leading-7 text-zinc-700' }, `“Typical” means the usual sizes for ${HOUSE_TYPE_ARTICLE(g.houseType)}. Your installer measures every window before quoting.`)
+          : null,
       ]);
     };
     const setCount = (n) => {
@@ -6572,7 +6624,7 @@ function buildDetailOptions() {
           ? (g.backCount === null
               ? `The front only: the ${g.frontCount} window${g.frontCount === 1 ? '' : 's'} in your photo. The back and sides aren’t priced yet — add them below. Includes VAT${g.price.access ? ', and access for the upstairs windows' : ''}.`
               : state.backFromPhoto
-                ? `${g.frontCount} at the front and ${backSeen()} at the back, from your photos${g.backCount > backSeen() ? `, plus ${g.backCount - backSeen()} you added` : g.backCount < backSeen() ? `, less ${backSeen() - g.backCount} you took off` : ''} — ${counted} in all. The sides aren’t in either photo${g.backCount > backSeen() ? ', apart from any you added' : ', so side windows aren’t priced'}.${g.backCount > 0 ? ' Windows at the back are priced at typical sizes, not measured.' : ''}`
+                ? `${g.frontCount} at the front and ${backOnly(g.backCount)} at the back${sidesTold() ? `, plus ${sidesTold()} on the sides` : ''} — ${counted} in all.${sidesTold() === null ? ' Side windows aren’t priced yet.' : ''}`
                 : `${g.frontCount} at the front from your photo, plus ${g.backCount} at the back and sides at typical sizes — ${counted} in all. Includes VAT${g.price.access ? ', and access for the upstairs windows' : ''}.`)
         : g.raisedToTypical
           ? `We can see ${g.frontCount} window${g.frontCount === 1 ? '' : 's'} on the front, but your photo doesn’t show the whole house, so we’ve priced ${HOUSE_TYPE_ARTICLE(g.houseType)}’s usual ${counted}. Set the real number below if you know it. Includes VAT${g.price.access ? ', and scaffolding or ladder access for the upstairs windows' : ''}.`
@@ -8529,6 +8581,20 @@ function buildInstaller() {
                   r,
                 ]))),
             ]) : null,
+            /* Which windows were measured and which are a typical size. An
+               installer who quotes a typical size as measured finds out on
+               survey, in front of the homeowner. */
+            (lead.glazing?.countBasis?.lines || []).length ? h('div', { className: 'mt-3' }, [
+              h('p', { className: 'text-base text-white/80 font-semibold' }, 'How the windows were counted'),
+              h('ul', { className: 'mt-1.5 grid gap-1' }, lead.glazing.countBasis.lines.map(t =>
+                h('li', { className: 'text-base text-white/80 flex items-start gap-2' }, [
+                  h('span', { className: 'text-white/35', 'aria-hidden': 'true' }, '·'),
+                  t,
+                ]))),
+              lead.glazing.countBasis.lines.some(t => /typical/.test(t))
+                ? h('p', { className: 'mt-1 text-base text-amber-300' }, 'Sizes marked typical need measuring before you quote.')
+                : null,
+            ]) : null,
             h('div', { className: 'mt-3 flex flex-wrap gap-x-6 gap-y-2' }, [
               est ? h('div', {}, [
                 h('p', { className: 'text-base text-white/80 font-semibold' }, 'Estimated project'),
@@ -8543,7 +8609,7 @@ function buildInstaller() {
                weight an installer should put on the figure — and the page says
                so to the homeowner too. */
             h('p', { className: 'mt-3 text-base leading-6 text-white/80 max-w-[52ch]' },
-              `Estimate from ${lead.measurementSource === 'measured' ? 'the measured elevation' : 'a typical home of this type'} — an estimate for planning, not a quotation. Reference ${lead.id}.`),
+              `Estimate from ${lead.glazing?.countBasis ? 'the windows as counted above' : lead.measurementSource === 'measured' ? 'the measured elevation' : 'a typical home of this type'} — an estimate for planning, not a quotation. Reference ${lead.id}.`),
           ]),
           /* The homeowner's own design. This is the thing a generic lead cannot
              carry, and it is why the first phone call is different. */
@@ -8898,6 +8964,7 @@ async function handleRearUpload(file) {
     state.backTouched = true;
     state.backFromPhoto = true;
     state.backPhotoCount = state.backCount;
+    state.sideCount = null;
     state.rearDoorCount = Number(data.rearDoorCount) || 0;
     reachedStage('count_corrected');
     U(n === 1 ? 'We found 1 window at the back' : `We found ${n} windows at the back`);
@@ -8934,6 +9001,7 @@ async function handleUpload(file) {
   state.backCount = null;
   state.backFromPhoto = false;
   state.backPhotoCount = null;
+  state.sideCount = null;
   state.backTouched = false;
   state.glazing = null;
   U('Looking at your home…');
@@ -9363,6 +9431,8 @@ async function sendDesignPack() {
     backCountSource: state.backCount === null || state.backCount === undefined
       ? undefined
       : (state.backFromPhoto ? 'photo' : 'told'),
+    backPhotoCount: state.backFromPhoto && Number.isFinite(state.backPhotoCount) ? state.backPhotoCount : undefined,
+    sideCount: sidesTold() ?? undefined,
         claddingId: state.cladding.id,
         trimId: state.trim.id,
         roofId: state.roof.id,
