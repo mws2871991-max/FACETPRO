@@ -507,7 +507,7 @@ const COST_PAGES = [
           { heading: 'What moves the price', paras: [
             'Size and glazing do most of it. A larger footprint costs more in every direction at once — more frame, more glass, more base — and the roof specification matters as much as the floor area: a lightweight tiled roof is a different job from polycarbonate.',
             'Groundworks are the line people do not budget for. A level garden with easy access is a different price from one that needs a retaining wall, drainage moved, or materials carried through the house.',
-            'And a conservatory is rarely the only work. If the windows or roofline are due anyway, doing them together saves paying twice for the same scaffold — which is why the visualiser prices those five trades from one photograph, even though it cannot price the conservatory itself.',
+            'And a conservatory is rarely the only work. If the windows or roofline are due anyway, doing them together saves paying twice for the same scaffold — which is why the visualiser prices those five trades together from a photo of the front, even though it cannot price the conservatory itself.',
           ] },
           { heading: 'Why we will not pretend to price this from a photograph', paras: [
             'Every other cost on this site is computed from the same rate card the estimate uses, and changes when that changes. This page cannot work that way, because nothing in a photograph of the front of a house tells you the size of a conservatory that does not exist yet.',
@@ -547,7 +547,7 @@ const COST_PAGES = [
           } },
           { heading: 'Why the total is not five quotes added up', paras: [
             'Five trades priced separately means paying for access five times, five sets of mobilisation, and five companies each protecting their own margin against the others\u2019 unknowns. Priced together, the scaffold goes up once.',
-            'It also means you see one number for the outside of your house instead of five that never quite add up to a decision. That is the whole reason this site prices all of it from one photograph.',
+            'It also means you see one number for the outside of your house instead of five that never quite add up to a decision. That is the whole reason this site prices all of it together, starting from one photo of the front.',
           ] },
         ],
       };
@@ -859,17 +859,17 @@ function relatedFor(slug) {
 const JOURNEY_HERO = {
   cladding: {
     h: 'See what your house would look like rendered',
-    p: 'Upload one photo. We will estimate your wall area, show you the finishes on your own house, and price the job.',
+    p: 'Upload a photo of the front. We will measure the front wall, estimate the rest for your house type and say which is which, show you the finishes on your own house, and price the job.',
     cta: 'Render my house',
   },
   windows: {
     h: 'See new windows on your own house',
-    p: 'Upload one photo. We will find every window, size them against your front door and price the job.',
+    p: 'Upload a photo of the front. We will find the windows on it, size them against your front door and price them, then ask you how many are at the back and sides.',
     cta: 'Show me my windows',
   },
   doors: {
     h: 'See a new front door on your own house',
-    p: 'Upload one photo. Try the styles and colours on your own doorway and see what it costs fitted.',
+    p: 'Upload a photo of the front. Try the styles and colours on your own doorway and see what it costs fitted.',
     cta: 'Show me my door',
   },
   roof: {
@@ -879,12 +879,12 @@ const JOURNEY_HERO = {
        notes/roof-area-needs-a-source.md — and a photograph of the front
        cannot see a rear slope. Claiming a measurement we do not take is the
        one thing that makes the rest of the estimate not worth believing. */
-    p: 'Upload one photo. We will show you the coverings on your own roof and price the job, scaffolding and waste included.',
+    p: 'Upload a photo of the front. We will show you the coverings on your own roof and estimate the job for your house type (a roof can’t be measured from the ground), scaffolding and waste included.',
     cta: 'Show me my roof',
   },
   roofline: {
     h: 'See new fascias, soffits and guttering on your house',
-    p: 'Upload one photo. We will measure your roofline from it and price the job, scaffolding included.',
+    p: 'Upload a photo of the front. We will estimate your roofline for your house type and price the job, scaffolding included.',
     cta: 'Show me my roofline',
   },
 };
@@ -898,7 +898,7 @@ const JOURNEY_HERO = {
 const SLUG_HERO = {
   'bifold-doors-cost': {
     h: 'Price your bifolds, and see the rest on your own house',
-    p: 'Bifolds open onto the garden, so we price them from the same rate card and do not draw them onto a photograph of your front. Upload one photo and design your windows, front door, walls, roofline and roof on your actual house.',
+    p: 'Bifolds open onto the garden, so we price them from the same rate card and do not draw them onto a photograph of your front. Upload a photo of the front and design your windows, front door, walls, roofline and roof on your actual house.',
     cta: 'Upload my house',
   },
 };

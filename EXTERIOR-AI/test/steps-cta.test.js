@@ -38,7 +38,7 @@ test('it comes after the explanation, not before it', () => {
      where it was and add a button nobody needed. */
   const steps = page.indexOf('id="how-it-works"');
   const cta = page.indexOf('id="steps-cta-heading"');
-  const fiveTrades = page.indexOf('One photo. Five trades. One starting point.');
+  const fiveTrades = page.indexOf('Start with the front. Five trades, one starting point.');
 
   assert.ok(steps > -1 && cta > -1 && fiveTrades > -1, 'one of the three anchors has gone');
   assert.ok(cta > steps, 'the invitation has moved above the four steps — the gap after them is back');
@@ -100,10 +100,12 @@ test('the five-trade line describes rather than argues', () => {
      "Why two neighbours pay thousands apart"; a third time, inside the
      section explaining how the product works, was arguing where it should
      have been describing. */
-  assert.match(page, /One photo\. Five trades\. One starting point\./,
+  /* 26 September: "One photo. Five trades." became "Start with the front",
+     because one photo of the front does not show the back of a house. */
+  assert.match(page, /Start with the front\. Five trades, one starting point\./,
     'the claim itself is gone — that line is the proposition, not the padding');
   assert.ok(!page.includes('booking, waiting in for and chasing'),
     'the booking-and-chasing clause is back in the four-steps section');
-  assert.match(page, /Windows, doors, walls, roofline and roof &mdash; priced together from the same photograph\./,
+  assert.match(page, /Windows, doors, walls, roofline and roof &mdash; priced together, starting from one photo of the front\./,
     'the supporting line has drifted from the agreed wording');
 });
