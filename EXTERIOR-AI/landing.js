@@ -864,7 +864,7 @@ const JOURNEY_HERO = {
   },
   windows: {
     h: 'See new windows on your own house',
-    p: 'Upload a photo of the front. We will find the windows on it, size them against your front door and price them, then ask you how many are at the back and sides.',
+    p: 'Upload a photo of the front. We will find the windows on it, size them against your front door and price them, then ask about the back and sides — add a second photo, or just tell us the number.',
     cta: 'Show me my windows',
   },
   doors: {
