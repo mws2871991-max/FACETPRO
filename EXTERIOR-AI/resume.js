@@ -75,6 +75,14 @@ const ID_FIELDS = [
   'windowStyleId', 'doorStyleId', 'windowDoorColourId', 'windowBarsId',
   'fasciaId', 'soffitId', 'gutteringId', 'rooflineCladdingId',
   'conservatoryStyleId', 'houseType',
+  /* Where the back-and-sides count came from: 'photo' or 'told'. Absent means
+     they never answered, which is a third state and not the same as zero.
+
+     Carried with the design because the number alone is not the whole answer.
+     Restored without it, a count read from a photograph comes back looking
+     like a typed guess, and the installer receiving the lead cannot tell
+     which of the two they are quoting against. */
+  'backCountSource',
 ];
 
 /* The same bounds the quote engine enforces, taken from the same file rather

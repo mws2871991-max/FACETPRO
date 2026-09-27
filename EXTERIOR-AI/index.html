@@ -2717,6 +2717,11 @@ function designChoices() {
     footprintM2: state.footprint?.area, trimLengthM: state.trimLengthM,
     windowCount: state.windowCount,
     backCount: state.backCount,
+    /* Not just how many, but how we know. Restored without this, a count read
+       from a photograph comes back looking like a typed guess. */
+    backCountSource: state.backCount === null || state.backCount === undefined
+      ? undefined
+      : (state.backFromPhoto ? 'photo' : 'told'),
   };
 }
 
@@ -2866,7 +2871,13 @@ function applyDesign(d) {
   if (d.footprintM2 > 0) state.footprint = { area: d.footprintM2 };
   if (d.trimLengthM > 0) state.trimLengthM = d.trimLengthM;
   if (d.windowCount > 0) state.windowCount = d.windowCount;
-  if (Number.isFinite(d.backCount) && d.backCount >= 0) state.backCount = d.backCount;
+  if (Number.isFinite(d.backCount) && d.backCount >= 0) {
+    state.backCount = d.backCount;
+    /* A restored count is an answer they already gave, so it is not a guess
+       to be nudged — and if a photograph gave it, say so again. */
+    state.backTouched = true;
+    state.backFromPhoto = d.backCountSource === 'photo';
+  }
   refreshPrice();
   refreshGlazing();
 }
@@ -5788,6 +5799,11 @@ async function refreshGlazing({ label } = {}) {
            homeowner has told us how many. No more front × 2.6. */
         seenOnly: true,
         backCount: state.backCount,
+    /* Not just how many, but how we know. Restored without this, a count read
+       from a photograph comes back looking like a typed guess. */
+    backCountSource: state.backCount === null || state.backCount === undefined
+      ? undefined
+      : (state.backFromPhoto ? 'photo' : 'told'),
       }),
     });
     const data = await res.json();
@@ -9253,6 +9269,11 @@ async function sendDesignPack() {
         // figure they saw: front from the photo, back and sides as told.
         seenOnly: true,
         backCount: state.backCount,
+    /* Not just how many, but how we know. Restored without this, a count read
+       from a photograph comes back looking like a typed guess. */
+    backCountSource: state.backCount === null || state.backCount === undefined
+      ? undefined
+      : (state.backFromPhoto ? 'photo' : 'told'),
         claddingId: state.cladding.id,
         trimId: state.trim.id,
         roofId: state.roof.id,

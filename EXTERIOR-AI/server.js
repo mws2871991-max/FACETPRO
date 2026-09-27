@@ -2461,7 +2461,21 @@ function resolveGlazing(body) {
     // The per-window geometry is ours to work with, not the installer's to
     // read — they get the count, the bands and the money.
     const { windows, ...summary } = result;
-    return { ...summary, ratesSourced: GLAZING_RATES_SOURCED };
+    /* Which counts the installer is quoting against.
+
+       The front is always from the photograph. The back is a photograph, a
+       number the homeowner gave us, or unanswered — three different things,
+       and an installer pricing a job should be told which. Derived here
+       rather than trusted from the client: the count itself is already
+       re-priced server-side for the same reason. */
+    const backCountSource = summary.backCount === null || summary.backCount === undefined
+      ? 'not priced'
+      : (body.backCountSource === 'photo' ? 'photo' : 'told');
+    return {
+      ...summary,
+      ratesSourced: GLAZING_RATES_SOURCED,
+      counts: { front: 'photo', backAndSides: backCountSource },
+    };
   } catch (err) {
     console.error('Could not attach a glazing estimate to the lead:', err.message);
     return null;

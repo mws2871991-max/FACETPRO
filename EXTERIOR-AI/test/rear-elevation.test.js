@@ -76,3 +76,51 @@ test('the rear reply omits every front-only finding', () => {
   assert.match(reply, /canMeasure: false/, 'the rear claims it can measure');
   assert.match(reply, /scaleReference: false/, 'the rear claims a scale reference');
 });
+
+/* ── Which counts came from a photograph ── */
+
+test('the back count carries where it came from', () => {
+  /* The number alone is not the whole answer. A count read from a photograph
+     and a count somebody typed are different evidence, and an installer
+     pricing the job should be told which they are quoting against.
+
+     Three states, not two: absent means they never answered, which is not the
+     same as zero — zero is "just the front", a real answer. */
+  const resume = require('../resume');
+
+  const fromPhoto = resume.buildPayload({ backCount: 5, backCountSource: 'photo' });
+  assert.strictEqual(fromPhoto.backCount, 5);
+  assert.strictEqual(fromPhoto.backCountSource, 'photo');
+
+  const told = resume.buildPayload({ backCount: 4, backCountSource: 'told' });
+  assert.strictEqual(told.backCountSource, 'told');
+
+  /* Zero survives as an answer rather than being dropped as falsy. */
+  const none = resume.buildPayload({ backCount: 0, backCountSource: 'told' });
+  assert.strictEqual(none.backCount, 0);
+
+  /* Never answered stays never answered. */
+  const unanswered = resume.buildPayload({ claddingId: 'alabaster' });
+  assert.ok(!('backCount' in unanswered));
+  assert.ok(!('backCountSource' in unanswered));
+
+  /* And it is an allowlisted id, not free text riding into a stored record. */
+  const junk = resume.buildPayload({ backCount: 5, backCountSource: '<script>alert(1)</script>' });
+  assert.ok(!('backCountSource' in junk), 'free text reached the saved design');
+});
+
+test('the lead tells the installer which counts are photographs', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  const at = source.indexOf('const backCountSource =');
+  assert.ok(at > 0, 'the lead does not say where the counts came from');
+  const block = source.slice(at, at + 600);
+
+  assert.match(block, /'not priced'/, 'an unanswered back is not distinguished');
+  assert.match(block, /counts: \{ front: 'photo', backAndSides: backCountSource \}/,
+    'the lead summary does not carry the counts');
+
+  /* Derived server-side, like the price. A client that can set the number
+     must not also be the thing that certifies where it came from. */
+  assert.match(block, /body\.backCountSource === 'photo' \? 'photo' : 'told'/,
+    'the source is taken from the client without being narrowed');
+});
