@@ -4074,7 +4074,7 @@ function buildUploadDetect() {
                first one got rather than an empty frame and a button. It is one
                more render against the daily cap, spent on somebody who has
                demonstrably not given up. */
-            onClick: () => { state.uploadedImg = null; state.uploadedBase64 = null; state.detections = []; state.stage = 'landing'; state.detectionStatus = 'idle'; state.renderUrl = null; state.renderId = null; state.windowCount = null; state.backCount = null; state.frontWindowCount = null; state.glazing = null; state.hasCustomised = false; state.revealed = false; state.lastPriceDelta = null; autoRenderDone = false; U('Photo removed — add another whenever you like'); render(); }
+            onClick: () => { state.uploadedImg = null; state.uploadedBase64 = null; state.detections = []; state.stage = 'landing'; state.detectionStatus = 'idle'; state.renderUrl = null; state.renderId = null; state.windowCount = null; state.backCount = null; state.backFromPhoto = false; state.backPhotoCount = null; state.frontWindowCount = null; state.glazing = null; state.hasCustomised = false; state.revealed = false; state.lastPriceDelta = null; autoRenderDone = false; U('Photo removed — add another whenever you like'); render(); }
           /* Screen 3: "allow replace photo without restarting the journey".
 
            The behaviour was already right — this clears the photograph, the
@@ -5038,7 +5038,9 @@ function photoChangedPriceLine(spread, n, doorOnly) {
   const front = state.glazing?.frontCount;
   const told = state.glazing?.seenOnly ? state.glazing.backCount : null;
   const how = front && told !== null && told !== undefined
-    ? `we counted ${front} window${front === 1 ? '' : 's'} at the front, plus ${told} at the back and sides.`
+    ? (state.backFromPhoto
+      ? `we counted ${front} window${front === 1 ? '' : 's'} at the front and ${backSeen()} at the back from your photos${told > backSeen() ? `, plus ${told - backSeen()} you added` : told < backSeen() ? `, less ${backSeen() - told} you took off` : ''}. Windows on the sides aren’t in either photo${told > backSeen() ? ', apart from any you added' : ', so they aren’t priced'}.`
+      : `we counted ${front} window${front === 1 ? '' : 's'} at the front, plus ${told} at the back and sides.`)
     : front && front !== n
     ? `we counted ${front} window${front === 1 ? '' : 's'} at the front and allowed for about ${n} in all, at the sizes and styles in your photo.`
     : `we counted ${n} window${n === 1 ? '' : 's'}, at the sizes and styles in your photo.`;
@@ -5373,6 +5375,23 @@ function chosenSentence() {
 /* The one-line version, beside the total, so nobody has to open "See what's
    included" to find out which parts of the price are measured and which are
    estimates. */
+/* "2 windows, from your photo of the back", and once they have used − or +,
+   which part came from the photo and which from them. */
+function backSeen() {
+  return Number.isFinite(state.backPhotoCount) ? state.backPhotoCount : (state.backCount || 0);
+}
+
+function backFromPhotoText(n) {
+  const w = (k) => `${k} window${k === 1 ? '' : 's'}`;
+  if (!state.backFromPhoto) return w(n);
+  const seen = Number.isFinite(state.backPhotoCount) ? state.backPhotoCount : n;
+  const extra = n - seen;
+  if (extra === 0) return `${w(n)}, from your photo of the back`;
+  return extra > 0
+    ? `${w(n)}: ${seen} from your photo of the back, plus ${extra} you added`
+    : `${w(n)}: ${seen} in your photo of the back, less ${-extra} you took off`;
+}
+
 function basisSummary(price) {
   const b = price?.basis;
   if (!b) return null;
@@ -6384,7 +6403,7 @@ function buildDetailOptions() {
           ? h('p', { className: 'text-base leading-7 text-amber-800' }, 'Part of the front was cut off in your photo, so there may be more windows at the front. Add them to the back-and-sides number below, or try another photo.')
           : null,
         h('div', { className: 'rounded-xl border-2 p-3 ' + (g.backCount === null ? 'border-amber-500 bg-amber-50' : 'border-zinc-200 bg-white') }, [
-          h('p', { className: 'text-lg font-semibold text-zinc-900' }, 'Back and sides of the house'),
+          h('p', { className: 'text-lg font-semibold text-zinc-900' }, state.backFromPhoto ? 'Back of the house' : 'Back and sides of the house'),
           g.backCount === null
             ? h('div', { className: 'mt-1 grid gap-2' }, [
                 h('p', { className: 'text-base leading-7 text-zinc-700' }, 'Not priced yet — your photo only shows the front. Add a photo of the back, or tell us how many windows are there.'),
@@ -6423,10 +6442,22 @@ function buildDetailOptions() {
               ])
             : h('div', { className: 'mt-1 flex items-center justify-between gap-3 flex-wrap' }, [
                 h('p', { className: 'text-base text-zinc-700' }, g.backCount === 0
-                  ? 'None — just the front'
-                  : `${g.backCount} window${g.backCount === 1 ? '' : 's'}${state.backFromPhoto ? ', from your photo of the back' : ''}`),
+                  ? (state.backFromPhoto ? 'None found in your photo of the back' : 'None — just the front')
+                  : backFromPhotoText(g.backCount)),
                 stepper(g.backCount, setBack, 'window at the back'),
               ]),
+            /* The sides are in neither photo. A back photo answers for the
+               back, and the rule is not to let it answer for anything else:
+               say plainly that side windows are not priced, and how to add
+               them. */
+            state.backFromPhoto
+              ? h('p', { className: 'mt-2 pt-2 border-t border-zinc-200 text-base leading-7 text-amber-800' }, [
+                  h('strong', {}, 'Sides of the house: not seen. '),
+                  g.backCount > backSeen()
+                    ? 'They aren’t in either photo. Any side windows you’ve added with + are counted above.'
+                    : 'They aren’t in either photo, so side windows aren’t priced. If you have any, add them with + above.',
+                ])
+              : null,
             /* "Add them" starts at the front's count, as a guess to adjust,
                not as something they told us. Say so until they touch it. */
             (g.backCount !== null && !state.backTouched && !state.backFromPhoto)
@@ -6479,7 +6510,9 @@ function buildDetailOptions() {
         g.seenOnly && g.countSource !== 'manual_entry'
           ? (g.backCount === null
               ? `The front only: the ${g.frontCount} window${g.frontCount === 1 ? '' : 's'} in your photo. The back and sides aren’t priced yet — add them below. Includes VAT${g.price.access ? ', and access for the upstairs windows' : ''}.`
-              : `${g.frontCount} at the front from your photo, plus ${g.backCount} at the back and sides — ${counted} in all. Includes VAT${g.price.access ? ', and access for the upstairs windows' : ''}.`)
+              : state.backFromPhoto
+                ? `${g.frontCount} at the front and ${backSeen()} at the back, from your photos${g.backCount > backSeen() ? `, plus ${g.backCount - backSeen()} you added` : g.backCount < backSeen() ? `, less ${backSeen() - g.backCount} you took off` : ''} — ${counted} in all. The sides aren’t in either photo${g.backCount > backSeen() ? ', apart from any you added' : ', so side windows aren’t priced'}.`
+                : `${g.frontCount} at the front from your photo, plus ${g.backCount} at the back and sides — ${counted} in all. Includes VAT${g.price.access ? ', and access for the upstairs windows' : ''}.`)
         : g.raisedToTypical
           ? `We can see ${g.frontCount} window${g.frontCount === 1 ? '' : 's'} on the front, but your photo doesn’t show the whole house, so we’ve priced ${HOUSE_TYPE_ARTICLE(g.houseType)}’s usual ${counted}. Set the real number below if you know it. Includes VAT${g.price.access ? ', and scaffolding or ladder access for the upstairs windows' : ''}.`
         : scaled && assumed
@@ -8803,6 +8836,7 @@ async function handleRearUpload(file) {
     state.backCount = Math.max(0, Math.min(30, n));
     state.backTouched = true;
     state.backFromPhoto = true;
+    state.backPhotoCount = state.backCount;
     state.rearDoorCount = Number(data.rearDoorCount) || 0;
     reachedStage('count_corrected');
     U(n === 1 ? 'We found 1 window at the back' : `We found ${n} windows at the back`);
