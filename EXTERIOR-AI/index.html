@@ -2017,6 +2017,9 @@ const state = {
   glazingLoading: false,
   windowCount: null,        // the homeowner's own count, which beats ours
   backCount: null,          // windows at the back and sides, as they told us; null = not priced yet
+  /* Their correction to the front count. null means they have not disagreed
+     with the photograph — not zero, which is a real answer. */
+  frontCountOverride: null,
   prefs: { windowStyleId: null, doorStyleId: null, windowDoorColourId: null, windowBarsId: null,
            fasciaId: null, soffitId: null, gutteringId: null, rooflineCladdingId: null,
            /* A journey pre-declines the glazing it did not come for. Both are
@@ -2717,6 +2720,7 @@ function designChoices() {
     footprintM2: state.footprint?.area, trimLengthM: state.trimLengthM,
     windowCount: state.windowCount,
     backCount: state.backCount,
+    frontCount: state.frontCountOverride,
     /* Not just how many, but how we know. Restored without this, a count read
        from a photograph comes back looking like a typed guess. */
     backCountSource: state.backCount === null || state.backCount === undefined
@@ -5818,6 +5822,7 @@ async function refreshGlazing({ label } = {}) {
            homeowner has told us how many. No more front × 2.6. */
         seenOnly: true,
         backCount: state.backCount,
+        frontCount: state.frontCountOverride,
     /* Not just how many, but how we know. Restored without this, a count read
        from a photograph comes back looking like a typed guess. */
     backCountSource: state.backCount === null || state.backCount === undefined
@@ -6396,6 +6401,14 @@ function buildDetailOptions() {
        plainly rather than filling in with a multiplier. A stage 2 rear photo
        will fill the second line from a picture instead of a number. */
     const frontAndBack = (g) => {
+      /* Corrects what the photograph saw at the front, and nothing else — the
+         back count, the seenOnly labelling and the per-elevation wording all
+         carry on as they were. */
+      const setFront = (n) => {
+        state.frontCountOverride = Math.max(0, Math.min(30, n));
+        reachedStage('count_corrected');
+        refreshGlazing();
+      };
       const setBack = (n, touched = true) => {
         state.backCount = Math.max(0, Math.min(30, n));
         state.backTouched = touched;
@@ -6419,10 +6432,28 @@ function buildDetailOptions() {
               ? 'Sizes measured from your photo'
               : `Sizes not measured — typical for ${HOUSE_TYPE_ARTICLE(g.houseType)}`),
           ]),
-          h('span', { className: 'text-lg text-emerald-700 font-semibold' }, '\u2713 Priced'),
+          /* Their way to disagree with the front count.
+
+             This panel replaced the old whole-house block, which had the only
+             − and + on the page, so after any photograph the front count
+             became uncorrectable — while detectionReview went on telling them
+             to "change the number of windows below with the − and + buttons"
+             and scrolled them here to find none.
+
+             It sets a front-specific override rather than the old
+             windowCountOverride: that one replaces the whole-house total and
+             marks the reading manual_entry, which collapses this panel back
+             to a single number and throws away the back count they gave us. */
+          h('div', { className: 'flex items-center gap-3 flex-wrap' }, [
+            stepper(g.frontCount, setFront, 'window at the front'),
+            h('span', { className: 'text-lg text-emerald-700 font-semibold' }, '\u2713 Priced'),
+          ]),
         ]),
+        g.frontTold
+          ? h('p', { className: 'text-base leading-7 text-zinc-600' }, 'Front count as you told us.')
+          : null,
         g.frontCutOff
-          ? h('p', { className: 'text-base leading-7 text-amber-800' }, 'Part of the front was cut off in your photo, so there may be more windows at the front. Add them to the back-and-sides number below, or try another photo.')
+          ? h('p', { className: 'text-base leading-7 text-amber-800' }, 'Part of the front was cut off in your photo, so there may be more windows at the front. Add them with − and + above, or try another photo.')
           : null,
         h('div', { className: 'rounded-xl border-2 p-3 ' + (g.backCount === null ? 'border-amber-500 bg-amber-50' : 'border-zinc-200 bg-white') }, [
           h('p', { className: 'text-lg font-semibold text-zinc-900' }, state.backFromPhoto ? 'Back of the house' : 'Back and sides of the house'),
@@ -8895,6 +8926,15 @@ async function handleUpload(file) {
   /* A count corrected for the last photograph does not apply to this one, and
      a stale range next to a new house is worse than no range at all. */
   state.windowCount = null;
+  /* A front correction, and everything we learned about the back, belonged to
+     the previous photograph. Replacing the photo kept them: a rear count of 5
+     from one house was being added to the front of another, still captioned
+     "from your photo of the back". */
+  state.frontCountOverride = null;
+  state.backCount = null;
+  state.backFromPhoto = false;
+  state.backPhotoCount = null;
+  state.backTouched = false;
   state.glazing = null;
   U('Looking at your home…');
   render();
@@ -9317,6 +9357,7 @@ async function sendDesignPack() {
         // figure they saw: front from the photo, back and sides as told.
         seenOnly: true,
         backCount: state.backCount,
+        frontCount: state.frontCountOverride,
     /* Not just how many, but how we know. Restored without this, a count read
        from a photograph comes back looking like a typed guess. */
     backCountSource: state.backCount === null || state.backCount === undefined

@@ -2457,6 +2457,8 @@ function resolveGlazing(body) {
          and sides only if they told us how many. */
       seenOnly: body.seenOnly === true,
       backCount: body.backCount,
+      /* Priced the way the page priced it, corrections included. */
+      frontCountOverride: body.frontCount,
     });
     // The per-window geometry is ours to work with, not the installer's to
     // read — they get the count, the bands and the money.
@@ -2471,10 +2473,17 @@ function resolveGlazing(body) {
     const backCountSource = summary.backCount === null || summary.backCount === undefined
       ? 'not priced'
       : (body.backCountSource === 'photo' ? 'photo' : 'told');
+    /* The front is a photograph only when a photograph actually read it and
+       the homeowner did not correct it. A house-type prior is neither, and
+       saying "photo" over one would certify to an installer exactly the thing
+       this field exists to keep honest. */
+    const frontSource = summary.frontTold ? 'told'
+      : (summary.countSource === 'photo_door' || summary.countSource === 'photo_count') ? 'photo'
+      : 'estimated';
     return {
       ...summary,
       ratesSourced: GLAZING_RATES_SOURCED,
-      counts: { front: 'photo', backAndSides: backCountSource },
+      counts: { front: frontSource, backAndSides: backCountSource },
     };
   } catch (err) {
     console.error('Could not attach a glazing estimate to the lead:', err.message);

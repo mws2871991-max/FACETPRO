@@ -972,6 +972,18 @@ function estimateGlazing({
   selections = {},
   rates,
   windowCountOverride = null,
+  /* The homeowner correcting the FRONT count, which is not the same thing as
+     windowCountOverride.
+
+     windowCountOverride replaces the whole-house total and marks the reading
+     manual_entry — which is right for the old whole-house flow and wrong
+     here: it discards the front/back split, so the page falls back to a
+     single number and the back count they gave us is lost.
+
+     This corrects only what the photograph claimed to see, and leaves
+     everything downstream — the back count, the seenOnly labelling, the
+     per-elevation wording — intact. */
+  frontCountOverride = null,
   seenOnly = false,
   backCount = null,
 } = {}) {
@@ -1009,7 +1021,29 @@ function estimateGlazing({
     ? countWindows({ detections, houseType: key, bands })
     : null;
 
-  const base = measured || counted || priorWindows({ houseType: key, bands });
+  const baseRead = measured || counted || priorWindows({ houseType: key, bands });
+
+  /* Their correction to the front, applied before anything is scaled or
+     added to, so the back count and the labelling behave exactly as they
+     would have if the photograph had read this number in the first place.
+
+     Bounded like every other typed figure: there is no honest client that
+     sends four hundred front windows, and answering with thirty would dress
+     a tampered request up as a real one. Out of band falls back rather than
+     clamping, and says so. */
+  /* Number(null) is 0, and "not corrected" must not become "no windows at the
+     front" — the same trap backCount documents thirty lines down, walked into
+     once here already: without this guard every uncorrected estimate priced a
+     frontage of zero. */
+  const frontGiven = frontCountOverride !== null && frontCountOverride !== undefined && frontCountOverride !== '';
+  const frontTyped = frontGiven ? Number(frontCountOverride) : NaN;
+  const frontTypedOk = Number.isFinite(frontTyped) && frontTyped >= 0 && frontTyped <= MAX_WINDOWS;
+  if (frontGiven && Number.isFinite(frontTyped) && !frontTypedOk) {
+    console.warn(`Ignoring an implausible front window count of ${frontTyped} — outside 0-${MAX_WINDOWS}.`);
+  }
+  const base = (frontTypedOk && (baseRead.method === 'door' || baseRead.method === 'count'))
+    ? { ...baseRead, frontCount: frontTyped, frontTold: true }
+    : baseRead;
 
   const frontToTotal = rates.frontToTotal?.[key] ?? FRONT_TO_TOTAL_WINDOWS[key];
 
@@ -1113,6 +1147,9 @@ function estimateGlazing({
       ? `We've capped this at ${MAX_WINDOWS} windows. If your home has more, tell us the number and we'll price it properly.`
       : null,
     frontCount: (base.method === 'door' || base.method === 'count') ? base.frontCount : null,
+    /* Whether the front number is the photograph's or theirs. The lead needs
+       it for the same reason backCountSource exists. */
+    frontTold: base.frontTold === true,
     frontToTotal: (fromPhoto && !frontOnly) ? frontToTotal : null,
     /* Only meaningful when the page asked for seenOnly and the count came from
        the photo: how many at the back and sides we priced (null = none, not

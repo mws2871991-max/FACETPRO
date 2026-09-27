@@ -113,11 +113,21 @@ test('the lead tells the installer which counts are photographs', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
   const at = source.indexOf('const backCountSource =');
   assert.ok(at > 0, 'the lead does not say where the counts came from');
-  const block = source.slice(at, at + 600);
+  const block = source.slice(at, at + 1400);
 
   assert.match(block, /'not priced'/, 'an unanswered back is not distinguished');
-  assert.match(block, /counts: \{ front: 'photo', backAndSides: backCountSource \}/,
+  assert.match(block, /counts: \{ front: frontSource, backAndSides: backCountSource \}/,
     'the lead summary does not carry the counts');
+
+  /* The front is a photograph only when one actually read it and the
+     homeowner did not correct it. It was hardcoded to 'photo', which said so
+     over a house-type prior — no photograph involved — and over a count they
+     had typed themselves. Certifying either to an installer is the exact
+     thing this field exists to prevent. */
+  const front = source.slice(source.indexOf('const frontSource ='), source.indexOf('const frontSource =') + 320);
+  assert.match(front, /summary\.frontTold \? 'told'/, 'a corrected front is still called a photograph');
+  assert.match(front, /photo_door' \|\| summary\.countSource === 'photo_count'/, 'the front source ignores how it was read');
+  assert.match(front, /'estimated'/, 'a house-type prior is not distinguished from a photograph');
 
   /* Derived server-side, like the price. A client that can set the number
      must not also be the thing that certifies where it came from. */
