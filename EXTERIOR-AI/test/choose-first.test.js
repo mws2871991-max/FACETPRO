@@ -29,8 +29,13 @@ test('the homepage opens with six product boxes, each to a journey', () => {
     '/design?journey=windows', '/design?journey=doors', '/design?journey=roofline',
     '/design?journey=roof', '/design?journey=cladding', '/cost/conservatory-cost-uk',
   ]);
-  for (const img of ['windows', 'doors', 'roofline', 'roofs', 'walls', 'conservatory']) {
-    assert.ok(fs.existsSync(path.join(__dirname, '..', 'assets', 'products', `${img}.jpg`)), `${img}.jpg is missing`);
+  /* Six pictures, one per box, each one that exists. Read from the markup
+     rather than a fixed list of names: card pictures are renamed, never
+     overwritten, when they change (images are cached for a year). */
+  const imgs = [...section.matchAll(/<img src="(\/assets\/products\/[^"]+)"/g)].map(m => m[1]);
+  assert.strictEqual(imgs.length, 6, `expected six card pictures, found ${imgs.length}`);
+  for (const src of imgs) {
+    assert.ok(fs.existsSync(path.join(__dirname, '..', src)), `${src} is missing`);
   }
 });
 
