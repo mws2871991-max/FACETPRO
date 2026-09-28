@@ -3682,9 +3682,32 @@ function buildUploadDetect() {
       /* Only the wall we measured: the front. The whole-house figure is front
          × an unchecked multiplier, and "we found about 109 m² of wall" claimed
          the back and sides were found too. */
-      const frontWall = (state.price?.basis?.walls || []).find(w => w.kind === 'measured');
-      if (measured && frontWall && state.journey !== 'windows' && state.journey !== 'doors') {
-        parts.push(`about ${frontWall.m2} m² of front wall`);
+      const wallsBasis = state.price?.basis?.walls || [];
+      const frontWall = wallsBasis.find(w => w.kind === 'measured');
+      /* The other way a photograph gives us a wall area, which had no line at
+         all until now.
+
+         measure.js has two methods. The door method measures the front
+         elevation and multiplies out, so observed.frontElevationM2 exists and
+         the line above names it. The coverage method — the one used when no
+         front door was found — never measures a wall: it reads how much of the
+         frame the house fills and calibrates that straight to a whole-house
+         figure, leaving frontElevationM2 null. So `kind === 'measured'` found
+         nothing and this line disappeared, taking with it the only sight of
+         the wall area the cladding price is built on, while the panel above
+         still wore a green "Sized to your home" badge over it. A price with no
+         visible quantity is the thing this summary exists to prevent.
+
+         Worded as sized, not found. Listing it as plain "of wall" is exactly
+         the claim the comment above warns about — that the back and sides were
+         seen — and coverage has seen them even less than the door method has.
+
+         `walls` is only built when cladding is priced, so its presence is
+         already the gate; no journey needs checking beyond the two below. */
+      const sizedWall = wallsBasis.find(w => w.kind === 'estimated' && /^photo_/.test(String(w.from || '')));
+      if (measured && state.journey !== 'windows' && state.journey !== 'doors') {
+        if (frontWall) parts.push(`about ${frontWall.m2} m² of front wall`);
+        else if (sizedWall) parts.push(`about ${sizedWall.m2} m² of wall in all, sized from your photo rather than measured`);
       }
 
       /* And what kind of house we think it is, which is now the most
@@ -5050,7 +5073,7 @@ function photoChangedPriceLine(spread, n, doorOnly) {
   if (!was || !spread || !state.uploadedImg || !state.detectionId || doorOnly) return null;
   /* Front only: the typical figure was a whole house, so comparing the two
      would read as a saving that is not one. Say what this covers instead. */
-  if (state.glazing?.seenOnly && state.glazing.backCount === null) {
+  if (frontOnlyPrice(state.glazing)) {
     return h('p', { className: 'mt-2 text-base leading-7 text-white/85' },
       `This is the front only. The typical figure (${fmtMoney(was.low)} – ${fmtMoney(was.high)}) was for a whole ${String(was.typeLabel || 'house').toLowerCase()}${/bungalow/i.test(was.typeLabel || '') ? '' : ' house'}.`);
   }
@@ -5133,9 +5156,9 @@ function buildGlazingLedPanel() {
       h('div', { className: 'mt-2 text-base text-white/80' },
         doorOnly
           ? `Your ${doorNoun}, supplied and fitted`
-          : [`${n} window${n === 1 ? '' : 's'}`, g.seenOnly && g.backCount === null ? ' at the front' : '', hasDoor ? ` and ${isRearOpening(doorId) ? 'garden doors' : 'a front door'}` : '', ', supplied and fitted'].join('')),
+          : [`${n} window${n === 1 ? '' : 's'}`, frontOnlyPrice(g) ? ' at the front' : '', hasDoor ? ` and ${isRearOpening(doorId) ? 'garden doors' : 'a front door'}` : '', ', supplied and fitted'].join('')),
       photoChangedPriceLine(spread, n, doorOnly),
-      (g.seenOnly && g.backCount === null && !doorOnly)
+      (frontOnlyPrice(g) && !doorOnly)
         ? h('button', {
             type: 'button',
             className: 'mt-2 text-left underline underline-offset-4 text-base text-amber-200 min-h-[44px]',
@@ -5415,6 +5438,22 @@ function backOnly(total) {
 }
 function backSeen() {
   return Number.isFinite(state.backPhotoCount) ? state.backPhotoCount : (state.backCount || 0);
+}
+/* "The price you are looking at covers the front of the house and nothing
+   else." Ask this, never `backCount === null` on its own.
+
+   Two different things both produce a null backCount. One is the front
+   photographed with the back question still unanswered — genuinely front
+   only. The other is the homeowner typing a whole-house total, which glazing
+   nulls backCount for because there is no front/back split to report. Reading
+   the raw null called the second one "front only" too, so a figure covering
+   the whole house was labelled "(front only)" in the bar, "at the front"
+   under the total, offered a "Back and sides not priced yet — add them"
+   button for windows already in the price, and told "This is the front only.
+   The typical figure was for a whole house" — understating their own number
+   against the typical, the one direction this site must never err in. */
+function frontOnlyPrice(g) {
+  return !!(g && g.seenOnly && g.backCount === null && g.countSource !== 'manual_entry');
 }
 
 function backFromPhotoText(n) {
@@ -5930,7 +5969,7 @@ function buildTotalBar() {
   if (glaz?.price) {
     const n = glaz.windowCount;
     if (glaz.price.windowsIncluded !== false) {
-      parts.push(`${n} window${n === 1 ? '' : 's'}${glaz.seenOnly && glaz.backCount === null ? ' (front only)' : ''}`);
+      parts.push(`${n} window${n === 1 ? '' : 's'}${frontOnlyPrice(glaz) ? ' (front only)' : ''}`);
     }
     /* 'none' is a string, and a truthy one. Declining the door — which the
        windows journey does for everybody who arrives on it — still counted as
