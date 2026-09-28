@@ -3236,6 +3236,23 @@ function buildChooser() {
     h('section', { className: 'rounded-2xl bg-white border border-zinc-200 p-6 md:p-8', 'aria-labelledby': 'choose-look-heading' }, [
       h('p', { className: 'text-base text-zinc-600 font-semibold' }, journeyLabel(j) || ''),
       h('h2', { id: 'choose-look-heading', className: 'serif mt-1 text-[26px] md:text-[32px] tracking-tight scroll-mt-40' }, 'Choose the look'),
+      /* What "fascias, soffits and guttering" means, for somebody who has
+         never had to name them (28 September). Only on the first question of
+         this journey, and labelled an illustration: the two pictures are
+         generated, not a job and not a Facet Pro render (see
+         assets/products/SOURCES.md), so they may show the idea but not claim
+         a result. */
+      (j === 'roofline' && step === 0) ? h('figure', { className: 'mt-4 max-w-[560px]' }, [
+        h('div', { className: 'grid grid-cols-2 gap-2 sm:gap-3' }, [
+          ['/assets/products/roofline-white-sm.jpg', 'White', 'Illustration: white fascia and soffit with black guttering on a brick house'],
+          ['/assets/products/roofline-grey-sm.jpg', 'Grey', 'Illustration: the same roofline with grey fascia and soffit'],
+        ].map(([src, label, alt]) => h('div', { className: 'relative rounded-xl overflow-hidden border border-zinc-200 bg-white' }, [
+          h('img', { src, alt, width: 600, height: 450, loading: 'lazy', decoding: 'async', className: 'w-full aspect-[4/3] object-cover' }),
+          h('span', { className: 'absolute top-2 right-2 text-base px-2 py-0.5 rounded-full bg-white text-zinc-900 font-semibold border border-zinc-200' }, label),
+        ]))),
+        h('figcaption', { className: 'mt-2 text-base leading-7 text-zinc-600' },
+          'Illustration. The fascia is the board along the roof edge, the soffit is underneath it, and the guttering carries the rain away.'),
+      ]) : null,
       /* One question per screen. Seventeen choices on one card is a quiz, and
          the person we are building for is seventy and has never heard of a
          casement. Every question already has a sensible answer picked, so
