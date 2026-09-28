@@ -3399,18 +3399,31 @@ function buildUploadDetect() {
     // Framing guide. How the photo is framed is the single biggest factor in
     // whether we can estimate wall area from it, so ask for it up front
     // rather than explaining afterwards why the number looks wrong.
-    dropArea.appendChild(h('div', { className: 'absolute inset-[8%] border-2 border-dashed border-zinc-300 rounded-lg pointer-events-none' }, [
+    /* Wider screens only: on a phone the box is not 4:3 and the list inside
+       it is long, so the label landed on top of the upload arrow. */
+    dropArea.appendChild(h('div', { className: 'hidden sm:block absolute inset-[8%] border-2 border-dashed border-zinc-300 rounded-lg pointer-events-none' }, [
       h('span', { className: 'absolute -top-2.5 left-3 px-1.5 bg-white text-base text-zinc-600 font-semibold' }, 'Fit the whole house in here'),
     ]));
     dropArea.appendChild(h('div', { className: 'text-center p-8 relative' }, [
       h('div', { className: 'w-12 h-12 mx-auto rounded-full bg-zinc-900 text-white grid place-items-center' }, '↑'),
       h('div', { className: 'mt-3 text-lg font-medium' }, onPhone() ? 'Take or choose a photo of the front of your house' : 'Drop a photo of the front of your house'),
-      h('div', { className: 'mt-1 text-base text-zinc-600' }, 'JPG or PNG — one picture from the pavement is enough'),
-      h('ul', { className: 'mt-3 text-base leading-7 text-zinc-600 max-w-[34ch] mx-auto text-left grid gap-1' }, [
-        h('li', {}, '• Show as much of the front as possible'),
-        h('li', {}, '• Keep the front door visible if you can'),
-        h('li', {}, '• Stand back far enough to get the whole house in'),
-      ]),
+      h('div', { className: 'mt-1 text-base text-zinc-600' }, 'One picture is enough'),
+      /* The questions that stop somebody at the button (28 September): does
+         it have to be straight, can I use one I already have, what about the
+         car or the tree, can I just take it now? A line each, in the list
+         that was already here rather than a new section. Only what is true:
+         a window a tree hides can be added with + on the next screen, and
+         the front door is what the photo is sized against. */
+      h('ul', { className: 'mt-3 text-base leading-7 text-zinc-700 max-w-[36ch] mx-auto text-left grid gap-1' }, [
+        'From the pavement or across the road',
+        'As much of the house as you can, with the front door in it',
+        'One you already have is fine, or take one now',
+        'It doesn’t have to be perfectly straight. A car or tree in the way is fine — you can add any window it hides',
+        'Daylight is best',
+      ].map(t => h('li', { className: 'flex gap-2' }, [
+        h('span', { className: 'text-emerald-700 font-semibold', 'aria-hidden': 'true' }, '✓'),
+        h('span', {}, t),
+      ]))),
       /* The same instruction the render prompt gives the model — "do not add,
          remove, move or resize any window, door or other opening" — said to
          the person it reassures. It answers the thing that stops people
