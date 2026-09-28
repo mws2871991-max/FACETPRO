@@ -2170,6 +2170,33 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
      windows in that photo" about a photograph that had been read perfectly
      well a minute earlier. Reachable by re-adding the same rear photo after
      replacing the front one. */
+  /* The window mask, started as soon as there is a record for this photo —
+     however that record came to exist.
+
+     This used to run only after a fresh reading. A photograph answered from
+     either cache (the in-process map, or the store after a restart) got a
+     record with no mask and no promise, so the render started one itself,
+     gave it GRACE_MS against an 83-second cold start, lost, and fell back to
+     the patch hold. Live on 28 September: number 14, answered from the
+     cache, came back with both bays green again — pilasters, cornice,
+     corbels — on the build carrying the mask. A first upload is always a
+     miss, so customers mostly got the mask; anyone re-uploading, "Use a
+     different photo" and back, and every test run did not.
+
+     Idempotent: a record that already has a mask or a mask on the way is
+     left alone, so the cache paths can call it every time. */
+  const prepareWindowMask = (record, elev) => {
+    if (!record || elev !== 'front' || !process.env.REPLICATE_API_TOKEN) return;
+    if (record.windowMask || record.maskPromise) return;
+    record.maskPromise = fetchWindowMask({
+      image: img.buffer, mime: img.mime,
+      replicateKey: process.env.REPLICATE_API_TOKEN,
+      deadlineAt: Date.now() + MASK_WARM_MS,
+      changingDoor: false,
+      onNote: (why) => obs.record('detect', 'window mask not prepared', { reason: why }),
+    }).then((m) => { record.windowMask = m; return m; }).catch(() => null);
+  };
+
   const answer = (record, id) => (
     (record.elevation === 'rear')
       ? res.json({
@@ -2209,7 +2236,7 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
 
   const seenId = detectionByImage.get(fingerprint);
   const seen = seenId ? detectionRecords.get(seenId) : null;
-  if (seen) return answer(seen, seenId);
+  if (seen) { prepareWindowMask(seen, seen.elevation || elevation); return answer(seen, seenId); }
 
   /* Not in this process — ask the store. A failure here is a cache miss and
      nothing more: the photograph still gets read, it just costs a call. */
@@ -2255,6 +2282,7 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
     const id = saveDetectionRecord(stored.detections, stored.aspectRatio !== null
       ? { width: stored.aspectRatio, height: 1 } : null, elevation);
     detectionByImage.set(fingerprint, id);
+    prepareWindowMask(detectionRecords.get(id), elevation);
     return answer(detectionRecords.get(id), id);
   }
   if (stored) {
@@ -2448,16 +2476,7 @@ For houseType, judge it from what the photograph shows: a gap on both sides is d
      record for the render to pick up; nothing awaits it here, no failure of
      it can reach this response, and a photograph nobody renders simply throws
      it away. */
-  const record = detectionRecords.get(detectionId);
-  if (record && elevation === 'front' && process.env.REPLICATE_API_TOKEN) {
-    record.maskPromise = fetchWindowMask({
-      image: img.buffer, mime: img.mime,
-      replicateKey: process.env.REPLICATE_API_TOKEN,
-      deadlineAt: Date.now() + MASK_WARM_MS,
-      changingDoor: false,
-      onNote: (why) => obs.record('detect', 'window mask not prepared', { reason: why }),
-    }).then((m) => { record.windowMask = m; return m; }).catch(() => null);
-  }
+  prepareWindowMask(detectionRecords.get(detectionId), elevation);
 
   /* Kept so a restart does not change the answer. Awaited rather than fired
      and forgotten: if this write fails the homeowner should still get their

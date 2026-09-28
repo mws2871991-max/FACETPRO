@@ -248,13 +248,17 @@ test('the mask is started when the photograph arrives, not when the render does'
      so a mask started at render time would almost never be used. Started at
      upload it has the whole of the person's choosing time as a head start. */
   const src = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  /* Since 28 September the warm-up lives in prepareWindowMask, so the cache
+     paths can share it (see the test below); the fresh reading calls it
+     straight after saving its record. */
   const warmAt = src.indexOf('record.maskPromise = fetchWindowMask(');
   assert.ok(warmAt > 0, 'the mask is no longer prepared at upload');
-  const detectAt = src.indexOf('const detectionId = saveDetectionRecord(detections, size, elevation);');
-  assert.ok(detectAt > 0 && warmAt > detectAt && warmAt - detectAt < 1600,
-    'the warm-up should sit with the detection record it hangs off');
-  assert.match(src.slice(warmAt - 400, warmAt), /elevation === 'front'/,
+  assert.match(src.slice(warmAt - 400, warmAt), /elev !== 'front'/,
     'the back of a house has no render path that uses this');
+  const detectAt = src.indexOf('const detectionId = saveDetectionRecord(detections, size, elevation);');
+  const callAt = src.indexOf('prepareWindowMask(detectionRecords.get(detectionId), elevation);');
+  assert.ok(detectAt > 0 && callAt > detectAt && callAt - detectAt < 1600,
+    'the warm-up should sit with the detection record it hangs off');
 });
 
 test('a second colour on the same photograph does not pay for a second mask', () => {
@@ -281,4 +285,19 @@ test('the segmentation budget is measured from the start, not from the POST', ()
   assert.ok(budgetAt > 0, 'the deadline is no longer taken before the request');
   assert.ok(budgetAt < postAt, 'the deadline must be set before the POST, not after it');
   assert.ok(!/const until = Date\.now\(\) \+ waitMs/.test(src), 'the post-POST deadline is back');
+});
+
+test('a photo answered from either cache still gets its mask started', () => {
+  /* 28 September: number 14, answered from the detection cache, rendered
+     with no mask (the render's own start lost GRACE_MS to a cold start) and
+     both bays came back green. The cache paths must start it too. */
+  const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'server.js'), 'utf8');
+  assert.match(src, /if \(seen\) \{ prepareWindowMask\(seen, seen\.elevation \|\| elevation\); return answer\(seen, seenId\); \}/,
+    'the in-process cache answers without starting the mask');
+  assert.match(src, /prepareWindowMask\(detectionRecords\.get\(id\), elevation\);\s*return answer\(detectionRecords\.get\(id\), id\);/,
+    'the stored cache answers without starting the mask');
+  assert.match(src, /prepareWindowMask\(detectionRecords\.get\(detectionId\), elevation\);/,
+    'a fresh reading no longer starts the mask');
+  // Idempotent, so the cache paths can call it on every upload.
+  assert.match(src, /if \(record\.windowMask \|\| record\.maskPromise\) return;/);
 });
