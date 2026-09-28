@@ -198,7 +198,7 @@ const COST_PAGES = [
     title: 'Window replacement cost UK (2026 prices)',
     h1: 'What does window replacement cost in the UK?',
     intent: 'window replacement cost UK',
-    description: 'What replacing your windows costs in the UK, priced from real supplier and labour rates — per window and for a whole house.',
+    description: 'What replacing your windows costs in the UK, priced from what these jobs really sell for — per window and for a whole house.',
     build: (c) => {
       const semi = windowJob(c, { count: 8 });
       const detached = windowJob(c, { count: 12 });
@@ -687,7 +687,7 @@ const cta = (siteUrl, slug) => (isConservatory(slug) ? conservatoryCta(siteUrl, 
 /* Every page carries the same two caveats, in the same words as the product.
    Two copies of a disclaimer is how they drift, so they are written once here
    and no page may override them. */
-const CAVEAT = 'These are estimates for planning, from real supplier and labour rates — not a quotation, and not a survey. What you pay depends on your own house and, more than anything else, on which company quotes it. Your installer confirms the figure on survey.';
+const CAVEAT = 'These are estimates for planning, from what these jobs really sell for in the UK — not a quotation, and not a survey. What you pay depends on your own house and, more than anything else, on which company quotes it. Your installer confirms the figure on survey.';
 
 const BETA_NOTICE = 'Facet Pro is in beta. Our measurement of wall area from a photograph is still being calibrated against surveyed properties, so treat wall and roof figures as indicative and window figures as a guide.';
 
