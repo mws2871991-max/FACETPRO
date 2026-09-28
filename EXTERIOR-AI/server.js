@@ -2907,7 +2907,12 @@ async function keepRender(replicateUrl, restore = null) {
            keep a changed patch whole when it touches a window box — is the
            premise the mask exists to replace. */
         const masked = restore.mask
-          ? restoreOutsideMask({ render: bytes, ...common, mask: restore.mask, maskMime: restore.maskMime })
+          ? restoreOutsideMask({
+              render: bytes, ...common, mask: restore.mask, maskMime: restore.maskMime,
+              /* Same rule that decided the count decides this. A window we
+                 will not charge for is a window we will not repaint. */
+              notOurs: glazing.neighbourWindowBoxes(detections),
+            })
           : { restored: false, reason: 'no mask' };
         if (masked.restored) {
           bytes = masked.buffer;

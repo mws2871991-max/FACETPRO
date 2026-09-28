@@ -301,3 +301,75 @@ test('a photo answered from either cache still gets its mask started', () => {
   // Idempotent, so the cache paths can call it on every upload.
   assert.match(src, /if \(record\.windowMask \|\| record\.maskPromise\) return;/);
 });
+
+/* ── Windows that are not this customer's (28 September, live) ── */
+
+test("a window the count refuses to charge for is not repainted either", () => {
+  /* Segmentation is asked for "window" and answers honestly: every window in
+     the frame, next door's included. So a windows-only render recoloured the
+     neighbour's frames and the mask then faithfully protected the result.
+     Measured on number 14 — the sash above number 12's own front door came
+     back anthracite under a mask that was otherwise doing its job.
+
+     Same rule as the count decides it, so the two can never disagree about
+     whose window it is. */
+  const notOurs = [{ x: 0, y: 0, w: 10, h: 100 }];   // the left tenth of the frame
+  /* Segmentation finds windows across most of the frontage — the neighbour's
+     included. Not the whole frame: a mask covering everything is segmentation
+     failing, and restoreOutsideMask rightly refuses it. */
+  const maskAll = png(W, H, (x) => (x <= 27 ? [255, 255, 255] : [0, 0, 0]));
+  const r = restoreOutsideMask({
+    render: RENDER, renderMime: 'image/png',
+    original: ORIGINAL, originalMime: 'image/png',
+    mask: maskAll, maskMime: 'image/png', notOurs,
+  });
+  assert.strictEqual(r.restored, true, r.reason || '');
+  const out = read(r.buffer);
+  assert.deepStrictEqual(at(out, 2, 20), [0, 0, 255], "the neighbour's window kept the render");
+  /* Inside the mask and not cut: still the render. x=30 is outside the mask
+     altogether and is the photograph for the ordinary reason. */
+  assert.deepStrictEqual(at(out, 20, 20), [255, 0, 0], 'the rest of the mask stopped being honoured');
+  assert.deepStrictEqual(at(out, 30, 20), [0, 0, 255], 'wall outside the mask should be the photograph');
+});
+
+test('cutting a neighbour out never widens what the render keeps', () => {
+  /* The cut can only ever remove area from the mask. If it could add any, a
+     bad box would start repainting something the segmentation had held. */
+  const notOurs = [{ x: 0, y: 0, w: 10, h: 100 }];
+  const run = (cut) => restoreOutsideMask({
+    render: RENDER, renderMime: 'image/png', original: ORIGINAL, originalMime: 'image/png',
+    mask: MASK, maskMime: 'image/png', ...(cut ? { notOurs } : {}),
+  }).insideShare;
+  assert.ok(run(true) <= run(false), 'the cut increased the area kept from the render');
+});
+
+test('a missing or malformed neighbour list is simply no cut', () => {
+  /* This runs on a paid render. It must not throw for anything a caller can
+     hand it. */
+  for (const notOurs of [undefined, null, [], 'nonsense', [null], [{}]]) {
+    const r = restoreOutsideMask({
+      render: RENDER, renderMime: 'image/png', original: ORIGINAL, originalMime: 'image/png',
+      mask: MASK, maskMime: 'image/png', notOurs,
+    });
+    assert.strictEqual(r.restored, true, `notOurs=${JSON.stringify(notOurs)} broke the hold: ${r.reason}`);
+  }
+});
+
+test('the render asks glazing whose windows these are, not its own rule', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  assert.match(src, /notOurs: glazing\.neighbourWindowBoxes\(detections\)/,
+    'the hold no longer uses the same judgement as the count');
+});
+
+test("neighbourWindowBoxes and the count agree about number 14", () => {
+  /* One answer, two uses. The sash above number 12's door is excluded from
+     the price and from the render, or the two halves of the product are
+     telling the homeowner different things about the same window. */
+  const OPUS_14 = require('./fixtures/edwardian-14-opus-detections.json');
+  const glazing = require('../glazing');
+  const boxes = glazing.neighbourWindowBoxes(OPUS_14.detections);
+  assert.strictEqual(boxes.length, 1, "number 14's photograph contains exactly one window that is not theirs");
+  assert.ok(Math.abs(boxes[0].x - 11.7) < 0.1, 'that box should be the sash above number 12’s door');
+  assert.strictEqual(glazing.frontWindowCount(OPUS_14.detections), 4,
+    'and the count must still be the four windows number 14 actually has');
+});

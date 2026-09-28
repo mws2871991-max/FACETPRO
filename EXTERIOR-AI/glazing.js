@@ -662,14 +662,15 @@ function windowCandidates(detections) {
   const units = new Map();          // pane group name -> merged candidate
   const singles = [];
   let neighbours = 0;
+  const notOurs = [];               // boxes judged to be another property's
   for (const d of confident) {
     const b = box(d);
     if (!b) continue;               // box() coerces and rejects the unusable
-    if (isNeighbours(b, String(d?.label || ''), subject)) { neighbours++; continue; }
-    if (!subject && neighboursRoofWindow(b, roofLine)) { neighbours++; continue; }
+    if (isNeighbours(b, String(d?.label || ''), subject)) { neighbours++; notOurs.push(b); continue; }
+    if (!subject && neighboursRoofWindow(b, roofLine)) { neighbours++; notOurs.push(b); continue; }
     /* The model's own word on whose house it is, which a subject box cannot
        know and geometry cannot see. */
-    if (disowned(b, String(d?.label || ''))) { neighbours++; continue; }
+    if (disowned(b, String(d?.label || ''))) { neighbours++; notOurs.push(b); continue; }
     if (isSidelight(d)) { sidelights++; continue; }
     if (isFanlight(b, String(d?.label || ''), doorB)) { sidelights++; continue; }
     const label = String(d?.label || '');
@@ -731,7 +732,7 @@ function windowCandidates(detections) {
   for (const u of joined.list) u.isBay = (u.panes || 1) >= BAY_MIN_PANES || u.labelBay === true;
   const bays = joined.list.filter(u => u.isBay).length;
 
-  return { kept: joined.list, duplicates, sidelights, panesMerged, neighbours, bays };
+  return { kept: joined.list, duplicates, sidelights, panesMerged, neighbours, bays, notOurs };
 }
 
 /* The front-elevation count pricing will use, for the page to show. The
@@ -769,6 +770,21 @@ function frontWindowCount(detections) {
 function publishedRange(result) {
   if (!result) return null;
   return result.marketRange || result.range || null;
+}
+
+/* The window boxes this photograph contains that are NOT this customer's.
+ *
+ * The count has always worked this out and thrown it away. The render needs
+ * it: a segmentation mask of "window" finds every window in the frame, next
+ * door's included, so a windows-only render recolours the neighbour's frames
+ * and the mask faithfully protects the result. Measured on number 14, live on
+ * 28 September — the sash above number 12's door came back anthracite.
+ *
+ * Same judgement as the count, deliberately. If a window is not theirs to be
+ * charged for it is not theirs to be repainted, and the two answers should
+ * never be able to disagree. */
+function neighbourWindowBoxes(detections) {
+  return windowCandidates(detections).notOurs;
 }
 
 function frontBayCount(detections) {
@@ -1482,6 +1498,7 @@ module.exports = {
   windowBasis,
   frontWindowCount,
   frontBayCount,
+  neighbourWindowBoxes,
   publishedRange,
   resolveHouseType,
   houseTypeFromEvidence,

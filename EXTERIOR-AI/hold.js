@@ -584,8 +584,12 @@ function changedShare({ render, renderMime, original, originalMime, boxes }) {
  * render back on the brickwork.
  */
 const MASK_ON = 160;
+/* How far outside a neighbour's window box to keep holding, as a percentage of
+   the frame. The boxes are loose and a frame repainted halfway along its
+   length reads worse than one left alone. */
+const NOT_OURS_MARGIN_PCT = 1.5;
 
-function restoreOutsideMask({ render, renderMime, original, originalMime, mask, maskMime }) {
+function restoreOutsideMask({ render, renderMime, original, originalMime, mask, maskMime, notOurs = [] }) {
   const untouched = (reason) => ({ buffer: render, restored: false, reason, insideShare: 0 });
   try {
     if (!/png/i.test(renderMime || '')) return untouched('render is not a PNG');
@@ -607,6 +611,33 @@ function restoreOutsideMask({ render, renderMime, original, originalMime, mask, 
       return untouched(`mask is ${m.width}x${m.height}, render is ${W}x${H}`);
     }
 
+    /* Windows that are not this customer's are cut out of the mask before it
+       is used.
+
+       Segmentation is asked for "window" and answers honestly: every window in
+       the frame, next door's included. So a windows-only render recoloured the
+       neighbour's frames and the mask then protected that result — measured on
+       number 14, where the sash above number 12's door came back anthracite
+       under a mask that was otherwise doing its job.
+
+       The boxes come from the same rule that decides the count, so a window we
+       refuse to charge for is a window we refuse to repaint. Generous by a
+       margin, because the boxes are loose and half a repainted frame on the
+       boundary looks worse than a whole one held. */
+    const cuts = (Array.isArray(notOurs) ? notOurs : [])
+      /* Every field checked. This runs inside a render that has already been
+         paid for, and a null or half-built box in this list must cost nothing
+         worse than no cut — a test passing [null] took the whole hold down
+         with "Cannot read properties of null". */
+      .filter(b2 => b2 && ['x', 'y', 'w', 'h'].every(k => Number.isFinite(Number(b2[k]))) && b2.w > 0 && b2.h > 0)
+      .map(b2 => ({
+        x0: Math.floor((Number(b2.x) - NOT_OURS_MARGIN_PCT) * W / 100),
+        x1: Math.ceil((Number(b2.x) + Number(b2.w) + NOT_OURS_MARGIN_PCT) * W / 100),
+        y0: Math.floor((Number(b2.y) - NOT_OURS_MARGIN_PCT) * H / 100),
+        y1: Math.ceil((Number(b2.y) + Number(b2.h) + NOT_OURS_MARGIN_PCT) * H / 100),
+      }));
+    const notOurWindow = (x, y) => cuts.some(c => x >= c.x0 && x <= c.x1 && y >= c.y0 && y <= c.y1);
+
     /* Nearest neighbour for the mask — it is a binary decision and bilinear
        would only invent grey along every edge to threshold again. The
        photograph keeps the bilinear sample it has always had. */
@@ -616,7 +647,7 @@ function restoreOutsideMask({ render, renderMime, original, originalMime, mask, 
       for (let x = 0; x < W; x++) {
         const mx = Math.min(m.width - 1, Math.max(0, Math.round((x + 0.5) * m.width / W - 0.5)));
         const my = Math.min(m.height - 1, Math.max(0, Math.round((y + 0.5) * m.height / H - 0.5)));
-        if (m.data[(my * m.width + mx) * 4] >= MASK_ON) { inside++; continue; }   // window: keep the render
+        if (m.data[(my * m.width + mx) * 4] >= MASK_ON && !notOurWindow(x, y)) { inside++; continue; }   // our window: keep the render
         sample(src, (x + 0.5) * (src.width / W) - 0.5, (y + 0.5) * (src.height / H) - 0.5, px);
         const i = (y * W + x) * 4;
         out.data[i] = px[0]; out.data[i + 1] = px[1]; out.data[i + 2] = px[2];
