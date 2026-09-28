@@ -666,7 +666,7 @@ const conservatoryCta = (siteUrl, slug) => `<div class="cta-block">
 const cta = (siteUrl, slug) => (isConservatory(slug) ? conservatoryCta(siteUrl, slug) : `<div class="cta-block">
   <h2>See it on your own house</h2>
   <p>Every figure above is a typical house. Yours is not typical — nobody's is.
-     Upload one photograph and we will find your windows, doors, roof and walls,
+     Start with one photograph of the front and we will find your windows, doors, roof and walls,
      estimate your wall area, and price your own elevation.</p>
   <!-- "Upload a photo", the same words as every button on the homepage. This
        said "Upload a photo of your house", which is the same action under a
@@ -990,7 +990,7 @@ ${coverage}
 <p class="muted">We are not an installer and we do not do the work. We visualise and cost your project, and pass it to vetted installers if &mdash; and only if &mdash; you ask us to.</p>
 </section>
 <section><h2>Why start with a photograph</h2>
-<p>A local quote over the phone is a guess with a postcode attached. The thing that actually decides your price is your own elevation: how many windows, how big, how many open, and how much wall there is. One photograph answers all four, in about a minute, without anybody coming to your house.</p>
+<p>A local quote over the phone is a guess with a postcode attached. The thing that actually decides your price is your own elevation: how many windows, how big, how many open, and how much wall there is. A photograph of the front answers all four for the front, in about a minute, without anybody coming to your house — and the back and sides take a second photo or a number.</p>
 </section>`;
 
   return page({
