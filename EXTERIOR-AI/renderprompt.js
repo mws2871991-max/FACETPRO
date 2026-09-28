@@ -219,6 +219,10 @@ function buildRenderPrompt(sel = {}) {
   const styleWords = WINDOW_STYLE_WORDS[windowStyle.toLowerCase()] || null;
   // Bars only mean anything on windows that are being replaced.
   const georgianBars = !!sel.georgianBars && !!windowStyle && changingGlazing;
+  /* A bay on the frontage, from detection. Only worth a sentence when the
+     frames are actually changing colour — with no glazing job there is nothing
+     tempting the model towards the pilasters. */
+  const hasBay = !!sel.hasBay;
 
   /* The frame colour as a description where the id is known, and as the bare
      trade name only where it is not. Same rule as every other trade: the id is
@@ -309,6 +313,26 @@ function buildRenderPrompt(sel = {}) {
          neighbour's roof: the exclusion goes where the work is described. */
       (trim ? '' : 'Only the frames change colour: do not recolour the fascias, soffits, bargeboards, guttering or ' +
         'downpipes to match them — they keep their existing colour. ') +
+      /* The bay's stonework, beside the same verb, for the same reason the
+         fascias and the neighbour's roof are named here rather than in HOLDS.
+
+         Number 14, live on 28 September: both bays came out green and the sash
+         frames inside them stayed white. On a painted bay the pilasters,
+         capitals, cornice, corbels and sill are the same colour as the joinery
+         around the glass, so the model reads the whole structure as one object
+         and recolours the larger part of it. The customer saw a green bay
+         beside a price for green sash windows.
+
+         Wording alone has lost this argument before — it is why hold.js
+         exists — and it cannot win here either, because hold.js keeps any
+         changed patch touching a window box and detection returns the whole
+         bay as one box. This narrows the target; it does not fix it. The fix
+         is a real window mask, which is a separate piece of work. */
+      (hasBay
+        ? 'On a bay window, only the window frames and the sashes within the bay change colour. The bay\'s ' +
+          'painted columns, pilasters, capitals, cornice, brackets, corbels and sill are part of the building, ' +
+          'not part of the window: they keep their existing colour exactly. '
+        : '') +
       /* Georgian bars: the one window option that changes the glass, not the
          frame, so it gets its own sentence and says where the bars go. Windows
          only — "every pane" would otherwise put a grid on the door glass too. */

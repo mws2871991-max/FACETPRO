@@ -414,3 +414,45 @@ test('every frame colour in the catalogue has words for the model', () => {
       `${c.id} (${c.hex}) has no entry in FRAME_COLOUR_WORDS`);
   }
 });
+
+/* ── A bay is not all window (28 September 2026) ── */
+
+test('a bay\'s stonework is named beside the verb that recolours frames', () => {
+  /* Number 14, live on 28 September, Sliding Sash in Chartwell Green: both
+     bays came back bright lime — pilasters, capitals, cornice, the corbels
+     under the sill, the sill, and the brick spandrel between the two bays —
+     while the sash frames inside them stayed white. Exactly inverted. On a
+     painted bay the joinery around the glass is the same colour as the
+     structure holding it, so Kontext reads the whole thing as one object and
+     recolours the part with the most surface area.
+
+     Named here rather than in HOLDS for the reason the fascias and the
+     neighbour's roof are: the exclusion has to sit beside the work it is an
+     exception to. Twelve clauses later has already been tried and lost. */
+  const withBay = buildRenderPrompt({
+    windowStyle: 'sliding sash', glazingColour: 'Chartwell Green',
+    glazingColourId: 'chartwell-green', hasBay: true,
+  });
+  assert.match(withBay, /On a bay window, only the window frames and the sashes within the bay change colour/);
+  for (const part of ['pilasters', 'capitals', 'cornice', 'brackets', 'corbels', 'sill']) {
+    assert.ok(withBay.includes(part), `the bay sentence should name the ${part}`);
+  }
+});
+
+test('the bay sentence stays out of prompts that have no bay and no frames to change', () => {
+  /* Every clause in this prompt competes with every other for the model's
+     attention — the door-only bug is the standing proof — so a sentence about
+     pilasters does not go on a house without a bay. */
+  const noBay = buildRenderPrompt({
+    windowStyle: 'sliding sash', glazingColour: 'Chartwell Green',
+    glazingColourId: 'chartwell-green', hasBay: false,
+  });
+  assert.ok(!/pilasters/.test(noBay), 'a house with no bay is being told about pilasters');
+
+  /* And a door-only job changes no window frame at all, so the bay is not its
+     business even when the photograph has one. */
+  const doorOnly = buildRenderPrompt({
+    doorStyle: 'composite', glazingColour: 'Anthracite', hasBay: true,
+  });
+  assert.ok(!/pilasters/.test(doorOnly), 'a door-only render is being told about the bay');
+});

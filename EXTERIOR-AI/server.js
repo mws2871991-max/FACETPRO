@@ -3238,6 +3238,27 @@ app.post('/api/render', renderLimiter, async (req, res) => {
       .map(d => String(d.label))
     : [];
 
+  /* Is there a bay on this frontage, so the prompt can say what a bay is made
+     of? Read from the same record and read the same defensively.
+
+     Number 14, 28 September: both bays came back green — the painted pilasters,
+     capitals, cornice, the brackets under the sill and the sill itself — while
+     the sash frames inside them stayed white. Exactly backwards. On a painted
+     bay the joinery around the glass is the same colour as the frames, so
+     Kontext treats the whole structure as one object and recolours the part
+     with the most surface area.
+
+     hold.js cannot undo it afterwards: restoreSurroundings keeps a changed
+     patch whole when it touches a window box, deliberately, because the boxes
+     are loose — and detection returns a bay as ONE box with the stonework
+     inside it. So the pillars sit inside a "window" and are kept.
+
+     Both labels, because either can name it: c4b13fa made isBay a property of
+     a counted unit, and the model's own wording ("Upper Bay Window") is what
+     that rule reads when the geometry is a single box. */
+  const hasBay = !!detectionRecord && (detectionRecord.detections || [])
+    .some(d => d && d.type === 'window' && /\bbay\b/i.test(String(d.label || '')));
+
   /* Whether this photograph can carry a roof change at all.
 
      Three attempts at winning this with wording have lost. On hero-before.jpg
@@ -3280,6 +3301,7 @@ app.post('/api/render', renderLimiter, async (req, res) => {
        windows can't be found by comparison, so the model is asked, as before. */
     georgianBars: windowBarsId === 'georgian' && !!cladding,
     wallMaterials,
+    hasBay,
   });
 
   /* The roof was the only thing asked for and the photograph cannot show it.
