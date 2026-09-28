@@ -22,13 +22,17 @@ const withoutComments = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\
 const start = html.indexOf('function buildVisualizer');
 const visualizer = withoutComments(html.slice(start, html.indexOf('\nfunction ', start + 1)));
 
-test('each label sits over its own picture', () => {
-  // The render is clipped from the right, so it occupies the left.
-  assert.match(visualizer, /clipPath: `inset\(0 \$\{100 - state\.afterPct\}% 0 0\)`/,
-    'the after pane is no longer clipped from the right — recheck the label corners');
-  const pill = (word) => (visualizer.match(new RegExp(`className: '([^']*)' \\}, '${word}'\\)`)) || [])[1] || '';
-  assert.match(pill('After'), /\bleft-3\b/, '"After" must sit on the left, over the render');
-  assert.match(pill('Before'), /\bright-3\b/, '"Before" must sit on the right, over the photograph');
+test('before and after are two buttons, and one label names the picture on screen', () => {
+  /* 28 September: the slider rebuilt itself on the first step of every drag
+     (renderVisualizerOnly in its input handler), so dragging went nowhere.
+     It was replaced by Before / After buttons that show one whole picture. */
+  assert.ok(!/type: 'range', min: 0, max: 100, value: state\.afterPct/.test(visualizer), 'the drag slider is back');
+  assert.match(visualizer, /state\.afterPct = which === 'after' \? 100 : 0/, 'the buttons no longer swap the whole picture');
+  assert.match(visualizer, /'aria-pressed': showing === which/, 'the buttons do not say which is showing');
+  // One label at a time, for whichever picture fills the frame.
+  assert.match(visualizer, /\(!state\.renderUrl \|\| showing === 'before'\)/, '"Before" shows over the After picture');
+  assert.match(visualizer, /state\.renderUrl && showing === 'after'/, '"After" shows over the photograph');
+  assert.ok(!/% after`\)/.test(visualizer), 'the percentage readout is back');
 });
 
 test('daylight from outside draws nothing over the windows', () => {

@@ -81,13 +81,13 @@ test('overlays are gated on the same confidence the pricing uses', () => {
   assert.ok(typeof glazing.estimateGlazing === 'function');
 });
 
-test('it does not claim to simulate light', () => {
-  const start = html.indexOf('const lightingControls =');
-  const body = withoutComments(html.slice(start, start + 2000));
-  assert.ok(!/light transmission|simulat/i.test(body),
-    'this is a tint and a gradient, and the copy has to say so');
-  assert.match(body, /An idea of how it might look/);
-  assert.match(body, /no extra renders/, 'free is worth saying, and it is true');
+test('the lighting buttons are off until the glow can land on real windows', () => {
+  /* 28 September: on number 14 the glow boxes sat beside the windows, not on
+     them, and the neighbour's roof window lit up. Turned off, not deleted. */
+  assert.match(html, /const LIGHTING_CONTROLS_ON = false;/);
+  assert.match(html, /const lightingControls = \(LIGHTING_CONTROLS_ON && state\.renderUrl && state\.revealed\)/);
+  // And the page is fixed on the view that draws nothing over the glass.
+  assert.match(html, /timeOfDay: 'afternoon'/);
 });
 
 /* These three locate the image frame by its class string. The aspect ratio was
@@ -147,18 +147,3 @@ test('both panes are lit by the same hour', () => {
   assert.ok(!/filter:/.test(after), 'the after image is filtered separately from the before');
 });
 
-test('the controls appear only once there is a render to light, and it has been seen', () => {
-  /* The condition was `state.renderUrl ?` and the subject was "do not offer to
-     relight a picture that does not exist". That is still the subject; there
-     is now a second way for the picture to be unavailable. Since the reveal
-     card went in, a render can exist and still be covered — so these controls
-     were sitting under it offering to change the time of day of something the
-     homeowner had not yet been shown. Caught by rendering the page on a phone
-     viewport, not by reading the source. */
-  const start = html.indexOf('const lightingControls =');
-  const cond = html.slice(start, start + 120);
-  assert.match(cond, /state\.renderUrl/,
-    'offering these before the picture exists promises something the page cannot do');
-  assert.match(cond, /state\.revealed/,
-    'and offering them over the reveal card promises it about a picture still hidden');
-});

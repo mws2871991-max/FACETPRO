@@ -1945,7 +1945,9 @@ const state = {
      cheapest cannot silently leave this pointing at the wrong one. */
   roof: findSwatch(journeyExcludes('roof') ? 'none'
     : readJourney() === 'roof' ? ROOF_JOURNEY_DEFAULT : 'slate-roof'),
-  afterPct: 65,
+  /* All or nothing now: the page opens on the new look, and Before / After
+     swap between the two whole pictures (see beforeAfter below). */
+  afterPct: 100,
   leads: [],
   leadsLoaded: false,
   contact: { name: "", email: "", postcode: "", phone: "" },
@@ -4410,19 +4412,37 @@ function buildVisualizer() {
     ]);
   }
 
-  const slider = h('input', {
-    type: 'range', min: 0, max: 100, value: state.afterPct, 'aria-label': 'Slide between before and after', style: { minHeight: '44px' },
-    className: 'absolute bottom-3 left-1/2 -translate-x-1/2 w-[60%] accent-zinc-900',
-  });
-  slider.addEventListener('input', (e) => {
-    state.afterPct = parseInt(e.target.value);
-    /* Funnel event 5. Only over a real render: dragging the slider across the
-       swatch schematic is playing with a colour preview, not looking at your
-       own house, and counting it would report a reveal to everybody who
-       touched the control before uploading anything. reachedStage de-dupes. */
+  /* Two buttons, not a slider (28 September).
+
+     The slider did not work. Its input handler called renderVisualizerOnly(),
+     which rebuilt this panel, slider included, on the first step of every
+     drag: the element under the finger was thrown away and the rest of the
+     drag went nowhere. Dragging it left to right ended at 0.
+
+     And fixed, it would still be the wrong control for the people this site
+     is for. A thin track to drag on a phone is fiddly at any age and worse
+     past fifty, and a picture split 65/35 down the middle of the house is a
+     harder thing to read than the house before and the house after. Two big
+     buttons do the comparison in a tap each. */
+  const showing = state.afterPct >= 50 ? 'after' : 'before';
+  const pick = (which) => {
+    state.afterPct = which === 'after' ? 100 : 0;
+    /* Funnel event 5, as the slider was. Only over a real render: tapping
+       across the swatch schematic is playing with a colour preview, not
+       looking at your own house. reachedStage de-dupes. */
     if (state.renderUrl) reachedStage('reveal_viewed');
     renderVisualizerOnly();
-  });
+  };
+  const slider = h('div', {
+    role: 'group', 'aria-label': 'Show your house before or after',
+    className: 'absolute bottom-3 left-1/2 -translate-x-1/2 flex rounded-full bg-white/95 border border-zinc-300 p-1 shadow',
+  }, ['before', 'after'].map(which => h('button', {
+    type: 'button',
+    'aria-pressed': showing === which ? 'true' : 'false',
+    className: 'px-5 min-h-[44px] rounded-full text-lg font-semibold ' +
+      (showing === which ? 'bg-zinc-900 text-white' : 'text-zinc-800'),
+    onClick: () => pick(which),
+  }, which === 'after' ? 'After' : 'Before')));
 
   const groupLabels = { Cladding: 'Walls & cladding', Trim: 'Fascia, soffit & guttering', Roof: 'Roof' };
   /* Roofs and rendering are product lines in the header, so they need
@@ -4594,7 +4614,20 @@ function buildVisualizer() {
   /* Not until they have seen it. These appeared as soon as the render
      existed, which since the reveal card went in means they were sitting under
      a covered picture offering to change its time of day. */
-  const lightingControls = (state.renderUrl && state.revealed) ? h('div', { className: 'px-4 pb-4 grid gap-2' }, [
+  /* Off (28 September). Evening and Inside glow paint an orange block over
+     every detected window box. The boxes are loose and the picture is
+     cropped to fit its frame, so on a real photo the glow lands beside the
+     windows, not on them: on number 14 the upper bay's glow sat above the
+     bay, the lower one hung below it, and the neighbour's roof window lit
+     up. That is light the photo does not have, in places the windows are
+     not, which is what Mike's rule says the site must not do. Morning is a
+     colour tint of the same one picture. The code is left in place, with
+     the page fixed on afternoon, outside; turn this back on only with the
+     glow drawn from a real window mask.
+
+     The original condition, kept for that day: (state.renderUrl && state.revealed) */
+  const LIGHTING_CONTROLS_ON = false;
+  const lightingControls = (LIGHTING_CONTROLS_ON && state.renderUrl && state.revealed) ? h('div', { className: 'px-4 pb-4 grid gap-2' }, [
     h('div', { className: 'flex items-center gap-2 flex-wrap' }, [
       segmented([{ id: 'outside', label: 'Outside' }, { id: 'inside', label: 'Inside glow' }],
         state.view, (v) => { state.view = v; }),
@@ -4768,8 +4801,13 @@ function buildVisualizer() {
              LEFT of the frame and the photograph shows on the RIGHT. The pills
              had it the other way round: "After" sat over the untouched photo
              and "Before" over the new design, at every slider position. */
-          h('div', { className: 'absolute right-3 top-3 text-base px-2 py-1 rounded-full bg-white border border-zinc-200' }, 'Before'),
-          state.renderUrl
+          /* One label, for the picture on screen. With the whole frame showing
+             one or the other, a Before pill over the After picture would be
+             wrong. */
+          (!state.renderUrl || showing === 'before')
+            ? h('div', { className: 'absolute left-3 top-3 text-base px-2 py-1 rounded-full bg-white border border-zinc-200' }, 'Before')
+            : null,
+          state.renderUrl && showing === 'after'
             /* Opposite corner, no clip.
 
                This sat on top of the Before pill and was wiped in with a
@@ -4792,7 +4830,6 @@ function buildVisualizer() {
             ? h('div', { className: 'absolute left-3 top-3 text-base px-2 py-1 rounded-full bg-emerald-600 text-white whitespace-nowrap' }, 'After')
             : null,
           slider,
-          h('div', { className: 'absolute bottom-3 right-3 text-base px-2 py-1 rounded-full bg-white border border-zinc-200' }, `${state.afterPct}% after`),
 
           /* ── "THAT'S MY HOUSE" ──
              Developer Brief §3, its stated most important change, and the
