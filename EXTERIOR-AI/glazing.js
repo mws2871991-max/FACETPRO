@@ -74,6 +74,24 @@ const MIN_WINDOW_H_M = 0.35;
 const MAX_WINDOW_W_M = 5.0;
 const MAX_WINDOW_H_M = 3.2;
 
+/* A bay's box is not its window's box.
+
+   Detection draws a bay as one box round the whole structure: the cornice,
+   the painted columns and the sill under it, as well as the glass. On an
+   Edwardian terrace photographed on 28 September (number 14, two bays) that
+   made each bay 3.6–3.9 m tall, over MAX_WINDOW_H_M, and both were thrown
+   away as implausible. The house was priced on four windows: the two flat
+   sashes, the dormer, and the neighbour's roof window. Its two most
+   expensive units were missing.
+
+   So a unit known to be a bay is never rejected for its height. Its width is
+   the bay's own, measured; its height is the box's height minus the
+   stonework, which the photograph cannot separate from the glass, so it is
+   taken as a typical bay light and said to be typical (heightAssumed). */
+const MAX_BAY_H_M = 5.0;
+const BAY_GLAZED_H_M = 2.0;
+const BAY_LABEL = /\bbay\b/i;
+
 // What a house can plausibly have. Outside this the detection is wrong, and
 // the honest answer is the prior rather than a confident wrong number — the
 // same reasoning as the manual-area bounds in computePrice.
@@ -501,8 +519,37 @@ function isNeighbours(b, label, subject) {
   return NEIGHBOUR_LABEL.test(label);
 }
 
+/* Where the row's roofline is, when detection gives one: the top of the
+   widest fascia, gutter or soffit box. Null when there is none to read. */
+function roofLineY(detections) {
+  const lines = (detections || [])
+    .filter(d => ['fascia', 'guttering', 'soffit'].includes(d?.type))
+    .map(d => box(d))
+    .filter(b => b && b.w >= 50);
+  return lines.length ? Math.min(...lines.map(b => b.y)) : null;
+}
+
+/* A window in the roof, cut off by the edge of the photograph, on a terrace.
+
+   On number 14 (28 September) the neighbour's dormer, sliced by the left
+   edge at 0–8% across and wholly above the gutter line, came back as "Small
+   Roof Window" and was counted as the customer's. A terrace gives no subject
+   box (the roof and walls are full-width), so the only geometric fact left
+   is this one: our own photograph is centred on our own house, and a roof
+   window the frame cuts through at the side belongs to the house next door.
+
+   Narrow on purpose, because dropping one of their own windows is the worse
+   mistake (see isNeighbours): it must touch the left or right edge, sit
+   entirely above the roofline, and only when there is no subject box. */
+function neighboursRoofWindow(b, roofLine) {
+  if (roofLine === null) return false;
+  const atEdge = b.x <= 1 || b.x + b.w >= 99;
+  return atEdge && (b.y + b.h) <= roofLine;
+}
+
 function windowCandidates(detections) {
   const subject = subjectBox(detections || []);
+  const roofLine = roofLineY(detections);
 
   const confident = (detections || [])
     .filter(d => d?.type === 'window' && (Number(d?.confidence) || 0) >= MIN_CONFIDENCE);
@@ -515,9 +562,10 @@ function windowCandidates(detections) {
     const b = box(d);
     if (!b) continue;               // box() coerces and rejects the unusable
     if (isNeighbours(b, String(d?.label || ''), subject)) { neighbours++; continue; }
+    if (!subject && neighboursRoofWindow(b, roofLine)) { neighbours++; continue; }
     if (isSidelight(d)) { sidelights++; continue; }
     const label = String(d?.label || '');
-    const c = { b, confidence: Number(d?.confidence) || 0, panes: 1 };
+    const c = { b, confidence: Number(d?.confidence) || 0, panes: 1, labelBay: BAY_LABEL.test(label) };
     const pane = label.match(PANE_LABEL);
     if (!pane) { singles.push(c); continue; }
     const key = pane[1].trim().toLowerCase();
@@ -569,7 +617,10 @@ function windowCandidates(detections) {
      A judgement, not a measurement. If it turns out to be wrong it will be
      wrong in the cheap direction: BAY_MIN_PANES is one number, and the pane
      counts it reads are now on every unit. */
-  for (const u of joined.list) u.isBay = (u.panes || 1) >= BAY_MIN_PANES;
+  /* Or the model said so. "Upper Bay Window" as a single box is a bay just as
+     surely as three panes edge to edge are; it was priced as a plain window,
+     when it was priced at all. */
+  for (const u of joined.list) u.isBay = (u.panes || 1) >= BAY_MIN_PANES || u.labelBay === true;
   const bays = joined.list.filter(u => u.isBay).length;
 
   return { kept: joined.list, duplicates, sidelights, panesMerged, neighbours, bays };
@@ -629,10 +680,17 @@ function measureWindows({ detections, aspectRatio, bands }) {
 
   for (const c of kept) {
     const size = sizeWindow(c.b, door.b.h, aspectRatio);
+    const maxH = c.isBay ? MAX_BAY_H_M : MAX_WINDOW_H_M;
     if (size.widthM < MIN_WINDOW_W_M || size.heightM < MIN_WINDOW_H_M ||
-        size.widthM > MAX_WINDOW_W_M || size.heightM > MAX_WINDOW_H_M) {
+        size.widthM > MAX_WINDOW_W_M || size.heightM > maxH) {
       implausible++;
       continue;
+    }
+    let heightAssumed = false;
+    if (c.isBay && size.heightM > BAY_GLAZED_H_M) {
+      size.heightM = BAY_GLAZED_H_M;
+      size.areaM2 = size.widthM * BAY_GLAZED_H_M;
+      heightAssumed = true;
     }
     const band = bandFor(size.areaM2, bands);
     windows.push({
@@ -647,6 +705,7 @@ function measureWindows({ detections, aspectRatio, bands }) {
       /* Priced as a bay because it is one, not because a style was picked. */
       isBay: !!c.isBay,
       panes: c.panes || 1,
+      heightAssumed,
     });
   }
 
@@ -1150,6 +1209,8 @@ function estimateGlazing({
     /* Whether the front number is the photograph's or theirs. The lead needs
        it for the same reason backCountSource exists. */
     frontTold: base.frontTold === true,
+    /* Bays measured across but not up: their boxes include the stonework. */
+    bayHeightsAssumed: base.method === 'door' ? (base.windows || []).filter(w => w.heightAssumed).length : 0,
     frontToTotal: (fromPhoto && !frontOnly) ? frontToTotal : null,
     /* Only meaningful when the page asked for seenOnly and the count came from
        the photo: how many at the back and sides we priced (null = none, not
@@ -1243,7 +1304,8 @@ function windowBasis(summary, { backCountSource = null, backPhotoCount = null, s
   const frontCounted = summary.frontTold ? 'told' : 'photo';
   lines.push(`Front: ${w(front)}, ${frontCounted === 'told' ? 'number corrected by the homeowner' : 'counted from the photo'}. ` +
     (frontSizes === 'measured'
-      ? (frontCounted === 'told' ? 'Sizes measured from the photo where seen, typical for any others.' : 'Sizes measured from the photo, using the front door for scale.')
+      ? (frontCounted === 'told' ? 'Sizes measured from the photo where seen, typical for any others.' : 'Sizes measured from the photo, using the front door for scale.') +
+        (summary.bayHeightsAssumed > 0 ? ` Bay width${summary.bayHeightsAssumed === 1 ? '' : 's'} measured; height${summary.bayHeightsAssumed === 1 ? '' : 's'} typical (the photo can't separate a bay's glass from its stonework).` : '')
       : 'Sizes typical, not measured (no front door in shot to measure from).'));
 
   if (!summary.seenOnly) {
