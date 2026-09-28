@@ -42,3 +42,23 @@ test('daylight from outside draws nothing over the windows', () => {
   assert.ok(!/rgba\(255,255,255,0\.88\)/.test(body), 'the white glass panel is back');
   assert.ok(!/transparent 0 35%/.test(body), 'the specular sweep is back');
 });
+
+test('the page names the control that is on the screen', () => {
+  /* a2404c1 replaced the drag slider with two Before / After buttons, and
+     Step 2's intro went on saying "Drag the slider to compare…". Found live on
+     28 September. An instruction for a control that is not there is worse than
+     none: the reader concludes the page is broken or that they have missed
+     something, and this is the step where they are deciding whether to trust
+     the picture at all. */
+  const page = require('node:fs').readFileSync(
+    require('node:path').join(__dirname, '..', 'index.html'), 'utf8');
+  assert.ok(!/Drag the slider to compare/.test(page),
+    'Step 2 still tells people to drag a slider that was removed');
+  assert.match(page, /Tap Before and After to compare/,
+    'Step 2 should name the two buttons it actually has');
+
+  /* And those buttons must still be what it names. If they are ever replaced
+     again this test should fail with the copy, not after it. */
+  assert.match(page, /which === 'after' \? 'After' : 'Before'/,
+    'the Before / After buttons have changed shape — check the copy that names them');
+});

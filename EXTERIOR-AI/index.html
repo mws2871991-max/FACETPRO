@@ -4760,7 +4760,14 @@ function buildVisualizer() {
       ]),
       h('span', { className: 'text-base px-2 py-1 rounded-full bg-zinc-900 text-white' }, 'Price updates as you choose'),
     ]),
-    h('p', { className: 'mt-2 text-lg text-zinc-600 max-w-[62ch]' }, 'Drag the slider to compare your home now with how it could look. Every colour and material moves the estimate, so there are no surprises later.'),
+    /* Names the control that is actually there. a2404c1 replaced the drag
+       slider with two Before / After buttons — because the drag was broken,
+       and because a thin track is the wrong control for the people this site
+       is for — and this line went on telling them to drag it. An instruction
+       for a control that is not on the screen is worse than no instruction:
+       the reader assumes the page is broken, or that they have missed
+       something. */
+    h('p', { className: 'mt-2 text-lg text-zinc-600 max-w-[62ch]' }, 'Tap Before and After to compare your home now with how it could look. Every colour and material moves the estimate, so there are no surprises later.'),
     /* 1 September handoff §7: "aim for approximately 65–70% visual, 30–35%
        controls". This was 1.2fr / 0.8fr — exactly 60/40, and the estimate
        panel beside it is now a headline figure with the itemisation folded
