@@ -481,3 +481,55 @@ test('a door boxed with its sidelights is not measured against, and says so', ()
     'the homeowner should be told a door was found and not used, not that none was found');
 });
 
+
+/* ── A fragment of a door is not a ruler (28 September 2026) ── */
+
+const { doorReference, MIN_DOOR_RATIO, MAX_DOOR_RATIO, DOOR_LEAF_RATIO } = require('../geometry');
+
+/* Portrait, which is what a phone held upright produces and what
+   hero-before.jpg is. The ratio maths only works if the frame shape is
+   passed, so it is passed. */
+const ASPECT_3_4 = 900 / 1200;
+
+const doorBox = (w_pct, h_pct) => ([
+  { type: 'door-front', label: 'Front Door', confidence: 0.6, x_pct: 0, y_pct: 54, w_pct, h_pct },
+]);
+
+test('the ruler is bounded at both ends, not just the wide end', () => {
+  /* MIN_DOOR_RATIO has always refused boxes too WIDE to be a leaf — a garage
+     door, a door boxed with its sidelights. Nothing refused boxes too NARROW,
+     because until the front prompt started asking for partly-visible elements
+     the detector never returned a fragment of one. */
+  assert.ok(MAX_DOOR_RATIO > MIN_DOOR_RATIO, 'the ceiling must sit above the floor');
+  assert.ok(MAX_DOOR_RATIO > 3.04,
+    'a leaf plus its fanlight scores 3.04 and is a real door — the ceiling must not reject it');
+  assert.ok(Math.abs(MAX_DOOR_RATIO - DOOR_LEAF_RATIO * 2) < 1e-9,
+    'the ceiling should track the leaf ratio rather than be its own magic number');
+});
+
+test('a door sliced by the frame edge is refused as the 1.98 m ruler', () => {
+  /* The real box from hero-before.jpg once detection moved to Opus and began
+     finding the recessed front door: 4% of the width by 24% of the height,
+     against a leaf's 2.20. Accepted, it scaled that house's front elevation to
+     16 m². The plausibility band happened to catch the result, but a band only
+     refuses answers that land outside it — the same fragment on a larger house
+     lands inside and is never questioned. */
+  assert.strictEqual(doorReference(doorBox(4, 24), ASPECT_3_4), null,
+    'a ratio-8 sliver is still being used to measure the house');
+});
+
+test('doors that are merely narrow are still accepted', () => {
+  /* The point of the ceiling is fragments, not narrow doors. These must all
+     survive, or real houses lose their measurement to fix a rarer fault. */
+  for (const [w, h, what] of [[7, 18, 'a leaf square on'], [6, 19, 'a narrow leaf'], [6, 21, 'a leaf plus fanlight']]) {
+    const r = doorReference(doorBox(w, h), ASPECT_3_4);
+    assert.ok(r, `${what} (${w}x${h}) was refused and should not have been`);
+  }
+});
+
+test('an unknown frame shape is not evidence against the box', () => {
+  /* shapeRatio returns null without an aspect ratio, and null has always meant
+     "no opinion" for the floor. The ceiling has to read it the same way or a
+     caller with no aspect ratio suddenly loses every door. */
+  assert.ok(doorReference(doorBox(4, 24), null), 'a null ratio must not be treated as a failure');
+});

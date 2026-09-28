@@ -55,6 +55,39 @@ const DOOR_LEAF_RATIO = DOOR_HEIGHT_M / 0.838;
    the door height inside such a box is reliable enough to use. */
 const MIN_DOOR_RATIO = 1.2;
 
+/* And nothing narrower than this, which the sweep above never needed because
+   the model was not returning fragments.
+
+   The table opposite bounds the ruler from one side only: too WIDE and it is a
+   garage door or a door boxed with its sidelights. Nothing bounded it from the
+   other, because every box the detector offered was a whole door.
+
+   That changed on 28 September, when the front prompt began asking for
+   elements the photograph shows only part of — the fix for a front door
+   recessed in a porch against the frame edge, which the old model missed on
+   every one of fourteen runs. It is now found, and on hero-before.jpg it comes
+   back 4% of the width by 24% of the height: a shape ratio of 8, where a real
+   leaf measures 2.20. That is not a door, it is the sliver of one the frame
+   edge left behind, and doorReference accepted it as the 1.98 m ruler for the
+   entire house. The front elevation came out at 16 m².
+
+   The plausibility band caught that particular one — 63 m² against the 90–200
+   expected of a detached — but a band is the wrong place to catch it. A band
+   only refuses the answers that land outside it, and a fragment of a door on a
+   larger house lands inside easily. Refuse the fragment instead, where we can
+   still say why.
+
+   Twice the leaf ratio, so it tracks the door rather than being its own
+   number: a leaf seen square on is 2.36, and 4.73 is that leaf with half its
+   width hidden — about 60 degrees off-axis, past the point where anything
+   measured off this photograph is worth having. Beyond it the box is a
+   fragment whatever caused it.
+
+   Same trade as above, and it falls the same way. A rejected door drops to a
+   method that says what it is; an accepted fragment sets a confident scale for
+   every wall, window and price on the page. */
+const MAX_DOOR_RATIO = DOOR_LEAF_RATIO * 2;
+
 const DOOR_TYPES = new Set(['door-front']);
 
 const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
@@ -105,10 +138,13 @@ const shapeRatio = (b, aspectRatio) =>
  *   scores 0.90 and cannot be told apart. See MIN_DOOR_RATIO.
  *
  *   Among what is left, prefer the most door-shaped rather than the biggest.
- *   Excess HEIGHT is not thresholded, because a narrow door legitimately
- *   scores 2.89 and a leaf-plus-fanlight 3.04 — guessing between those would
- *   reject real doors. The detection prompt is the defence there, and real
- *   photographs will say where the line sits.
+ *   Excess HEIGHT is only bounded far out, at MAX_DOOR_RATIO. It deliberately
+ *   still does not try to separate a narrow door (2.89) from a leaf plus its
+ *   fanlight (3.04) — guessing between those would reject real doors, and the
+ *   detection prompt remains the defence. The ceiling sits at 4.73, well clear
+ *   of both, and exists for a different case the sweep never saw: a box that is
+ *   a FRAGMENT of a door rather than a door plus something else. See
+ *   MAX_DOOR_RATIO.
  *
  * Returning null is a supported answer: the callers measure another way and
  * say which way they used.
@@ -122,7 +158,9 @@ function doorReference(detections, aspectRatio) {
 
   const plausible = doors.filter(d => {
     const r = shapeRatio(d.b, aspectRatio);
-    return r === null || r >= MIN_DOOR_RATIO;
+    /* Null means the frame shape is unknown, and an unknown shape is not
+       evidence against the box — same reasoning as the lower bound. */
+    return r === null || (r >= MIN_DOOR_RATIO && r <= MAX_DOOR_RATIO);
   });
   if (!plausible.length) return null;
 
@@ -368,7 +406,7 @@ function roofFraming(detections) {
 }
 
 module.exports = {
-  DOOR_HEIGHT_M, DOOR_LEAF_RATIO, MIN_DOOR_RATIO, DOOR_TYPES,
+  DOOR_HEIGHT_M, DOOR_LEAF_RATIO, MIN_DOOR_RATIO, MAX_DOOR_RATIO, DOOR_TYPES,
   clamp, isFiniteNumber, box, intersectionPct, shapeRatio,
   doorReference, sawDoorBox, observedDoorShape,
   subjectBox, SUBJECT_MARGIN_PCT, SUBJECT_BOUND_TYPES, SUBJECT_ANCHOR_TYPES, SUBJECT_VERTICAL_TYPES,
