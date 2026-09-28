@@ -1773,6 +1773,29 @@ function findSwatch(id) {
    Named once. Two lists that have to agree are two lists that will not, and
    this one has to agree with landing.js's journeyForSlug and with the ids the
    pricing engine accepts. */
+/* A pair of pictures at the top of a journey's first question, to show
+   what the choice looks like (28 September). Both pairs are generated
+   illustrations — not jobs, not Facet Pro renders — so the caption always
+   begins "Illustration." and never calls them a before-and-after of a real
+   house. Sources and rules: assets/products/SOURCES.md. The homepage pair
+   is the one made by Facet Pro; these are not. */
+const JOURNEY_ILLUSTRATIONS = {
+  windows: {
+    pictures: [
+      ['/assets/products/windows-white-sm.jpg', 'White', 'Illustration: white sash windows in a red-brick garden room'],
+      ['/assets/products/windows-black-sm.jpg', 'Black', 'Illustration: the same windows in black'],
+    ],
+    caption: 'Illustration. The same windows in white and in black — the frame colour changes the whole look.',
+  },
+  roofline: {
+    pictures: [
+      ['/assets/products/roofline-white-sm.jpg', 'White', 'Illustration: white fascia and soffit with black guttering on a brick house'],
+      ['/assets/products/roofline-grey-sm.jpg', 'Grey', 'Illustration: the same roofline with grey fascia and soffit'],
+    ],
+    caption: 'Illustration. The fascia is the board along the roof edge, the soffit is underneath it, and the guttering carries the rain away.',
+  },
+};
+
 const JOURNEYS = {
   /* Windows and doors open on a choice, like every other journey does.
 
@@ -3242,16 +3265,13 @@ function buildChooser() {
          generated, not a job and not a Facet Pro render (see
          assets/products/SOURCES.md), so they may show the idea but not claim
          a result. */
-      (j === 'roofline' && step === 0) ? h('figure', { className: 'mt-4 max-w-[560px]' }, [
-        h('div', { className: 'grid grid-cols-2 gap-2 sm:gap-3' }, [
-          ['/assets/products/roofline-white-sm.jpg', 'White', 'Illustration: white fascia and soffit with black guttering on a brick house'],
-          ['/assets/products/roofline-grey-sm.jpg', 'Grey', 'Illustration: the same roofline with grey fascia and soffit'],
-        ].map(([src, label, alt]) => h('div', { className: 'relative rounded-xl overflow-hidden border border-zinc-200 bg-white' }, [
-          h('img', { src, alt, width: 600, height: 450, loading: 'lazy', decoding: 'async', className: 'w-full aspect-[4/3] object-cover' }),
-          h('span', { className: 'absolute top-2 right-2 text-base px-2 py-0.5 rounded-full bg-white text-zinc-900 font-semibold border border-zinc-200' }, label),
-        ]))),
-        h('figcaption', { className: 'mt-2 text-base leading-7 text-zinc-600' },
-          'Illustration. The fascia is the board along the roof edge, the soffit is underneath it, and the guttering carries the rain away.'),
+      (JOURNEY_ILLUSTRATIONS[j] && step === 0) ? h('figure', { className: 'mt-4 max-w-[560px]' }, [
+        h('div', { className: 'grid grid-cols-2 gap-2 sm:gap-3' }, JOURNEY_ILLUSTRATIONS[j].pictures.map(([src, label, alt]) =>
+          h('div', { className: 'relative rounded-xl overflow-hidden border border-zinc-200 bg-white' }, [
+            h('img', { src, alt, width: 600, height: 450, loading: 'lazy', decoding: 'async', className: 'w-full aspect-[4/3] object-cover' }),
+            h('span', { className: 'absolute top-2 right-2 text-base px-2 py-0.5 rounded-full bg-white text-zinc-900 font-semibold border border-zinc-200' }, label),
+          ]))),
+        h('figcaption', { className: 'mt-2 text-base leading-7 text-zinc-600' }, JOURNEY_ILLUSTRATIONS[j].caption),
       ]) : null,
       /* One question per screen. Seventeen choices on one card is a quiz, and
          the person we are building for is seventy and has never heard of a
