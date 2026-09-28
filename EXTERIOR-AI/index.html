@@ -432,9 +432,15 @@
        category picture, never to be used in Real Homes, which claims
        photographs of real jobs. -->
   <section data-page="home" aria-labelledby="choose-heading">
+    <!-- Heading on the left and the before/after on the right from lg (1024px) up, so
+         the six cards sit right under both instead of below an empty right
+         half. Stacked on a phone, picture before the choice. -->
+    <div class="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,560px)] lg:gap-8 lg:items-center">
+    <div>
     <p class="text-base text-zinc-600 font-semibold">Home exterior planning &middot; UK</p>
     <h1 id="choose-heading" class="serif mt-2 text-[30px] sm:text-[40px] leading-tight tracking-tight">What would you like to change?</h1>
     <p class="mt-2 text-lg leading-6 text-zinc-600 max-w-[62ch]">Pick one. Then upload a photo of your house to see it changed, with a price — no measuring, no sales call.</p>
+    </div>
     <!-- What the product does, at a glance, above the choice (28 September).
 
          The "after" is a real Facet Pro render, made on the live site from the
@@ -445,19 +451,20 @@
          Mike's rule says not to do. The "before" is an illustration, not a
          customer's house, and the caption says so. See
          assets/work/PROVENANCE.md. -->
-    <figure class="mt-4 max-w-[640px]">
+    <figure class="mt-4 lg:mt-0 max-w-[640px]">
       <div class="grid grid-cols-2 gap-2 sm:gap-3">
         <div class="relative rounded-xl overflow-hidden border border-zinc-200 bg-white">
-          <img src="/assets/work/detached-before-sm.jpg" srcset="/assets/work/detached-before-sm.jpg 600w, /assets/work/detached-before.jpg 1200w" sizes="(min-width: 640px) 320px, 50vw" alt="An example detached brick house with tired white window frames" width="600" height="450" loading="eager" decoding="async" class="w-full aspect-[4/3] object-cover">
+          <img src="/assets/work/detached-before-sm.jpg" srcset="/assets/work/detached-before-sm.jpg 600w, /assets/work/detached-before.jpg 1200w" sizes="(min-width: 1024px) 280px, (min-width: 640px) 320px, 50vw" alt="An example detached brick house with tired white window frames" width="600" height="450" loading="eager" decoding="async" class="w-full aspect-[4/3] object-cover">
           <span class="absolute bottom-2 left-2 text-base px-2 py-0.5 rounded-full bg-white text-zinc-900 font-semibold border border-zinc-200">Before</span>
         </div>
         <div class="relative rounded-xl overflow-hidden border border-zinc-200 bg-white">
-          <img src="/assets/work/detached-after-sm.jpg" srcset="/assets/work/detached-after-sm.jpg 600w, /assets/work/detached-after.jpg 1200w" sizes="(min-width: 640px) 320px, 50vw" alt="The same house as Facet Pro showed it with anthracite windows; the brick, door and roofline unchanged" width="600" height="450" loading="eager" decoding="async" class="w-full aspect-[4/3] object-cover">
+          <img src="/assets/work/detached-after-sm.jpg" srcset="/assets/work/detached-after-sm.jpg 600w, /assets/work/detached-after.jpg 1200w" sizes="(min-width: 1024px) 280px, (min-width: 640px) 320px, 50vw" alt="The same house as Facet Pro showed it with anthracite windows; the brick, door and roofline unchanged" width="600" height="450" loading="eager" decoding="async" class="w-full aspect-[4/3] object-cover">
           <span class="absolute bottom-2 left-2 text-base px-2 py-0.5 rounded-full bg-emerald-600 text-white font-semibold">After</span>
         </div>
       </div>
       <figcaption class="mt-2 text-base leading-7 text-zinc-600">An example house, and what Facet Pro made from its photo: anthracite windows, nothing else changed.</figcaption>
     </figure>
+    </div>
     <div class="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
       <a href="/design?journey=windows" class="group rounded-2xl overflow-hidden border border-zinc-200 bg-white hover:border-zinc-900 transition">
         <img src="/assets/products/windows.jpg" alt="Anthracite bay windows on a brick house" width="640" height="480" class="w-full aspect-[4/3] object-cover" loading="eager" decoding="async">
