@@ -507,7 +507,7 @@ const COST_PAGES = [
           { heading: 'What moves the price', paras: [
             'Size and glazing do most of it. A larger footprint costs more in every direction at once — more frame, more glass, more base — and the roof specification matters as much as the floor area: a lightweight tiled roof is a different job from polycarbonate.',
             'Groundworks are the line people do not budget for. A level garden with easy access is a different price from one that needs a retaining wall, drainage moved, or materials carried through the house.',
-            'And a conservatory is rarely the only work. If the windows or roofline are due anyway, doing them together saves paying twice for the same scaffold — which is why the visualiser prices those five trades together from a photo of the front, even though it cannot price the conservatory itself.',
+            'And a conservatory is rarely the only work. If the windows or roofline are due anyway, doing them together saves paying twice for the same scaffold — which is why the visualiser prices windows, doors, walls, roofline and roof together from a photo of the front, even though it cannot price the conservatory itself.',
           ] },
           { heading: 'Why we will not pretend to price this from a photograph', paras: [
             'Every other cost on this site is computed from the same rate card the estimate uses, and changes when that changes. This page cannot work that way, because nothing in a photograph of the front of a house tells you the size of a conservatory that does not exist yet.',
@@ -546,7 +546,7 @@ const COST_PAGES = [
             ],
           } },
           { heading: 'Why the total is not five quotes added up', paras: [
-            'Five trades priced separately means paying for access five times, five sets of mobilisation, and five companies each protecting their own margin against the others\u2019 unknowns. Priced together, the scaffold goes up once.',
+            'Five jobs quoted separately by five companies means paying for access five times, five sets of mobilisation, and five companies each protecting their own margin against the others\u2019 unknowns. Priced together, the scaffold goes up once.',
             'It also means you see one number for the outside of your house instead of five that never quite add up to a decision. That is the whole reason this site prices all of it together, starting from one photo of the front.',
           ] },
         ],

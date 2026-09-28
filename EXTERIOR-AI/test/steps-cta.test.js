@@ -38,7 +38,7 @@ test('it comes after the explanation, not before it', () => {
      where it was and add a button nobody needed. */
   const steps = page.indexOf('id="how-it-works"');
   const cta = page.indexOf('id="steps-cta-heading"');
-  const fiveTrades = page.indexOf('Start with the front. Five trades, one starting point.');
+  const fiveTrades = page.indexOf('Five home improvements. One photograph.');
 
   assert.ok(steps > -1 && cta > -1 && fiveTrades > -1, 'one of the three anchors has gone');
   assert.ok(cta > steps, 'the invitation has moved above the four steps — the gap after them is back');
@@ -102,7 +102,10 @@ test('the five-trade line describes rather than argues', () => {
      have been describing. */
   /* 26 September: "One photo. Five trades." became "Start with the front",
      because one photo of the front does not show the back of a house. */
-  assert.match(page, /Start with the front\. Five trades, one starting point\./,
+  /* 28 September: "Five trades" read as five companies next to "Five
+     companies, five appointments" in the comparison table. Now it names
+     improvements, not trades. */
+  assert.match(page, /Five home improvements\. One photograph\./,
     'the claim itself is gone — that line is the proposition, not the padding');
   assert.ok(!page.includes('booking, waiting in for and chasing'),
     'the booking-and-chasing clause is back in the four-steps section');
