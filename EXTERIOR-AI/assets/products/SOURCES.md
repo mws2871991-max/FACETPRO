@@ -5,7 +5,7 @@ Cropped to 640×480 from images already in the repository.
 | File | From | Licence / provenance |
 |---|---|---|
 | windows.jpg | `assets/work/hero-after.jpg` | Gallery photo — see `assets/work/PROVENANCE.md` |
-| doors.jpg | `assets/work/newbuild-after.jpg` | Gallery photo — see `assets/work/PROVENANCE.md` |
+| doors.jpg | 4:3 crop (1280×960 → 640×480, lightly sharpened) of `image_20260928_111904.jpg`, 1920×1280, supplied by Mike on 28 September 2026. Replaced the crop of `assets/work/newbuild-after.jpg`. | **AI-generated illustration, not a photograph of a real job.** Category picture only. Never use it in Real Homes. |
 | roofline.jpg | Right-hand 4:3 crop (1152×864 → 640×480) of `image_20260928_103143-can-you-do-a-after-ingrey.jpg`, 2688×864, the grey-fascia version supplied by Mike on 28 September 2026 (replacing the white one from the same day) | **AI-generated illustration, not a photograph of a real job** (the gutter brackets and corner give it away close up). Replaced the tile-hung gable crop, which showed bargeboards more than fascia, soffit and guttering. Used only as the category picture. Never use it in Real Homes. Replace with a real photo when one is available. |
 | roofs.jpg | `assets/swatches/slate-roof.jpg` | Pexels License, David McElwee — `assets/swatches/CREDITS.md` |
 | walls.jpg | 4:3 crop (1533×1150 → 640×480, lightly sharpened) of `image_20260928_105220-make-it-shaper-i-like-this-could-whoe-house-be-cladded-make-it-sharper.jpg`, 1920×1280, supplied by Mike on 28 September 2026 | **AI-generated illustration, not a photograph of a real job.** Replaced the Pexels sage clapboard house (robertkso), which was a real photo but not a UK house. Category picture only. Never use it in Real Homes. |
