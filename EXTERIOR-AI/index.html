@@ -474,14 +474,14 @@
         </span>
       </a>
       <a href="/design?journey=doors" class="group rounded-2xl overflow-hidden border border-zinc-200 bg-white hover:border-zinc-900 transition">
-        <img src="/assets/products/doors.jpg" alt="Illustration: a dark grey composite front door with glazed panels in a red-brick porch" width="640" height="480" class="w-full aspect-[4/3] object-cover" loading="eager" decoding="async">
+        <img src="/assets/products/doors-grey-porch.jpg" alt="Illustration: a dark grey composite front door with glazed panels in a red-brick porch" width="640" height="480" class="w-full aspect-[4/3] object-cover" loading="eager" decoding="async">
         <span class="block p-3 sm:p-4">
           <span class="block text-lg font-medium">Doors</span>
           <span class="block mt-0.5 text-base leading-7 text-zinc-600">Front, back, patio and bifold</span>
         </span>
       </a>
       <a href="/design?journey=roofline" class="group rounded-2xl overflow-hidden border border-zinc-200 bg-white hover:border-zinc-900 transition">
-        <img src="/assets/products/roofline.jpg" alt="Illustration: grey fascia and soffit with black guttering and a downpipe on a brick house" width="640" height="480" class="w-full aspect-[4/3] object-cover" loading="eager" decoding="async">
+        <img src="/assets/products/roofline-grey.jpg" alt="Illustration: grey fascia and soffit with black guttering and a downpipe on a brick house" width="640" height="480" class="w-full aspect-[4/3] object-cover" loading="eager" decoding="async">
         <span class="block p-3 sm:p-4">
           <span class="block text-lg font-medium">Roof edge &amp; gutters</span>
           <span class="block mt-0.5 text-base leading-7 text-zinc-600">Fascias, soffits and guttering</span>
@@ -495,20 +495,26 @@
         </span>
       </a>
       <a href="/design?journey=cladding" class="group rounded-2xl overflow-hidden border border-zinc-200 bg-white hover:border-zinc-900 transition">
-        <img src="/assets/products/walls.jpg" alt="Illustration: a detached house clad in dark grey weatherboard, with grey windows" width="640" height="480" class="w-full aspect-[4/3] object-cover" loading="eager" decoding="async">
+        <img src="/assets/products/walls-grey-clad.jpg" alt="Illustration: a detached house clad in dark grey weatherboard, with grey windows" width="640" height="480" class="w-full aspect-[4/3] object-cover" loading="eager" decoding="async">
         <span class="block p-3 sm:p-4">
           <span class="block text-lg font-medium">Walls</span>
           <span class="block mt-0.5 text-base leading-7 text-zinc-600">A new finish: render or cladding</span>
         </span>
       </a>
       <a href="/cost/conservatory-cost-uk" class="group rounded-2xl overflow-hidden border border-zinc-200 bg-white hover:border-zinc-900 transition">
-        <img src="/assets/products/conservatory.jpg" alt="Illustration: a white conservatory with a brick dwarf wall on a red-brick house" width="640" height="480" class="w-full aspect-[4/3] object-cover" loading="eager" decoding="async">
+        <img src="/assets/products/conservatory-brick-base.jpg" alt="Illustration: a white conservatory with a brick dwarf wall on a red-brick house" width="640" height="480" class="w-full aspect-[4/3] object-cover" loading="eager" decoding="async">
         <span class="block p-3 sm:p-4">
           <span class="block text-lg font-medium">Conservatories</span>
           <span class="block mt-0.5 text-base leading-7 text-zinc-600">Guide prices by style</span>
         </span>
       </a>
     </div>
+    <!-- Card pictures are renamed, never overwritten, when they change: every
+         .jpg is served max-age=31536000, immutable (see IMMUTABLE in
+         server.js), so a replaced picture under the old name stays the old
+         picture for a year in any browser that has seen it. Four were
+         overwritten on 28 September and returning visitors kept the old ones;
+         they now have new names. -->
     <!-- The promise, in one line, under the choice rather than above it. -->
     <p class="mt-4 text-base leading-7 text-zinc-600">Free &middot; No measuring &middot; No sales call &middot; See the price before anyone visits &middot; <a href="/how-we-price" class="underline underline-offset-2">How we price</a></p>
   </section>
