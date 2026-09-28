@@ -1287,7 +1287,11 @@ function pruneDetectionRecords() {
 /* 3: the analysis reports each side of the house (gap/shared/cut-off) and the
    type is derived from that — glazing.houseTypeFromEvidence. Bumped so every
    cached reading is taken again once rather than answering without sides. */
-const DETECTION_VERSION = 3;
+/* 4: the front prompt now asks for partly-visible elements, and detection
+   moved from Sonnet to Opus. Both change what a photograph returns, so every
+   reading cached under v3 is a reading from a model that could not see this
+   house's front door. */
+const DETECTION_VERSION = 4;
 
 /* What to ask of a photograph of the back of a house.
 
@@ -2263,7 +2267,38 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
-        model: 'claude-sonnet-5',
+        /* Opus, because Sonnet could not see this house's front door.
+
+           Measured 28 September on assets/work/hero-before.jpg — a bay-fronted
+           house whose front door and left-hand window sit recessed behind the
+           bay, against the left edge of the frame. Same prompt, same photo,
+           repeated runs:
+
+             claude-sonnet-5   left window 1/5 runs, front door  0/14 runs
+             claude-opus-5     left window 5/5 runs, front door   8/8 runs
+
+           The window was the reported symptom and it is the smaller half. The
+           front door is the scale reference for the entire survey — a UK front
+           door is 1.98 m and that is what turns percentages of an image into
+           metres — so scaleReference came back false, nothing could be
+           door-scaled, and the house fell through to the coverage method: a
+           whole-house figure calibrated off how much of the frame the house
+           fills, on the one photograph where the framing is unusual.
+
+           Not a prompting problem. The added paragraph below took the window
+           from 1/5 to 4/6 on Sonnet and left the door at 0/6. Fourteen runs
+           without it once is a capability difference, not phrasing.
+
+           Sonnet is also far less stable here: 2, 2, 6, 6, 7, 8, 10, 11, 12
+           window boxes across runs of the same photograph, against Opus's 3
+           every single time. mergeAdjacent absorbs that — which is why the
+           count survived — but frontBayCount and the pane counts under it did
+           not.
+
+           Costs about twice as much: ~$0.055–0.073 a detect against
+           ~$0.027–0.029, so roughly £1/day more at the 50/day cap. Set against
+           £100 a lead, one lead saved pays for years of it. Watch /ops. */
+        model: 'claude-opus-5',
         /* 1200 was not enough and failed silently.
 
            The prompt used to ask for a "notes" sentence on every element,
@@ -2305,6 +2340,8 @@ Each item must have exactly: {"type":"one of above","label":"short human label e
 Do not add any other keys, and do not describe anything in prose. Only the array.
 
 Coordinates: x_pct/y_pct = top-left corner, w_pct/h_pct = width/height, all as % of image dimensions.
+
+Work across the WHOLE width of the photograph, including any part of the house set back behind a projecting bay or porch. Include an element even when only part of it is visible — cut off by the edge of the frame, behind a bush, a car or a downpipe, or in deep shadow. Box the part you can see and lower the confidence to say so. A window or door half out of frame is still that home's window or door, and leaving it out quotes the homeowner for fewer windows than they have. The front door especially: it is often recessed in a porch and in shadow, and it is the scale reference for the whole survey, so find it even when it is partly hidden.
 
 Finally add: {"type":"analysis","summary":"2-3 sentence overview of the property","era":"victorian|edwardian|inter-war|post-war|modern|contemporary","wallMaterial":"red-brick|yellow-brick|grey-brick|render|stone|pebbledash|timber|other","houseType":"detached|semi-detached|end-terrace|mid-terrace|bungalow","sides":{"left":"gap|shared|cut-off","right":"gap|shared|cut-off"}}
 

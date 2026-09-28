@@ -672,7 +672,7 @@ function measureWindows({ detections, aspectRatio, bands }) {
   const door = doorReference(detections, aspectRatio);
   if (!door) return null;
 
-  const { kept, duplicates } = windowCandidates(detections);
+  const { kept, duplicates, sidelights, neighbours, panesMerged } = windowCandidates(detections);
 
   const doorTop = door.b.y;
   const windows = [];
@@ -715,7 +715,22 @@ function measureWindows({ detections, aspectRatio, bands }) {
     method: 'door',
     windows,
     frontCount: windows.length,
-    discarded: { duplicates, implausible },
+    /* Every way a window can leave this function, not just the two that
+       happened to be wired up.
+
+       windowCandidates has counted sidelights and neighbours since the day
+       each rule was written, and both were dropped on the floor here. So the
+       two rules that delete a window outright — a label matching "sidelight",
+       and a label matching "adjacent" on a photograph where subjectBox
+       returned null, which is most of them — were the only two whose effect
+       nothing could see. Diagnosing a missing window on 28 September meant
+       instrumenting this file by hand to rule them out, which is the tell.
+
+       panesMerged is here for the same reason: a merge is not a discard, but
+       it is the other way the number on screen ends up below the number of
+       boxes the model returned, and anyone asking "why is this 5 when I can
+       see 6" needs both halves of the answer. */
+    discarded: { duplicates, implausible, sidelights, neighbours, panesMerged },
     doorHeightPct: door.b.h,
     doorConfidence: door.confidence,
   };
