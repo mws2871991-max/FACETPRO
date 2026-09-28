@@ -564,4 +564,77 @@ function changedShare({ render, renderMime, original, originalMime, boxes }) {
   }
 }
 
-module.exports = { restoreDoor, restoreSurroundings, drawGeorgianBars, doorBox, changedShare };
+/* Hold everything the mask does not call a window.
+ *
+ * The blunt version of restoreSurroundings, and blunt is the point. That one
+ * reasons about patches because it only has boxes to work with; this one is
+ * handed the answer at the pixel and can simply take it. Inside the mask the
+ * render; outside it the photograph, resampled to the render's grid the same
+ * way every other hold in this file does it.
+ *
+ * Only safe when the windows are the ONLY thing being changed — a mask of the
+ * windows would otherwise throw away a new roof or new walls along with the
+ * bins. server.js gates it on the same flag restoreSurroundings uses, which is
+ * already exactly that condition.
+ *
+ * The mask arrives as a JPEG whatever its file extension says, so its edges
+ * are soft and it is thresholded rather than read as bits. MASK_ON sits high:
+ * a JPEG ringing artefact beside a hard edge overshoots in both directions,
+ * and letting a few stray light pixels through outside a window puts specks of
+ * render back on the brickwork.
+ */
+const MASK_ON = 160;
+
+function restoreOutsideMask({ render, renderMime, original, originalMime, mask, maskMime }) {
+  const untouched = (reason) => ({ buffer: render, restored: false, reason, insideShare: 0 });
+  try {
+    if (!/png/i.test(renderMime || '')) return untouched('render is not a PNG');
+    if (!mask || !mask.length) return untouched('no mask');
+    const src = decode(original, originalMime || '');
+    if (!src) return untouched('photograph type not handled');
+    const m = decode(mask, maskMime || '');
+    if (!m) return untouched('mask type not handled');
+
+    const out = PNG.sync.read(render);
+    const W = out.width, H = out.height;
+
+    /* A mask that does not describe this frame is worse than none: it would
+       hold the wrong half of the house. Compared as a shape, because the mask
+       is produced from the photograph and the two can legitimately differ by a
+       pixel or two of rounding. */
+    const ar = (w, h) => w / h;
+    if (Math.abs(ar(m.width, m.height) - ar(W, H)) > 0.02) {
+      return untouched(`mask is ${m.width}x${m.height}, render is ${W}x${H}`);
+    }
+
+    /* Nearest neighbour for the mask — it is a binary decision and bilinear
+       would only invent grey along every edge to threshold again. The
+       photograph keeps the bilinear sample it has always had. */
+    const px = [0, 0, 0];
+    let inside = 0;
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const mx = Math.min(m.width - 1, Math.max(0, Math.round((x + 0.5) * m.width / W - 0.5)));
+        const my = Math.min(m.height - 1, Math.max(0, Math.round((y + 0.5) * m.height / H - 0.5)));
+        if (m.data[(my * m.width + mx) * 4] >= MASK_ON) { inside++; continue; }   // window: keep the render
+        sample(src, (x + 0.5) * (src.width / W) - 0.5, (y + 0.5) * (src.height / H) - 0.5, px);
+        const i = (y * W + x) * 4;
+        out.data[i] = px[0]; out.data[i + 1] = px[1]; out.data[i + 2] = px[2];
+      }
+    }
+
+    /* An empty mask would hand back the photograph unchanged and call it a
+       render. A mask covering everything would hold nothing and is equally a
+       failure of the segmentation rather than a description of a house. Both
+       fall back to the patch-based hold, which at least reasons. */
+    const share = inside / (W * H);
+    if (share < 0.01) return untouched(`mask covers only ${(share * 100).toFixed(1)}% of the frame`);
+    if (share > 0.8) return untouched(`mask covers ${(share * 100).toFixed(0)}% of the frame`);
+
+    return { buffer: PNG.sync.write(out), restored: true, reason: null, insideShare: share };
+  } catch (err) {
+    return untouched(err?.message || 'mask hold failed');
+  }
+}
+
+module.exports = { restoreDoor, restoreSurroundings, restoreOutsideMask, drawGeorgianBars, doorBox, changedShare, MASK_ON };

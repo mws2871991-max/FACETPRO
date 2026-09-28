@@ -19,7 +19,13 @@ const leadscore = require('./leadscore');
 const { isTestTraffic } = require('./testtraffic');
 
 const { buildRenderPrompt } = require('./renderprompt');
-const { restoreDoor, restoreSurroundings, drawGeorgianBars, changedShare } = require('./hold');
+const { restoreDoor, restoreSurroundings, restoreOutsideMask, drawGeorgianBars, changedShare } = require('./hold');
+const { fetchWindowMask, maskWithinGrace } = require('./windowmask');
+/* How long a mask started at upload may take. Generous, because nothing is
+   waiting on it — a cold start at 83s still lands well before most people have
+   picked a colour, and the render only ever waits GRACE_MS for whatever state
+   it is in by then. */
+const MASK_WARM_MS = 120_000;
 const geometry = require('./geometry');
 const catalogue = JSON.parse(fs.readFileSync(path.join(__dirname, 'catalogue.json'), 'utf8'));
 
@@ -2425,6 +2431,34 @@ For houseType, judge it from what the photograph shows: a gap on both sides is d
   const detectionId = saveDetectionRecord(detections, size, elevation);
   detectionByImage.set(fingerprint, detectionId);
 
+  /* Start finding the windows now, while they are still choosing a colour.
+     Measured, and this is the whole reason it is here rather than in the
+     render: segmentation takes 2.0s on a warm container and 82.8s on a cold
+     one, and three of four calls during a day's testing were cold. A render
+     that waited for a cold start would add over a minute to the one thing the
+     homeowner is watching, so it waits six seconds and goes without — which
+     would have meant the mask almost never being used at all.
+
+     Started here it has the length of the render request, and everything the
+     person does before it, as a head start. The mask depends only on the
+     photograph, so it is also the right thing to compute once per photograph
+     rather than once per render: someone trying four colours pays for one.
+
+     Front elevations only, and fire-and-forget. The promise is parked on the
+     record for the render to pick up; nothing awaits it here, no failure of
+     it can reach this response, and a photograph nobody renders simply throws
+     it away. */
+  const record = detectionRecords.get(detectionId);
+  if (record && elevation === 'front' && process.env.REPLICATE_API_TOKEN) {
+    record.maskPromise = fetchWindowMask({
+      image: img.buffer, mime: img.mime,
+      replicateKey: process.env.REPLICATE_API_TOKEN,
+      deadlineAt: Date.now() + MASK_WARM_MS,
+      changingDoor: false,
+      onNote: (why) => obs.record('detect', 'window mask not prepared', { reason: why }),
+    }).then((m) => { record.windowMask = m; return m; }).catch(() => null);
+  }
+
   /* Kept so a restart does not change the answer. Awaited rather than fired
      and forgotten: if this write fails the homeowner should still get their
      estimate, but we should know, because a silently unwritten cache is the
@@ -2838,9 +2872,33 @@ async function keepRender(replicateUrl, restore = null) {
          reads as unchanged. When the door is being replaced it is one of the
          things asked for, and is kept like the windows. */
       if (restore.surroundings) {
-        const held = restoreSurroundings({ render: bytes, ...common, keepDoor: !restore.door });
-        if (held.restored) bytes = held.buffer;
-        else obs.record('render', 'kept surroundings not restored', { reason: held.reason });
+        /* The mask first, the patches only if it could not be had.
+
+           These answer the same question — what in this picture is not a
+           window — from different evidence. The mask knows at the pixel;
+           restoreSurroundings infers from boxes, and on a bay that inference
+           loses, because the box contains the pillars, the cornice, the sill
+           and whatever is parked under the window. Measured on number 14 the
+           patch version restores 3,572 patches and changes almost nothing,
+           while the mask restores the cornice, the corbels, the sill, the
+           brick between the two bays and both wheelie bins.
+
+           Not both. Running the patch hold over a masked render would put its
+           own judgement back on top of a better one, and its whole premise —
+           keep a changed patch whole when it touches a window box — is the
+           premise the mask exists to replace. */
+        const masked = restore.mask
+          ? restoreOutsideMask({ render: bytes, ...common, mask: restore.mask, maskMime: restore.maskMime })
+          : { restored: false, reason: 'no mask' };
+        if (masked.restored) {
+          bytes = masked.buffer;
+          obs.record('render', 'held the render to the window mask', { inside: masked.insideShare.toFixed(3) });
+        } else {
+          if (restore.mask) obs.record('render', 'window mask not used', { reason: masked.reason });
+          const held = restoreSurroundings({ render: bytes, ...common, keepDoor: !restore.door });
+          if (held.restored) bytes = held.buffer;
+          else obs.record('render', 'kept surroundings not restored', { reason: held.reason });
+        }
       }
       // Last, on the finished frames.
       if (restore.bars) {
@@ -3359,6 +3417,43 @@ app.post('/api/render', renderLimiter, async (req, res) => {
 
   try {
     const deadlineAt = renderStartedAt + RENDER_DEADLINE_MS;
+
+    /* Where the windows are, asked for at the same moment as the render
+       rather than after it.
+
+       Segmentation needs the photograph and nothing else, so it has no reason
+       to wait for FLUX. Started here it finishes inside the render's own
+       latency — measured warm at 2.0s and 5.7s against a render that takes
+       tens of seconds — and costs the homeowner no extra time at all. Awaited
+       below, once there is a picture to composite it onto.
+
+       Only for a windows-only job. doorRestore.surroundings is already exactly
+       that condition — no new walls, no new roof, no new roofline — and it has
+       to stay that way: a mask of the windows would otherwise hold back a new
+       roof along with the wheelie bins.
+
+       Never rejects: fetchWindowMask answers null for every failure it can
+       have, and the catch is belt and braces so a surprise cannot take down a
+       render that is already being paid for. */
+    const maskWanted = !!(doorRestore && doorRestore.surroundings);
+    const maskRecord = detectionId ? detectionRecords.get(String(detectionId)) : null;
+    const maskPromise = !maskWanted ? Promise.resolve(null)
+      /* Already finished: a second colour on the same photograph, or somebody
+         who took a while to choose. Free. */
+      : maskRecord?.windowMask ? Promise.resolve(maskRecord.windowMask)
+      /* Already running, started when they uploaded. Usually most of the way
+         through by now, which is the point of starting it there. */
+      : maskRecord?.maskPromise ? maskRecord.maskPromise
+      /* Neither — a render with no detection record, or one whose record has
+         been pruned. Start one anyway: it will usually lose the race against
+         GRACE_MS, but a warm container makes it in comfortably and it costs
+         nothing to try. */
+      : fetchWindowMask({
+          image: img.buffer, mime: img.mime, replicateKey, deadlineAt,
+          changingDoor: !!doorStyle,
+          onNote: (why) => obs.record('render', 'window mask not used', { reason: why }),
+        }).catch(() => null);
+
     const first = await runFlux({ prompt, inputImage, deadlineAt, replicateKey });
     if (!first.ok) return res.status(first.status).json({ error: first.error });
     let url = first.url;
@@ -3401,10 +3496,20 @@ app.post('/api/render', renderLimiter, async (req, res) => {
       }
     }
 
+    /* Waits a few seconds for it, never the whole cold start. See GRACE_MS. */
+    const mask = await maskWithinGrace(maskPromise);
+    /* Kept on the record so the next colour on this photograph is instant, and
+       so a mask that arrived after the grace is not thrown away — the person
+       who tries anthracite next gets the one this render gave up waiting for. */
+    if (maskRecord && mask && !maskRecord.windowMask) maskRecord.windowMask = mask;
+    const restorePlan = (doorRestore && mask)
+      ? { ...doorRestore, mask: mask.buffer, maskMime: mask.mime }
+      : doorRestore;
+
     return respondWithRender(res, url, {
       roofSkipped: roofUnsupported || undefined,
       ...(missedChanges.length ? { missedChanges } : {}),
-    }, doorRestore);
+    }, restorePlan);
   } catch (err) {
     console.error('Render error:', err);
     return res.status(502).json({ error: "Couldn't reach the render service." });
