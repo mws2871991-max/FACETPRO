@@ -15,6 +15,17 @@ The files carry no EXIF and no origin markers — they have been stripped — so
 the provenance cannot be recovered from the images. It has to come from whoever
 put them there.
 
+## The homepage pair: `detached-before*.jpg` / `detached-after*.jpg` (28 September 2026)
+
+Not in the "Real homes" gallery, and not claimed to be a real job.
+
+| File | What it is | Source |
+|---|---|---|
+| `detached-before.jpg`, `-sm.jpg` | **An illustration**, not a customer's house. Captioned "An example house". | `dilapidated_house_before_renovation.webp` (Mike's Downloads, 13 Aug 2026), resized to 1248×832, centre-cropped 4:3 |
+| `detached-after.jpg`, `-sm.jpg` | **A real Facet Pro render** of the file above, made on the live site on 28 Sep 2026: Detached, Casement, Anthracite, plain glass, door and roofline kept. Nothing retouched. | Render `74bbd507068ff41685c4feb5dab70afe` (1248×832), same crop |
+
+It replaced `semi-before-sm.jpg` / `semi-after-sm.jpg` on the page. That "after" was a staged picture (new block-paved drive, planting, a red door, a clean roofline) that Facet Pro cannot produce. Those two files stay in the tree because tests and the render prompt refer to them as a detection fixture; they are no longer shown to visitors.
+
 ## Before adding a pair
 
     npm run check-pair before.jpg after.jpg -- --out /tmp/diff.png
