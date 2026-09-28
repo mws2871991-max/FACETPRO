@@ -948,3 +948,106 @@ test('publishedRange prefers the market spread and falls back to our own', () =>
     { low: 1, high: 2 }, 'our own estimate is the fallback, not nothing');
   assert.strictEqual(publishedRange(null), null);
 });
+
+/* ── Number 14, from the 28 September run-through ── */
+
+const OPUS_14 = require('./fixtures/edwardian-14-opus-detections.json');
+
+test("number 14 is priced on its own four windows, not next door's", () => {
+  /* An Edwardian mid-terrace, photographed with number 12 beside it. Counting
+     the photograph by hand: the ground-floor bay, the first-floor bay, one
+     sash above its own black front door, and the dormer. Four.
+
+     The live reading offered seven. The three that are not number 14's:
+       "Neighbour (No.12) first floor window" — above number 12's own door,
+          inside the subject box and nowhere near the frame edge, so neither
+          geometry nor an edge test could reach it. The model said whose it
+          was and nothing read the sentence.
+       "Fanlight over front door" — part of the door set, like the sidelights
+          beside it. Nobody quotes a fanlight as a window.
+       and the bay panes, which merge correctly and always did. */
+  assert.strictEqual(fwc(OPUS_14.detections), 4,
+    "number 14 is not being priced on the four windows it has");
+  assert.strictEqual(require('../glazing').frontBayCount(OPUS_14.detections), 2, 'both bays should be bays');
+
+  /* The neighbour's window is inside the subject box — the point of the
+     fixture. If this ever stops being true the test has stopped testing the
+     rule it was written for. */
+  const subject = geometry.subjectBox(OPUS_14.detections);
+  assert.ok(subject, 'this fixture must have a subject box');
+  const nb = OPUS_14.detections.find(d => /Neighbour \(No\.12\)/.test(String(d.label || '')));
+  assert.ok(nb, "the neighbour's window has gone from the fixture");
+  const cx = nb.x_pct + nb.w_pct / 2;
+  assert.ok(cx > subject.x && cx < subject.x + subject.w,
+    "the neighbour's window must sit inside the subject box, or geometry would catch it anyway");
+  assert.ok(nb.x_pct > 1 && nb.x_pct + nb.w_pct < 99,
+    'and away from the frame edge, or an edge test would catch it anyway');
+});
+
+test('"adjacent" says where; "adjacent house" says whose', () => {
+  /* One word, opposite meanings, and the old single regex read both as
+     ownership — so "Window Adjacent To Front Door" on somebody's own house was
+     deleted on every photograph without a subject box, which is most of them.
+     What the word qualifies is the distinction. */
+  const win = (label, x) => ({ type: 'window', confidence: 0.9, label, x_pct: x, y_pct: 30, w_pct: 10, h_pct: 12 });
+  const terrace = [win('Upper Bay Window', 30), win('Lower Bay Window', 30)];
+  assert.strictEqual(geometry.subjectBox(terrace), null, 'this fixture must have no subject box');
+  const base = fwc(terrace);
+
+  for (const label of ['Adjacent House Window', 'Adjacent Property Window', "Neighbour's window"]) {
+    assert.strictEqual(fwc([...terrace, win(label, 40)]), base,
+      `"${label}" is a statement of ownership and should be dropped wherever it sits`);
+  }
+  /* Placed clear of the bay on BOTH axes. At x=40 it shares an edge with the
+     bay at x=30..40 and mergeAdjacent joins the two — correctly — so the count
+     does not move and the test reads as a label failure. The same trap the
+     test above this one documents. */
+  const clear = (label) => ({ type: 'window', confidence: 0.9, label, x_pct: 60, y_pct: 60, w_pct: 10, h_pct: 12 });
+  for (const label of ['Window Adjacent To Front Door', 'Window adjacent to the porch']) {
+    assert.strictEqual(fwc([...terrace, clear(label)]), base + 1,
+      `"${label}" describes a position on the customer's own house and must survive`);
+  }
+});
+
+test('a fanlight is a shallow light over a door, not any window above one', () => {
+  /* The geometric half of the rule, which has to be tight: a window directly
+     over a front door is completely ordinary. Number 14's real fanlight is 29%
+     of its door's height. */
+  const door = { type: 'door-front', confidence: 0.9, label: 'Front Door', x_pct: 45, y_pct: 60, w_pct: 7, h_pct: 16 };
+  const wall = [{ type: 'cladding', confidence: 0.9, label: 'Brick', x_pct: 18, y_pct: 30, w_pct: 60, h_pct: 52 }, door];
+  const over = (h) => ({ type: 'window', confidence: 0.9, label: 'Window', x_pct: 45, y_pct: 60 - h, w_pct: 7, h_pct: h });
+
+  assert.strictEqual(fwc([...wall, over(3)]), 0, 'a shallow light over the door is part of the door set');
+  assert.strictEqual(fwc([...wall, over(11)]), 1, 'a full-height window over a door is a window');
+
+  /* And by its name, wherever it sits, because the model usually says so. */
+  const named = { ...over(3), label: 'Fanlight over front door', y_pct: 20 };
+  assert.strictEqual(fwc([...wall, named]), 0, 'a thing called a fanlight is one');
+  /* But only by a noun that names the part. "Above the front door" states a
+     position, and number 14's own first-floor sash was labelled exactly that
+     and deleted by the first version of this rule. */
+  const sash = { type: 'window', confidence: 0.9, label: 'First floor window above front door',
+                 x_pct: 30, y_pct: 22, w_pct: 10, h_pct: 17 };
+  assert.strictEqual(fwc([...wall, sash]), 1, 'a first-floor sash was deleted for where it sits');
+});
+
+test('the panel confirms the number the homeowner is charged for', () => {
+  /* "We found 8 windows" sat over a price for 7 on number 14, on one screen.
+     The panel read /api/detect's frontWindowCount — everything surviving the
+     hygiene filters — while the price came from measureWindows, which then
+     discards units whose measured size is impossible for a window. The panel
+     is the one the homeowner is asked to confirm, so it has to be the priced
+     number. Their own correction still wins over both. */
+  const page = require('node:fs').readFileSync(
+    require('node:path').join(__dirname, '..', 'index.html'), 'utf8');
+  const at = page.indexOf('const windows = state.windowCount');
+  assert.ok(at > 0, 'the summary count has moved');
+  const expr = page.slice(at, at + 200);
+  assert.match(expr, /state\.windowCount\s*\|\|\s*state\.glazing\?\.frontCount/,
+    'the panel no longer prefers the priced count over the raw detect count');
+  const ownAt = expr.indexOf('state.windowCount');
+  const pricedAt = expr.indexOf('state.glazing?.frontCount');
+  const detectAt = expr.indexOf('state.frontWindowCount');
+  assert.ok(ownAt < pricedAt && pricedAt < detectAt,
+    'their own correction, then the priced count, then the detect count');
+});

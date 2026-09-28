@@ -1,0 +1,176 @@
+{
+  "note": "Live /api/detect for number 14 (Edwardian mid-terrace, two bays), Opus, 28 September 2026. No image: the repo is public and this is somebody home.",
+  "detections": [
+    {
+      "type": "window",
+      "label": "Top floor window (dormer/upper storey)",
+      "confidence": 0.82,
+      "x_pct": 51.2,
+      "y_pct": 0,
+      "w_pct": 15.4,
+      "h_pct": 9.8
+    },
+    {
+      "type": "window",
+      "label": "First floor bay - left angled pane",
+      "confidence": 0.83,
+      "x_pct": 50.2,
+      "y_pct": 18.4,
+      "w_pct": 6.4,
+      "h_pct": 17.5
+    },
+    {
+      "type": "window",
+      "label": "First floor bay - centre window",
+      "confidence": 0.9,
+      "x_pct": 57.8,
+      "y_pct": 17.2,
+      "w_pct": 16,
+      "h_pct": 18.8
+    },
+    {
+      "type": "window",
+      "label": "First floor bay - right angled pane",
+      "confidence": 0.8,
+      "x_pct": 75.8,
+      "y_pct": 18,
+      "w_pct": 8,
+      "h_pct": 17
+    },
+    {
+      "type": "window",
+      "label": "First floor window above front door",
+      "confidence": 0.88,
+      "x_pct": 29.8,
+      "y_pct": 22.2,
+      "w_pct": 10.3,
+      "h_pct": 16.6
+    },
+    {
+      "type": "window",
+      "label": "Neighbour (No.12) first floor window",
+      "confidence": 0.7,
+      "x_pct": 11.7,
+      "y_pct": 22,
+      "w_pct": 9.8,
+      "h_pct": 16.6
+    },
+    {
+      "type": "window",
+      "label": "Ground floor bay - left angled pane",
+      "confidence": 0.78,
+      "x_pct": 49.4,
+      "y_pct": 48.5,
+      "w_pct": 5.2,
+      "h_pct": 20
+    },
+    {
+      "type": "window",
+      "label": "Ground floor bay - centre window",
+      "confidence": 0.9,
+      "x_pct": 57.3,
+      "y_pct": 47,
+      "w_pct": 20.8,
+      "h_pct": 22.6
+    },
+    {
+      "type": "window",
+      "label": "Ground floor bay - right angled pane",
+      "confidence": 0.75,
+      "x_pct": 78.8,
+      "y_pct": 48.3,
+      "w_pct": 6,
+      "h_pct": 19.6
+    },
+    {
+      "type": "window",
+      "label": "Fanlight over front door",
+      "confidence": 0.6,
+      "x_pct": 31,
+      "y_pct": 49.5,
+      "w_pct": 8,
+      "h_pct": 5.6
+    },
+    {
+      "type": "door-front",
+      "label": "Front door No.14",
+      "confidence": 0.93,
+      "x_pct": 30.9,
+      "y_pct": 55.2,
+      "w_pct": 8.4,
+      "h_pct": 19.2
+    },
+    {
+      "type": "door-front",
+      "label": "Neighbour front door No.12",
+      "confidence": 0.5,
+      "x_pct": 13.5,
+      "y_pct": 54.5,
+      "w_pct": 8.5,
+      "h_pct": 22.5
+    },
+    {
+      "type": "roof",
+      "label": "Main roof slope",
+      "confidence": 0.6,
+      "x_pct": 21.5,
+      "y_pct": 4.2,
+      "w_pct": 31.5,
+      "h_pct": 7.5
+    },
+    {
+      "type": "cladding",
+      "label": "Yellow stock brick facade",
+      "confidence": 0.9,
+      "x_pct": 22,
+      "y_pct": 8,
+      "w_pct": 69,
+      "h_pct": 68
+    },
+    {
+      "type": "fascia",
+      "label": "Fascia above bay",
+      "confidence": 0.45,
+      "x_pct": 48,
+      "y_pct": 10.5,
+      "w_pct": 40,
+      "h_pct": 3.2
+    },
+    {
+      "type": "soffit",
+      "label": "Soffit under roof overhang",
+      "confidence": 0.4,
+      "x_pct": 48,
+      "y_pct": 13.2,
+      "w_pct": 39,
+      "h_pct": 2.4
+    },
+    {
+      "type": "guttering",
+      "label": "Rainwater downpipe (right side)",
+      "confidence": 0.7,
+      "x_pct": 88.5,
+      "y_pct": 11.5,
+      "w_pct": 3.2,
+      "h_pct": 58
+    },
+    {
+      "type": "analysis",
+      "summary": "A two-storey (plus attic) Victorian terraced house in yellow stock brick with red brick banding and painted stucco detailing. It has a full-height canted bay to the right with sash windows and a recessed arched entrance with a black panelled front door numbered 14. A low brick front wall with bins encloses a small forecourt.",
+      "era": "victorian",
+      "wallMaterial": "yellow-brick",
+      "houseType": "mid-terrace",
+      "sides": {
+        "left": "shared",
+        "right": "shared"
+      }
+    }
+  ],
+  "subjectBox": {
+    "x": 7.5,
+    "y": 0,
+    "w": 90.2,
+    "h": 83
+  },
+  "aspectRatio": null
+}

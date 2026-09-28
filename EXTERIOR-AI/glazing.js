@@ -487,13 +487,14 @@ function insideSubject(b, subject) {
    a label FORMAT — a " - " and the word "Pane" — to infer a grouping, and broke
    the next day when the model phrased it differently. This reads an explicit
    statement of ownership that the model volunteered, for an exclusion. If the
-   wording changes we are no worse than today; the geometric test is the
-   primary and this only reaches further.
+   wording changes we are no worse than today.
 
-   Narrow on purpose. "Adjacent", "neighbour" and "next door" describe whose
-   building it is and nothing else does; no window on the customer's own house
-   is ever labelled any of them. */
-const NEIGHBOUR_LABEL = /\b(adjacent|neighbou?r(ing|s)?|next[\s-]door)\b/i;
+   The single regex that used to live here claimed "adjacent", "neighbour" and
+   "next door" all describe whose building it is and nothing else does. Half of
+   that was wrong, and see disowned() below for what it cost: "adjacent"
+   describes where a thing is, and a window adjacent to the customer's own
+   front door is the customer's own. The two kinds of word are now two
+   constants with two different burdens of proof. */
 
 /* Whose building — by whichever test can actually answer.
 
@@ -515,8 +516,105 @@ const NEIGHBOUR_LABEL = /\b(adjacent|neighbou?r(ing|s)?|next[\s-]door)\b/i;
    costs nothing on the photograph that found the bug and removes the only way
    this rule can delete a real window. */
 function isNeighbours(b, label, subject) {
-  if (subject) return !insideSubject(b, subject);
-  return NEIGHBOUR_LABEL.test(label);
+  /* Geometry only, now that disowned() reads the labels properly.
+ *
+ * This used to fall back to NEIGHBOUR_LABEL whenever there was no subject box
+ * — and there usually is not; subjectBox returns null on most real
+ * photographs, by design, because it refuses anything it cannot bound
+ * confidently. So the fallback was not a fallback, it was the main path, and
+ * it deleted any window the model happened to label "adjacent" anywhere on the
+ * frontage. "Window Adjacent To Front Door" is the example its own comment
+ * gave as the thing that must never happen, and it was happening on every
+ * photograph without a subject box.
+ *
+ * disowned() now makes the distinction that rule wanted and could not express:
+ * an ownership word anywhere, a positional word only at the frame's edge. It
+ * runs unconditionally in windowCandidates, so there is nothing left for this
+ * to fall back to. No subject box means no geometric opinion. */
+  if (!subject) return false;
+  return !insideSubject(b, subject);
+}
+
+/* Whose house the model says it is — split from where it says it sits.
+ *
+ * NEIGHBOUR_LABEL lumps two different kinds of word together, and the
+ * difference is the whole rule. "Neighbour", "neighbouring" and "next door"
+ * state OWNERSHIP: the model volunteering that this thing belongs to another
+ * property. "Adjacent" states POSITION, and a window adjacent to the front
+ * door is the customer's own. isNeighbours' comment has always said the first
+ * is what it wants to read; it just had no way to ask for it separately.
+ *
+ * Number 14 is why it matters. The live reading returned "Neighbour (No.12)
+ * first floor window" — above number 12's own front door, plainly theirs, and
+ * the model said so in as many words. It sits well inside the subject box and
+ * nowhere near the frame edge, so geometry could not catch it and neither
+ * could an edge test. Counted, it put a fifth window on a house with four and
+ * charged a terrace multiplier on top.
+ *
+ * So: an ownership word is trusted wherever it appears. A positional word
+ * still needs corroboration, and the frame's edge is the corroboration
+ * available — a window can only be sliced by the edge if the photograph stops
+ * there. "Window Adjacent To Front Door", the case the original comment was
+ * most afraid of, is in the middle of the frontage and survives both tests.
+ *
+ * Runs whether or not there is a subject box, unlike everything else here. */
+/* "Adjacent" alone is where; "adjacent house" is whose. What the word
+   qualifies is the whole distinction — "Adjacent House Window" and "Window
+   Adjacent To Front Door" share a word and mean opposite things. */
+const NEIGHBOUR_OWNED = /\b(neighbou?r(ing|s|'s)?|next[\s-]door)\b|\badjacent\s+(house|home|propert|building|dwelling|structure)/i;
+const NEIGHBOUR_NEARBY = /\badjacent\b/i;
+
+function disowned(b, label) {
+  if (NEIGHBOUR_OWNED.test(label)) return true;
+  if (NEIGHBOUR_NEARBY.test(label)) return b.x <= 1 || b.x + b.w >= 99;
+  return false;
+}
+
+/* The glazed panel above a front door is part of the door set, like the
+   sidelights beside it.
+ *
+ * "Fanlight above Front Door" came back typed `window` on number 14 and was
+ * priced as a small window — the same mistake sidelights made, in the one
+ * direction sidelights could not: above rather than beside. Nobody quotes a
+ * fanlight as a window; it is replaced with the door or not at all.
+ *
+ * By words first, because the model usually says so, and by geometry when it
+ * does not: sitting just above the door and no wider than it. The geometry is
+ * deliberately tight. A first-floor window directly over a front door is
+ * completely ordinary, and it is metres up, not centimetres.
+ *
+ * NOUNS ONLY, and this cost a real window to learn. The first version of this
+ * rule also matched "above the front door", which the handoff proposing it
+ * suggested — and number 14's own first-floor sash came back from the model
+ * labelled "First floor window above front door". It was deleted, and the
+ * count went from five to four on a house we had just fixed. "Above the front
+ * door" states where a thing is; half the windows on a terrace are above the
+ * front door. Only a word that names the part — fanlight, transom, overlight —
+ * says what it is. The geometry below is what covers a fanlight the model
+ * described only by position, and it can measure the difference that the
+ * phrase cannot. */
+const FANLIGHT_LABEL = /\b(fan[\s-]?light|transom|over[\s-]?light)\b/i;
+const FANLIGHT_GAP_PCT = 3;
+const FANLIGHT_MAX_HEIGHT_SHARE = 0.5;
+
+function isFanlight(b, label, door) {
+  if (FANLIGHT_LABEL.test(label)) return true;
+  if (!door) return false;
+  const gap = door.y - (b.y + b.h);          // how far its foot sits above the door's head
+  if (!(gap >= -1 && gap <= FANLIGHT_GAP_PCT)) return false;
+  /* Over the door rather than merely near it, and not wider than the doorway
+     plus its frame. */
+  const overlap = Math.min(b.x + b.w, door.x + door.w) - Math.max(b.x, door.x);
+  if (!(overlap >= b.w * 0.6 && b.w <= door.w * 1.5)) return false;
+  /* And SHALLOW, which is the test that makes the rest safe.
+
+     Position alone said a ground-floor window sitting directly on top of a
+     doorway was a fanlight, and on a house where the door and the window below
+     the stairs line up that is an ordinary window being deleted — caught by a
+     fixture in glazing.test.js doing exactly that. A fanlight is a light over
+     a door, a band; number 14's real one is 29% of its door's height. Half is
+     generous and still nowhere near a window. */
+  return b.h <= door.h * FANLIGHT_MAX_HEIGHT_SHARE;
 }
 
 /* Where the row's roofline is, when detection gives one: the top of the
@@ -550,6 +648,12 @@ function neighboursRoofWindow(b, roofLine) {
 function windowCandidates(detections) {
   const subject = subjectBox(detections || []);
   const roofLine = roofLineY(detections);
+  /* The doorway, for telling a fanlight from a window. Taken straight off the
+     detections rather than through doorReference, because this wants where the
+     door is and not whether it is fit to measure against — a door too oddly
+     shaped to be a ruler still has a fanlight over it. */
+  const doorD = (detections || []).find(d => d?.type === 'door-front' && box(d));
+  const doorB = doorD ? box(doorD) : null;
 
   const confident = (detections || [])
     .filter(d => d?.type === 'window' && (Number(d?.confidence) || 0) >= MIN_CONFIDENCE);
@@ -563,7 +667,11 @@ function windowCandidates(detections) {
     if (!b) continue;               // box() coerces and rejects the unusable
     if (isNeighbours(b, String(d?.label || ''), subject)) { neighbours++; continue; }
     if (!subject && neighboursRoofWindow(b, roofLine)) { neighbours++; continue; }
+    /* The model's own word on whose house it is, which a subject box cannot
+       know and geometry cannot see. */
+    if (disowned(b, String(d?.label || ''))) { neighbours++; continue; }
     if (isSidelight(d)) { sidelights++; continue; }
+    if (isFanlight(b, String(d?.label || ''), doorB)) { sidelights++; continue; }
     const label = String(d?.label || '');
     const c = { b, confidence: Number(d?.confidence) || 0, panes: 1, labelBay: BAY_LABEL.test(label) };
     const pane = label.match(PANE_LABEL);

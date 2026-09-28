@@ -3666,9 +3666,21 @@ function buildUploadDetect() {
       const real = state.detections.filter(d => d.type !== 'analysis');
       const hits = (re) => real.filter(d => re.test(String(d.type || '')) || re.test(String(d.label || '')));
 
-      /* The server's count when it sent one: sidelights belong to the door and
-         a bay's panes are one window, which a regex over labels cannot know. */
-      const windows = state.windowCount || (state.frontWindowCount ?? hits(/window/i).length);
+      /* The number that is actually being charged for, whenever there is one.
+
+         This showed state.frontWindowCount, which /api/detect computes as
+         windowCandidates().kept.length — everything that survives the hygiene
+         filters. The price is built by measureWindows, which then discards
+         units whose measured size is impossible for a window. On number 14 the
+         panel said "we found 8 windows" over a price for 7, on the same
+         screen, and the panel is the one the homeowner is asked to confirm.
+
+         Order matters: their own correction first, because once somebody has
+         typed a number that is the number; then the priced count; then the
+         detect count, which is all there is before /api/glazing answers. */
+      const windows = state.windowCount
+        || state.glazing?.frontCount
+        || (state.frontWindowCount ?? hits(/window/i).length);
       const measured = MEASURED_FROM_PHOTO.includes(String(state.price?.footprintSource || ''));
 
       const parts = [];
