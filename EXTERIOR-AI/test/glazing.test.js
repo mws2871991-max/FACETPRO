@@ -1051,3 +1051,56 @@ test('the panel confirms the number the homeowner is charged for', () => {
   assert.ok(ownAt < pricedAt && pricedAt < detectAt,
     'their own correction, then the priced count, then the detect count');
 });
+
+test('two front doors in one photograph means two houses', () => {
+  /* The evening run-through of 28 September, on number 14. The label rule
+     works whenever the model volunteers "Neighbour (No.12)" — and when it does
+     not, the same sash is BOTH priced and repainted, because one answer feeds
+     the count and the render mask. Five windows on a house with four, and next
+     door's frames turned anthracite.
+
+     Geometry settles it without the label: a window directly above a doorway,
+     within that doorway's width, belongs to the house that doorway belongs to. */
+  const AR = 888 / 1184;
+  const fix = require('./fixtures/edwardian-14-opus-detections.json');
+  const stripped = JSON.parse(JSON.stringify(fix.detections)).map(d => {
+    if (/Neighbour \(No\.12\)/.test(String(d.label || ''))) d.label = 'First floor window (left)';
+    return d;
+  });
+
+  assert.strictEqual(fwc(stripped, AR), 4, "number 14 has four windows whether or not the model says whose the fifth is");
+  assert.strictEqual(require('../glazing').neighbourWindowBoxes(stripped, AR).length, 1,
+    'and that window must also be cut out of the render mask');
+
+  /* Without a frame shape the rule cannot know which of the two doors is ours,
+     so it stands down rather than guess — doorReference falls back to the
+     TALLEST door, and here the tallest is number 12's. */
+  assert.strictEqual(fwc(stripped), 5, 'with no aspect ratio the rule must not fire at all');
+});
+
+test('the two-doors rule never touches an ordinary one-door house', () => {
+  /* The failure to fear is deleting somebody's real window. This rule only
+     fires when a second front door is in shot, so the common photograph is
+     untouched by it — including a window directly above the customer's OWN
+     door, which is the most ordinary arrangement on a terrace. */
+  const AR = 888 / 1184;
+  const house = [
+    { type: 'cladding', confidence: 0.9, label: 'Brick', x_pct: 18, y_pct: 30, w_pct: 60, h_pct: 52 },
+    { type: 'door-front', confidence: 0.9, label: 'Front Door', x_pct: 45, y_pct: 60, w_pct: 7, h_pct: 16 },
+    { type: 'window', confidence: 0.9, label: 'First floor window', x_pct: 44, y_pct: 30, w_pct: 9, h_pct: 14 },
+    { type: 'window', confidence: 0.9, label: 'Ground floor window', x_pct: 22, y_pct: 55, w_pct: 12, h_pct: 14 },
+  ];
+  assert.strictEqual(fwc(house, AR), 2, 'a one-door house lost a window to the two-doors rule');
+
+  /* Now put the neighbour into the same photograph — their door and the window
+     above it. The customer's count must not move: theirs are still theirs, and
+     the window above OUR door (x=44, directly over the door at x=45) is the
+     most ordinary arrangement on a terrace and must survive. */
+  const pair = [...house,
+    { type: 'door-front', confidence: 0.9, label: 'Front Door', x_pct: 20, y_pct: 60, w_pct: 7, h_pct: 18 },
+    { type: 'window', confidence: 0.9, label: 'First floor window', x_pct: 19, y_pct: 30, w_pct: 9, h_pct: 14 }];
+  assert.strictEqual(fwc(pair, AR), fwc(house, AR),
+    "adding next door's door and window changed what this customer is charged for");
+  assert.strictEqual(require('../glazing').neighbourWindowBoxes(pair, AR).length, 1,
+    "and next door's window must be cut from the render mask too");
+});

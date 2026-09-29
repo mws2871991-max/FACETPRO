@@ -357,8 +357,13 @@ test('a missing or malformed neighbour list is simply no cut', () => {
 
 test('the render asks glazing whose windows these are, not its own rule', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
-  assert.match(src, /notOurs: glazing\.neighbourWindowBoxes\(detections\)/,
+  assert.match(src, /notOurs: glazing\.neighbourWindowBoxes\(detections, detectionAspectRatio\)/,
     'the hold no longer uses the same judgement as the count');
+  /* And it must be given the frame shape, or the two-front-doors rule stands
+     down and next door's windows are repainted on every run where the model
+     does not happen to use the word "neighbour". */
+  assert.match(src, /const detectionAspectRatio = found \? found\.aspectRatio : null;/,
+    'the render path no longer carries the frame shape to the mask cut');
 });
 
 test("neighbourWindowBoxes and the count agree about number 14", () => {

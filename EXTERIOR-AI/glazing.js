@@ -564,6 +564,45 @@ function isNeighbours(b, label, subject) {
 const NEIGHBOUR_OWNED = /\b(neighbou?r(ing|s|'s)?|next[\s-]door)\b|\badjacent\s+(house|home|propert|building|dwelling|structure)/i;
 const NEIGHBOUR_NEARBY = /\badjacent\b/i;
 
+/* A photograph with two front doors is a photograph of two houses.
+ *
+ * The rule below reads the model's own words, and on number 14 that works
+ * whenever the model volunteers "Neighbour (No.12)". The evening run-through
+ * of 28 September caught the other half: when it does not volunteer it, the
+ * sash above number 12's door is priced AND repainted, because the same answer
+ * feeds the count and the render mask. One root cause, two defects — five
+ * windows on a house with four, and next door's frames turned anthracite.
+ *
+ * Geometry can settle it without the label, because the photograph contains
+ * the evidence: two front doors. A window sitting directly above a doorway,
+ * within that doorway's width, belongs to the house that doorway belongs to.
+ * That is how a terrace is laid out and it is why the fanlight rule below can
+ * use the same relationship.
+ *
+ * Only ever fires when there is more than one front door in shot, so a normal
+ * photograph of one house is untouched by it. `ours` is the doorway the survey
+ * is already scaled against — the same door whose 1.98 m sets every
+ * measurement — so the count and the ruler cannot disagree about which house
+ * this is. Without an aspect ratio there is no way to know which door that is,
+ * and the rule stands down rather than guess: doorReference falls back to the
+ * TALLEST door there, and on this photograph the tallest is number 12's.
+ *
+ * The failure to fear is dropping somebody's real window, so both conditions
+ * are required and the overlap is a clear majority of the window's width. A
+ * window beside a neighbour's door, or above our own, is untouched. */
+const OTHER_DOOR_OVERLAP = 0.6;
+
+function aboveAnotherFrontDoor(b, ours, doors) {
+  if (!ours || doors.length < 2) return false;
+  for (const d of doors) {
+    if (Math.abs(d.x - ours.x) < 0.01 && Math.abs(d.y - ours.y) < 0.01) continue;   // our own doorway
+    if (b.y + b.h > d.y) continue;                                                  // must be ABOVE it, not beside it
+    const overlap = Math.min(b.x + b.w, d.x + d.w) - Math.max(b.x, d.x);
+    if (overlap >= b.w * OTHER_DOOR_OVERLAP) return true;
+  }
+  return false;
+}
+
 function disowned(b, label) {
   if (NEIGHBOUR_OWNED.test(label)) return true;
   if (NEIGHBOUR_NEARBY.test(label)) return b.x <= 1 || b.x + b.w >= 99;
@@ -645,9 +684,19 @@ function neighboursRoofWindow(b, roofLine) {
   return atEdge && (b.y + b.h) <= roofLine;
 }
 
-function windowCandidates(detections) {
+function windowCandidates(detections, aspectRatio = null) {
   const subject = subjectBox(detections || []);
   const roofLine = roofLineY(detections);
+  /* Every doorway in shot, and which one is ours. Optional throughout: a
+     caller with no aspect ratio gets exactly the behaviour it got before this
+     rule existed. */
+  const doorBoxes = (detections || [])
+    .filter(d => d?.type === 'door-front')
+    .map(d => box(d))
+    .filter(Boolean);
+  const ourDoor = (isFiniteNumber(aspectRatio) && aspectRatio > 0 && doorBoxes.length > 1)
+    ? (doorReference(detections || [], aspectRatio) || {}).b || null
+    : null;
   /* The doorway, for telling a fanlight from a window. Taken straight off the
      detections rather than through doorReference, because this wants where the
      door is and not whether it is fit to measure against — a door too oddly
@@ -671,6 +720,9 @@ function windowCandidates(detections) {
     /* The model's own word on whose house it is, which a subject box cannot
        know and geometry cannot see. */
     if (disowned(b, String(d?.label || ''))) { neighbours++; notOurs.push(b); continue; }
+    /* And the same finding from the layout, for the runs where the model does
+       not say it in words. */
+    if (aboveAnotherFrontDoor(b, ourDoor, doorBoxes)) { neighbours++; notOurs.push(b); continue; }
     if (isSidelight(d)) { sidelights++; continue; }
     if (isFanlight(b, String(d?.label || ''), doorB)) { sidelights++; continue; }
     const label = String(d?.label || '');
@@ -739,8 +791,8 @@ function windowCandidates(detections) {
    summary under the photograph counted every box with "window" in its type
    or label, so it said 7 while the estimate was built on something else —
    the same number worked out twice, differently. */
-function frontWindowCount(detections) {
-  return windowCandidates(detections).kept.length;
+function frontWindowCount(detections, aspectRatio = null) {
+  return windowCandidates(detections, aspectRatio).kept.length;
 }
 
 /* How many of those units are bays.
@@ -783,12 +835,12 @@ function publishedRange(result) {
  * Same judgement as the count, deliberately. If a window is not theirs to be
  * charged for it is not theirs to be repainted, and the two answers should
  * never be able to disagree. */
-function neighbourWindowBoxes(detections) {
-  return windowCandidates(detections).notOurs;
+function neighbourWindowBoxes(detections, aspectRatio = null) {
+  return windowCandidates(detections, aspectRatio).notOurs;
 }
 
-function frontBayCount(detections) {
-  return windowCandidates(detections).bays;
+function frontBayCount(detections, aspectRatio = null) {
+  return windowCandidates(detections, aspectRatio).bays;
 }
 
 function measureWindows({ detections, aspectRatio, bands }) {
@@ -796,7 +848,7 @@ function measureWindows({ detections, aspectRatio, bands }) {
   const door = doorReference(detections, aspectRatio);
   if (!door) return null;
 
-  const { kept, duplicates, sidelights, neighbours, panesMerged } = windowCandidates(detections);
+  const { kept, duplicates, sidelights, neighbours, panesMerged } = windowCandidates(detections, aspectRatio);
 
   const doorTop = door.b.y;
   const windows = [];

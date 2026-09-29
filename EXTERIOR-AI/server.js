@@ -1349,6 +1349,10 @@ function imageFingerprint(buffer, elevation = 'front') {
     .digest('hex');
 }
 
+/* Frame shape from the image bytes. Null when the size is unknown, which is
+   what every caller downstream already treats as "no opinion". */
+const aspectRatioOf = (size) => (size && size.height > 0 ? size.width / size.height : null);
+
 function saveDetectionRecord(detections, size, elevation = 'front') {
   const id = crypto.randomUUID();
   detectionRecords.set(id, {
@@ -2215,8 +2219,8 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
     canMeasure: record.detections.some(d => d.type === 'cladding'),
     scaleReference: record.detections.some(d => d.type === 'door-front') && record.aspectRatio !== null,
     // What pricing will count, so the page does not count it a second way.
-    frontWindowCount: glazing.frontWindowCount(record.detections),
-    frontBayCount: glazing.frontBayCount(record.detections),
+    frontWindowCount: glazing.frontWindowCount(record.detections, record.aspectRatio),
+    frontBayCount: glazing.frontBayCount(record.detections, record.aspectRatio),
     houseType: houseTypeFrom(record.detections),
     /* Where this house is, when the detections can say. Null whenever they
        cannot — see geometry.subjectBox and its guards.
@@ -2521,8 +2525,8 @@ For houseType, judge it from what the photograph shows: a gap on both sides is d
   res.json({
     elevation: 'front',
     detections: forDisplay(detections), detectionId, canMeasure: hasWall, scaleReference: hasDoor && !!size,
-    frontWindowCount: glazing.frontWindowCount(detections),
-    frontBayCount: glazing.frontBayCount(detections),
+    frontWindowCount: glazing.frontWindowCount(detections, aspectRatioOf(size)),
+    frontBayCount: glazing.frontBayCount(detections, aspectRatioOf(size)),
     subjectBox: subjectBoxFor(detections),
     houseType: houseTypeFrom(detections),
   });
@@ -2828,7 +2832,10 @@ async function detectionsForRestore({ detectionId, fingerprint }, waitMs = RESTO
   for (;;) {
     const id = (detectionId && detectionRecords.has(detectionId)) ? detectionId : detectionByImage.get(fingerprint);
     const record = id ? detectionRecords.get(id) : null;
-    if (record) return record.detections || [];
+    /* The frame shape travels with the boxes now. Without it the mask cut
+       cannot ask which of two front doors is this customer's, and stands down
+       — see aboveAnotherFrontDoor in glazing.js. */
+    if (record) return { detections: record.detections || [], aspectRatio: record.aspectRatio ?? null };
     if (Date.now() >= deadline) return null;
     await new Promise(r => setTimeout(r, 500));
   }
@@ -2877,7 +2884,9 @@ async function keepRender(replicateUrl, restore = null) {
      prompt problem any more, and for the cases it leaves alone. Before
      storing, so the picture, the share link and the download all agree. */
   if (restore) {
-    const detections = await detectionsForRestore(restore);
+    const found = await detectionsForRestore(restore);
+    const detections = found ? found.detections : null;
+    const detectionAspectRatio = found ? found.aspectRatio : null;
     const common = { renderMime: mime, original: restore.original, originalMime: restore.originalMime, detections };
     if (!detections) {
       obs.record('render', 'kept door not restored', { reason: 'no detection record for this photograph' });
@@ -2911,7 +2920,7 @@ async function keepRender(replicateUrl, restore = null) {
               render: bytes, ...common, mask: restore.mask, maskMime: restore.maskMime,
               /* Same rule that decided the count decides this. A window we
                  will not charge for is a window we will not repaint. */
-              notOurs: glazing.neighbourWindowBoxes(detections),
+              notOurs: glazing.neighbourWindowBoxes(detections, detectionAspectRatio),
             })
           : { restored: false, reason: 'no mask' };
         if (masked.restored) {
@@ -3197,8 +3206,9 @@ async function judgeRender(url, trades, original) {
   // An image we cannot read is not worth waiting on detection for.
   const probe = [{ x_pct: 0, y_pct: 0, w_pct: 1, h_pct: 1 }];
   if (changedShare({ render: bytes, renderMime: mime, original: original.buffer, originalMime: original.mime, boxes: probe }) === null) return null;
-  const detections = await detectionsForRestore(original, 15_000);
-  if (!detections) return null;
+  const found = await detectionsForRestore(original, 15_000);
+  if (!found) return null;
+  const detections = found.detections;
   const missed = [];
   let worst = Infinity;
   for (const trade of trades) {

@@ -25,18 +25,32 @@ before(async () => { await require('./helpers/server-ready')(BASE); });
 const door = [{ type: 'door-front', label: 'Front Door', confidence: 0.9, x_pct: 62, y_pct: 54, w_pct: 10, h_pct: 30 }];
 
 test('found by detectionId when the page has one', async () => {
-  detectionRecords.set('det-a', { detections: door });
-  assert.deepStrictEqual(await detectionsForRestore({ detectionId: 'det-a', fingerprint: 'none' }, 0), door);
+  detectionRecords.set('det-a', { detections: door, aspectRatio: 0.75 });
+  const found = await detectionsForRestore({ detectionId: 'det-a', fingerprint: 'none' }, 0);
+  assert.deepStrictEqual(found.detections, door);
+  /* The frame shape travels with the boxes. Without it the mask cut cannot ask
+     which of two front doors is this customer's — see aboveAnotherFrontDoor. */
+  assert.strictEqual(found.aspectRatio, 0.75, 'the frame shape must come back with the detections');
 });
 
 test('found by the photograph when the render set off before detection finished', async () => {
   // The render arrives first; detection lands 700ms later.
   const pending = detectionsForRestore({ detectionId: null, fingerprint: 'fp-late' }, 5000);
   setTimeout(() => {
-    detectionRecords.set('det-late', { detections: door });
+    detectionRecords.set('det-late', { detections: door, aspectRatio: 0.75 });
     detectionByImage.set('fp-late', 'det-late');
   }, 700);
-  assert.deepStrictEqual(await pending, door);
+  assert.deepStrictEqual((await pending).detections, door);
+});
+
+test('a record with no frame shape still answers, with none', async () => {
+  /* Records are held in memory across a deploy's worth of uploads and older
+     ones predate aspectRatio. Null is a supported answer everywhere: the
+     two-front-doors rule stands down rather than guessing which door is ours. */
+  detectionRecords.set('det-old', { detections: door });
+  const found = await detectionsForRestore({ detectionId: 'det-old', fingerprint: 'none' }, 0);
+  assert.deepStrictEqual(found.detections, door);
+  assert.strictEqual(found.aspectRatio, null);
 });
 
 test('gives up, rather than hanging the render, when detection never lands', async () => {
