@@ -448,6 +448,15 @@
     <p class="mt-3 text-lg leading-7 text-zinc-700 max-w-[46ch]">Start with one photo of the front. Try new windows, doors, roofline, walls and more on your actual home.</p>
     <button type="button" class="mt-5 cta w-full sm:w-auto px-7 py-4 rounded-full text-lg font-semibold transition min-h-[52px]" onclick="goToUpload()">Upload my house</button>
     <p class="mt-3 text-base text-zinc-700">Free &middot; No measuring &middot; No sales call</p>
+    <!-- The privacy answer at the moment of deciding (Mike, 29 September).
+         This is a photograph of someone's home; the explanation lived in the
+         FAQ, below the fold. Folded, so the first screen stays simple, and it
+         opens in place rather than sending anyone away from the button.
+         Says what legal/privacy.html says — test/photo-privacy.test.js. -->
+    <details class="photo-privacy mt-1 text-base text-zinc-700 max-w-[60ch]">
+      <summary class="cursor-pointer py-2.5 leading-6">Your original photo isn&rsquo;t stored. <span class="underline underline-offset-2">See how your photo is used</span></summary>
+      <p class="pb-2 leading-7 text-zinc-600">Your photo goes to the AI services that find the windows, doors, roof and walls and draw the new look. Once your picture has been made, the photo is deleted. It is never published, sold, or used to train anybody&rsquo;s AI. We keep the picture we make for you, your choices, and &mdash; for seven days &mdash; a fingerprint of the photo with its measurements, so the same photo always gives you the same price. <a href="/privacy#your-photograph" class="underline underline-offset-2">Full privacy notice</a></p>
+    </details>
     </div>
     <!-- What the product does, at a glance, above the choice (28 September).
 
@@ -637,7 +646,7 @@
              retention promise we do not implement is the exact failure this
              line is meant to reassure people about, so it makes the claim
              privacy.html already makes and links to the detail. -->
-        <p class="mt-2 text-base text-white/80">Your original photo isn&rsquo;t saved &mdash; we keep the image we generate, not your photograph. <a href="#tech-heading" class="inline-block py-3 underline underline-offset-2 hover:text-white/85">How your photo is used</a></p>
+        <p class="mt-2 text-base text-white/80">Your original photo isn&rsquo;t saved &mdash; we keep the image we generate, not your photograph. <a href="/privacy#your-photograph" class="inline-block py-3 underline underline-offset-2 hover:text-white/85">See how your photo is used</a></p>
 
         <!-- The fairness line stays in the hero as a hook; the full section
              lives further down the page.
@@ -1545,9 +1554,10 @@
          scale comes from, that one elevation is being extrapolated to a whole
          house, and that the number carries a stated range.
 
-         The id stays `tech-heading` because the hero and the upload panel both
-         link here for "How your photo is used", so the privacy answer stays in
-         this section too, at the foot, with the link out. -->
+         The hero and the upload panel used to link here for "How your photo
+         is used". Since 29 September they open the answer in place and link to
+         /privacy#your-photograph; the short privacy line stays at the foot of
+         this section as well. -->
     <p class="text-base text-zinc-600 font-semibold">Accuracy</p>
     <h2 id="tech-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">What a photo of the front can and can’t tell us</h2>
     <!-- Copy-edit handoff §11. Its opening is used; its instruction to drop
@@ -4225,9 +4235,20 @@ function buildUploadDetect() {
            which is no use to somebody deciding here. It says only what is
            true: privacy.html promises the photograph is used and then deleted,
            and what is kept is the image we generate. */
-        h('p', { className: 'mt-3 text-base leading-7 text-zinc-600' }, [
-          'Your original photo isn’t saved — we keep the image we generate, not your photograph. ',
-          h('a', { href: '#tech-heading', className: 'inline-block py-3 underline underline-offset-2' }, 'How your photo is used'),
+        /* 29 September: the link here went to #tech-heading — the section on
+           what a photo can measure, which is on /how-we-price and not on this
+           page at all, so on /design the tap did nothing. The answer now
+           opens in place, next to the button, so nobody leaves the upload to
+           read it. */
+        h('details', { className: 'photo-privacy mt-3 text-base text-zinc-600' }, [
+          h('summary', { className: 'cursor-pointer py-2.5 leading-6' }, [
+            'Your original photo isn’t stored. ',
+            h('span', { className: 'underline underline-offset-2' }, 'See how your photo is used'),
+          ]),
+          h('p', { className: 'pb-2 leading-7' }, [
+            'Your photo goes to the AI services that find the windows, doors, roof and walls and draw the new look. Once your picture has been made, the photo is deleted. It is never published, sold, or used to train anybody’s AI. We keep the picture we make for you, your choices, and — for seven days — a fingerprint of the photo with its measurements, so the same photo always gives you the same price. ',
+            h('a', { href: '/privacy#your-photograph', className: 'underline underline-offset-2' }, 'Full privacy notice'),
+          ]),
         ]),
         /* Hidden while the photo is being read. "Choose a photo" would throw
            away a request already in flight and "Start again" is a decision

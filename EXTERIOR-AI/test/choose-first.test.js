@@ -25,7 +25,7 @@ test('the homepage opens with six product boxes, each to a journey', () => {
   const at = html.indexOf('id="choose-heading"');
   const section = html.slice(html.lastIndexOf('<section', at), html.indexOf('</section>', at));
   const hrefs = [...section.matchAll(/<a href="([^"]+)"/g)].map(m => m[1]);
-  assert.deepStrictEqual(hrefs.filter(h => h !== '/how-we-price'), [
+  assert.deepStrictEqual(hrefs.filter(h => h !== '/how-we-price' && !h.startsWith('/privacy')), [
     '/design?journey=windows', '/design?journey=doors', '/design?journey=roofline',
     '/design?journey=roof', '/design?journey=cladding', '/cost/conservatory-cost-uk',
   ]);
