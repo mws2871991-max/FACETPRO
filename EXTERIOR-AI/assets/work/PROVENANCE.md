@@ -50,6 +50,32 @@ generating redraws every pixel even when it is the same house.
 It cannot tell a good generated pair from a bad one, and says so rather than
 guessing. The three questions below are still yours.
 
+## What the machine could settle — 29 September 2026
+
+`scripts/check-gallery-pair.js` was run on all three pairs. The calibrated
+number is the quietest sixth: low means somewhere in the frame is genuinely
+untouched, which generated imagery never manages because it redraws every
+pixel even when it is the same house. A photograph re-finished scores under 8;
+generated scores over 13.
+
+| Pair | Unchanged pixels | Quietest sixth | Verdict |
+|---|---|---|---|
+| hero | 42.6% | **2.6** | reads as a photograph |
+| newbuild | 44.0% | **7.8** | reads as a photograph |
+| tilehung | 40.3% | **1.8** | reads as a photograph |
+
+All three: "No machine-detectable problem." So **"Photographs, not renders"
+is substantiable** and stays on the page.
+
+**What this does NOT settle, and the page no longer claims:** whose job each
+one was. The caption said "Every photograph here is a job this team has done"
+— an objective claim about services, with UNKNOWN against every row below it.
+It now reads "Every picture here is a photograph of a real house, before and
+after — not a render, and not a showroom", which is exactly what the table
+above supports and no more.
+
+Answer the two columns below and the stronger claim can come back.
+
 ## Fill this in
 
 | File | Real job? | Address or job ref | Date | Work carried out | Photographer | Homeowner permission held |
