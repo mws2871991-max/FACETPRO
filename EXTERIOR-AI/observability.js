@@ -136,6 +136,27 @@ function timingSummary() {
 
 /* kind is the thing you would group by when deciding what to fix first:
    'render', 'detect', 'delivery', 'storage', 'request', 'crash'. */
+/* Where events go to outlive the process, when somebody wires one up.
+ *
+ * Injected rather than required, so this file keeps depending on nothing. That
+ * is not tidiness: it is what lets the ring keep working when the database is
+ * down, which is exactly the moment an operational record matters most. The
+ * server owns the wiring; this owns the scrubbing and the ring.
+ *
+ * A sink that throws, rejects, or hangs must cost nothing. The caller is a
+ * failure being recorded, and a failure to record a failure must not become a
+ * second one. */
+let sink = null;
+function setSink(fn) { sink = typeof fn === 'function' ? fn : null; }
+
+function toSink(entry) {
+  if (!sink) return;
+  try {
+    const p = sink(entry);
+    if (p && typeof p.catch === 'function') p.catch(() => {});
+  } catch (_) { /* deliberately swallowed — see setSink */ }
+}
+
 function record(kind, message, detail) {
   const k = String(kind || 'unknown');
   counts[k] = (counts[k] || 0) + 1;
@@ -143,7 +164,11 @@ function record(kind, message, detail) {
   lastSeen[k] = at;
   if (!firstSeen[k]) firstSeen[k] = at;
 
-  events.push({ at, kind: k, message: scrubText(message).slice(0, 300), detail: scrubDetail(detail) });
+  const entry = { at, kind: k, message: scrubText(message).slice(0, 300), detail: scrubDetail(detail) };
+  events.push(entry);
+  /* After scrubbing, never before: what is persisted is what an operator may
+     read, and it must have had a homeowner taken out of it first. */
+  toSink(entry);
   /* Oldest out. Two hundred is enough to see a pattern and small enough that
      a crash loop cannot exhaust memory before the platform restarts us. */
   while (events.length > MAX_EVENTS) events.shift();
@@ -151,7 +176,7 @@ function record(kind, message, detail) {
 
 /* Everything an operator wants in one place, and nothing that identifies a
    homeowner. Newest first, because that is what you came to see. */
-function summary({ limit = 50 } = {}) {
+function summary({ limit = 50, history = null } = {}) {
   const byKind = Object.keys(counts).sort((a, b) => counts[b] - counts[a]).map(k => ({
     kind: k, count: counts[k], firstSeen: firstSeen[k], lastSeen: lastSeen[k],
   }));
@@ -162,13 +187,29 @@ function summary({ limit = 50 } = {}) {
     /* Said out loud, because a summary that looks complete and is not is
        worse than none: this is what the running process has seen since it
        started, not a history. A deploy resets it. */
-    retention: 'in memory only; the last ' + MAX_EVENTS + ' events since this process started',
+    /* Said out loud either way. The header of this file promised that when a
+       volume or DATABASE_URL existed we would persist and SAY SO, and a
+       summary that looks complete and is not is worse than none. */
+    retention: Array.isArray(history)
+      ? 'the last ' + MAX_EVENTS + ' events in memory, plus ' + history.length + ' kept in storage across deploys'
+      : 'in memory only; the last ' + MAX_EVENTS + ' events since this process started',
     byKind,
     /* Empty until something has been measured. Deliberately not defaulted to a
        plausible-looking figure: the point of this block is that a number here
        has been observed. */
     timings: timingSummary(),
-    recent: events.slice(-limit).reverse(),
+    /* This process first, then anything older from storage — the question
+       that prompted persisting these was always about a render a few minutes
+       ago, and the deploy in between is precisely what used to lose it.
+       De-duplicated on time and message, because a running process writes to
+       both and would otherwise report everything twice. */
+    recent: (() => {
+      const mine = events.slice(-limit).reverse();
+      if (!Array.isArray(history) || !history.length) return mine;
+      const seen = new Set(mine.map(e => e.at + '|' + e.message));
+      const older = history.filter(e => e && !seen.has(e.at + '|' + e.message));
+      return mine.concat(older).slice(0, limit);
+    })(),
   };
 }
 
@@ -183,4 +224,5 @@ const reset = () => {
   for (const k of Object.keys(outcomes)) delete outcomes[k];
 };
 
-module.exports = { record, time, outcome, timingSummary, summary, reset, MAX_EVENTS, _internals: { scrubText, scrubDetail } };
+module.exports = {
+  setSink, record, time, outcome, timingSummary, summary, reset, MAX_EVENTS, _internals: { scrubText, scrubDetail } };

@@ -479,8 +479,19 @@ module.exports = function opsRoutes({
       };
     } catch (_) { /* an ops page that fails because one panel failed is worse */ }
 
+    /* What happened before this container did.
+ *
+ * The ring in memory starts empty on every deploy, and twice in one day a
+ * question about a live render could not be answered because the deploy that
+ * shipped the answer had cleared the evidence. Read alongside, never instead:
+ * if storage is unreachable the page still shows what this process has seen,
+ * which is the half that matters when the database is the thing that broke. */
+    let history = null;
+    try { history = await store.readOpsEvents(200); }
+    catch (_) { /* an ops page that fails because one panel failed is worse */ }
+
     res.json({
-      ...obs.summary({ limit }),
+      ...obs.summary({ limit, history }),
       usage: { day: usage.day, detect: usage.detect, render: usage.render, caps: DAILY_LIMITS },
       measurement,
       storage: store.hasDb ? 'postgres' : 'jsonl files (lost on restart without a volume)',

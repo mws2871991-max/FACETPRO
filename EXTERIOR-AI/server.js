@@ -10,6 +10,11 @@ const emails = require('./emails');
 const delivery = require('./delivery');
 const retention = require('./retention');
 const obs = require('./observability');
+/* Events outlive the container now. observability.js keeps depending on
+   nothing and is handed somewhere to write; store decides whether that is
+   Postgres or a file. Failures inside the sink are swallowed there, because
+   the caller is a failure being recorded. */
+obs.setSink((ev) => store.appendOpsEvent(ev));
 const installers = require('./installers');
 const withdrawal = require('./withdrawal');
 const routing = require('./routing');
@@ -3953,6 +3958,14 @@ async function runRetention({ dryRun = false } = {}) {
 
     if (p.accessLogExpired) {
       await store.mutate('accessLog', (rows) => rows.filter(r => !retention.isExpired(r, retention.PERIODS.accessLogDays)));
+    }
+    /* Operational events age out like everything else. A fault log is not a
+       reason to keep anything for ever. */
+    try {
+      const opsCutoff = new Date(Date.now() - retention.PERIODS.opsEventDays * retention.DAY).toISOString();
+      summary.opsEventsDeleted = await store.pruneOpsEvents(opsCutoff);
+    } catch (err) {
+      obs.record('storage', 'could not prune the operational events', { reason: err.message });
     }
     // The deletion itself is evidence that the policy is enforced.
     await record('retentionRuns', summary);

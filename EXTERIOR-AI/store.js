@@ -252,6 +252,17 @@ const SCHEMA = [
     coverage_pct REAL
   )`,
 
+  /* Operational events, so a deploy stops erasing the record of what went
+     wrong. observability.js says in its own header that it is a ring in memory
+     "until a volume or DATABASE_URL exists — then persist it and say so", and
+     DATABASE_URL now exists. Twice in one day a question about a live render
+     could not be answered because the deploy that shipped the answer had
+     cleared the evidence. Nothing here identifies a homeowner: observability
+     scrubs before this sees it. */
+  `CREATE TABLE IF NOT EXISTS ops_events (
+    id SERIAL PRIMARY KEY, ts TIMESTAMPTZ NOT NULL, kind TEXT NOT NULL,
+    message TEXT, detail JSONB
+  )`,
   `CREATE TABLE IF NOT EXISTS detection_cache (
     image_hash TEXT PRIMARY KEY, ts TIMESTAMPTZ NOT NULL, aspect_ratio DOUBLE PRECISION, detections JSONB NOT NULL
   )`,
@@ -403,6 +414,9 @@ async function ensureSchema() {
     /* Read on every installer portal load, once per lead in the list, to say
        whether this installer has already decided about it. */
     ['lead_responses_lead_id_idx', 'lead_responses (lead_id)'],
+    /* /api/ops reads the newest events on every load, and the retention sweep
+       deletes by age. */
+    ['ops_events_ts_idx', 'ops_events (ts)'],
   ];
   for (const [name, target] of indexes) {
     try {
@@ -815,6 +829,62 @@ async function readMeasurements(limit = 1000, sinceIso = null) {
   } catch (_) { return []; }
 }
 
+/* The operational record, newest first, for /api/ops to show alongside what
+   this process has seen since it started.
+
+   Kept deliberately small: a few hundred rows answers "what happened to that
+   render an hour ago", which is the question a deploy kept erasing. Anything
+   larger is a log aggregator, and observability.js explains at length why this
+   codebase does not want one. */
+async function readOpsEvents(limit = 200) {
+  const n = Math.max(1, Math.min(1000, Number(limit) || 200));
+  if (pool) {
+    const { rows } = await pool.query(
+      `SELECT ts, kind, message, detail FROM ${SCHEMA_NAME}.ops_events
+        ORDER BY id DESC LIMIT $1`, [n]);
+    return rows.map(r => ({ at: new Date(r.ts).toISOString(), kind: r.kind, message: r.message, detail: r.detail || undefined }));
+  }
+  try {
+    return fs.readFileSync(path.join(DATA_DIR, 'ops-events.jsonl'), 'utf8')
+      .trim().split('\n').filter(Boolean).map(l => JSON.parse(l)).slice(-n).reverse();
+  } catch (_) { return []; }
+}
+
+/* Old events go, on the same schedule as everything else. An operational
+   record is not a reason to keep anything for ever. */
+async function pruneOpsEvents(beforeIso) {
+  if (pool) {
+    const { rowCount } = await pool.query(
+      `DELETE FROM ${SCHEMA_NAME}.ops_events WHERE ts < $1`, [beforeIso]);
+    return rowCount || 0;
+  }
+  const file = path.join(DATA_DIR, 'ops-events.jsonl');
+  try {
+    const all = fs.readFileSync(file, 'utf8').trim().split('\n').filter(Boolean).map(l => JSON.parse(l));
+    const kept = all.filter(r => String(r?.at || '') >= beforeIso);
+    if (kept.length !== all.length) fs.writeFileSync(file, kept.map(r => JSON.stringify(r)).join('\n') + (kept.length ? '\n' : ''));
+    return all.length - kept.length;
+  } catch (_) { return 0; }
+}
+
+/* One event, written without anything waiting for it. Never throws: the
+   caller is observability.record(), which runs inside request handling and
+   whose entire job is that a failure has somewhere to go. A failure to record
+   a failure must not become a second one. */
+async function appendOpsEvent(ev) {
+  try {
+    if (pool) {
+      await pool.query(
+        `INSERT INTO ${SCHEMA_NAME}.ops_events (ts, kind, message, detail) VALUES ($1,$2,$3,$4)`,
+        [ev.at, String(ev.kind || 'unknown'), String(ev.message || '').slice(0, 300),
+         ev.detail === undefined ? null : JSON.stringify(ev.detail)]);
+      return true;
+    }
+    fs.appendFileSync(path.join(DATA_DIR, 'ops-events.jsonl'), JSON.stringify(ev) + '\n');
+    return true;
+  } catch (_) { return false; }
+}
+
 async function readFunnel(days = 30) {
   const since = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
   if (pool) {
@@ -1024,6 +1094,7 @@ async function end() {
 }
 
 module.exports = {
+  readOpsEvents, appendOpsEvent, pruneOpsEvents,
   ensureSchema, append, readAll, replaceAll, mutate, end, getResume, DATA_DIR, putRender, getRender, deleteRenders, staleRenderIds, hasDb: !!pool,
   getDetectionCache, putDetectionCache,
   countStage, readFunnel, readFunnelDays, recordMeasurement, readMeasurements,

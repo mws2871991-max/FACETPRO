@@ -34,6 +34,11 @@ const PERIODS = {
   sharedEnquiryDays: 730,     // 24 months from last contact
   consentRecordDays: 2191,    // 6 years
   accessLogDays: 365,         // 12 months
+  /* Operational events. Long enough to answer "what happened to that render
+     last week" and to see a pattern across a few deploys, short enough that a
+     fault log never becomes a history of the site. Nothing in it identifies a
+     homeowner — observability scrubs before storage sees it. */
+  opsEventDays: 30,
 };
 
 const age = (iso, now) => {
