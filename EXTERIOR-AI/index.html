@@ -312,7 +312,7 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
           "name": "How long does it take?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Detecting the windows, doors, roof and cladding takes about 30 seconds. Colour changes and prices update instantly. A full photorealistic render of your home can take up to a minute."
+            "text": "Finding the windows, doors, roof and cladding takes about half a minute. Colour changes and prices update instantly. A full photorealistic render of your home can take up to a minute."
           }
         },
         {
@@ -1234,7 +1234,7 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
 
       <details class="group">
         <summary class="flex items-center justify-between gap-4 py-4"><h3 class="text-lg font-medium">How long does it take?</h3><span class="chev text-zinc-600 transition-transform" aria-hidden="true">⌄</span></summary>
-        <p class="pb-4 text-lg leading-6 text-zinc-600 max-w-[72ch]">Finding the windows, doors, roof and cladding takes about 30 seconds. Colour changes and prices update instantly. A full photorealistic render of your home can take up to a minute.</p>
+        <p class="pb-4 text-lg leading-6 text-zinc-600 max-w-[72ch]">Finding the windows, doors, roof and cladding takes about half a minute. Colour changes and prices update instantly. A full photorealistic render of your home can take up to a minute.</p>
       </details>
 
       <details class="group">
@@ -2093,6 +2093,7 @@ const state = {
   /* Whether that came from a person. The photograph may propose a house type;
      only a tap on the picker or a resumed design settles one. */
   houseTypeChosen: false,
+  houseTypeEditing: false,
   /* Whether the photograph told us the house type. False when detection
      could not see both sides (glazing.houseTypeFromEvidence) — the type on
      screen is then our default, and the page must say so. */
@@ -4008,7 +4009,7 @@ function buildUploadDetect() {
       h('p', {
         className: `${detecting ? 'text-xl text-white' : 'text-base text-white/80'} mb-2 font-semibold`,
         role: 'status', 'aria-live': 'polite',
-      }, detecting ? 'Looking at your house — this takes about 20 seconds' : 'We found your home'),
+      }, detecting ? 'Looking at your house — this takes about half a minute' : 'We found your home'),
       detecting
         ? h('p', { className: 'mb-2 text-base text-emerald-300' }, '✓ Photo received')
         : null,
@@ -4220,7 +4221,14 @@ function buildUploadDetect() {
            the page is, and before this nothing did. */
         h('h2', { id: 'design-heading', 'aria-level': '1', className: 'mt-1 serif text-[26px] md:text-[32px] tracking-tight' }, 'Let’s see what your home could become'),
       ]),
-      h('span', { className: 'text-base px-2.5 py-1 rounded-full bg-[#FFF7ED] border border-zinc-200 font-semibold' }, 'Takes about 30 seconds'),
+      /* Photo to picture, not one step of it. Measured on the live service on 29
+         September: reading the photograph takes about 35 seconds and the render
+         another 7 to 15, so a minute is the honest figure and it is the only
+         one this page now gives. The badge said 30 seconds, the FAQ said 30,
+         and the spinner somebody actually watches said 20 — a number the site
+         overran on every upload it has ever handled. Where two figures
+         disagree the reader believes the smallest one, and we broke it. */
+      h('span', { className: 'text-base px-2.5 py-1 rounded-full bg-[#FFF7ED] border border-zinc-200 font-semibold' }, 'Takes about a minute'),
     ]),
     /* Guidance for somebody deciding. Once the photograph is in and being
        read, it is forty-four pixels explaining what is already happening. */
@@ -5248,6 +5256,49 @@ const HOUSE_TYPE_ARTICLE = (id) => {
 
 /* Picker used in two places — here and in the measure step — both writing to
    state.houseType, so they can never disagree. */
+/* Asked once, then shown.
+ *
+ * The estimate panel put the full five-button chooser under "What kind of home
+ * is it?" — on a journey that has already asked exactly that, as question one,
+ * and recorded the answer. Being asked the same question twice reads as the
+ * first answer not having landed, and the launch run-through flagged it as
+ * such.
+ *
+ * So once they have told us, the panel states it with a Change link and gets
+ * out of the way. Until then it asks, because the answer genuinely matters:
+ * it picks the plausibility band the wall measurement is checked against AND
+ * the multiplier that turns a front elevation into a whole house.
+ *
+ * Only when they CHOSE it. A type read off the photograph is ours to be wrong
+ * about, so that one keeps the buttons — the same distinction the summary
+ * line makes between "You told us it's" and "it looks like". */
+function houseTypeRow(opts) {
+  if (!state.houseTypeChosen) {
+    return [
+      h('div', { className: 'text-base text-zinc-600 font-semibold' }, 'What kind of home is it?'),
+      h('div', { className: 'mt-2' }, buildHouseTypePicker(opts)),
+    ];
+  }
+  if (state.houseTypeEditing) {
+    return [
+      h('div', { className: 'text-base text-zinc-600 font-semibold' }, 'What kind of home is it?'),
+      h('div', { className: 'mt-2' }, buildHouseTypePicker(opts)),
+    ];
+  }
+  const label = (HOUSE_TYPES.find(t => t.id === state.houseType) || {}).label || 'Semi-detached';
+  return [
+    h('div', { className: 'flex items-center gap-2 flex-wrap' }, [
+      h('span', { className: 'text-base text-zinc-600' }, 'Your home:'),
+      h('span', { className: 'text-base text-zinc-900 font-semibold' }, label),
+      h('button', {
+        type: 'button',
+        className: 'underline underline-offset-4 text-base text-zinc-600 hover:text-zinc-900 min-h-[44px]',
+        onClick: () => { state.houseTypeEditing = true; render(); },
+      }, 'Change'),
+    ]),
+  ];
+}
+
 function buildHouseTypePicker({ short } = {}) {
   return h('div', { className: 'flex flex-wrap gap-2' }, HOUSE_TYPES.map(t =>
     h('button', {
@@ -5269,6 +5320,7 @@ function buildHouseTypePicker({ short } = {}) {
         state.houseType = t.id;
         /* Told, not guessed — so a later photograph never overrides it. */
         state.houseTypeChosen = true;
+        state.houseTypeEditing = false;   // answered: back to showing it
         state.measurement = null;      // prior and multiplier both change
         state.useMeasurement = false;
         /* And measure the photograph again, as the new type.
@@ -5432,8 +5484,7 @@ function buildGlazingLedPanel() {
     // Light card so the dark-filled selected chip has something to read
     // against inside the dark estimate panel.
     h('div', { className: 'mt-4 rounded-xl bg-[#FDFCF9] border border-zinc-200 p-3' }, [
-      h('div', { className: 'text-base text-zinc-600 font-semibold' }, 'What kind of home is it?'),
-      h('div', { className: 'mt-2' }, buildHouseTypePicker({ short: true })),
+      ...houseTypeRow({ short: true }),
     ]),
 
     h('div', { className: 'mt-5' }, [
@@ -5869,8 +5920,7 @@ function buildPricePanel(price, priceRow) {
       // Light card so the dark-filled selected chip has something to read
       // against inside the dark estimate panel.
       h('div', { className: 'mt-4 rounded-xl bg-[#FDFCF9] border border-zinc-200 p-3' }, [
-        h('div', { className: 'text-base text-zinc-600 font-semibold' }, 'What kind of home is it?'),
-        h('div', { className: 'mt-2' }, buildHouseTypePicker({ short: true })),
+        ...houseTypeRow({ short: true }),
       ]),
 
       h('div', { className: 'mt-5' }, [

@@ -19,7 +19,10 @@ const withoutComments = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\
 test('changing the house type measures the photograph again', () => {
   /* It cleared the measurement and never re-ran it: tapping Semi on a
      detached reading turned photo_door 90 m² into the typical 85. */
-  const at = html.indexOf('state.houseTypeChosen = true;\n        state.measurement = null;');
+  /* Anchored on the assignment alone: a line now sits between it and the
+     measurement reset (houseTypeEditing, which closes the Change row once the
+     question is answered). */
+  const at = html.indexOf('state.houseTypeChosen = true;\n        state.houseTypeEditing = false;');
   assert.ok(at > 0, 'the house-type picker handler has moved — find it and re-point this test');
   const handler = withoutComments(html.slice(at, at + 2500));
   const measure = handler.indexOf('await autoMeasure()');
