@@ -20,7 +20,7 @@ const { isTestTraffic } = require('./testtraffic');
 
 const { buildRenderPrompt } = require('./renderprompt');
 const { restoreDoor, restoreSurroundings, restoreOutsideMask, correctFrameColour, drawGeorgianBars, changedShare } = require('./hold');
-const { fetchWindowMask, maskWithinGrace } = require('./windowmask');
+const { fetchWindowMask, maskWithinGrace, GRACE_MS } = require('./windowmask');
 /* How long a mask started at upload may take. Generous, because nothing is
    waiting on it — a cold start at 83s still lands well before most people have
    picked a colour, and the render only ever waits GRACE_MS for whatever state
@@ -3571,6 +3571,17 @@ app.post('/api/render', renderLimiter, async (req, res) => {
 
     /* Waits a few seconds for it, never the whole cold start. See GRACE_MS. */
     const mask = await maskWithinGrace(maskPromise);
+    /* Say so when it was wanted and did not arrive.
+ *
+ * The grace expiring is not a failure of fetchWindowMask, so it produces no
+ * note of its own — and the render then quietly keeps neither the bay nor the
+ * colour, with nothing in the log to say why. Found exactly that way: a live
+ * render came back bright green with every non-window surface correct, one
+ * render record about a door, and no word at all about the mask. A silent
+ * skip on the step that decides what the customer sees is worth a line. */
+    if (maskWanted && !mask) {
+      obs.record('render', 'window mask not ready in time', { graceMs: GRACE_MS });
+    }
     /* Kept on the record so the next colour on this photograph is instant, and
        so a mask that arrived after the grace is not thrown away — the person
        who tries anthracite next gets the one this render gave up waiting for. */

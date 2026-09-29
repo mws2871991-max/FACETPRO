@@ -400,3 +400,15 @@ test('the warm-up outlasts a cold start, which is the only time it matters', () 
   assert.ok(Number(m[1].replace(/_/g, '')) >= MAX_WAIT_MS,
     'the warm-up budget is below the ceiling, so the ceiling never applies');
 });
+
+test('a mask that was wanted and did not arrive says so', () => {
+  /* The grace expiring is not a failure of fetchWindowMask, so it makes no
+     note of its own. Found live: a render came back bright green with every
+     non-window surface correct, one record about a door, and nothing at all
+     about the mask — so neither the bay hold nor the colour correction had
+     run, and the log could not say why. The step that decides what the
+     customer sees does not get to skip silently. */
+  const src = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  assert.match(src, /if \(maskWanted && !mask\) \{[\s\S]{0,160}window mask not ready in time/,
+    'a mask that never arrived is skipped without a word');
+});
