@@ -473,25 +473,18 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
     </div>
     <!-- What the product does, at a glance, above the choice.
 
-         29 September: Mike chose this pair for the homepage — the same garden
-         room with white windows, then black. Both halves are AI-generated
-         illustrations (Mike's before_after_windows.webp, labels cropped out),
-         not a customer's house and not a Facet Pro render, so the caption and
-         the alt text say "Illustration". It replaced a real Facet Pro render
-         (74bbd507…), which stays on /how-we-price. See
+         29 September, evening: Mike chose a single feature house for the first
+         screen in place of the garden-room before/after — anthracite windows,
+         a bay and a red composite door on a brick house. It is an AI-generated
+         illustration (supplied by Mike), not a customer's house and not a
+         Facet Pro render, so the caption and the alt text say "Illustration".
+         The garden-room pair still opens the Windows journey. See
          assets/work/PROVENANCE.md and test/homepage-pair.test.js. -->
     <figure class="mt-4 lg:mt-0 max-w-[640px]">
-      <div class="grid grid-cols-2 gap-2 sm:gap-3">
-        <div class="relative rounded-xl overflow-hidden border border-zinc-200 bg-white">
-          <img src="/assets/work/home-windows-white-sm.jpg" srcset="/assets/work/home-windows-white-400.jpg 400w, /assets/work/home-windows-white-sm.jpg 600w, /assets/work/home-windows-white.jpg 1200w" fetchpriority="high" sizes="(min-width: 1024px) 280px, (min-width: 640px) 320px, 34vw" alt="Illustration: a red-brick garden room with white sash windows" width="600" height="450" loading="eager" decoding="async" class="w-full aspect-[4/3] object-cover bg-zinc-100">
-          <span class="absolute bottom-2 left-2 text-base px-2 py-0.5 rounded-full bg-white text-zinc-900 font-semibold border border-zinc-200">Before</span>
-        </div>
-        <div class="relative rounded-xl overflow-hidden border border-zinc-200 bg-white">
-          <img src="/assets/work/home-windows-black-sm.jpg" srcset="/assets/work/home-windows-black-400.jpg 400w, /assets/work/home-windows-black-sm.jpg 600w, /assets/work/home-windows-black.jpg 1200w" fetchpriority="high" sizes="(min-width: 1024px) 280px, (min-width: 640px) 320px, 34vw" alt="Illustration: the same garden room with black windows" width="600" height="450" loading="eager" decoding="async" class="w-full aspect-[4/3] object-cover bg-zinc-100">
-          <span class="absolute bottom-2 left-2 text-base px-2 py-0.5 rounded-full bg-emerald-600 text-white font-semibold">After</span>
-        </div>
+      <div class="rounded-xl overflow-hidden border border-zinc-200 bg-white">
+        <img src="/assets/work/home-feature-22-800.jpg" srcset="/assets/work/home-feature-22-480.jpg 480w, /assets/work/home-feature-22-800.jpg 800w, /assets/work/home-feature-22-1200.jpg 1200w" fetchpriority="high" sizes="(min-width: 1024px) 580px, (min-width: 640px) 640px, 60vw" alt="Illustration: a brick house with anthracite windows, a bay window and a red composite front door" width="800" height="533" loading="eager" decoding="async" class="w-full aspect-[3/2] object-cover bg-zinc-100">
       </div>
-      <figcaption class="mt-2 text-base leading-7 text-zinc-600">Illustration: the same windows in white, then black. Facet Pro shows the change on a photo of your own house.</figcaption>
+      <figcaption class="mt-2 text-base leading-7 text-zinc-600">Illustration: anthracite windows and a red composite front door. Facet Pro shows changes like these on a photo of your own house.</figcaption>
       <!-- The second half of the promise, straight after the picture. It goes
            to the same place as Upload my house, because the price is priced
            from their photograph. -->

@@ -15,6 +15,16 @@ The files carry no EXIF and no origin markers — they have been stripped — so
 the provenance cannot be recovered from the images. It has to come from whoever
 put them there.
 
+## The homepage feature house: `home-feature-22-*.jpg` (29 September 2026, evening)
+
+Chosen by Mike as the single picture on the homepage's first screen, replacing the garden-room before/after pair below (which still opens the Windows journey).
+
+| File | What it is | Source |
+|---|---|---|
+| `home-feature-22-1200.jpg`, `-800`, `-480` | **AI-generated illustration.** Not a customer's house, not a Facet Pro render. Captioned "Illustration"; alt text starts "Illustration:". | Image supplied by Mike in the chat, 1920×1280, resized, lightly sharpened |
+
+Never caption it as a real job or as something Facet Pro made, and never put it in Real Homes.
+
 ## The homepage pair: `home-windows-white*.jpg` / `home-windows-black*.jpg` (29 September 2026)
 
 Chosen by Mike as the main before/after on the homepage, replacing the detached pair below (which stays on /how-we-price).

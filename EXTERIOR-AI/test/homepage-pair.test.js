@@ -17,9 +17,9 @@ test('the homepage pair is labelled an illustration, in the caption and the alt 
   const at = html.indexOf('id="choose-heading"');
   const fig = html.slice(html.indexOf('<figure', at), html.indexOf('</figure>', at));
   const imgs = [...fig.matchAll(/<img src="([^"]+)"[^>]*alt="([^"]+)"/g)];
-  assert.strictEqual(imgs.length, 2);
+  assert.strictEqual(imgs.length, 1);
   for (const [, src, alt] of imgs) {
-    assert.match(src, /home-windows-(white|black)-sm\.jpg$/);
+    assert.match(src, /home-feature-22-800\.jpg$/);
     assert.ok(fs.existsSync(path.join(root, src)), `${src} is missing`);
     assert.match(alt, /^Illustration:/);
   }
