@@ -1,0 +1,177 @@
+{
+ "house": "hero-before",
+ "note": "Edwardian detached, two-storey curved bay, tile hanging over brick. The front door and a first-floor window sit recessed to the left, cut by the frame edge \u2014 the pair Sonnet missed on all fourteen runs.",
+ "aspectRatio": 0.75,
+ "countedByHand": {
+  "windows": 3,
+  "bays": 2
+ },
+ "source": "Live /api/detect, Opus, 29 September 2026. No image: this repository is public and these are real homes.",
+ "detections": [
+  {
+   "type": "roof",
+   "h_pct": 8.5,
+   "label": "Main Roof",
+   "w_pct": 90,
+   "x_pct": 4,
+   "y_pct": 1,
+   "confidence": 0.88
+  },
+  {
+   "type": "roof",
+   "h_pct": 10,
+   "label": "Left Wing Roof",
+   "w_pct": 8,
+   "x_pct": 0,
+   "y_pct": 13,
+   "confidence": 0.7
+  },
+  {
+   "type": "fascia",
+   "h_pct": 3.5,
+   "label": "Main Fascia Board",
+   "w_pct": 90,
+   "x_pct": 4,
+   "y_pct": 6.5,
+   "confidence": 0.78
+  },
+  {
+   "type": "soffit",
+   "h_pct": 3.5,
+   "label": "Roof Overhang Soffit",
+   "w_pct": 88,
+   "x_pct": 5,
+   "y_pct": 8.5,
+   "confidence": 0.75
+  },
+  {
+   "type": "guttering",
+   "h_pct": 3,
+   "label": "Eaves Guttering",
+   "w_pct": 90,
+   "x_pct": 4,
+   "y_pct": 5.5,
+   "confidence": 0.7
+  },
+  {
+   "type": "cladding",
+   "h_pct": 20,
+   "label": "Clay Tile Hung Cladding",
+   "w_pct": 86,
+   "x_pct": 7,
+   "y_pct": 30,
+   "confidence": 0.8
+  },
+  {
+   "type": "cladding",
+   "h_pct": 31,
+   "label": "Red Brick Walling",
+   "w_pct": 90,
+   "x_pct": 5,
+   "y_pct": 47,
+   "confidence": 0.82
+  },
+  {
+   "type": "window",
+   "h_pct": 16,
+   "label": "First Floor Bay - Left Return",
+   "w_pct": 8,
+   "x_pct": 26,
+   "y_pct": 14,
+   "confidence": 0.85
+  },
+  {
+   "type": "window",
+   "h_pct": 17,
+   "label": "First Floor Bay - Centre Left",
+   "w_pct": 14,
+   "x_pct": 34,
+   "y_pct": 12,
+   "confidence": 0.9
+  },
+  {
+   "type": "window",
+   "h_pct": 17,
+   "label": "First Floor Bay - Centre Right",
+   "w_pct": 13,
+   "x_pct": 48,
+   "y_pct": 12,
+   "confidence": 0.9
+  },
+  {
+   "type": "window",
+   "h_pct": 19,
+   "label": "First Floor Bay - Right Return (open)",
+   "w_pct": 15,
+   "x_pct": 61,
+   "y_pct": 13,
+   "confidence": 0.82
+  },
+  {
+   "type": "window",
+   "h_pct": 21,
+   "label": "Ground Floor Bay - Left Return",
+   "w_pct": 10,
+   "x_pct": 26,
+   "y_pct": 49,
+   "confidence": 0.75
+  },
+  {
+   "type": "window",
+   "h_pct": 22,
+   "label": "Ground Floor Bay - Centre Left",
+   "w_pct": 15,
+   "x_pct": 36,
+   "y_pct": 48,
+   "confidence": 0.88
+  },
+  {
+   "type": "window",
+   "h_pct": 22,
+   "label": "Ground Floor Bay - Centre Right",
+   "w_pct": 13,
+   "x_pct": 51,
+   "y_pct": 48,
+   "confidence": 0.88
+  },
+  {
+   "type": "window",
+   "h_pct": 22,
+   "label": "Ground Floor Bay - Right Return",
+   "w_pct": 12,
+   "x_pct": 64,
+   "y_pct": 48,
+   "confidence": 0.8
+  },
+  {
+   "type": "window",
+   "h_pct": 9,
+   "label": "Left Wing First Floor Window",
+   "w_pct": 7,
+   "x_pct": 0,
+   "y_pct": 25,
+   "confidence": 0.65
+  },
+  {
+   "type": "door-front",
+   "h_pct": 24,
+   "label": "Front Door",
+   "w_pct": 4,
+   "x_pct": 0,
+   "y_pct": 54,
+   "confidence": 0.45
+  },
+  {
+   "era": "inter-war",
+   "type": "analysis",
+   "sides": {
+    "left": "cut-off",
+    "right": "gap"
+   },
+   "summary": "A 1930s style detached house with a two-storey curved/canted bay to the front elevation, red brick at ground floor and clay tile hanging to the first floor. Windows are recently replaced multi-pane casements in a pale grey-blue finish, with a deep tiled roof overhang and a recessed entrance to the left. Mature clipped shrubs sit in the front border.",
+   "houseType": "detached",
+   "wallMaterial": "red-brick"
+  }
+ ],
+ "subjectBox": null
+}

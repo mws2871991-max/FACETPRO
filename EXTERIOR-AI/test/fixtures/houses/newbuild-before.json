@@ -1,0 +1,179 @@
+{
+ "house": "newbuild-before",
+ "note": "Modern yellow-brick detached. Five flat windows and a porch with glazed sidelights. No bay: the wide ground-floor right window is flat, and the model calls it one anyway.",
+ "aspectRatio": 1.333333,
+ "countedByHand": {
+  "windows": 5,
+  "bays": 0
+ },
+ "source": "Live /api/detect, Opus, 29 September 2026. No image: this repository is public and these are real homes.",
+ "detections": [
+  {
+   "type": "roof",
+   "h_pct": 23.5,
+   "label": "Main Roof",
+   "w_pct": 89,
+   "x_pct": 6.5,
+   "y_pct": 0,
+   "confidence": 0.93
+  },
+  {
+   "type": "roof",
+   "h_pct": 8,
+   "label": "Porch Canopy Roof",
+   "w_pct": 18,
+   "x_pct": 34,
+   "y_pct": 40.5,
+   "confidence": 0.85
+  },
+  {
+   "type": "cladding",
+   "h_pct": 74,
+   "label": "Yellow Brick Walls",
+   "w_pct": 90,
+   "x_pct": 5,
+   "y_pct": 4,
+   "confidence": 0.92
+  },
+  {
+   "type": "window",
+   "h_pct": 12.8,
+   "label": "First Floor Left Window",
+   "w_pct": 14.8,
+   "x_pct": 16.2,
+   "y_pct": 24.3,
+   "confidence": 0.94
+  },
+  {
+   "type": "window",
+   "h_pct": 10.6,
+   "label": "First Floor Landing Window",
+   "w_pct": 7.6,
+   "x_pct": 40,
+   "y_pct": 24.3,
+   "confidence": 0.92
+  },
+  {
+   "type": "window",
+   "h_pct": 15.2,
+   "label": "First Floor Gable Window",
+   "w_pct": 18.8,
+   "x_pct": 62.8,
+   "y_pct": 17.8,
+   "confidence": 0.94
+  },
+  {
+   "type": "window",
+   "h_pct": 16.2,
+   "label": "Ground Floor Left Window",
+   "w_pct": 16.4,
+   "x_pct": 14.5,
+   "y_pct": 49.8,
+   "confidence": 0.94
+  },
+  {
+   "type": "window",
+   "h_pct": 18.5,
+   "label": "Ground Floor Right Bay Window",
+   "w_pct": 26,
+   "x_pct": 59.8,
+   "y_pct": 49,
+   "confidence": 0.94
+  },
+  {
+   "type": "window",
+   "h_pct": 21.5,
+   "label": "Porch Left Sidelight",
+   "w_pct": 4.6,
+   "x_pct": 34,
+   "y_pct": 49.5,
+   "confidence": 0.7,
+   "countedWith": "door"
+  },
+  {
+   "type": "window",
+   "h_pct": 25,
+   "label": "Porch Right Sidelight",
+   "w_pct": 4.2,
+   "x_pct": 48,
+   "y_pct": 49.5,
+   "confidence": 0.7,
+   "countedWith": "door"
+  },
+  {
+   "type": "door-front",
+   "h_pct": 27,
+   "label": "Front Door",
+   "w_pct": 9.2,
+   "x_pct": 38.8,
+   "y_pct": 50.2,
+   "confidence": 0.93
+  },
+  {
+   "type": "fascia",
+   "h_pct": 3.2,
+   "label": "Front Eaves Fascia",
+   "w_pct": 44.5,
+   "x_pct": 6.8,
+   "y_pct": 18.3,
+   "confidence": 0.85
+  },
+  {
+   "type": "fascia",
+   "h_pct": 19,
+   "label": "Gable Bargeboard",
+   "w_pct": 44.5,
+   "x_pct": 50.5,
+   "y_pct": 0,
+   "confidence": 0.8
+  },
+  {
+   "type": "fascia",
+   "h_pct": 6,
+   "label": "Right Eaves Fascia",
+   "w_pct": 6,
+   "x_pct": 89.5,
+   "y_pct": 15.5,
+   "confidence": 0.7
+  },
+  {
+   "type": "soffit",
+   "h_pct": 2.4,
+   "label": "Front Eaves Soffit",
+   "w_pct": 43.5,
+   "x_pct": 7.2,
+   "y_pct": 20.8,
+   "confidence": 0.72
+  },
+  {
+   "type": "guttering",
+   "h_pct": 2.6,
+   "label": "Front Eaves Gutter",
+   "w_pct": 44,
+   "x_pct": 6.8,
+   "y_pct": 19.5,
+   "confidence": 0.82
+  },
+  {
+   "type": "guttering",
+   "h_pct": 58,
+   "label": "Right Downpipe",
+   "w_pct": 3.2,
+   "x_pct": 91,
+   "y_pct": 18.5,
+   "confidence": 0.83
+  },
+  {
+   "era": "modern",
+   "type": "analysis",
+   "sides": {
+    "left": "gap",
+    "right": "gap"
+   },
+   "summary": "A modern two-storey detached house faced in yellow stock brick with red brick feature lintels and a projecting gabled wing to the right. Grey uPVC windows and a matching grey composite front door with glazed sidelights sit beneath a small tiled porch canopy. The frontage is laid to block paving for off-street parking.",
+   "houseType": "detached",
+   "wallMaterial": "yellow-brick"
+  }
+ ],
+ "subjectBox": null
+}

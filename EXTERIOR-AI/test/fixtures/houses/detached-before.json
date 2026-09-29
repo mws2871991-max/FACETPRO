@@ -1,0 +1,132 @@
+{
+ "house": "detached-before",
+ "note": "Number 22, the example house on the homepage. Three-light and two-light windows upstairs, a canted bay below, a plain front door. Neighbours visible both sides.",
+ "aspectRatio": 1.333333,
+ "countedByHand": {
+  "windows": 3,
+  "bays": 1
+ },
+ "source": "Live /api/detect, Opus, 29 September 2026. No image: this repository is public and these are real homes.",
+ "detections": [
+  {
+   "type": "roof",
+   "label": "Main Hipped Roof",
+   "confidence": 0.95,
+   "x_pct": 7,
+   "y_pct": 0,
+   "w_pct": 86,
+   "h_pct": 19
+  },
+  {
+   "type": "cladding",
+   "label": "Red Brick Walls",
+   "confidence": 0.94,
+   "x_pct": 11.5,
+   "y_pct": 13.5,
+   "w_pct": 76,
+   "h_pct": 75
+  },
+  {
+   "type": "window",
+   "label": "First Floor Left Window",
+   "confidence": 0.95,
+   "x_pct": 24.2,
+   "y_pct": 22,
+   "w_pct": 16.7,
+   "h_pct": 17.5
+  },
+  {
+   "type": "window",
+   "label": "First Floor Right Window",
+   "confidence": 0.94,
+   "x_pct": 61.8,
+   "y_pct": 15.8,
+   "w_pct": 13.7,
+   "h_pct": 20
+  },
+  {
+   "type": "window",
+   "label": "Ground Floor Bay Window",
+   "confidence": 0.93,
+   "x_pct": 16,
+   "y_pct": 51.5,
+   "w_pct": 32,
+   "h_pct": 27.5
+  },
+  {
+   "type": "door-front",
+   "label": "Front Door",
+   "confidence": 0.9,
+   "x_pct": 62.3,
+   "y_pct": 53.1,
+   "w_pct": 12.7,
+   "h_pct": 33
+  },
+  {
+   "type": "fascia",
+   "label": "Front Fascia Board",
+   "confidence": 0.85,
+   "x_pct": 19.5,
+   "y_pct": 13,
+   "w_pct": 67,
+   "h_pct": 5.5
+  },
+  {
+   "type": "fascia",
+   "label": "Left Gable Fascia",
+   "confidence": 0.7,
+   "x_pct": 7.5,
+   "y_pct": 11,
+   "w_pct": 13,
+   "h_pct": 9
+  },
+  {
+   "type": "soffit",
+   "label": "Roof Overhang Soffit",
+   "confidence": 0.72,
+   "x_pct": 19.5,
+   "y_pct": 16.5,
+   "w_pct": 67,
+   "h_pct": 3
+  },
+  {
+   "type": "guttering",
+   "label": "Front Gutter Run",
+   "confidence": 0.78,
+   "x_pct": 8,
+   "y_pct": 11.5,
+   "w_pct": 80,
+   "h_pct": 4
+  },
+  {
+   "type": "guttering",
+   "label": "Right Downpipe",
+   "confidence": 0.88,
+   "x_pct": 83,
+   "y_pct": 6.5,
+   "w_pct": 2.5,
+   "h_pct": 82
+  },
+  {
+   "type": "guttering",
+   "label": "Left Corner Downpipe",
+   "confidence": 0.45,
+   "x_pct": 11.5,
+   "y_pct": 24,
+   "w_pct": 1.6,
+   "h_pct": 58
+  },
+  {
+   "type": "analysis",
+   "summary": "A detached inter-war red brick house with a hipped tiled roof, a curved ground-floor bay window and a plain timber front door set flush in the right-hand elevation. The property is vacant and neglected, with peeling paint to the bay window surround, moss on the brickwork and a cracked concrete forecourt. Both side walls are visible with open ground and a driveway beyond.",
+   "era": "inter-war",
+   "wallMaterial": "red-brick",
+   "houseType": "detached",
+   "sides": {
+    "left": "gap",
+    "right": "gap"
+   }
+  }
+ ],
+ "subjectBox": null
+}

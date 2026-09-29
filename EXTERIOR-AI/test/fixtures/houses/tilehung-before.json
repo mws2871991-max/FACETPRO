@@ -1,0 +1,168 @@
+{
+ "house": "tilehung-before",
+ "note": "Tile-hung detached. A three-light casement above, a four-light bay below, and no front door in shot \u2014 so nothing can be scaled and the count is all there is.",
+ "aspectRatio": 0.75,
+ "countedByHand": {
+  "windows": 2,
+  "bays": 1
+ },
+ "source": "Live /api/detect, Opus, 29 September 2026. No image: this repository is public and these are real homes.",
+ "detections": [
+  {
+   "type": "window",
+   "h_pct": 16.7,
+   "label": "First Floor Gable Window",
+   "w_pct": 35.2,
+   "x_pct": 30.4,
+   "y_pct": 21.6,
+   "confidence": 0.96
+  },
+  {
+   "type": "window",
+   "h_pct": 27,
+   "label": "Ground Floor Bay Window",
+   "w_pct": 57.1,
+   "x_pct": 25.2,
+   "y_pct": 52.3,
+   "confidence": 0.97
+  },
+  {
+   "type": "window",
+   "h_pct": 13,
+   "label": "Left Side Recessed Window",
+   "w_pct": 4.2,
+   "x_pct": 0,
+   "y_pct": 54,
+   "confidence": 0.4
+  },
+  {
+   "type": "door-front",
+   "h_pct": 19.2,
+   "label": "Front Door (recessed, shadowed)",
+   "w_pct": 5.4,
+   "x_pct": 86.8,
+   "y_pct": 54.3,
+   "confidence": 0.55
+  },
+  {
+   "type": "roof",
+   "h_pct": 30,
+   "label": "Main Roof",
+   "w_pct": 25,
+   "x_pct": 75,
+   "y_pct": 18.5,
+   "confidence": 0.85
+  },
+  {
+   "type": "roof",
+   "h_pct": 13.5,
+   "label": "Bay Window Hipped Roof",
+   "w_pct": 59,
+   "x_pct": 21,
+   "y_pct": 38.2,
+   "confidence": 0.92
+  },
+  {
+   "type": "roof",
+   "h_pct": 7,
+   "label": "Left Wing Roof Edge",
+   "w_pct": 11,
+   "x_pct": 0,
+   "y_pct": 44.5,
+   "confidence": 0.5
+  },
+  {
+   "type": "cladding",
+   "h_pct": 52,
+   "label": "Clay Tile-Hung Gable Wall",
+   "w_pct": 88,
+   "x_pct": 0,
+   "y_pct": 0,
+   "confidence": 0.93
+  },
+  {
+   "type": "cladding",
+   "h_pct": 32,
+   "label": "Brickwork Ground Floor",
+   "w_pct": 100,
+   "x_pct": 0,
+   "y_pct": 48,
+   "confidence": 0.9
+  },
+  {
+   "type": "fascia",
+   "h_pct": 26,
+   "label": "Gable Bargeboard",
+   "w_pct": 41,
+   "x_pct": 47,
+   "y_pct": 0,
+   "confidence": 0.8
+  },
+  {
+   "type": "fascia",
+   "h_pct": 3,
+   "label": "Bay Roof Fascia",
+   "w_pct": 60,
+   "x_pct": 21.5,
+   "y_pct": 48.3,
+   "confidence": 0.8
+  },
+  {
+   "type": "soffit",
+   "h_pct": 2,
+   "label": "Bay Roof Soffit",
+   "w_pct": 58,
+   "x_pct": 22,
+   "y_pct": 50.5,
+   "confidence": 0.6
+  },
+  {
+   "type": "soffit",
+   "h_pct": 12,
+   "label": "Gable Overhang Soffit",
+   "w_pct": 13,
+   "x_pct": 75,
+   "y_pct": 15,
+   "confidence": 0.55
+  },
+  {
+   "type": "guttering",
+   "h_pct": 3.2,
+   "label": "Bay Roof Gutter",
+   "w_pct": 60,
+   "x_pct": 21.5,
+   "y_pct": 48.5,
+   "confidence": 0.85
+  },
+  {
+   "type": "guttering",
+   "h_pct": 25,
+   "label": "Right Downpipe",
+   "w_pct": 2.5,
+   "x_pct": 81.5,
+   "y_pct": 50,
+   "confidence": 0.8
+  },
+  {
+   "type": "guttering",
+   "h_pct": 25,
+   "label": "Left Downpipe",
+   "w_pct": 2.2,
+   "x_pct": 1.5,
+   "y_pct": 52,
+   "confidence": 0.6
+  },
+  {
+   "era": "contemporary",
+   "type": "analysis",
+   "sides": {
+    "left": "cut-off",
+    "right": "cut-off"
+   },
+   "summary": "A modern, high-specification detached house finished in red brick with extensive clay tile-hanging to the prominent front gable. A large hipped-roof bay window with multi-pane cream casements sits beneath a matching three-light gable window, with the recessed entrance set to the right. Clipped box hedging and gravel driveway complete the newly-built frontage.",
+   "houseType": "detached",
+   "wallMaterial": "red-brick"
+  }
+ ],
+ "subjectBox": null
+}
