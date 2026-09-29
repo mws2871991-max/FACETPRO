@@ -68,6 +68,9 @@
   a.cta{display:block;margin:18px 0 0;padding:16px 20px;background:#fff;color:#0F1012;text-decoration:none;border-radius:999px;text-align:center;font-weight:600}
   .muted{color:#52525b;font-size:16px}
   .cta-block .muted{color:rgba(255,255,255,.55)}
+  /* The privacy link sat in this dark box in the page's default dark link
+     colour: there, but invisible (found 29 September). */
+  .cta-block a:not(.cta){color:#fff;text-decoration:underline;text-underline-offset:2px}
   /* The journey hero, above the guide: the action first for somebody who came
      to see it on their own house, and out of the way in a second for somebody
      who came for the number. Lighter than .cta-block on purpose — the dark

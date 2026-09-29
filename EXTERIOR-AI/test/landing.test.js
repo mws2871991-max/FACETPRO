@@ -485,3 +485,26 @@ test('every cost page carries the six products, and marks the one it is about', 
   assert.ok(!landing.renderCostPage('new-roof-cost', OPTS).includes('aria-current'),
     'a page about something else marks nothing');
 });
+
+/* 29 September: one line on every guide, and five new pages. */
+test('every guide ends with the same line, except the conservatory page', () => {
+  for (const p of landing.COST_PAGES) {
+    const html = landing.renderCostPage(p.slug, OPTS);
+    const has = html.includes('Don&rsquo;t estimate your house from an average.') && html.includes('Upload a photo and see yours.');
+    assert.strictEqual(has, !/conservator/.test(p.slug), p.slug);
+  }
+  for (const a of landing.AREA_PAGES) {
+    const html = landing.renderAreaPage(a.slug, { ...OPTS, recipients: [] });
+    assert.ok(html.includes('Don&rsquo;t estimate your house from an average.'), a.slug);
+  }
+});
+
+test('the five pages added on 29 September exist, and only where there is a sourced figure', () => {
+  const slugs = landing.COST_PAGES.map(p => p.slug);
+  for (const s of ['composite-door-cost', 'patio-doors-cost', 'french-doors-cost', 'sash-windows-cost', 'cladding-cost']) {
+    assert.ok(slugs.includes(s), s);
+    assert.match(landing.renderCostPage(s, OPTS), /£[\d,]+/);
+  }
+  // No aluminium rate in the catalogue, so no aluminium page.
+  assert.ok(!slugs.some(s => /aluminium/.test(s)));
+});

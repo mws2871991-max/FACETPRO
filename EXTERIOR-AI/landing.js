@@ -553,6 +553,171 @@ const COST_PAGES = [
       };
     },
   },
+  /* ── Added 29 September ──
+
+     Five more of the searches homeowners make, each only where the engine
+     already holds a figure with a source behind it
+     (notes/glazing-rates-from-the-trade.md): composite doors, sliding patio
+     and French (double) doors, and the sash premium were all checked against
+     national-installer prices; cladding uses the same material and labour
+     rates as the rendering page.
+
+     Deliberately NOT built yet, because the number would be ours and not
+     checked: aluminium windows (no aluminium rate in the catalogue at all),
+     flush casement (x1.15 has no source note), and bay window replacement
+     (x1.45 on a single unit — a real bay is three to five panes and its
+     price wants Mike's figure, not a multiplier). "12 windows" is answered by
+     the 10-window page's 8–12 table, and "roof replacement" is the same
+     search as "new roof", so a second page would only compete with the first. */
+  {
+    slug: 'composite-door-cost',
+    title: 'Composite door cost UK — fitted prices for 2026',
+    h1: 'What does a composite door cost?',
+    intent: 'composite door cost',
+    description: 'What a composite front door costs fitted in the UK, against uPVC, and what moves the price — from what these jobs actually sell for.',
+    build: (c) => {
+      const all = doorPrices(c);
+      const comp = all.find(d => /composite/i.test(d.name));
+      const upvc = all.find(d => /upvc/i.test(d.name));
+      return {
+        answer: `${money(comp.low)} to ${money(comp.high)} for a composite front door, supplied and fitted with the old door taken away, inc VAT. A uPVC door is about ${money(upvc.low)} to ${money(upvc.high)}.`,
+        sections: [
+          { heading: 'Composite against uPVC', table: {
+            head: ['Door', 'Fitted, inc VAT'],
+            rows: [
+              [comp.name, `${money(comp.low)} – ${money(comp.high)}`],
+              [upvc.name, `${money(upvc.low)} – ${money(upvc.high)}`],
+            ],
+          } },
+          { heading: 'What you are paying for', paras: [
+            'A composite door has a solid insulated core inside a moulded skin. It is heavier than uPVC, it keeps its colour and woodgrain far better in British weather, and it feels like a front door when you close it. For the door people see first, that is usually worth it.',
+            'The price here is a standard door in a standard opening. Side panels, a top light, a new frame in an unusual size or a lot of making good around the opening all add to it, and they are the first things to ask about when two quotes do not match.',
+          ] },
+          { heading: 'Why two quotes for the same door differ so much', paras: [
+            'The same composite door, to the same specification, settles at about 1.6 times as much with one national installer as with another. That gap is bigger than the difference between composite and uPVC. It is the reason the figure above is a range, and the reason to get more than one quote.',
+          ] },
+        ],
+      };
+    },
+  },
+  {
+    slug: 'patio-doors-cost',
+    title: 'Patio doors cost UK — sliding patio door prices',
+    h1: 'What do patio doors cost?',
+    intent: 'patio doors cost',
+    description: 'What a sliding patio door costs fitted in the UK, against French doors and bifolds, from what these jobs actually sell for.',
+    build: (c) => {
+      const all = doorPrices(c);
+      const pick = (re) => all.find(d => re.test(d.name));
+      const patio = pick(/sliding patio/i);
+      const french = pick(/double doors/i);
+      const bi = pick(/bifold, up to 2\.4/i);
+      return {
+        answer: `${money(patio.low)} to ${money(patio.high)} for a sliding patio door, supplied and fitted with the old door taken away, inc VAT.`,
+        sections: [
+          { heading: 'Patio doors against the alternatives', table: {
+            head: ['Door', 'Fitted, inc VAT'],
+            rows: [
+              ['Sliding patio door', `${money(patio.low)} – ${money(patio.high)}`],
+              ['French / double doors', `${money(french.low)} – ${money(french.high)}`],
+              ['Bifold, up to 2.4 m', `${money(bi.low)} – ${money(bi.high)}`],
+            ],
+          } },
+          { heading: 'Sliding, French or bifold', paras: [
+            'A sliding patio door gives the most glass for the money and takes no room to open, which suits a smaller garden or a room with furniture near the doors. French doors open fully but swing into the room or the garden. Bifolds open the whole width and cost the most.',
+            'All three are priced here for an existing opening of the same size. Widening the opening means a new lintel and building work, which is a different and larger job.',
+          ] },
+        ],
+      };
+    },
+  },
+  {
+    slug: 'french-doors-cost',
+    title: 'French doors cost UK — fitted prices for 2026',
+    h1: 'What do French doors cost?',
+    intent: 'French doors cost',
+    description: 'What French (double) doors cost fitted in the UK, against sliding patio doors and bifolds, from what these jobs actually sell for.',
+    build: (c) => {
+      const all = doorPrices(c);
+      const pick = (re) => all.find(d => re.test(d.name));
+      const french = pick(/double doors/i);
+      const patio = pick(/sliding patio/i);
+      const bi = pick(/bifold, up to 2\.4/i);
+      return {
+        answer: `${money(french.low)} to ${money(french.high)} for a pair of French doors, supplied and fitted with the old doors taken away, inc VAT.`,
+        sections: [
+          { heading: 'French doors against the alternatives', table: {
+            head: ['Door', 'Fitted, inc VAT'],
+            rows: [
+              ['French / double doors', `${money(french.low)} – ${money(french.high)}`],
+              ['Sliding patio door', `${money(patio.low)} – ${money(patio.high)}`],
+              ['Bifold, up to 2.4 m', `${money(bi.low)} – ${money(bi.high)}`],
+            ],
+          } },
+          { heading: 'What moves the price', paras: [
+            'Side panels either side of the pair, the glass, and whether the frame is a standard size. A pair of French doors into an existing opening is the figure above; adding fixed side panels to fill a wider opening adds to it.',
+            'Colour moves it less than people expect — a single-figure percentage for anthracite or a woodgrain finish, not a different category of door.',
+          ] },
+        ],
+      };
+    },
+  },
+  {
+    slug: 'sash-windows-cost',
+    title: 'Sash windows cost UK — replacement sash prices',
+    h1: 'What do sash windows cost?',
+    intent: 'sash window cost',
+    description: 'What replacement sliding sash windows cost fitted in the UK, per window and for a house, against standard casements.',
+    build: (c) => {
+      const one = windowJob(c, { count: 8, styleId: 'sliding-sash' });
+      const rows = [4, 6, 8, 10].map(n => {
+        const s = windowJob(c, { count: n, styleId: 'sliding-sash' });
+        const k = windowJob(c, { count: n });
+        return [String(n), `${money(s.low)} – ${money(s.high)}`, `${money(k.low)} – ${money(k.high)}`];
+      });
+      return {
+        answer: `${money(one.perWindowLow)} to ${money(one.perWindowHigh)} per sliding sash window fitted, so roughly ${money(one.low)} to ${money(one.high)} for eight, inc VAT.`,
+        sections: [
+          { heading: 'Sash against casement, by number of windows', table: {
+            head: ['Windows', 'Sliding sash, inc VAT', 'Casement, inc VAT'],
+            rows,
+          } },
+          { heading: 'Why a sash costs more', paras: [
+            'A sliding sash is two frames that move inside a box, with balances to hold them where you leave them. There is more to make and more to fit than a casement that hinges open, and it shows in the price: a sash is roughly two-thirds more than a casement of the same size.',
+            'These figures are for replacement sash windows. Restoring or draught-proofing original timber sashes is a different trade with its own prices, and nothing on this page covers it. If your house is listed or in a conservation area, check with the council before replacing them at all.',
+          ] },
+        ],
+      };
+    },
+  },
+  {
+    slug: 'cladding-cost',
+    title: 'House cladding cost UK — per m² and per house',
+    h1: 'What does cladding a house cost?',
+    intent: 'cladding cost',
+    description: 'What cladding a house costs in the UK per square metre and for a typical house, by material, including scaffolding and waste, inc VAT.',
+    build: (c) => {
+      const walls = wallsFor(c, 90);
+      const clad = walls.rows.filter(r => !/render/i.test(r.material));
+      const cheapest = clad.reduce((a, b) => (a.perM2 <= b.perM2 ? a : b));
+      return {
+        answer: `From about ${money(cheapest.perM2)} per m² supplied and fitted, so roughly ${money(cheapest.total)} for 90 m² of wall including scaffolding.`,
+        sections: [
+          { heading: 'By material, on 90 m² of wall', table: {
+            head: ['Cladding', 'Per m² inc VAT', 'Typical house inc VAT'],
+            rows: clad.map(r => [`${r.name}${r.material ? ` (${r.material})` : ''}`, money(r.perM2), money(r.total)]),
+          } },
+          { heading: 'The number that decides it is your wall area', paras: [
+            'Every figure above is multiplied by how much wall there is, and almost nobody knows theirs. Windows and doors come out of it, and gable ends and side walls add to it.',
+            'Upload a photograph of the front and we estimate the front wall from it, using your front door as the known size, and estimate the rest for your house type — and say which part was measured and which was estimated.',
+          ] },
+          { heading: 'What is not included', paras: [
+            'Repairs to the wall behind, insulation boards, and planning. Cladding on the front of a house can need planning permission, particularly in a conservation area, so check with your council before you commit.',
+          ] },
+        ],
+      };
+    },
+  },
 ];
 
 /* Area pages. Kept to the outward codes and towns the business actually works
@@ -665,8 +830,10 @@ const conservatoryCta = (siteUrl, slug) => `<div class="cta-block">
 </div>`;
 
 const cta = (siteUrl, slug) => (isConservatory(slug) ? conservatoryCta(siteUrl, slug) : `<div class="cta-block">
-  <h2>See it on your own house</h2>
-  <p>Every figure above is a typical house. Yours is not typical — nobody's is.
+  <!-- Mike's line for every guide (29 September): the page has just shown an
+       average, so the next step says why that is not your answer. -->
+  <h2>Don&rsquo;t estimate your house from an average.</h2>
+  <p><strong>Upload a photo and see yours.</strong> Every figure above is a typical house.
      Start with one photograph of the front and we will find your windows, doors, roof and walls,
      estimate your wall area, and price your own elevation.</p>
   <!-- "Upload a photo", the same words as every button on the homepage. This
@@ -797,7 +964,10 @@ function faqFor(built) {
    them together saves the whole second scaffold. A customer reading about a
    re-roof is the single best-qualified reader of the rendering page there is,
    and the link was missing in exactly that direction. */
-const SHARES_SCAFFOLD = [['new-roof-cost', 'house-rendering-cost']];
+/* Roofline and cladding added 29 September: the same argument, and adding
+   the cladding page shifted the rotation so that nothing linked to the
+   roofline page at all. */
+const SHARES_SCAFFOLD = [['new-roof-cost', 'house-rendering-cost'], ['fascia-soffit-replacement-cost', 'cladding-cost']];
 
 const scaffoldPartner = (slug) => {
   const pair = SHARES_SCAFFOLD.find(p => p.includes(slug));
@@ -898,6 +1068,18 @@ const JOURNEY_HERO = {
    the way in and withdrawing it two sections later is the sort of small
    dishonesty that costs more than it buys. */
 const SLUG_HERO = {
+  /* Same reason as bifolds: patio and French doors are almost always at the
+     back, and we draw on a photograph of the front. */
+  'patio-doors-cost': {
+    h: 'Price your patio door, and see the rest on your own house',
+    p: 'Patio doors open onto the garden, so we price them from the same figures and do not draw them onto a photograph of your front. Upload a photo of the front and design your windows, front door, walls, roofline and roof on your actual house.',
+    cta: 'Upload my house',
+  },
+  'french-doors-cost': {
+    h: 'Price your French doors, and see the rest on your own house',
+    p: 'French doors usually open onto the garden, so we price them from the same figures and do not draw them onto a photograph of your front. Upload a photo of the front and design your windows, front door, walls, roofline and roof on your actual house.',
+    cta: 'Upload my house',
+  },
   'bifold-doors-cost': {
     h: 'Price your bifolds, and see the rest on your own house',
     p: 'Bifolds open onto the garden, so we price them from the same rate card and do not draw them onto a photograph of your front. Upload a photo of the front and design your windows, front door, walls, roofline and roof on your actual house.',
