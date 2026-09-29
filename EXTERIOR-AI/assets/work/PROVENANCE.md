@@ -15,6 +15,17 @@ The files carry no EXIF and no origin markers — they have been stripped — so
 the provenance cannot be recovered from the images. It has to come from whoever
 put them there.
 
+## The homepage pair: `home-windows-white*.jpg` / `home-windows-black*.jpg` (29 September 2026)
+
+Chosen by Mike as the main before/after on the homepage, replacing the detached pair below (which stays on /how-we-price).
+
+| File | What it is | Source |
+|---|---|---|
+| `home-windows-white.jpg` (1200×900), `-sm.jpg` (600×450) | **AI-generated illustration.** Not a customer's house, not a Facet Pro render. Captioned "Illustration"; alt text starts "Illustration:". | Left half of `before_after_windows.webp` (3840×1280, Mike's Downloads, 28 Sep 2026), crop (387,130)–(1920,1280), label cropped out, lightly sharpened |
+| `home-windows-black.jpg`, `-sm.jpg` | **AI-generated illustration**, same as above. Every pixel is redrawn, not just the frames, and the stone sills went black too. | Right half, same crop |
+
+Never caption this pair as a real job or as something Facet Pro made, and never put it in Real Homes.
+
 ## The homepage pair: `detached-before*.jpg` / `detached-after*.jpg` (28 September 2026)
 
 Not in the "Real homes" gallery, and not claimed to be a real job.
