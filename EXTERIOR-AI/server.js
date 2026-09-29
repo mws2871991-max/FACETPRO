@@ -19,7 +19,7 @@ const leadscore = require('./leadscore');
 const { isTestTraffic } = require('./testtraffic');
 
 const { buildRenderPrompt } = require('./renderprompt');
-const { restoreDoor, restoreSurroundings, restoreOutsideMask, drawGeorgianBars, changedShare } = require('./hold');
+const { restoreDoor, restoreSurroundings, restoreOutsideMask, correctFrameColour, drawGeorgianBars, changedShare } = require('./hold');
 const { fetchWindowMask, maskWithinGrace } = require('./windowmask');
 /* How long a mask started at upload may take. Generous, because nothing is
    waiting on it — a cold start at 83s still lands well before most people have
@@ -2948,6 +2948,26 @@ async function keepRender(replicateUrl, restore = null) {
           else obs.record('render', 'kept surroundings not restored', { reason: held.reason });
         }
       }
+      /* The colour, once the picture is held to the right place.
+ *
+ * After the mask because it needs it — a correction with nothing bounding it
+ * would tint the whole house — and before the bars, which are drawn in the
+ * frame's own colour and should be drawn in the corrected one. */
+      if (restore.glazingHex && restore.mask) {
+        const fixed = correctFrameColour({
+          render: bytes, renderMime: mime,
+          original: restore.original, originalMime: restore.originalMime,
+          mask: restore.mask, maskMime: restore.maskMime, hex: restore.glazingHex,
+        });
+        if (fixed.corrected) {
+          bytes = fixed.buffer;
+          obs.record('render', 'corrected the frame colour to the swatch',
+            { from: fixed.from, to: restore.glazingHex, deltaE: fixed.deltaE, share: fixed.share.toFixed(3) });
+        } else {
+          obs.record('render', 'frame colour not corrected', { reason: fixed.reason });
+        }
+      }
+
       // Last, on the finished frames.
       if (restore.bars) {
         const drawn = drawGeorgianBars({ render: bytes, ...common });
@@ -3395,7 +3415,11 @@ app.post('/api/render', renderLimiter, async (req, res) => {
     ? { original: img.buffer, originalMime: img.mime, detectionId: detectionId ? String(detectionId) : null,
         fingerprint: imageFingerprint(img.buffer),
         door: !doorStyle, surroundings: !trim && !(roof && !roofUnsupported),
-        bars: windowBarsId === 'georgian' }
+        bars: windowBarsId === 'georgian',
+        /* The colour they actually picked, as a number rather than as prose.
+           renderprompt can only describe it; this is what the correction
+           measures against. */
+        glazingHex: (catalogue.windowsDoors.colours.find(c => c.id === windowDoorColourId) || {}).hex || null }
     : null;
 
   const prompt = buildRenderPrompt({

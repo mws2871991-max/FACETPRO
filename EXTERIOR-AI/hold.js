@@ -668,4 +668,200 @@ function restoreOutsideMask({ render, renderMime, original, originalMime, mask, 
   }
 }
 
-module.exports = { restoreDoor, restoreSurroundings, restoreOutsideMask, drawGeorgianBars, doorBox, changedShare, MASK_ON };
+/* ── The colour the homeowner actually chose ──
+ *
+ * The last of the three ways this render goes wrong, and the only one that can
+ * be settled arithmetically rather than asked for.
+ *
+ * Number 14, Chartwell Green, live on 28 September: the frames came back
+ * BRIGHT LIME. renderprompt describes chartwell-green as "muted grey-green
+ * sage, soft and dusty, never bright or lime green" — the words are already
+ * there, and were already written once before in response to the same defect
+ * on a door. Saying it a third time is not a plan. The customer picks a colour
+ * from a swatch and is shown a different colour beside a price for the one
+ * they picked.
+ *
+ * So take the lightness the model produced and replace the colour with the
+ * one they chose. In Lab: keep L (the shading, the reflections, the sense of a
+ * real surface in real light) and take a and b from the swatch hex. Lime
+ * cannot survive it, because lime is not in the swatch.
+ *
+ * ── Telling frame from glass ──
+ *
+ * Correcting every changed pixel would tint the glass too, and a window whose
+ * sky reflection has gone sage looks worse than one whose frame is slightly
+ * off. The separation uses the defect itself: the model paints ALL the frames
+ * one consistent wrong colour, so the frame is the dominant colour among the
+ * changed pixels. A coarse histogram finds it; glass reflections vary too much
+ * to out-vote it. Same idea drawGeorgianBars uses to find its mullions, which
+ * is the one frame/glass test in this file that has survived real photographs.
+ *
+ * Deliberately does nothing when there is nothing to fix: if what the model
+ * produced is already close to the swatch, the render is left exactly alone.
+ */
+const CORRECT_MIN_SHARE = 0.002;   // fewer changed pixels than this and there is no frame to find
+const CORRECT_MAX_SHARE = 0.60;    // more of the mask than this is not a frame, it is the whole picture
+/* How far a pixel's COLOUR may sit from the frame's, ignoring how light it is.
+ *
+ * Measured in Lab's a/b plane, and the first version of this got it wrong in a
+ * way worth recording: it matched on full RGB distance to one dominant colour,
+ * so the lit parts of a frame matched and the shaded parts did not. Number 14
+ * came back mottled — patches of corrected sage between patches of untouched
+ * lime, visibly worse than the flat lime it replaced.
+ *
+ * A frame is one colour under a range of light. The error is in the hue and
+ * the error is uniform; the lightness variation is real and is the thing worth
+ * keeping. So the test has to be blind to L, which is also what makes it safe
+ * for glass: curtains and dark interiors sit near the neutral axis, far from a
+ * saturated frame in a/b however bright they are.
+ *
+ * Swept 18 / 24 / 30 / 36 on number 14 and the result did not move at all: the
+ * painted pixels form one tight cluster in a/b and everything else is far
+ * outside any of them. 24 is the middle of a plateau rather than a tuned
+ * number, which is the most honest thing to say about it. */
+const CORRECT_AB_TOLERANCE = 24;
+const CORRECT_SKIP_DE = 12;        // already this close to the swatch: leave it alone
+
+const srgbToLinear = (v) => { const c = v / 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+const linearToSrgb = (c) => {
+  const v = c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+  return Math.max(0, Math.min(255, Math.round(v * 255)));
+};
+/* D65, the white point sRGB is defined against. */
+const WHITE = [0.95047, 1, 1.08883];
+const f = (t) => (t > 0.008856 ? Math.cbrt(t) : (7.787 * t) + (16 / 116));
+const fInv = (t) => { const t3 = t * t * t; return t3 > 0.008856 ? t3 : (t - 16 / 116) / 7.787; };
+
+function rgbToLab(r, g, b) {
+  const R = srgbToLinear(r), G = srgbToLinear(g), B = srgbToLinear(b);
+  const x = (R * 0.4124 + G * 0.3576 + B * 0.1805) / WHITE[0];
+  const y = (R * 0.2126 + G * 0.7152 + B * 0.0722) / WHITE[1];
+  const z = (R * 0.0193 + G * 0.1192 + B * 0.9505) / WHITE[2];
+  const fx = f(x), fy = f(y), fz = f(z);
+  return [(116 * fy) - 16, 500 * (fx - fy), 200 * (fy - fz)];
+}
+
+function labToRgb(L, a, bb) {
+  const fy = (L + 16) / 116, fx = fy + a / 500, fz = fy - bb / 200;
+  const x = fInv(fx) * WHITE[0], y = fInv(fy) * WHITE[1], z = fInv(fz) * WHITE[2];
+  const R = x * 3.2406 + y * -1.5372 + z * -0.4986;
+  const G = x * -0.9689 + y * 1.8758 + z * 0.0415;
+  const B = x * 0.0557 + y * -0.2040 + z * 1.0570;
+  return [linearToSrgb(R), linearToSrgb(G), linearToSrgb(B)];
+}
+
+const hexToRgb = (hex) => {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+};
+
+function correctFrameColour({ render, renderMime, original, originalMime, mask, maskMime, hex }) {
+  const untouched = (reason) => ({ buffer: render, corrected: false, reason, share: 0, from: null });
+  try {
+    if (!/png/i.test(renderMime || '')) return untouched('render is not a PNG');
+    const target = hexToRgb(hex);
+    if (!target) return untouched('no swatch colour for this choice');
+    const src = decode(original, originalMime || '');
+    if (!src) return untouched('photograph type not handled');
+    const m = mask ? decode(mask, maskMime || '') : null;
+    if (!m) return untouched('no mask — a correction without one would tint the whole house');
+
+    const out = PNG.sync.read(render);
+    const W = out.width, H = out.height, N = W * H;
+    if (Math.abs((m.width / m.height) - (W / H)) > 0.02) return untouched('mask does not describe this frame');
+
+    /* Changed, and inside the mask: the pixels the model painted on a window. */
+    const px = [0, 0, 0];
+    const eligible = new Uint8Array(N);
+    let n = 0;
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const k = y * W + x;
+        const mx = Math.min(m.width - 1, Math.max(0, Math.round((x + 0.5) * m.width / W - 0.5)));
+        const my = Math.min(m.height - 1, Math.max(0, Math.round((y + 0.5) * m.height / H - 0.5)));
+        if (m.data[(my * m.width + mx) * 4] < MASK_ON) continue;
+        sample(src, (x + 0.5) * (src.width / W) - 0.5, (y + 0.5) * (src.height / H) - 0.5, px);
+        let d = 0;
+        for (let c = 0; c < 3; c++) d = Math.max(d, Math.abs(out.data[k * 4 + c] - px[c]));
+        if (d > CHANGE_T) { eligible[k] = 1; n++; }
+      }
+    }
+    if (n / N < CORRECT_MIN_SHARE) return untouched(`only ${n} changed pixels inside the mask`);
+
+    /* The colour the model actually used, by vote. A coarse histogram rather
+       than a median: frame and glass are two populations, and a per-channel
+       median of both returns a blend belonging to neither. */
+    const BINS = 16, SH = 4;
+    const hist = new Uint32Array(BINS * BINS * BINS);
+    for (let k = 0; k < N; k++) {
+      if (!eligible[k]) continue;
+      const r = out.data[k * 4] >> SH, g = out.data[k * 4 + 1] >> SH, b = out.data[k * 4 + 2] >> SH;
+      hist[(r * BINS + g) * BINS + b]++;
+    }
+    let best = 0, bestBin = 0;
+    for (let i = 0; i < hist.length; i++) if (hist[i] > best) { best = hist[i]; bestBin = i; }
+    const br = (bestBin / (BINS * BINS)) | 0, bg = ((bestBin / BINS) | 0) % BINS, bb = bestBin % BINS;
+    /* The bin's own mean, so the reference is a real colour rather than a
+       quantised one. */
+    let sr = 0, sg = 0, sb = 0, cnt = 0;
+    for (let k = 0; k < N; k++) {
+      if (!eligible[k]) continue;
+      if ((out.data[k * 4] >> SH) !== br || (out.data[k * 4 + 1] >> SH) !== bg || (out.data[k * 4 + 2] >> SH) !== bb) continue;
+      sr += out.data[k * 4]; sg += out.data[k * 4 + 1]; sb += out.data[k * 4 + 2]; cnt++;
+    }
+    if (!cnt) return untouched('no dominant colour among the changed pixels');
+    const dominant = [Math.round(sr / cnt), Math.round(sg / cnt), Math.round(sb / cnt)];
+
+    /* Already right? Then this render does not need saving from itself. */
+    const dl = rgbToLab(...dominant), tl = rgbToLab(...target);
+    const dE = Math.sqrt((dl[0] - tl[0]) ** 2 + (dl[1] - tl[1]) ** 2 + (dl[2] - tl[2]) ** 2);
+    if (dE < CORRECT_SKIP_DE) return untouched(`already within ΔE ${dE.toFixed(1)} of the swatch`);
+
+    /* Which pixels are frame, and how light the model made them on average.
+ *
+ * Keeping L exactly as rendered — which is how the fix was specified — turns
+ * bright lime into bright SAGE, and "too bright" was half of what was wrong
+ * with it. Chartwell Green is a dark, dusty colour; lime is a light one, and
+ * the difference is mostly lightness, not hue.
+ *
+ * So the frame's average lightness is moved onto the swatch's, and every
+ * pixel keeps its distance from that average. The shading, the reflections and
+ * the sense of a real surface in real light all survive — they are differences
+ * in L, not absolutes — while the colour as a whole lands where it was
+ * chosen. Flattening L to a single value instead would give perfectly accurate
+ * paint on a cardboard cut-out. */
+    const frame = [];
+    let sumL = 0;
+    const tol2 = CORRECT_AB_TOLERANCE * CORRECT_AB_TOLERANCE;
+    for (let k = 0; k < N; k++) {
+      if (!eligible[k]) continue;
+      const [L, a2, b2] = rgbToLab(out.data[k * 4], out.data[k * 4 + 1], out.data[k * 4 + 2]);
+      const da = a2 - dl[1], db2 = b2 - dl[2];
+      if (da * da + db2 * db2 > tol2) continue;   // a different colour: glass, or something the model left alone
+      frame.push(k, L);
+      sumL += L;
+    }
+    let changedPx = frame.length / 2;
+    if (!changedPx) return untouched('nothing matched the dominant colour');
+    const meanL = sumL / changedPx;
+    const shift = tl[0] - meanL;
+    for (let i = 0; i < frame.length; i += 2) {
+      const k = frame[i];
+      const L = Math.max(0, Math.min(100, frame[i + 1] + shift));
+      const [nr, ng, nb] = labToRgb(L, tl[1], tl[2]);
+      out.data[k * 4] = nr; out.data[k * 4 + 1] = ng; out.data[k * 4 + 2] = nb;
+    }
+    const share = changedPx / N;
+    if (share > CORRECT_MAX_SHARE) return untouched(`would repaint ${(share * 100).toFixed(0)}% of the picture`);
+
+    return { buffer: PNG.sync.write(out), corrected: true, reason: null, share,
+             from: `rgb(${dominant.join(',')})`, deltaE: Number(dE.toFixed(1)) };
+  } catch (err) {
+    return untouched(err?.message || 'colour correction failed');
+  }
+}
+
+module.exports = { restoreDoor, restoreSurroundings, restoreOutsideMask, correctFrameColour,
+                   drawGeorgianBars, doorBox, changedShare, MASK_ON, rgbToLab, labToRgb, hexToRgb };
