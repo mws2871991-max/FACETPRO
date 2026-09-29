@@ -724,7 +724,7 @@ ${faq ? `<script type="application/ld+json">${JSON.stringify(faq)}</script>` : '
 </head><body>
 <header class="site"><div class="wrap">
   <a class="logo" href="${escapeHtml(siteUrl)}/">Facet Pro</a>
-  <a href="${escapeHtml(ctaHref(siteUrl, slug))}">See my house &rarr;</a>
+  <a class="cta-top" href="${escapeHtml(ctaHref(siteUrl, slug))}">See my house &rarr;</a>
 </div>${productMenu(siteUrl, slug)}</header>
 <main class="wrap">
 <h1>${escapeHtml(h1)}</h1>

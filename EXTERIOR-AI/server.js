@@ -1895,22 +1895,37 @@ const PRIOR_AREA_UNCERTAINTY = 0.25;
    band that already means something. Recomputed at each end rather than scaled,
    for the same reason as priceRange: scaffolding is fixed and VAT rides on top,
    so the total is not proportional to area. */
+/* The roofline run is estimated too, unless they typed it (29 September).
+
+   Fascia, soffit and guttering are priced by the metre of roof edge, not by
+   wall area, and the length is the catalogue's typical run unless the
+   homeowner gave their own. Widening only the area left a roofline-only job
+   with low === high: a single exact-looking figure (£5,500) beside a range
+   for every other trade, under a promise that every estimate is a range. So
+   an estimated length gets the same ±PRIOR_AREA_UNCERTAINTY as an estimated
+   area; a told length stays exactly what they said. */
+function trimLengthAt(selections, factor) {
+  const told = Number(selections.trimLengthM);
+  if (Number.isFinite(told) && told >= TRIM_LENGTH_MIN_M && told <= TRIM_LENGTH_MAX_M) return told;
+  return Math.round(catalogue.defaultTrimLengthM * factor);
+}
+
 function priceRangeFromArea(selections, band) {
-  const at = (a) => computePrice({ ...selections, footprintM2: a }).total;
+  const at = (a, f) => computePrice({ ...selections, footprintM2: a, trimLengthM: trimLengthAt(selections, f) }).total;
   const round500 = (n) => Math.round(n / 500) * 500;
-  const low = round500(at(band.low));
-  const high = round500(at(band.high));
+  const low = round500(at(band.low, 1 - PRIOR_AREA_UNCERTAINTY));
+  const high = round500(at(band.high, 1 + PRIOR_AREA_UNCERTAINTY));
   // A band narrow enough to round to one figure is not a range worth showing.
   return high > low ? { low, high } : null;
 }
 
 function priceRange(selections, m2) {
   const area = m2 && m2 > 0 ? m2 : catalogue.defaultFootprintM2;
-  const at = (a) => computePrice({ ...selections, footprintM2: a }).total;
+  const at = (a, f) => computePrice({ ...selections, footprintM2: a, trimLengthM: trimLengthAt(selections, f) }).total;
   const round500 = (n) => Math.round(n / 500) * 500;
   return {
-    low: round500(at(area * (1 - PRIOR_AREA_UNCERTAINTY))),
-    high: round500(at(area * (1 + PRIOR_AREA_UNCERTAINTY))),
+    low: round500(at(area * (1 - PRIOR_AREA_UNCERTAINTY), 1 - PRIOR_AREA_UNCERTAINTY)),
+    high: round500(at(area * (1 + PRIOR_AREA_UNCERTAINTY), 1 + PRIOR_AREA_UNCERTAINTY)),
   };
 }
 
