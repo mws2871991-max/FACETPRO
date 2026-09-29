@@ -378,3 +378,25 @@ test("neighbourWindowBoxes and the count agree about number 14", () => {
   assert.strictEqual(glazing.frontWindowCount(OPUS_14.detections), 4,
     'and the count must still be the four windows number 14 actually has');
 });
+
+test('the warm-up outlasts a cold start, which is the only time it matters', () => {
+  /* Measured cold starts: 82.8s and 88.9s. The ceiling was 75s, so the warm-up
+     fired at upload could never survive a cold container — and a cold
+     container is precisely the case it exists for. Caught live on 29
+     September: "segmentation still running at the deadline", followed by a
+     render with no mask, no held bay, green wheelie bins and no colour
+     correction. Nobody waits on this number; GRACE_MS is what a finished
+     render waits. */
+  const { MAX_WAIT_MS, GRACE_MS, MIN_BUDGET_MS } = require('../windowmask');
+  assert.ok(MAX_WAIT_MS > 90000, `${MAX_WAIT_MS}ms does not clear a measured 88.9s cold start`);
+  assert.ok(GRACE_MS <= 10000, 'the render must not inherit that wait');
+  assert.ok(MIN_BUDGET_MS < GRACE_MS * 3, 'a render with no time left should not start one at all');
+
+  /* And the warm-up's own budget must be at least the ceiling, or the ceiling
+     is decorative. */
+  const src = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  const m = src.match(/const MASK_WARM_MS = ([\d_]+);/);
+  assert.ok(m, 'the warm-up budget has gone');
+  assert.ok(Number(m[1].replace(/_/g, '')) >= MAX_WAIT_MS,
+    'the warm-up budget is below the ceiling, so the ceiling never applies');
+});

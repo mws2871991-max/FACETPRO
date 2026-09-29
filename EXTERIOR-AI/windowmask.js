@@ -74,7 +74,20 @@ const DILATE = 3;
    deadline, so this takes a slice of what is left and gives up rather than
    spending it — a render with an unheld bay is worth more than no render. */
 const MIN_BUDGET_MS = 12000;
-const MAX_WAIT_MS = 75000;
+/* Above the cold start, not below it.
+ *
+ * This was 75s, and the two cold starts measured are 82.8s and 88.9s — so the
+ * ceiling sat underneath the thing it was meant to survive. Caught live on 29
+ * September: "window mask not prepared — segmentation still running at the
+ * deadline", and the render that followed had no mask, so it kept neither the
+ * bay nor the bins nor the colour. The one moment the warm-up exists for is a
+ * cold container, and it was the one moment it could not last.
+ *
+ * Costs nothing to raise. Nobody waits on this: the warm-up is fired and
+ * forgotten at upload, and what the finished render will wait for is GRACE_MS
+ * below, which is six seconds either way. The render path's own call is
+ * bounded by the render deadline it is passed, not by this. */
+const MAX_WAIT_MS = 110000;
 
 /* How long the finished render will wait for a mask that has not arrived.
  *
@@ -227,4 +240,4 @@ async function maskWithinGrace(maskPromise, graceMs = GRACE_MS) {
   }
 }
 
-module.exports = { fetchWindowMask, maskWithinGrace, maskPrompt, MODEL_VERSION, MASK_INDEX, DILATE, MIN_BUDGET_MS, GRACE_MS };
+module.exports = { fetchWindowMask, maskWithinGrace, maskPrompt, MODEL_VERSION, MASK_INDEX, DILATE, MIN_BUDGET_MS, MAX_WAIT_MS, GRACE_MS };
