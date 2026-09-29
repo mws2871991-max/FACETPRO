@@ -1983,10 +1983,10 @@ function journeyExcludes(group) {
 // The exact wording the homeowner agrees to. Sent with the lead and stored, so
 // there's a record of what was consented to and when — bump CONSENT_VERSION
 // whenever CONSENT_WORDING changes, and keep the on-screen label identical.
-const CONSENT_VERSION = '2026-08-01';
+const CONSENT_VERSION = '2026-09-29';
 const CONSENT_WORDING = {
   emailPack: 'Email me my design pack — my visualisation and indicative estimate.',
-  installerQuotes: 'Yes, I\u2019d like quotes. Please pass my name, postcode, email address and phone number, together with my design and estimate, to up to three vetted installers covering my area, so they can contact me about quoting for this work and arranging a survey. I understand they may contact me by email and by telephone, including if my number is registered with the Telephone Preference Service, and that each installer is responsible for its own use of my details.',
+  installerQuotes: 'Yes, I\u2019d like quotes. Please pass my name, postcode, email address and phone number, together with my design and estimate, to up to three vetted installers covering my area, so they can contact me about quoting for this work and arranging a survey. I understand they may contact me by email, by telephone and by text message, including if my number is registered with the Telephone Preference Service, and that each installer is responsible for its own use of my details.',
   terms: 'I\u2019ve read and agree to the Terms of Use and the Privacy Notice.',
 };
 
@@ -8633,10 +8633,19 @@ function buildSaveFraming() {
           ? (state.quote?.intent === 'quotes'
               ? h('div', { className: `rounded-xl border-2 p-3 ${state.consent.installerQuotes ? 'border-emerald-600 bg-emerald-50' : 'border-amber-500 bg-amber-50'}` }, [
                   h('p', { className: 'text-lg font-semibold text-zinc-900' },
-                    state.consent.installerQuotes ? '\u2713 Your quotes will be requested' : 'To get your prices, tick this box:'),
+                    state.consent.installerQuotes ? '\u2713 Your quotes will be requested' : 'To get quotes from installers, tick this box:'),
                   consentBox('installerQuotes', [CONSENT_WORDING.installerQuotes]),
                 ])
               : consentBox('installerQuotes', [CONSENT_WORDING.installerQuotes]))
+          : null,
+        /* Who pays, said where the choice is made (29 September). Taken off
+           the reassurance section earlier because it answered a question
+           nobody had asked there; here it is the question — the site says
+           "free", and the homeowner is deciding whether to be introduced.
+           Same fact as terms.html and privacy.html. */
+        state.installerQuotesAvailable
+          ? h('p', { className: 'text-base leading-7 text-zinc-600' },
+              'How we\u2019re paid: installers pay us when we pass on an enquiry. You pay nothing, it doesn\u2019t change your estimate, and no installer can pay to be recommended.')
           : null,
         /* They checked their postcode and nobody covers it. The box stays —
            they can still ask, and we still record that they did — but saying
