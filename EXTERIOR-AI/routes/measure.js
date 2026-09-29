@@ -60,7 +60,7 @@ module.exports = function measureRoutes({
      caveat the client renders — every figure here is a guide until a supplier
      rate card replaces catalogue.glazing. */
   router.post('/api/glazing', (req, res) => {
-    const { detectionId, houseType, windowStyleId, doorStyleId, windowDoorColourId, windowBarsId, windowCount, openerCount, seenOnly, backCount, frontCount } = req.body || {};
+    const { detectionId, houseType, windowStyleId, doorStyleId, windowDoorColourId, windowBarsId, windowMaterialId, windowCount, openerCount, seenOnly, backCount, frontCount } = req.body || {};
 
     /* No style chosen, no price. The module will happily price a default set,
        which is the right behaviour for a module and the wrong one for an
@@ -81,7 +81,11 @@ module.exports = function measureRoutes({
         // house-type prior while looking like it had measured the photograph.
         aspectRatio: record?.aspectRatio ?? null,
         houseType,
-        selections: { windowStyleId, doorStyleId, windowDoorColourId, windowBarsId },
+        selections: {
+          windowStyleId, doorStyleId, windowDoorColourId, windowBarsId,
+          /* Frame material (29 September): only one the catalogue holds. */
+          windowMaterialId: (catalogue.glazing?.materials || []).some(m => m.id === windowMaterialId) ? windowMaterialId : null,
+        },
         rates: catalogue.glazing,
         windowCountOverride: windowCount,
         openerCount,

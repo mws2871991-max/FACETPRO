@@ -70,7 +70,7 @@ function placeholdersIn(file) {
  */
 module.exports = function pageRoutes({
   perMinute, requireInvestorPassword, SITE_URL, __dirname: appDir,
-  catalogue, SITE_MODE, LEAD_RECIPIENTS,
+  catalogue, SITE_MODE, LEAD_RECIPIENTS, countSeoLanding = async () => {},
 }) {
   const router = express.Router();
   const __dirname = appDir;   // keep the moved code's path expressions correct
@@ -131,6 +131,14 @@ module.exports = function pageRoutes({
     res.setHeader('Cache-Control', 'public, max-age=600, stale-while-revalidate=3600');
   };
 
+  router.get('/cost', perMinute(120, 'Too many requests — please wait a moment.'), (req, res) => {
+    landingCacheHeader(res);
+    res.type('html').send(landing.renderCostIndex({
+      catalogue, siteUrl: SITE_URL.replace(/\/$/, ''), siteMode: SITE_MODE,
+    }));
+    countSeoLanding(req, 'cost');
+  });
+
   router.get('/cost/:slug', perMinute(120, 'Too many requests — please wait a moment.'), (req, res, next) => {
     const html = landing.renderCostPage(req.params.slug, {
       catalogue, siteUrl: SITE_URL.replace(/\/$/, ''), siteMode: SITE_MODE,
@@ -141,6 +149,7 @@ module.exports = function pageRoutes({
     if (!html) return next();
     landingCacheHeader(res);
     res.type('html').send(html);
+    countSeoLanding(req, req.params.slug);
   });
 
   router.get('/:slug', perMinute(120, 'Too many requests — please wait a moment.'), (req, res, next) => {
@@ -160,6 +169,7 @@ module.exports = function pageRoutes({
     if (!html) return next();
     landingCacheHeader(res);
     res.type('html').send(html);
+    countSeoLanding(req, req.params.slug);
   });
 
   /* Served either way; indexed only when finished. X-Robots-Tag rather than

@@ -652,6 +652,21 @@
     "georgianBarUplift": 1.12,
     "georgianBarNote": "Georgian bars, per window, as a multiple of the window price. Our own figure from typical UK trade pricing (bars commonly add about 10-15% to a window), not a supplier rate card; replace when one lands.",
     "nonWhiteUplift": 1.08,
+    "materials": [
+      {
+        "id": "upvc",
+        "name": "uPVC",
+        "multiplier": 1,
+        "colourIncluded": false
+      },
+      {
+        "id": "aluminium",
+        "name": "Aluminium",
+        "multiplier": 1.25,
+        "colourIncluded": true
+      }
+    ],
+    "materialsNote": "Frame material, windows only. Every window band price is uPVC. Aluminium: Mike Sheehan's figure from 24 years selling windows, 29 September 2026 — about 25% more than the same window in uPVC, with the colour included in that (powder-coated), so the non-white uplift is not added again. Styles apply on top as for uPVC.",
     "doors": [
       {
         "id": "upvc",

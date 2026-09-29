@@ -50,6 +50,7 @@
 
 const glazing = require('./glazing');
 const routing = require('./routing');
+const measure = require('./measure');
 
 const escapeHtml = (v) => String(v ?? '')
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -91,12 +92,12 @@ const vatMult = (v) => 1 + asFraction(v);
    makes. houseType matters because the engine scales a front-elevation count
    to the whole house; here the count IS the whole house, so the override is
    used and the type only affects the band mix. */
-function windowJob(catalogue, { count, houseType = 'semi', colourId = null, styleId = 'casement' }) {
+function windowJob(catalogue, { count, houseType = 'semi', colourId = null, styleId = 'casement', materialId = null }) {
   const out = glazing.estimateGlazing({
     rates: catalogue.glazing,
     houseType,
     windowCountOverride: count,
-    selections: { windowStyleId: styleId, windowDoorColourId: colourId },
+    selections: { windowStyleId: styleId, windowDoorColourId: colourId, windowMaterialId: materialId },
   });
   /* The same figure the tool publishes. These two read different fields until
      today, so the page and the tool quoted the same house differently within
@@ -195,10 +196,10 @@ function roofFor(catalogue, m2) {
 const COST_PAGES = [
   {
     slug: 'window-replacement-cost-uk',
-    title: 'Window replacement cost UK (2026 prices)',
-    h1: 'What does window replacement cost in the UK?',
+    title: 'Window Replacement Cost UK 2026 | How Much to Replace Windows',
+    h1: 'What Does Window Replacement Cost in the UK?',
     intent: 'window replacement cost UK',
-    description: 'What replacing your windows costs in the UK, priced from what these jobs actually sell for — per window and for a whole house.',
+    description: 'What replacing your windows costs in the UK in 2026 — per window, by house size and by window size, fitted and inc VAT, from what these jobs actually sell for.',
     build: (c) => {
       const semi = windowJob(c, { count: 8 });
       const detached = windowJob(c, { count: 12 });
@@ -232,10 +233,10 @@ const COST_PAGES = [
   },
   {
     slug: 'new-windows-cost-uk',
-    title: 'New windows cost UK — what to budget in 2026',
-    h1: 'How much do new windows cost?',
+    title: 'New Windows Cost UK 2026 | Prices & Fitted Estimates',
+    h1: 'How Much Do New Windows Cost in the UK?',
     intent: 'new windows cost UK',
-    description: 'What new windows cost in the UK, by size, style and house type, from real fitted rates rather than a headline price.',
+    description: 'How much new windows cost in the UK in 2026 — per window, by style and for a whole house, fitted and inc VAT. The starting point for every window cost guide.',
     build: (c) => {
       const base = windowJob(c, { count: 8 });
       const flush = windowJob(c, { count: 8, styleId: 'flush' });
@@ -289,10 +290,10 @@ const COST_PAGES = [
   },
   {
     slug: 'upvc-window-prices',
-    title: 'uPVC window prices — supply and fit, by size',
-    h1: 'uPVC window prices, by size',
+    title: 'uPVC Window Prices UK 2026 | Supply & Fitted Costs',
+    h1: 'uPVC Window Prices: How Much Do They Cost Fitted?',
     intent: 'uPVC window prices',
-    description: 'uPVC window prices by size, supply and fit, inc VAT — plus what a whole-house job comes to.',
+    description: 'uPVC window prices in the UK by size, supplied and fitted inc VAT, what is included, and what a whole-house job comes to.',
     build: (c) => {
       const vat = vatMult(c.glazing.vatPct ?? 20);
       const semi = windowJob(c, { count: 8 });
@@ -303,20 +304,17 @@ const COST_PAGES = [
             head: ['Size', 'Example', 'Inc VAT'],
             rows: c.glazing.windowBands.map(b => [b.label, b.example, money(b.supplyFit * vat)]),
           } },
-          { heading: 'What is in that figure', paras: [
-            'Supply, fitting, removing and taking away the old frames, and the sealing and making good around the new one. VAT is included in every number on this page.',
-            `Access equipment is separate where it is needed — ${money((c.glazing.accessCost || 0) * vat)} for a scaffold tower on upstairs windows — and there is a minimum job charge of ${money((c.glazing.minJobCharge || 0) * vat)}, because sending a two-man team out for one small window costs what it costs.`,
-          ] },
+          /* 'What is in that figure' moved to the shared 'What is included' section. */
         ],
       };
     },
   },
   {
     slug: '10-window-replacement-cost',
-    title: '10 window replacement cost — what ten windows comes to',
-    h1: 'What does replacing 10 windows cost?',
+    title: '10 Window Replacement Cost UK 2026 | Fitted Prices',
+    h1: 'How Much Does It Cost to Replace 10 Windows?',
     intent: '10 window replacement cost',
-    description: 'What replacing ten windows costs, fitted and inc VAT, with the same job priced at eight and twelve for comparison.',
+    description: 'What replacing ten windows costs in the UK, fitted and inc VAT, with eight to twelve windows side by side for comparison.',
     build: (c) => {
       const ten = windowJob(c, { count: 10 });
       return {
@@ -339,10 +337,10 @@ const COST_PAGES = [
   },
   {
     slug: 'front-door-replacement-cost',
-    title: 'Front door replacement cost UK',
-    h1: 'What does a new front door cost?',
+    title: 'Front Door Replacement Cost UK 2026 | Fitted Prices',
+    h1: 'How Much Does a New Front Door Cost?',
     intent: 'front door replacement cost',
-    description: 'Front door replacement costs in the UK by door type — uPVC, composite, double, patio and bifold — fitted and inc VAT.',
+    description: 'Front door replacement costs in the UK by door type — uPVC, composite, double, patio and bifold — fitted with the old door removed, inc VAT.',
     build: (c) => ({
       answer: (() => {
         const d = doorPrices(c).find(x => /composite/i.test(x.name));
@@ -388,10 +386,10 @@ const COST_PAGES = [
   },
   {
     slug: 'house-rendering-cost',
-    title: 'House rendering cost UK — per m² and per house',
-    h1: 'What does rendering a house cost?',
+    title: 'House Rendering Cost UK 2026 | Cost Per m² & Per House',
+    h1: 'How Much Does It Cost to Render a House?',
     intent: 'house rendering cost',
-    description: 'House rendering and cladding costs per square metre and for a typical house, including scaffolding and waste, inc VAT.',
+    description: 'House rendering costs per square metre and per house in the UK, including a 3-bed house worked example, scaffolding and waste, inc VAT.',
     build: (c) => {
       const walls = wallsFor(c, 90);
       const cheapest = walls.rows.reduce((a, b) => (a.perM2 <= b.perM2 ? a : b));
@@ -519,10 +517,10 @@ const COST_PAGES = [
   },
   {
     slug: 'house-exterior-renovation-cost',
-    title: 'House exterior renovation cost UK — the whole outside',
-    h1: 'What does renovating a house exterior cost?',
+    title: 'House Exterior Renovation Cost UK 2026 | Complete Guide',
+    h1: 'How Much Does It Cost to Renovate the Outside of a House?',
     intent: 'house exterior renovation cost',
-    description: 'What a full exterior renovation costs in the UK — windows, doors, walls, roof and roofline priced together rather than separately.',
+    description: 'What renovating the whole outside of a UK house costs — windows, doors, walls, roofline and roof, itemised and together, inc VAT.',
     build: (c) => {
       const win = windowJob(c, { count: 8 });
       const doors = doorPrices(c).find(d => /composite/i.test(d.name));
@@ -571,8 +569,8 @@ const COST_PAGES = [
      search as "new roof", so a second page would only compete with the first. */
   {
     slug: 'composite-door-cost',
-    title: 'Composite door cost UK — fitted prices for 2026',
-    h1: 'What does a composite door cost?',
+    title: 'Composite Door Cost UK 2026 | Fitted Prices & Guide',
+    h1: 'How Much Does a Composite Door Cost?',
     intent: 'composite door cost',
     description: 'What a composite front door costs fitted in the UK, against uPVC, and what moves the price — from what these jobs actually sell for.',
     build: (c) => {
@@ -718,6 +716,99 @@ const COST_PAGES = [
       };
     },
   },
+  /* ── SEO sprint 1 (29 September) ── */
+  {
+    slug: '12-window-replacement-cost',
+    title: '12 Window Replacement Cost UK 2026 | Fitted Prices',
+    h1: 'How Much Does It Cost to Replace 12 Windows?',
+    intent: '12 window replacement cost',
+    description: 'What replacing twelve windows costs in the UK, fitted and inc VAT — typical of a 4-bed detached — with ten to fourteen windows side by side.',
+    build: (c) => {
+      const twelve = windowJob(c, { count: 12, houseType: 'detached' });
+      const alu = windowJob(c, { count: 12, houseType: 'detached', materialId: 'aluminium' });
+      return {
+        answer: `${money(twelve.low)} to ${money(twelve.high)} fitted, inc VAT — around ${money(twelve.perWindowLow)} to ${money(twelve.perWindowHigh)} a window in uPVC.`,
+        sections: [
+          { heading: 'Twelve windows, and either side of it', table: {
+            head: ['Windows', 'Estimated cost fitted, inc VAT'],
+            rows: [10, 11, 12, 13, 14].map(n => {
+              const j = windowJob(c, { count: n, houseType: 'detached' });
+              return [String(n), `${money(j.low)} – ${money(j.high)}`];
+            }),
+          } },
+          { heading: 'What moves the price of twelve windows', paras: [
+            'Window size first: twelve windows on a detached house usually include two or three large ones downstairs, and a large window costs roughly twice a small one.',
+            'Then how many open, the material (uPVC or aluminium), the style (casement, flush or sash), and access — on a detached house more of the twelve are upstairs, and upstairs windows need a tower or, on a tall house, scaffolding. VAT is in every figure.',
+          ] },
+          { heading: 'Example: a 4-bed detached', paras: [
+            `Twelve windows in white uPVC: ${money(twelve.low)} to ${money(twelve.high)} fitted, inc VAT. The same twelve in aluminium: ${money(alu.low)} to ${money(alu.high)}.`,
+          ] },
+        ],
+        faqs: [
+          { q: 'How much does it cost to replace 12 windows?', a: `About ${money(twelve.low)} to ${money(twelve.high)} fitted, inc VAT, for twelve uPVC casements on a detached house.` },
+          { q: 'How long does it take to fit 12 windows?', a: 'Usually two days for a fitting team, sometimes three if several are large or hard to reach.' },
+          { q: 'Is it cheaper per window to do all twelve?', a: 'Yes, per window: access and setting up are paid once across more windows.' },
+        ],
+      };
+    },
+  },
+  {
+    slug: 'aluminium-window-prices',
+    title: 'Aluminium Window Prices UK 2026 | Fitted Cost Guide',
+    /* Mike's image_20260929_124901, an AI illustration — captioned as one. */
+    image: {
+      src: '/assets/products/windows-aluminium-800.jpg',
+      srcset: '/assets/products/windows-aluminium-480.jpg 480w, /assets/products/windows-aluminium-800.jpg 800w, /assets/products/windows-aluminium-1200.jpg 1200w',
+      alt: 'Illustration: a red-brick house with slim dark grey aluminium windows and sliding glass doors',
+      caption: 'Illustration: slim aluminium frames in anthracite on a red-brick house.',
+    },
+    h1: 'How Much Do Aluminium Windows Cost?',
+    intent: 'aluminium window prices',
+    description: 'Aluminium window prices in the UK by size and quantity, fitted and inc VAT, against uPVC — from what these jobs actually sell for.',
+    build: (c) => {
+      const vat = vatMult(c.glazing.vatPct ?? 20);
+      const mat = (c.glazing.materials || []).find(m => m.id === 'aluminium');
+      const mult = mat?.multiplier ?? 1;
+      const pct = Math.round((mult - 1) * 100);
+      const semi = windowJob(c, { count: 8, materialId: 'aluminium' });
+      const semiU = windowJob(c, { count: 8 });
+      return {
+        answer: `About ${money(semi.perWindowLow)} to ${money(semi.perWindowHigh)} per aluminium window fitted, so roughly ${money(semi.low)} to ${money(semi.high)} for eight, inc VAT — about ${pct}% more than uPVC for the same windows.`,
+        sections: [
+          { heading: 'Price by size', table: {
+            head: ['Size', 'Typical opening', 'Aluminium, supply and fit, inc VAT'],
+            rows: c.glazing.windowBands.map(b => [b.label, b.example, money(b.supplyFit * mult * vat)]),
+          } },
+          { heading: 'Price by quantity', table: {
+            head: ['Windows', 'Aluminium, inc VAT', 'uPVC, inc VAT'],
+            rows: [6, 8, 10, 12].map(n => {
+              const a = windowJob(c, { count: n, materialId: 'aluminium' });
+              const u = windowJob(c, { count: n });
+              return [String(n), `${money(a.low)} – ${money(a.high)}`, `${money(u.low)} – ${money(u.high)}`];
+            }),
+          } },
+          { heading: 'Aluminium or uPVC', paras: [
+            `Aluminium costs about ${pct}% more than uPVC for the same window. Its frames are slimmer for the same strength, which suits large glazed areas and a modern look; uPVC is the lower-cost frame and what most UK homes have.`,
+            'Neither is the right answer for every house — it comes down to budget, the look you want and the size of the glass.',
+          ] },
+          { heading: 'Colours and finishes', paras: [
+            'Aluminium is powder-coated, and on this site the colour is part of the aluminium price: anthracite, black, grey or white cost the same. On uPVC a non-white finish is an extra.',
+          ] },
+          { heading: 'What affects the installation cost', paras: [
+            'The same things as any window: how many, how big, how many open, the style, and access to upstairs windows. Structural work around a widened opening is priced separately.',
+          ] },
+          { heading: 'Example: a 3-bed semi', paras: [
+            `Eight windows in aluminium: ${money(semi.low)} to ${money(semi.high)} fitted, inc VAT, against ${money(semiU.low)} to ${money(semiU.high)} in white uPVC.`,
+          ] },
+        ],
+        faqs: [
+          { q: 'How much does an aluminium window cost?', a: `From about ${money(c.glazing.windowBands[1].supplyFit * mult * vat)} for a standard 1200 × 1200 aluminium window, supplied and fitted, inc VAT — more once access is added, and more with some companies than others.` },
+          { q: 'Are aluminium windows more expensive than uPVC?', a: `Yes — about ${pct}% more for the same window, with the colour included.` },
+          { q: 'How much are aluminium windows for a 3-bed house?', a: `About ${money(semi.low)} to ${money(semi.high)} for eight windows, fitted and inc VAT.` },
+        ],
+      };
+    },
+  },
 ];
 
 /* Area pages. Kept to the outward codes and towns the business actually works
@@ -800,11 +891,19 @@ function journeyForSlug(slug) {
    same place. */
 const isConservatory = (slug) => !!slug && /conservator/.test(slug);
 
-const ctaHref = (siteUrl, slug) => {
+/* `where` says which of the page's buttons was pressed — hero, end or header —
+   so the funnel can tell whether the button above the answer or the one after
+   it earns the upload (SEO sprint 1, §18). Allowlisted server-side like
+   `from`; it names a button, never a person. */
+const CTA_PLACES = ['hero', 'end', 'header'];
+const ctaHref = (siteUrl, slug, where) => {
   const journey = slug ? journeyForSlug(slug) : null;
   const q = [];
   if (journey) q.push(`journey=${journey}`);
   if (slug) q.push(`from=${encodeURIComponent(slug)}`);
+  if (where && CTA_PLACES.includes(where)) q.push(`cta=${where}`);
+  /* "Try aluminium" opens the tool with aluminium already chosen. */
+  if (slug === 'aluminium-window-prices') q.push('material=aluminium');
   /* The tool, not the homepage. Until 20 September these pages pointed at
      `/?journey=…#your-photo`, which dropped a reader of a cost guide into a
      30-screen page and asked them to find the uploader in it. `/design` is the
@@ -812,6 +911,47 @@ const ctaHref = (siteUrl, slug) => {
      top of it. Old links still work — see the redirect in server.js. */
   return `${siteUrl}/design${q.length ? `?${q.join('&')}` : ''}${isConservatory(slug) ? '#conservatory' : ''}`;
 };
+
+/* ── SEO SPRINT 1: categories, breadcrumbs, the CTA's words ──
+
+   Each guide belongs to one category, and each category has a hub — the page
+   the breadcrumb's middle step and every "up" link point at. Derived from the
+   slug like the journey is, so there is no second list to keep in step. */
+const CATEGORIES = {
+  windows:      { label: 'Windows',        hub: 'new-windows-cost-uk' },
+  doors:        { label: 'Doors',          hub: 'front-door-replacement-cost' },
+  walls:        { label: 'Walls',          hub: 'house-rendering-cost' },
+  roofline:     { label: 'Roofline',       hub: 'fascia-soffit-replacement-cost' },
+  roof:         { label: 'Roofs',          hub: 'new-roof-cost' },
+  conservatory: { label: 'Conservatories', hub: 'conservatory-cost-uk' },
+  exterior:     { label: 'Whole exterior', hub: 'house-exterior-renovation-cost' },
+};
+const categoryFor = (slug) => {
+  if (!slug) return 'windows';                       // area pages are about windows
+  if (/exterior/.test(slug)) return 'exterior';
+  if (isConservatory(slug)) return 'conservatory';
+  return ({ windows: 'windows', doors: 'doors', cladding: 'walls', roofline: 'roofline', roof: 'roof' })[journeyForSlug(slug)] || 'exterior';
+};
+/* The short name for a crumb: the title up to its first separator, without
+   the year. "New Windows Cost UK 2026 | Prices…" → "New Windows Cost UK". */
+const crumbName = (title) => title.split(/ [|—–] /)[0].replace(/\s+20\d\d\b/, '').trim();
+
+/* The button's words, matched to what was searched (sprint brief §4). The
+   heading above the end button is the same on every guide on purpose — it is
+   the argument — and the button is the specific promise. */
+const CTA_WORDS = {
+  'new-windows-cost-uk': 'See my windows',
+  'window-replacement-cost-uk': 'Show me my windows',
+  '10-window-replacement-cost': 'Count my windows',
+  '12-window-replacement-cost': 'Count my windows',
+  'upvc-window-prices': 'See uPVC on my house',
+  'aluminium-window-prices': 'Try aluminium',
+  'front-door-replacement-cost': 'Show me my door',
+  'composite-door-cost': 'Try a composite door',
+  'house-rendering-cost': 'Render my house',
+  'house-exterior-renovation-cost': 'Plan my house',
+};
+const ctaWords = (slug, fallback) => (slug && CTA_WORDS[slug]) || fallback;
 
 /* The conservatory page gets its own, because the standard one promises to
    find their windows, doors, roof and walls in a photograph — true, and not
@@ -824,7 +964,7 @@ const conservatoryCta = (siteUrl, slug) => `<div class="cta-block">
      of the front of a house. What we can do is show the eight styles side by side
      with what people pay for each, and note which one appeals so it is on the
      table when somebody talks to you.</p>
-  <p><a class="cta" href="${escapeHtml(ctaHref(siteUrl, slug))}">Compare the styles</a></p>
+  <p><a class="cta" href="${escapeHtml(ctaHref(siteUrl, slug, 'end'))}">Compare the styles</a></p>
   <p class="muted">Free to try &middot; No measurements &middot; No sales call unless you ask</p>
   <p class="muted">Your original photo isn&rsquo;t stored. <a href="/privacy#your-photograph">See how your photo is used &rarr;</a></p>
 </div>`;
@@ -847,7 +987,7 @@ const cta = (siteUrl, slug) => (isConservatory(slug) ? conservatoryCta(siteUrl, 
        The journey CTA above it keeps its own words on purpose: "Show me my
        windows" on a page about window costs is a different and more specific
        promise, not a second name for this one. -->
-  <p><a class="cta" href="${escapeHtml(ctaHref(siteUrl, slug))}">Upload a photo</a></p>
+  <p><a class="cta" href="${escapeHtml(ctaHref(siteUrl, slug, 'end'))}">${escapeHtml(ctaWords(slug, 'Upload a photo'))}</a></p>
   <p class="muted">Free to try &middot; No measurements &middot; No sales call unless you ask</p>
   <p class="muted">Your original photo isn&rsquo;t stored. <a href="/privacy#your-photograph">See how your photo is used &rarr;</a></p>
 </div>`);
@@ -876,8 +1016,44 @@ const productMenu = (siteUrl, slug) => `<nav class="products" aria-label="Produc
     href === `/cost/${slug}` ? ' aria-current="page"' : ''}>${escapeHtml(label)}</a></li>`).join('')
 }</ul></nav>`;
 
-function page({ title, description, h1, canonical, body, siteUrl, siteMode, related, faq, slug }) {
+/* Structured data as one @graph: the page, its breadcrumb, and — only where
+   questions and answers are visibly on the page — an FAQ. The old version
+   built an FAQ from every section heading, so "By door type" was being
+   declared to Google as a question; the brief says FAQ schema only where FAQs
+   genuinely appear, and that is the rule now. */
+function schemaFor({ title, description, canonical, siteUrl, crumbs, faqs, updated }) {
+  const graph = [
+    {
+      '@type': 'WebPage', '@id': `${canonical}#page`, url: canonical, name: title, description,
+      inLanguage: 'en-GB', isPartOf: { '@type': 'WebSite', name: 'Facet Pro', url: `${siteUrl}/` },
+      publisher: { '@type': 'Organization', name: 'Facet Pro', url: `${siteUrl}/` },
+      ...(updated ? { dateModified: updated } : {}),
+      breadcrumb: { '@id': `${canonical}#breadcrumb` },
+    },
+    {
+      '@type': 'BreadcrumbList', '@id': `${canonical}#breadcrumb`,
+      itemListElement: crumbs.map((c, i) => ({
+        '@type': 'ListItem', position: i + 1, name: c.name, ...(c.href ? { item: c.href } : { item: canonical }),
+      })),
+    },
+  ];
+  if (faqs && faqs.length) {
+    graph.push({
+      '@type': 'FAQPage', '@id': `${canonical}#faq`,
+      mainEntity: faqs.map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })),
+    });
+  }
+  return { '@context': 'https://schema.org', '@graph': graph };
+}
+
+const breadcrumbNav = (crumbs) => `<nav class="crumbs" aria-label="Breadcrumb"><ol>${crumbs.map((c, i) =>
+  i === crumbs.length - 1
+    ? `<li aria-current="page">${escapeHtml(c.name)}</li>`
+    : `<li><a href="${escapeHtml(c.href)}">${escapeHtml(c.name)}</a></li>`).join('')}</ol></nav>`;
+
+function page({ title, description, h1, canonical, body, siteUrl, siteMode, related, slug, crumbs, faqs, updated }) {
   const beta = siteMode === 'beta';
+  const schema = crumbs ? schemaFor({ title, description, canonical, siteUrl, crumbs, faqs, updated }) : null;
   return `<!doctype html><html lang="en-GB"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${escapeHtml(title)}</title>
@@ -887,15 +1063,24 @@ function page({ title, description, h1, canonical, body, siteUrl, siteMode, rela
 <meta property="og:description" content="${escapeHtml(description)}">
 <meta property="og:type" content="article">
 <meta property="og:image" content="${escapeHtml(siteUrl)}/assets/og-image.png">
+<meta property="og:url" content="${escapeHtml(canonical)}">
+<meta property="og:site_name" content="Facet Pro">
+<meta property="og:locale" content="en_GB">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${escapeHtml(title)}">
+<meta name="twitter:description" content="${escapeHtml(description)}">
+<meta name="twitter:image" content="${escapeHtml(siteUrl)}/assets/og-image.png">
+<meta name="robots" content="index, follow">
 <link rel="icon" href="/assets/favicon-32.png">
 <link rel="stylesheet" href="/assets/landing.css">
-${faq ? `<script type="application/ld+json">${JSON.stringify(faq)}</script>` : ''}
+${schema ? `<script type="application/ld+json">${JSON.stringify(schema).replace(/</g, '\\u003c')}</script>` : ''}
 </head><body>
 <header class="site"><div class="wrap">
   <a class="logo" href="${escapeHtml(siteUrl)}/">Facet Pro</a>
-  <a class="cta-top" href="${escapeHtml(ctaHref(siteUrl, slug))}">See my house &rarr;</a>
+  <a class="cta-top" href="${escapeHtml(ctaHref(siteUrl, slug, 'header'))}">See my house &rarr;</a>
 </div>${productMenu(siteUrl, slug)}</header>
 <main class="wrap">
+${crumbs ? breadcrumbNav(crumbs) : ''}
 <h1>${escapeHtml(h1)}</h1>
 ${body}
 <!-- The beta notice, after the figures rather than before them.
@@ -924,19 +1109,6 @@ ${related ? `<nav class="related"><h2>Related costs</h2><ul>${related.map(r =>
   Facet Pro &middot; <a href="/privacy">Privacy notice</a> &middot; <a href="/terms">Terms of use</a>
 </div></footer>
 </body></html>`;
-}
-
-/* FAQPage structured data, built from the page's own headings and first
-   paragraph. Generated rather than hand-written so it cannot describe content
-   the page does not have, which is the thing Google penalises. */
-function faqFor(built) {
-  const items = built.sections.filter(s => s.paras?.length).map(s => ({
-    '@type': 'Question',
-    name: s.heading,
-    acceptedAnswer: { '@type': 'Answer', text: s.paras[0] },
-  }));
-  if (!items.length) return null;
-  return { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: items };
 }
 
 /* ── RENDERING ──────────────────────────────────────────────────────────── */
@@ -1007,13 +1179,16 @@ function relatedFor(slug) {
   const partner = partnerSlug ? rotated.filter(p => p.slug === partnerSlug) : [];
   const pairedSlug = pairedPage(slug);
   const paired = pairedSlug ? rotated.filter(p => p.slug === pairedSlug) : [];
-  const ordered = [...partner, ...paired, ...sameTrade, ...rest]
+  /* Up first: the category hub, so every guide links to its parent. */
+  const hubSlug = CATEGORIES[categoryFor(slug)]?.hub;
+  const up = hubSlug && hubSlug !== slug ? COST_PAGES.filter(p => p.slug === hubSlug) : [];
+  const ordered = [...up, ...partner, ...paired, ...sameTrade, ...rest]
     .filter((p, i, a) => a.indexOf(p) === i);
 
   return ordered.slice(0, 5)
     .map(p => ({
       href: `/cost/${p.slug}`,
-      label: p.h1.replace(/\?$/, ''),
+      label: crumbName(p.title),
       /* Said on the link itself, because it is the reason to follow it. */
       note: p.slug === partnerSlug ? 'shares the same scaffold as this job' : null,
     }));
@@ -1068,6 +1243,12 @@ const JOURNEY_HERO = {
    the way in and withdrawing it two sections later is the sort of small
    dishonesty that costs more than it buys. */
 const SLUG_HERO = {
+  /* The cornerstone page (sprint brief §15). */
+  'house-exterior-renovation-cost': {
+    h: 'Your house isn\u2019t a typical house.',
+    p: 'Upload one photo and see what your house could cost. Facet Pro finds your windows, doors, walls, roofline and roof, lets you try new ones on your own house, and prices the whole outside together.',
+    cta: 'Plan my house',
+  },
   /* Same reason as bifolds: patio and French doors are almost always at the
      back, and we draw on a photograph of the front. */
   'patio-doors-cost': {
@@ -1094,16 +1275,257 @@ const journeyHero = (siteUrl, slug) => {
   return `<div class="journey-hero">
   <h2>${escapeHtml(copy.h)}</h2>
   <p>${escapeHtml(copy.p)}</p>
-  <p><a class="cta" href="${escapeHtml(ctaHref(siteUrl, slug))}">${escapeHtml(copy.cta)}</a></p>
+  <p><a class="cta" href="${escapeHtml(ctaHref(siteUrl, slug, 'hero'))}">${escapeHtml(ctaWords(slug, copy.cta))}</a></p>
   <p class="muted">Free &middot; No measurements &middot; No sales call unless you ask</p>
   <p class="muted">Your original photo isn&rsquo;t stored. <a href="/privacy#your-photograph">See how your photo is used &rarr;</a></p>
 </div>`;
 };
 
+/* ── SEO SPRINT 1: the extra sections and the questions ──
+
+   Kept beside the pages rather than inside them so each sprint page's
+   structure can be read in one place: example property, anything the brief
+   asks for that the page lacked, and the questions people actually search.
+   Every figure is still computed; nothing here types a price. */
+const wallPrior = (type) => measure.HOUSE_TYPE_PRIORS[type]?.wallM2;
+
+const EXTRAS = {
+  'new-windows-cost-uk': (c) => {
+    const semi = windowJob(c, { count: 8 });
+    const terrace = windowJob(c, { count: 6, houseType: 'terrace' });
+    const det = windowJob(c, { count: 12, houseType: 'detached' });
+    const alu = windowJob(c, { count: 8, materialId: 'aluminium' });
+    return {
+      sections: [
+        { heading: 'Example: a 3-bed semi', paras: [
+          `A typical three-bedroom semi has about eight windows. In white uPVC casements that is ${money(semi.low)} to ${money(semi.high)} fitted, inc VAT. The same eight in aluminium is about ${money(alu.low)} to ${money(alu.high)}.`,
+          `A 2-bed mid-terrace with six windows is about ${money(terrace.low)} to ${money(terrace.high)}; a 4-bed detached with twelve is about ${money(det.low)} to ${money(det.high)}.`,
+        ] },
+      ],
+      faqs: [
+        { q: 'How much does a new window cost in the UK?', a: `About ${money(semi.perWindowLow)} to ${money(semi.perWindowHigh)} per window fitted for a standard uPVC casement, inc VAT, when several are done together. One small window on its own costs more per window because of the minimum charge.` },
+        { q: 'How much do windows cost for a 3-bed house?', a: `About ${money(semi.low)} to ${money(semi.high)} for eight uPVC windows on a 3-bed semi, fitted and inc VAT.` },
+        { q: 'Are aluminium windows more expensive than uPVC?', a: 'Yes — about a quarter more for the same window, with the colour included in that.' },
+        { q: 'Why do window quotes vary so much?', a: 'Mostly because of which company quotes. The same windows to the same specification can settle at very different prices with different installers, which is why the figure here is a range.' },
+      ],
+    };
+  },
+  'window-replacement-cost-uk': (c) => {
+    const semi = windowJob(c, { count: 8 });
+    return {
+      sections: [
+        { heading: 'Example: replacing the windows on a 3-bed semi', paras: [
+          `Eight windows — two large downstairs, the rest standard bedroom and landing sizes — comes to ${money(semi.low)} to ${money(semi.high)} fitted, inc VAT, taking out and taking away the old frames.`,
+          'If some of them are bays, or you choose sash, flush casement or aluminium, it moves up from there; colour moves it least.',
+        ] },
+      ],
+      faqs: [
+        { q: 'How much does it cost to replace all the windows in a house?', a: `For a typical eight-window semi, ${money(semi.low)} to ${money(semi.high)} fitted, inc VAT. A terrace is less, a detached house more — see the table above.` },
+        { q: 'Is it cheaper to replace windows all at once?', a: 'Usually per window, yes: access, travel and setting up are paid once rather than several times. Replacing one or two at a time also carries a minimum charge each visit.' },
+        { q: 'How long does window replacement take?', a: 'An average house is typically one to two days for a fitting team, depending on the number of windows and how many are upstairs.' },
+      ],
+    };
+  },
+  '10-window-replacement-cost': (c) => {
+    const ten = windowJob(c, { count: 10 });
+    return {
+      sections: [
+        { heading: 'Which houses have ten windows', paras: [
+          'Ten is typical of a larger three-bed semi or a smaller four-bed, counting every window front and back, including the small ones — bathroom, landing, a kitchen side window.',
+          'Facet Pro counts the windows on the front from your photograph and asks about the back and sides, so you do not have to count from memory.',
+        ] },
+      ],
+      faqs: [
+        { q: 'How much does it cost to replace 10 windows?', a: `About ${money(ten.low)} to ${money(ten.high)} fitted, inc VAT, for ten uPVC casements.` },
+        { q: 'Do I get a discount for ten windows?', a: 'Rarely a discount as such, but the per-window cost falls because access and setting up are paid once across more windows.' },
+      ],
+    };
+  },
+  'upvc-window-prices': (c) => {
+    const u = windowJob(c, { count: 8 });
+    const a = windowJob(c, { count: 8, materialId: 'aluminium' });
+    const vat = vatMult(c.glazing.vatPct ?? 20);
+    return {
+      sections: [
+        { heading: 'uPVC against aluminium', table: {
+          head: ['Frame', 'Eight windows fitted, inc VAT'],
+          rows: [['uPVC, white', `${money(u.low)} – ${money(u.high)}`], ['Aluminium, colour included', `${money(a.low)} – ${money(a.high)}`]],
+        }, paras: [
+          'uPVC is the lower-cost frame and the one most UK homes have. Aluminium costs about a quarter more for the same window; its frames are slimmer for the same strength, and a coloured finish is part of its price rather than an extra.',
+          'Neither is right for every house. The choice usually comes down to budget, the look you want, and how large the glazed areas are.',
+        ] },
+        { heading: 'Example: a 3-bed semi in uPVC', paras: [
+          `Eight windows, mostly standard 1200 × 1200 bedroom sizes with two large downstairs: ${money(u.low)} to ${money(u.high)} fitted, inc VAT. A single standard window on its own is about ${money(c.glazing.windowBands[1].supplyFit * vat)} plus the minimum charge.`,
+        ] },
+      ],
+      faqs: [
+        { q: 'How much is a uPVC window fitted?', a: `From about ${money(c.glazing.windowBands[1].supplyFit * vat)} for a standard 1200 × 1200 window, supplied and fitted, inc VAT — more once access is added, and more with some companies than others.` },
+        { q: 'Does colour cost extra on uPVC?', a: `A non-white finish such as anthracite adds about ${Math.round(((c.glazing.nonWhiteUplift || 1) - 1) * 100)}% to the window price.` },
+        { q: 'Is uPVC cheaper than aluminium?', a: 'For the same window, yes — aluminium is about a quarter more.' },
+      ],
+    };
+  },
+  'front-door-replacement-cost': (c) => {
+    const comp = doorPrices(c).find(d => /composite/i.test(d.name));
+    const upvc = doorPrices(c).find(d => /upvc/i.test(d.name));
+    return {
+      sections: [
+        { heading: 'Example: a new front door on a 3-bed semi', paras: [
+          `A composite door in a standard opening, old door taken away: ${money(comp.low)} to ${money(comp.high)} fitted, inc VAT. The same opening in uPVC: ${money(upvc.low)} to ${money(upvc.high)}.`,
+        ] },
+      ],
+      faqs: [
+        { q: 'How much does a new front door cost fitted?', a: `About ${money(upvc.low)} to ${money(upvc.high)} for uPVC and ${money(comp.low)} to ${money(comp.high)} for composite, inc VAT, with the old door taken away.` },
+        { q: 'How long does it take to fit a front door?', a: 'Usually half a day to a day for a standard door and frame.' },
+        { q: 'Should I replace the windows at the same time?', a: 'It is the most common combined job. Doing both together means one visit and a door and windows that match.' },
+      ],
+    };
+  },
+  'composite-door-cost': (c) => {
+    const comp = doorPrices(c).find(d => /composite/i.test(d.name));
+    return {
+      sections: [
+        { heading: 'What affects the price of a composite door', paras: [
+          'Size: the figure above is a standard single door. Wider or taller openings need a made-to-measure frame.',
+          'Glazing: a solid door is the base; glazed panels, decorative glass and side panels or a top light add to it.',
+          'Hardware and colour: handles, letterplates, knockers and locks vary, and most colours are available — a two-colour door (one colour outside, white inside) is common.',
+          'Frame, removal and installation: the price includes a new frame, taking the old door away, fitting and sealing. Re-forming a damaged opening, a new threshold or step, and internal decorating are not included.',
+        ] },
+        { heading: 'Example: replacing a uPVC front door with composite', paras: [
+          `Standard opening, new frame, old door taken away: ${money(comp.low)} to ${money(comp.high)} fitted, inc VAT.`,
+        ] },
+      ],
+      faqs: [
+        { q: 'How much is a composite door fitted?', a: `About ${money(comp.low)} to ${money(comp.high)} inc VAT for a standard composite front door with a new frame, old door taken away.` },
+        { q: 'Is a composite door worth it over uPVC?', a: 'It costs more but is heavier, better insulated and holds its colour better. For the door people see first, many homeowners find it worth it; uPVC is a sound door for less.' },
+        { q: 'How long does a composite door take to arrive?', a: 'Composite doors are made to order, typically a few weeks from survey to fitting.' },
+      ],
+    };
+  },
+  'house-rendering-cost': (c) => {
+    const rows = [['2-bed mid-terrace', 'terrace'], ['3-bed semi', 'semi'], ['4-bed detached', 'detached']]
+      .map(([label, type]) => {
+        const m2 = wallPrior(type);
+        const w = wallsFor(c, m2);
+        const r = w.rows.reduce((a, b) => (a.perM2 <= b.perM2 ? a : b));
+        return { label, m2, total: r.total, name: r.name };
+      });
+    const semi = rows[1];
+    return {
+      sections: [
+        { heading: 'How much does it cost to render a 3-bed house?', table: {
+          head: ['House', 'Wall area (planning figure)', `Rendered (${semi.name}), inc VAT`],
+          rows: rows.map(r => [r.label, `about ${r.m2} m²`, money(r.total)]),
+        }, paras: [
+          `About ${money(semi.total)} for a typical 3-bed semi, taking about ${semi.m2} m² of wall — our planning figure for a semi from a survey table of UK houses, after windows and doors. Your own wall area can be well above or below it.`,
+          'Upload a photo and Facet Pro estimates the front wall against your front door and estimates the rest for your house type. That is an estimate, not a survey measurement, and it says so — a renderer measures on site before quoting.',
+        ] },
+      ],
+      faqs: [
+        { q: 'How much does it cost to render a house?', a: `From about ${money(semi.total)} for a typical 3-bed semi, including scaffolding and waste, inc VAT. The biggest variable is your wall area.` },
+        { q: 'How much is rendering per m²?', a: 'See the table by finish above: the price per square metre includes materials and labour, inc VAT, with scaffolding added once per job.' },
+        { q: 'Do I need planning permission to render my house?', a: 'Often not, but it can be needed in a conservation area, on a listed building, or where it changes the look significantly. Check with your council first.' },
+      ],
+    };
+  },
+  'house-exterior-renovation-cost': () => ({
+    sections: [],
+    faqs: [
+      { q: 'How much does it cost to renovate the outside of a house?', a: 'For a typical semi doing windows, a front door, walls, roofline and roof together, see the itemised table above. You do not have to do all five — add up the lines that apply to your house.' },
+      { q: 'Is it cheaper to do everything at once?', a: 'Often, because jobs at height share one scaffold and one set-up, and the result matches.' },
+      { q: 'Where should I start?', a: 'Whatever is failing first — usually roofline or windows — and plan the rest around the same scaffold.' },
+    ],
+  }),
+};
+
+/* Home → Costs → category → this page. The category step links to its hub;
+   on the hub itself it links to the category's place on the /cost index, so
+   no crumb points at the page it sits on. */
+function crumbsFor(siteUrl, slug, name) {
+  const cat = categoryFor(slug);
+  const c = CATEGORIES[cat];
+  const hubHref = c.hub === slug ? `${siteUrl}/cost#${cat}` : `${siteUrl}/cost/${c.hub}`;
+  return [
+    { name: 'Home', href: `${siteUrl}/` },
+    { name: 'Costs', href: `${siteUrl}/cost` },
+    { name: c.label, href: hubHref },
+    { name },
+  ];
+}
+
+/* What the figure includes, said once per category and in the same terms as
+   the engine that produced it. */
+function includedSection(cat, c) {
+  const vat = vatMult(c.glazing?.vatPct ?? 20);
+  const g = c.glazing || {};
+  const byCat = {
+    windows: [
+      'Supplying and fitting the new windows, taking out and taking away the old ones, and sealing and making good around each new frame. VAT is in every figure.',
+      `Access for upstairs windows is included where the estimate needs it (${money((g.accessCost || 0) * vat)} for a tower), and small jobs carry a minimum charge of ${money((g.minJobCharge || 0) * vat)}. Not included: new sills or lintels where the old ones have failed, internal decorating, and anything structural.`,
+    ],
+    doors: [
+      `Supplying and fitting the door and frame, taking the old door away (${money((g.disposalPerUnit || 0) * vat)} of the figure), standard hardware, and sealing around the frame. VAT is in every figure.`,
+      'Not included: widening or re-forming the opening, a new step or threshold in stone, and internal decorating.',
+    ],
+    walls: [
+      'Materials and labour per square metre, a waste allowance on the materials, scaffolding for the job, and VAT.',
+      'Not included: repairs to the wall underneath, insulation boards (external wall insulation is a different job), and moving pipes, cables or satellite dishes beyond the usual.',
+    ],
+    roofline: [
+      'Fascia, soffit and guttering boards and their fitting per metre, a waste allowance on materials, scaffolding, and VAT.',
+      'Not included: rotten rafter feet or roof timbers found once the old boards come off, and new downpipe runs beyond replacing like for like.',
+    ],
+    roof: [
+      'The new covering and its fitting per square metre, a waste allowance on materials, scaffolding, and VAT.',
+      'Not included: structural timbers, rebuilding chimneys, and flat roofs — see below.',
+    ],
+    exterior: [
+      'Each line is priced the same way as its own guide: windows and doors fitted with the old ones taken away; walls, roofline and roof with materials, labour, waste and scaffolding. All inc VAT.',
+      'Not included: structural repairs, anything behind the surfaces being replaced, and internal making good.',
+    ],
+  };
+  const paras = byCat[cat];
+  return paras ? { heading: 'What is included in these prices', paras } : null;
+}
+
+const PLANNING_VS_QUOTE = {
+  heading: 'Planning estimate or quotation?',
+  paras: [
+    'Every figure on this page is a planning estimate: what a job like this typically costs, for budgeting and for judging the quotes you get. It is not a quotation. A quotation comes from an installer after a survey, when the exact sizes, specification and condition of your house are known.',
+    'Facet Pro narrows the estimate to your own house from a photograph of the front — the windows it can see, the wall it can measure against your front door — and says which parts are measured and which are estimated for your house type. Your installer confirms the figure on survey.',
+  ],
+};
+
+/* Down-links on a hub, and up-and-across on the cornerstone page. */
+function hubLinks(slug) {
+  const cat = categoryFor(slug);
+  if (slug === CATEGORIES.exterior.hub) {
+    const parts = [
+      ['Windows', 'new-windows-cost-uk'], ['Doors', 'front-door-replacement-cost'],
+      ['Rendering', 'house-rendering-cost'], ['Cladding', 'cladding-cost'],
+      ['Fascias, soffits and guttering', 'fascia-soffit-replacement-cost'], ['Roof', 'new-roof-cost'],
+    ].filter(([, sl]) => COST_PAGES.some(p => p.slug === sl));
+    return `<section class="hub"><h2>Price each part of the outside</h2><ul>${parts.map(([label, sl]) =>
+      `<li><a href="/cost/${sl}">${escapeHtml(label)}</a></li>`).join('')}</ul></section>`;
+  }
+  if (CATEGORIES[cat].hub !== slug) return '';
+  const children = COST_PAGES.filter(p => p.slug !== slug && categoryFor(p.slug) === cat);
+  if (!children.length) return '';
+  return `<section class="hub"><h2>${escapeHtml(CATEGORIES[cat].label)} cost guides</h2><ul>${children.map(p =>
+    `<li><a href="/cost/${p.slug}">${escapeHtml(crumbName(p.title))}</a></li>`).join('')}</ul></section>`;
+}
+
+/* Questions, visible, in the same words the schema declares. */
+const faqSection = (faqs) => (faqs && faqs.length ? `<section class="faq"><h2>Common questions</h2>
+${faqs.map(f => `<h3>${escapeHtml(f.q)}</h3>\n<p>${escapeHtml(f.a)}</p>`).join('\n')}
+</section>` : '');
+
 function renderCostPage(slug, { catalogue, siteUrl, siteMode }) {
   const def = COST_PAGES.find(p => p.slug === slug);
   if (!def) return null;
-  const built = def.build(catalogue);
+  const built0 = def.build(catalogue);
+  const extra = EXTRAS[slug] ? EXTRAS[slug](catalogue) : {};
+  const built = { ...built0, sections: [...built0.sections, ...(extra.sections || [])], faqs: built0.faqs || extra.faqs };
   /* NOTE, unresolved: two briefs disagree about what comes first here.
 
      §4 of the UX brief put journeyHero above the guide — "somebody who
@@ -1120,9 +1542,18 @@ function renderCostPage(slug, { catalogue, siteUrl, siteMode }) {
      this is a judgement about acquisition rather than a defect. Moving the
      beta notice below the body, which both briefs would want, is done
      regardless and is most of the distance. */
+  const cat = categoryFor(slug);
+  const shared = [
+    ...(built.included === false ? [] : [includedSection(cat, catalogue)].filter(Boolean)),
+    PLANNING_VS_QUOTE,
+  ];
   const body = `${journeyHero(siteUrl, slug)}
 <div class="answer"><strong>The short answer</strong><span>${escapeHtml(built.answer)}</span></div>
-${built.sections.map(section).join('\n')}`;
+${def.image ? `<figure class="guide-pic"><img src="${escapeHtml(def.image.src)}" srcset="${escapeHtml(def.image.srcset)}" sizes="(min-width: 760px) 720px, 100vw" alt="${escapeHtml(def.image.alt)}" width="800" height="600" loading="lazy" decoding="async"><figcaption>${escapeHtml(def.image.caption)}</figcaption></figure>` : ''}
+${built.sections.map(section).join('\n')}
+${shared.map(section).join('\n')}
+${hubLinks(slug)}
+${faqSection(built.faqs)}`;
   return page({
     slug,
     title: def.title,
@@ -1131,7 +1562,9 @@ ${built.sections.map(section).join('\n')}`;
     canonical: `${siteUrl}/cost/${slug}`,
     body, siteUrl, siteMode,
     related: relatedFor(slug),
-    faq: faqFor(built),
+    crumbs: crumbsFor(siteUrl, slug, crumbName(def.title)),
+    faqs: built.faqs,
+    updated: catalogue.updated,
   });
 }
 
@@ -1186,6 +1619,41 @@ ${coverage}
     canonical: `${siteUrl}/${slug}`,
     body, siteUrl, siteMode,
     related: relatedFor(''),
+    crumbs: [
+      { name: 'Home', href: `${siteUrl}/` },
+      { name: 'Costs', href: `${siteUrl}/cost` },
+      { name: 'Windows', href: `${siteUrl}/cost/${CATEGORIES.windows.hub}` },
+      { name: `Windows in ${where}` },
+    ],
+    updated: catalogue.updated,
+  });
+}
+
+/* /cost — every guide, grouped by category. The breadcrumb's "Costs" step
+   and the anchor each hub's own crumb points at. No figures of its own: each
+   link goes to a page that computes them. */
+function renderCostIndex({ catalogue, siteUrl, siteMode }) {
+  const groups = Object.entries(CATEGORIES).map(([cat, c]) => {
+    const pages = COST_PAGES.filter(p => categoryFor(p.slug) === cat)
+      .sort((a, b) => (a.slug === c.hub ? -1 : b.slug === c.hub ? 1 : 0));
+    if (!pages.length) return '';
+    return `<section id="${cat}"><h2>${escapeHtml(c.label)}</h2><ul>${pages.map(p =>
+      `<li><a href="/cost/${p.slug}">${escapeHtml(crumbName(p.title))}</a> <span class="rel-note">— ${escapeHtml(p.description)}</span></li>`).join('')}</ul></section>`;
+  }).join('\n');
+  const areas = `<section id="areas"><h2>By area</h2><ul>${AREA_PAGES.map(a =>
+    `<li><a href="/${a.slug}">Windows in ${escapeHtml(a.town)}</a></li>`).join('')}</ul></section>`;
+  const body = `<div class="answer"><strong>What this is</strong><span>Planning estimates for the outside of a UK house — windows, doors, walls, roofline and roof — each worked out from the same figures as the Facet Pro estimate, fitted and inc VAT.</span></div>
+${groups}
+${areas}`;
+  return page({
+    slug: null,
+    title: 'Home Improvement Cost Guides UK 2026 | Facet Pro',
+    description: 'Every Facet Pro cost guide in one place: windows, doors, rendering and cladding, fascias and guttering, roofs, conservatories and the whole exterior.',
+    h1: 'What home improvements cost',
+    canonical: `${siteUrl}/cost`,
+    body, siteUrl, siteMode,
+    crumbs: [{ name: 'Home', href: `${siteUrl}/` }, { name: 'Costs' }],
+    updated: catalogue.updated,
   });
 }
 
@@ -1193,6 +1661,7 @@ ${coverage}
    cannot exist without being listed or be listed without existing. */
 function allPaths() {
   return [
+    '/cost',
     ...COST_PAGES.map(p => `/cost/${p.slug}`),
     ...AREA_PAGES.map(p => `/${p.slug}`),
   ];
@@ -1200,7 +1669,7 @@ function allPaths() {
 
 module.exports = {
   COST_PAGES, AREA_PAGES,
-  renderCostPage, renderAreaPage, allPaths,
+  renderCostPage, renderAreaPage, renderCostIndex, allPaths, categoryFor, CATEGORIES,
   CAVEAT, BETA_NOTICE,
   _internals: { asFraction, vatMult, windowJob, doorPrices, rooflineFor, wallsFor, roofFor, escapeHtml, money },
 };

@@ -1601,6 +1601,13 @@ function buildPublicCatalogue(c) {
         ...pickFields(b, ['id', 'name', 'detail', 'description']),
         upliftPct: Math.round(((c.glazing?.georgianBarUplift ?? 1) - 1) * 100),
       })),
+      /* Frame material (29 September), from the same figure glazing.js prices
+         with, for the same reason as the bars. */
+      windowMaterials: (c.glazing?.materials || []).map(m => ({
+        id: m.id, name: m.name,
+        upliftPct: Math.round(((m.multiplier ?? 1) - 1) * 100),
+        colourIncluded: !!m.colourIncluded,
+      })),
     },
     fsgc: c.fsgc && Object.fromEntries([
       ['note', c.fsgc.note],
@@ -2598,6 +2605,8 @@ function resolveGlazing(body) {
         doorStyleId: body.doorStyleId,
         windowDoorColourId: body.windowDoorColourId,
         windowBarsId: body.windowBarsId,
+        /* Only a material the catalogue holds; anything else prices as uPVC. */
+        windowMaterialId: (catalogue.glazing.materials || []).some(m => m.id === body.windowMaterialId) ? body.windowMaterialId : null,
       },
       rates: catalogue.glazing,
       windowCountOverride: body.windowCount,
@@ -2705,6 +2714,7 @@ function resolvePreferences(body) {
     door: pickById(wd.doorStyles, body.doorStyleId, [...named, 'detail']),
     colour: pickById(wd.colours, body.windowDoorColourId, [...named, 'hex']),
     bars: pickById(wd.windowBars, body.windowBarsId, [...named, 'detail']),
+    material: pickById(catalogue.glazing?.materials, body.windowMaterialId, named),
   } : null;
 
   const roofline = fs_ ? {
@@ -4192,7 +4202,7 @@ const FUNNEL_STAGES = [
    makes spend decisions from, so the public endpoint refuses them. It costs
    nothing: the server records these itself, by calling store.countStage
    directly rather than by coming through here. */
-const SERVER_ONLY_STAGES = new Set(['lead_qualified', 'lead_sent', 'installer_received', 'installer_accepted',
+const SERVER_ONLY_STAGES = new Set(['lead_qualified', 'lead_sent', 'installer_received', 'installer_accepted', 'seo_landing',
   'crop_available', 'crop_unavailable']);
 
 /* Things that happen off the main line, counted but never chained.
@@ -4215,6 +4225,11 @@ const SERVER_ONLY_STAGES = new Set(['lead_qualified', 'lead_sent', 'installer_re
    /api/measurements it says whether a second photograph actually rescues the
    measurement, or whether the fault is ours and no photograph would. */
 const BRANCH_STAGES = new Map([
+  /* A cost guide or area page served (SEO sprint 1, §18). Counted by the
+     server when it sends the page — those pages run no script — once in total
+     and once per page as from/<slug>:seo_landing, so every later stage tagged
+     with the same `from` reads against it. Never from the browser. */
+  ['seo_landing', { of: 'landing', label: 'arrived on a cost guide or area page' }],
   ['photo_retry', { of: 'upload_completed', label: 'went back for another photo' }],
   /* The denominator photo_retry needs.
 
@@ -4334,6 +4349,7 @@ const BRANCH_STAGES = new Map([
 /* Which layout the visitor actually got. Allowlisted for the same reason every
    other key on the funnel is — see the note in the endpoint. */
 const DEVICE_KINDS = new Set(['mobile', 'desktop']);
+const CTA_PLACES = new Set(['hero', 'end', 'header']);
 
 /* ── POST /api/journey-timing ──
    The only number the server cannot measure: how long the homeowner waited.
@@ -4395,6 +4411,9 @@ app.post('/api/funnel', perMinute(120, 'Too many requests — please wait a mome
      Two values and no more, for the reason the stage name is allowlisted —
      without it a client writes free text into the counter table. */
   const device = DEVICE_KINDS.has(String(req.body?.device || '')) ? String(req.body.device) : null;
+  /* Which button on a guide sent them, only alongside a `from`: three values,
+     allowlisted, a button and never a person. */
+  const cta = from && CTA_PLACES.has(String(req.body?.cta || '')) ? String(req.body.cta) : null;
 
   /* Answered before the write. A counter that fails must never cost a visitor
      their journey, and the browser is not waiting for anything useful. */
@@ -4407,6 +4426,7 @@ app.post('/api/funnel', perMinute(120, 'Too many requests — please wait a mome
     if (journey) await store.countStage(`${journey}:${stage}`);
     if (from) await store.countStage(`from/${from}:${stage}`);
     if (device) await store.countStage(`device/${device}:${stage}`);
+    if (cta) await store.countStage(`cta/${cta}:${stage}`);
   }
   catch (err) { obs.record('funnel', 'could not record a stage', { stage, reason: err.message }); }
 });
@@ -4431,9 +4451,20 @@ app.use(require('./routes/ops')({
    route and before the 404 handler. __dirname is passed because the moved code
    resolves files against the app root, which is this file's directory and not
    routes/. */
+/* One landing counted per guide served, for the SEO funnel. Test traffic is
+   served and not counted, as everywhere else; a failed count never costs the
+   visitor the page. */
+const countSeoLanding = async (req, slug) => {
+  if (isTestTraffic(req)) return;
+  try {
+    await store.countStage('seo_landing');
+    if (LANDING_SLUGS.has(slug)) await store.countStage(`from/${slug}:seo_landing`);
+  } catch (err) { obs.record('funnel', 'could not record a stage', { stage: 'seo_landing', reason: err.message }); }
+};
+
 app.use(require('./routes/pages')({
   perMinute, requireInvestorPassword, SITE_URL, __dirname,
-  catalogue, SITE_MODE, LEAD_RECIPIENTS,
+  catalogue, SITE_MODE, LEAD_RECIPIENTS, countSeoLanding,
 }));
 
 /* ── NOT FOUND, AND THINGS GOING WRONG ──

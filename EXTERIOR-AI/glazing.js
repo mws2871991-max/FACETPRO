@@ -1071,6 +1071,14 @@ function priceGlazing({ windows, totalCount, selections, rates, houseType , open
      product, priced as a door; this multiplies the window units and nothing
      else. The figure is ours, not a supplier's — see georgianBarNote. */
   const barsMult = selections.windowBarsId === 'georgian' ? (rates.georgianBarUplift ?? 1) : 1;
+  /* Frame material, windows only (29 September). uPVC is the base every band
+     price is in; aluminium is Mike's figure of 25% more for the same window.
+     Where a material's colour is part of its price (powder-coated aluminium),
+     the non-white uplift is not charged again on top of it. Unknown or absent
+     means uPVC, so every existing estimate is unchanged. */
+  const material = (rates.materials || []).find(m => m.id === selections.windowMaterialId) || null;
+  const materialMult = material?.multiplier ?? 1;
+  const windowColourMult = material?.colourIncluded ? 1 : colourMult;
 
   /* The windows we have describe the front elevation. The ones we have not
      seen are priced at the house type's typical mix, not as copies of the
@@ -1128,7 +1136,7 @@ function priceGlazing({ windows, totalCount, selections, rates, houseType , open
          Either reason is enough — a unit detected as a bay, or a bay
          explicitly asked for. */
       const bayHere = w.isBay || isBay;
-      const unit = band.supplyFit * styleMult * colourMult * barsMult * (bayHere ? (rates.bayUplift ?? 1) : 1);
+      const unit = band.supplyFit * styleMult * windowColourMult * barsMult * materialMult * (bayHere ? (rates.bayUplift ?? 1) : 1);
       supplyFit += unit * scale;
       upperStoreyCount += scale * w.upperShare;
       byBand[w.bandId] = (byBand[w.bandId] || 0) + scale;

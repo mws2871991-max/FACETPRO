@@ -92,3 +92,18 @@
   footer.site .wrap{padding:20px 18px;font-size:16px;color:#52525b}
   a{color:#0F1012}
   @media(min-width:640px){h1{font-size:38px}.wrap{padding:32px 24px 80px}}
+
+  /* SEO sprint 1: breadcrumb, hub lists, questions, a guide picture. */
+  nav.crumbs ol{list-style:none;margin:18px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:0 6px;font-size:16px;color:#52525b}
+  nav.crumbs li+li::before{content:"\203A";margin-right:6px;color:#a1a1aa}
+  nav.crumbs a{color:#3f3f46;display:inline-flex;align-items:center;min-height:44px}
+  nav.crumbs li[aria-current]{display:inline-flex;align-items:center;min-height:44px;color:#18181b}
+  section.hub ul{padding-left:1.1em}
+  section.hub li{margin:6px 0}
+  section.hub a{display:inline-flex;align-items:center;min-height:44px}
+  section.faq h3{font-size:19px;margin:22px 0 4px}
+  figure.guide-pic{margin:22px 0 0}
+  figure.guide-pic img{width:100%;height:auto;border-radius:14px;background:#f4f4f5;display:block}
+  figure.guide-pic figcaption{margin-top:8px;font-size:16px;color:#52525b}
+  /* "Small" was breaking as "Smal / l" in the row headers on a phone. */
+  table th[scope=row]{white-space:nowrap}

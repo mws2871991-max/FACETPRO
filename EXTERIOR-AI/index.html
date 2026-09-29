@@ -1754,6 +1754,8 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
         <a href="/cost/anthracite-windows-cost" class="hover:text-zinc-900 inline-flex items-center min-h-[44px]">Anthracite windows</a>
         <a href="/cost/upvc-window-prices" class="hover:text-zinc-900 inline-flex items-center min-h-[44px]">uPVC window prices</a>
         <a href="/cost/10-window-replacement-cost" class="hover:text-zinc-900 inline-flex items-center min-h-[44px]">10 windows</a>
+        <a href="/cost/12-window-replacement-cost" class="hover:text-zinc-900 inline-flex items-center min-h-[44px]">12 windows</a>
+        <a href="/cost/aluminium-window-prices" class="hover:text-zinc-900 inline-flex items-center min-h-[44px]">Aluminium windows</a>
         <a href="/cost/front-door-replacement-cost" class="hover:text-zinc-900 inline-flex items-center min-h-[44px]">Front door cost</a>
         <a href="/cost/fascia-soffit-replacement-cost" class="hover:text-zinc-900 inline-flex items-center min-h-[44px]">Fascias &amp; soffits</a>
         <a href="/cost/house-rendering-cost" class="hover:text-zinc-900 inline-flex items-center min-h-[44px]">Rendering cost</a>
@@ -1766,6 +1768,7 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
         <a href="/cost/bifold-doors-cost" class="hover:text-zinc-900 inline-flex items-center min-h-[44px]">Bifold doors</a>
         <a href="/cost/cladding-cost" class="hover:text-zinc-900 inline-flex items-center min-h-[44px]">Cladding cost</a>
         <a href="/cost/conservatory-cost-uk" class="hover:text-zinc-900 inline-flex items-center min-h-[44px]">Conservatories</a>
+        <a href="/cost" class="hover:text-zinc-900 inline-flex items-center min-h-[44px] font-semibold">All cost guides</a>
       </div>
       <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-base text-zinc-600">
         <a href="/windows-grays" class="hover:text-zinc-900 inline-flex items-center min-h-[44px]">Windows Grays</a>
@@ -1971,6 +1974,13 @@ const journeyNoun = (id) => JOURNEYS[id]?.noun || null;
 /* An unknown value is not an error worth showing anybody — it is a stale link
    or somebody typing in the address bar, and the right answer is the ordinary
    page. */
+function readMaterialParam() {
+  try {
+    const m = new URLSearchParams(location.search).get('material');
+    return m === 'aluminium' || m === 'upvc' ? m : null;
+  } catch (_) { return null; }
+}
+
 function readJourney() {
   try {
     const j = new URLSearchParams(location.search).get('journey');
@@ -2174,6 +2184,9 @@ const state = {
      with the photograph — not zero, which is a real answer. */
   frontCountOverride: null,
   prefs: { windowStyleId: null, doorStyleId: null, windowDoorColourId: null, windowBarsId: null,
+           /* Frame material. From ?material= so /cost/aluminium-window-prices
+              can open the tool with aluminium already chosen ("Try aluminium"). */
+           windowMaterialId: readMaterialParam(),
            fasciaId: null, soffitId: null, gutteringId: null, rooflineCladdingId: null,
            /* A journey pre-declines the glazing it did not come for. Both are
               still chips the visitor can undo — see JOURNEYS. */
@@ -2867,6 +2880,7 @@ function designChoices() {
     doorStyleId: state.prefs.doorStyleId,
     windowDoorColourId: state.prefs.windowDoorColourId,
     windowBarsId: state.prefs.windowBarsId,
+    windowMaterialId: state.prefs.windowMaterialId,
     fasciaId: state.prefs.fasciaId, soffitId: state.prefs.soffitId,
     gutteringId: state.prefs.gutteringId, rooflineCladdingId: state.prefs.rooflineCladdingId,
     conservatoryStyleId: state.conservatoryId,
@@ -3029,7 +3043,7 @@ function applyDesign(d) {
   if (swatch(d.trimId, 'Trim')) state.trim = swatch(d.trimId, 'Trim');
   if (swatch(d.roofId, 'Roof')) state.roof = swatch(d.roofId, 'Roof');
   if (d.houseType && HOUSE_TYPES.some(t => t.id === d.houseType)) { state.houseType = d.houseType; state.houseTypeChosen = true; }
-  for (const key of ['windowStyleId', 'doorStyleId', 'windowDoorColourId', 'windowBarsId', 'fasciaId', 'soffitId', 'gutteringId', 'rooflineCladdingId']) {
+  for (const key of ['windowStyleId', 'doorStyleId', 'windowDoorColourId', 'windowBarsId', 'windowMaterialId', 'fasciaId', 'soffitId', 'gutteringId', 'rooflineCladdingId']) {
     if (d[key]) state.prefs[key] = d[key];
   }
   if (d.conservatoryStyleId) state.conservatoryId = d.conservatoryStyleId;
@@ -5748,9 +5762,10 @@ function chosenSelections() {
   const doorStyle = nameOf(wd?.doorStyles, state.prefs.doorStyleId);
   const glazColour = nameOf(wd?.colours, state.prefs.windowDoorColourId);
   const bars = nameOf(wd?.windowBars, state.prefs.windowBarsId);
+  const material = state.prefs.windowMaterialId === 'aluminium' ? nameOf(wd?.windowMaterials, 'aluminium') : null;
 
   const out = [];
-  if (windowStyle) out.push(['Windows', [windowStyle, glazColour, bars].filter(Boolean).join(' · ')]);
+  if (windowStyle) out.push(['Windows', [material, windowStyle, glazColour, bars].filter(Boolean).join(' · ')]);
   /* "Front door" was printed over every door in the catalogue, including the
      four that open onto the garden. A walk of the doors journey read "Front
      door — Bifold, 3 m", which is the one place the summary is meant to tell
@@ -6238,6 +6253,7 @@ async function refreshGlazing({ label } = {}) {
         doorStyleId: state.prefs.doorStyleId,
         windowDoorColourId: state.prefs.windowDoorColourId,
         windowBarsId: state.prefs.windowBarsId,
+        windowMaterialId: state.prefs.windowMaterialId,
         windowCount: state.windowCount,
         openerCount: state.openerCount,
         /* Price the front the photo shows; the back and sides only when the
@@ -6648,6 +6664,9 @@ function buildDetailOptions() {
         && (state.price?.priced || []).length) {
       reachedStage('trade_added');
     }
+    /* Material changes the price, not the picture: frame colour is what the
+       render draws, and it is the same colour in either material. */
+    if (key === 'windowMaterialId') refreshGlazing({ label: label || 'That change' });
     if (['windowStyleId', 'doorStyleId', 'windowDoorColourId', 'windowBarsId'].includes(key)) {
       /* And the picture has to stop showing the old frames.
 
@@ -6768,6 +6787,31 @@ function buildDetailOptions() {
       ]),
       h('p', { className: 'mt-2 text-base leading-7 text-zinc-600' },
         `Georgian bars add about ${georgian.upliftPct}% to each window. That is a typical figure for bars, not a price worked out for your windows — your installer confirms it.`),
+    ]);
+  };
+
+  /* uPVC or aluminium (29 September). Only once there are new windows, like
+     the bars. The sentence carries the figure the estimate uses. */
+  const materialRow = (list) => {
+    if (!list || list.length < 2 || !state.prefs.windowStyleId || state.prefs.windowStyleId === 'none') return null;
+    const current = state.prefs.windowMaterialId || 'upvc';
+    const alu = list.find(m => m.id === 'aluminium');
+    return h('div', {}, [
+      h('h4', { className: 'text-base text-zinc-600 font-semibold' }, 'Frame material'),
+      h('div', { className: 'mt-2 grid grid-cols-2 gap-2' }, list.map(m => {
+        const active = current === m.id;
+        return h('button', {
+          type: 'button', 'aria-pressed': active ? 'true' : 'false',
+          className: `text-left px-4 py-3 min-h-[44px] rounded-xl border transition ${active ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-400'}`,
+          onClick: () => setPref('windowMaterialId', m.id, m.name),
+        }, [
+          h('div', { className: 'text-lg font-medium' }, m.name),
+          h('div', { className: `text-base ${active ? 'text-white/85' : 'text-zinc-600'}` },
+            m.upliftPct ? `About ${m.upliftPct}% more` : 'The standard frame'),
+        ]);
+      })),
+      alu ? h('p', { className: 'mt-2 text-base leading-7 text-zinc-600' },
+        `Aluminium is about ${alu.upliftPct}% more than uPVC for the same window${alu.colourIncluded ? ', with the colour included' : ''}. The picture shows your frame colour either way.`) : null,
     ]);
   };
 
@@ -7281,6 +7325,7 @@ function buildDetailOptions() {
           ? h('p', { className: 'text-base leading-7 text-zinc-600 -mt-2' },
               'The picture shows your frame colour and Georgian bars. A sliding sash may not show on it — it is always in your price.')
           : null,
+        materialRow(wd.windowMaterials),
         barsRow(wd.windowBars),
         h('div', {}, [
           group('Door style', wd.doorStyles, 'doorStyleId', { optOut: 'front door', anchor: 'door-style' }),
@@ -9250,6 +9295,18 @@ function reportJourneyTiming() {
    as on the server — a page that posts obvious rubbish is a page with a bug,
    and there is no reason to make the server say so. */
 let fromSlugCache;
+/* Which button on the guide was pressed — hero, end or header — read once,
+   like `from`. Allowlisted again server-side. SEO sprint 1, §18. */
+let ctaPlaceCache;
+function readCtaPlace() {
+  if (ctaPlaceCache !== undefined) return ctaPlaceCache;
+  try {
+    const v = new URLSearchParams(location.search).get('cta') || '';
+    ctaPlaceCache = ['hero', 'end', 'header'].includes(v) ? v : null;
+  } catch (_) { ctaPlaceCache = null; }
+  return ctaPlaceCache;
+}
+
 function readFromSlug() {
   if (fromSlugCache !== undefined) return fromSlugCache;
   try {
@@ -9305,6 +9362,7 @@ function reachedStage(stage) {
     stage,
     journey: state.journey || undefined,
     from: readFromSlug() || undefined,
+    cta: readCtaPlace() || undefined,
     /* Which kind of screen this happened on.
 
        The journey is photograph, upload, image and a set of pricing choices —

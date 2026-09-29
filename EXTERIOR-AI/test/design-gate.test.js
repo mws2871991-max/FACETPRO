@@ -189,7 +189,7 @@ test('the conservatory guide sends its reader somewhere that exists', () => {
   const OPTS = { siteUrl: 'https://www.facetpro.co.uk', catalogue, siteMode: 'beta', recipients: [] };
   const html = landing.renderCostPage('conservatory-cost-uk', OPTS);
 
-  assert.match(html, /\/design\?from=conservatory-cost-uk#conservatory/,
+  assert.match(html, /\/design\?from=conservatory-cost-uk(&amp;cta=[a-z]+)?#conservatory/,
     'the conservatory CTA does not point at the conservatory section');
 
   /* And it stops promising what a photograph cannot do for this reader. */
@@ -200,7 +200,7 @@ test('the conservatory guide sends its reader somewhere that exists', () => {
   /* Every other page is untouched — this is one page's exception, not a new
      rule for all of them. */
   const windows = landing.renderCostPage('window-replacement-cost-uk', OPTS);
-  assert.match(windows, /\/design\?journey=windows&amp;from=window-replacement-cost-uk"/);
+  assert.match(windows, /\/design\?journey=windows&amp;from=window-replacement-cost-uk(&amp;cta=[a-z]+)?"/);
   assert.doesNotMatch(windows, /#conservatory/);
 });
 

@@ -291,10 +291,16 @@ test('pages with no priced journey get no hero', () => {
   /* A conservatory cannot be priced from a photograph and the whole-exterior
      page is the default, so neither should promise an experience the product
      does not have. */
-  for (const slug of ['conservatory-cost-uk', 'house-exterior-renovation-cost']) {
-    assert.ok(!landing.renderCostPage(slug, OPTS).includes('journey-hero'),
-      `${slug} should not carry a journey hero`);
-  }
+  assert.ok(!landing.renderCostPage('conservatory-cost-uk', OPTS).includes('journey-hero'),
+    'conservatory-cost-uk should not carry a journey hero');
+  /* SEO sprint 1 §15: the cornerstone page leads with "Your house isn't a
+     typical house" — a hero, but into the default tool, with no trade
+     pre-declared. */
+  const ext = landing.renderCostPage('house-exterior-renovation-cost', OPTS);
+  const hero = ext.slice(ext.indexOf('journey-hero'), ext.indexOf('</div>', ext.indexOf('journey-hero')));
+  assert.match(hero, /Your house isn\u2019t a typical house\.|Your house isn’t a typical house\./);
+  assert.match(hero, /Plan my house/);
+  assert.doesNotMatch(hero, /journey=/);
 });
 
 test('the whole-exterior page carries no journey, because it is the default', () => {
@@ -308,7 +314,7 @@ test('the whole-exterior page carries no journey, because it is the default', ()
   assert.ok(!/\?journey=/.test(html), 'the whole-exterior page should not pre-declare a trade');
   /* The whole-exterior page has no journey — but it does carry `from`, so
      the href is no longer bare. What matters is the absence of a journey. */
-  assert.match(html, /href="[^"]*\/design\?from=[a-z0-9-]+"/);
+  assert.match(html, /href="[^"]*\/design\?from=[a-z0-9-]+(&amp;cta=[a-z]+)?"/);
   assert.ok(!/journey=/.test(html.slice(html.indexOf('cta-block'))), 'no journey on the default page');
 });
 
@@ -413,7 +419,8 @@ test('every landing page is routed, and every route is a real page', () => {
   /* allPaths is the single source for the sitemap, so a page cannot exist
      unlisted or be listed without existing. */
   const paths = landing.allPaths();
-  assert.strictEqual(paths.length, landing.COST_PAGES.length + landing.AREA_PAGES.length);
+  // + 1 for /cost, the index of every guide (SEO sprint 1).
+  assert.strictEqual(paths.length, landing.COST_PAGES.length + landing.AREA_PAGES.length + 1);
   for (const p of paths) assert.match(p, /^\/[a-z0-9/-]+$/, `${p} is not a clean URL`);
   assert.strictEqual(new Set(paths).size, paths.length, 'a path is listed twice');
 });
@@ -482,8 +489,8 @@ test('every cost page carries the six products, and marks the one it is about', 
     assert.ok(menu.includes(`/design?journey=${j}"`), `the menu is missing ${j}`);
   }
   assert.match(menu, /href="[^"]*\/cost\/conservatory-cost-uk" aria-current="page">Conservatories/);
-  assert.ok(!landing.renderCostPage('new-roof-cost', OPTS).includes('aria-current'),
-    'a page about something else marks nothing');
+  const roofMenu = (landing.renderCostPage('new-roof-cost', OPTS).match(/<nav class="products"[\s\S]*?<\/nav>/) || [''])[0];
+  assert.ok(!roofMenu.includes('aria-current'), 'a page about something else marks nothing in the menu');
 });
 
 /* 29 September: one line on every guide, and five new pages. */
@@ -505,6 +512,8 @@ test('the five pages added on 29 September exist, and only where there is a sour
     assert.ok(slugs.includes(s), s);
     assert.match(landing.renderCostPage(s, OPTS), /£[\d,]+/);
   }
-  // No aluminium rate in the catalogue, so no aluminium page.
-  assert.ok(!slugs.some(s => /aluminium/.test(s)));
+  /* Aluminium waited for a figure; since Mike's 25% (29 September) it has
+     one, and the page is built from it. */
+  assert.ok(slugs.includes('aluminium-window-prices'));
+  assert.ok((catalogue.glazing.materials || []).some(m => m.id === 'aluminium'));
 });
