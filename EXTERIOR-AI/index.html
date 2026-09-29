@@ -3607,6 +3607,40 @@ function buildUploadDetect() {
       d.type !== 'analysis' && Number.isFinite(d.w_pct) && Number.isFinite(d.h_pct) && d.w_pct > 0 && d.h_pct > 0);
 
     const overlay = h('div', { className: 'absolute inset-0 pointer-events-none' });
+
+    /* The counted windows, numbered, on their own.
+ *
+ * Everything below draws every element we found — the roof, the fascia, the
+ * guttering, each pane of a bay — as identical rectangles. Nineteen of them on
+ * an ordinary house. The homeowner is asked, a few lines further down, "we
+ * counted 5 windows at the front — is that right?", and had no way to see
+ * WHICH five. A question you cannot check is a button people press to get
+ * past, and the launch run-through said exactly that.
+ *
+ * So the counted windows are numbered 1..n and nothing else is, with a bay
+ * carrying one number because it is one window in the count and one on the
+ * invoice. The boxes come from the server, from the same function that
+ * produces the count — see glazing.frontWindowBoxes — so the dots and the
+ * number can never disagree.
+ *
+ * Drawn first, then everything else on top and dimmer, so the answer to the
+ * question is the thing you see. */
+    const counted = Array.isArray(state.frontWindowBoxes) ? state.frontWindowBoxes : [];
+    counted.forEach((b, i) => {
+      overlay.appendChild(h('div', {
+        className: 'absolute rounded-sm ring-2 ring-emerald-400',
+        style: { left: b.x + '%', top: b.y + '%', width: b.w + '%', height: b.h + '%' },
+      }));
+      /* The number sits inside the top-left corner of its own window, so it
+         cannot drift onto a different one the way the labels below can. */
+      overlay.appendChild(h('span', {
+        className: 'absolute flex items-center justify-center rounded-full bg-emerald-500 text-white font-semibold shadow',
+        style: {
+          left: `calc(${b.x}% + 4px)`, top: `calc(${b.y}% + 4px)`,
+          width: '22px', height: '22px', fontSize: '13px', lineHeight: '22px',
+        },
+      }, String(i + 1)));
+    });
     /* Rough label geometry in percentage terms. A label is one line, so the
        only thing that matters is how tall a row is and roughly how wide the
        text runs — close enough to keep two of them apart. */
@@ -3647,8 +3681,12 @@ function buildUploadDetect() {
       }
       placed.push({ top, left: leftEdge, width: widthPct });
 
+      /* Dimmer than it was, and dimmer than the numbered windows above: this
+         is the supporting detail, not the answer to the question being asked.
+         Still drawn, because a homeowner who wants to see that we found the
+         guttering should be able to. */
       overlay.appendChild(h('div', {
-        className: 'absolute border border-zinc-900/70 bg-zinc-900/10',
+        className: 'absolute border border-zinc-900/40 bg-zinc-900/5',
         style: { left: x + '%', top: y + '%', width: w + '%', height: (d.h_pct ?? 0) + '%' },
       }));
       /* The text is hidden on a phone, and the boxes are not.
@@ -3816,9 +3854,7 @@ function buildUploadDetect() {
          Order matters: their own correction first, because once somebody has
          typed a number that is the number; then the priced count; then the
          detect count, which is all there is before /api/glazing answers. */
-      const windows = state.windowCount
-        || state.glazing?.frontCount
-        || (state.frontWindowCount ?? hits(/window/i).length);
+      const windows = countOnScreen(hits(/window/i).length);
       const measured = MEASURED_FROM_PHOTO.includes(String(state.price?.footprintSource || ''));
 
       const parts = [];
@@ -4002,6 +4038,20 @@ function buildUploadDetect() {
      wall area already exist, already work, and were already the answer — they
      were just never offered at the moment somebody is looking at what we
      found and doubting it. */
+/* The number of front windows this page is showing, from one place.
+ *
+ * The summary says it, the question asks the homeowner to confirm it, and the
+ * price is built on it. Those three reading it separately is how "we found 8
+ * windows" ended up over a price for 7 — so they read it here instead.
+ *
+ * Their own correction wins, then the priced count, then what detection
+ * returned. The fallback is only for the moment before /api/glazing answers. */
+  function countOnScreen(fallback = 0) {
+    return state.windowCount
+      || state.glazing?.frontCount
+      || (state.frontWindowCount ?? fallback);
+  }
+
   function detectionReview() {
     if (!state.detections.filter(d => d.type !== 'analysis').length) return null;
 
@@ -4020,14 +4070,32 @@ function buildUploadDetect() {
     }, label);
 
     return h('div', { className: 'mt-3 pt-3 border-t border-white/10' }, [
-      h('p', { className: 'text-base leading-7 text-white/85' }, 'Does that match your house?'),
+      /* Name the number, because "does that match your house?" cannot be
+         answered without knowing what is being claimed.
+
+         The launch run-through put it plainly: nineteen labels are drawn over
+         the photograph, they overlap and are unreadable at phone width, and
+         the easy button said "Looks right — continue" — so people confirm a
+         count they never actually read. A question that states the figure can
+         be checked by looking up at your own house; a question that does not
+         is a button people press to get past it.
+
+         The same number the summary above shows and the price below is built
+         on. See countOnScreen. */
+      h('p', { className: 'text-base leading-7 text-white/85' },
+        (() => {
+          const n = countOnScreen();
+          return n
+            ? `We counted ${n} window${n === 1 ? '' : 's'} at the front — is that right?`
+            : 'Does that match your house?';
+        })()),
       h('div', { className: 'mt-2 flex flex-wrap gap-2' }, [
-        btn('Looks right — continue', 'bg-white text-zinc-900 hover:bg-white/90', () => {
+        btn('Yes', 'bg-white text-zinc-900 hover:bg-white/90', () => {
           state.detectionOk = true;
           reachedStage('detection_confirmed');
           renderUploadOnly();
         }),
-        btn('Something looks wrong', 'border border-white/25 text-white hover:border-white/60', () => {
+        btn('No, change it', 'border border-white/25 text-white hover:border-white/60', () => {
           state.detectionOk = 'flagged';
           reachedStage('detection_flagged');
           renderUploadOnly();
@@ -4298,7 +4366,7 @@ function buildUploadDetect() {
                first one got rather than an empty frame and a button. It is one
                more render against the daily cap, spent on somebody who has
                demonstrably not given up. */
-            onClick: () => { state.uploadedImg = null; state.uploadedBase64 = null; state.detections = []; state.stage = 'landing'; state.detectionStatus = 'idle'; state.renderUrl = null; state.renderId = null; state.windowCount = null; state.backCount = null; state.backFromPhoto = false; state.backPhotoCount = null; state.sideCount = null; state.frontWindowCount = null; state.glazing = null; state.hasCustomised = false; state.revealed = false; state.lastPriceDelta = null; autoRenderDone = false; U('Photo removed — add another whenever you like'); render(); }
+            onClick: () => { state.uploadedImg = null; state.uploadedBase64 = null; state.detections = []; state.stage = 'landing'; state.detectionStatus = 'idle'; state.renderUrl = null; state.renderId = null; state.windowCount = null; state.backCount = null; state.backFromPhoto = false; state.backPhotoCount = null; state.sideCount = null; state.frontWindowCount = null; state.frontWindowBoxes = []; state.glazing = null; state.hasCustomised = false; state.revealed = false; state.lastPriceDelta = null; autoRenderDone = false; U('Photo removed — add another whenever you like'); render(); }
           /* Screen 3: "allow replace photo without restarting the journey".
 
            The behaviour was already right — this clears the photograph, the
@@ -9368,6 +9436,7 @@ async function handleUpload(file) {
     }
     state.detectionId = data.detectionId || null;
     state.frontWindowCount = Number.isFinite(data.frontWindowCount) ? data.frontWindowCount : null;
+    state.frontWindowBoxes = Array.isArray(data.frontWindowBoxes) ? data.frontWindowBoxes : [];
     state.frontBayCount = Number.isFinite(data.frontBayCount) ? data.frontBayCount : 0;
     /* What kind of house the photograph shows.
 

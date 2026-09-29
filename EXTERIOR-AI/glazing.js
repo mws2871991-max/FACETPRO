@@ -835,6 +835,30 @@ function publishedRange(result) {
  * Same judgement as the count, deliberately. If a window is not theirs to be
  * charged for it is not theirs to be repainted, and the two answers should
  * never be able to disagree. */
+/* The counted windows as boxes, one per unit, for the page to point at.
+ *
+ * The homeowner is asked "we counted 5 windows at the front — is that right?"
+ * and, until now, given nineteen identical rectangles to check it against:
+ * the roof, the fascia, the guttering and every pane of a bay all drawn the
+ * same way. A question you cannot check is a button people press to get past.
+ *
+ * These are the merged UNITS, not the raw detections — a five-pane bay is one
+ * box here because it is one window in the count and one window on the
+ * invoice. That is exactly why the page cannot work them out for itself: the
+ * merging, the sidelights, the fanlight and whose house it is all live here,
+ * and a second implementation on the client would drift from this one within
+ * the week. Same call as frontWindowCount: one answer, read in several
+ * places.
+ *
+ * Rounded, because these are for placing a dot on a photograph. */
+function frontWindowBoxes(detections, aspectRatio = null) {
+  const r1 = (n) => Math.round(n * 10) / 10;
+  return windowCandidates(detections, aspectRatio).kept.map(u => ({
+    x: r1(u.b.x), y: r1(u.b.y), w: r1(u.b.w), h: r1(u.b.h),
+    isBay: !!u.isBay, panes: u.panes || 1,
+  }));
+}
+
 function neighbourWindowBoxes(detections, aspectRatio = null) {
   return windowCandidates(detections, aspectRatio).notOurs;
 }
@@ -1551,6 +1575,7 @@ module.exports = {
   frontWindowCount,
   frontBayCount,
   neighbourWindowBoxes,
+  frontWindowBoxes,
   publishedRange,
   resolveHouseType,
   houseTypeFromEvidence,

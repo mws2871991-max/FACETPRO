@@ -30,7 +30,10 @@ test('changing the house type measures the photograph again', () => {
 
 test('"Something looks wrong" goes to the window counter, not the top of the section', () => {
   assert.match(html, /id: 'window-count'/, 'the counter row lost its id');
-  const at = html.indexOf("btn('Something looks wrong'");
+  /* Renamed to "No, change it" when the question above it started naming the
+     count — the button now answers "is that right?" rather than describing a
+     feeling. What it does is unchanged, and that is what this tests. */
+  const at = html.indexOf("btn('No, change it'");
   const handler = html.slice(at, at + 1200);
   assert.match(handler, /getElementById\('window-count'\)/);
 });

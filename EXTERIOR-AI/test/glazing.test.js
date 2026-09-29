@@ -1035,21 +1035,23 @@ test('the panel confirms the number the homeowner is charged for', () => {
   /* "We found 8 windows" sat over a price for 7 on number 14, on one screen.
      The panel read /api/detect's frontWindowCount — everything surviving the
      hygiene filters — while the price came from measureWindows, which then
-     discards units whose measured size is impossible for a window. The panel
-     is the one the homeowner is asked to confirm, so it has to be the priced
-     number. Their own correction still wins over both. */
+     discards units whose measured size is impossible for a window.
+
+     Now three places need that number: the summary, the question that asks the
+     homeowner to confirm it, and the price. They read it from one function so
+     they cannot disagree. */
   const page = require('node:fs').readFileSync(
     require('node:path').join(__dirname, '..', 'index.html'), 'utf8');
-  const at = page.indexOf('const windows = state.windowCount');
-  assert.ok(at > 0, 'the summary count has moved');
-  const expr = page.slice(at, at + 200);
-  assert.match(expr, /state\.windowCount\s*\|\|\s*state\.glazing\?\.frontCount/,
-    'the panel no longer prefers the priced count over the raw detect count');
-  const ownAt = expr.indexOf('state.windowCount');
-  const pricedAt = expr.indexOf('state.glazing?.frontCount');
-  const detectAt = expr.indexOf('state.frontWindowCount');
-  assert.ok(ownAt < pricedAt && pricedAt < detectAt,
+  const at = page.indexOf('function countOnScreen(fallback = 0)');
+  assert.ok(at > 0, 'the one source for the number on screen has gone');
+  const body = page.slice(at, at + 260);
+  const ownAt = body.indexOf('state.windowCount');
+  const pricedAt = body.indexOf('state.glazing?.frontCount');
+  const detectAt = body.indexOf('state.frontWindowCount');
+  assert.ok(ownAt > 0 && pricedAt > ownAt && detectAt > pricedAt,
     'their own correction, then the priced count, then the detect count');
+  assert.match(page, /const windows = countOnScreen\(hits\(\/window\/i\)\.length\);/,
+    'the summary no longer reads the shared number');
 });
 
 test('two front doors in one photograph means two houses', () => {

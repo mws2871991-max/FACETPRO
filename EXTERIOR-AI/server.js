@@ -2241,6 +2241,9 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
     // What pricing will count, so the page does not count it a second way.
     frontWindowCount: glazing.frontWindowCount(record.detections, record.aspectRatio),
     frontBayCount: glazing.frontBayCount(record.detections, record.aspectRatio),
+    /* One box per counted window, so the page can number what it is asking
+       the homeowner to confirm. Merged units, not raw boxes — a bay is one. */
+    frontWindowBoxes: glazing.frontWindowBoxes(record.detections, record.aspectRatio),
     houseType: houseTypeFrom(record.detections),
     /* Where this house is, when the detections can say. Null whenever they
        cannot — see geometry.subjectBox and its guards.
@@ -2547,6 +2550,7 @@ For houseType, judge it from what the photograph shows: a gap on both sides is d
     detections: forDisplay(detections), detectionId, canMeasure: hasWall, scaleReference: hasDoor && !!size,
     frontWindowCount: glazing.frontWindowCount(detections, aspectRatioOf(size)),
     frontBayCount: glazing.frontBayCount(detections, aspectRatioOf(size)),
+    frontWindowBoxes: glazing.frontWindowBoxes(detections, aspectRatioOf(size)),
     subjectBox: subjectBoxFor(detections),
     houseType: houseTypeFrom(detections),
   });
