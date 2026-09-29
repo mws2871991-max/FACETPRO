@@ -45,3 +45,14 @@ test('no wording claims supplier rates for everything', () => {
     assert.ok(!/supplier catalogue/i.test(src), `${name} still says "supplier catalogue"`);
   }
 });
+
+/* 29 September: two in-journey lines still framed prices against "a
+   supplier rate card" — the Georgian-bars note, shown on every windows
+   design, and the fallback shown if the window rates ever load unchecked. */
+test('no visible line measures a price against a supplier', () => {
+  const html = require('fs').readFileSync(require('path').join(__dirname, '..', 'index.html'), 'utf8');
+  const visible = html.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  for (const phrase of ['rather than a supplier rate card', 'not a supplier’s', 'Door prices come from real completed jobs']) {
+    assert.ok(!visible.includes(phrase), `still says "${phrase}"`);
+  }
+});

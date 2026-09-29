@@ -5438,7 +5438,7 @@ function buildGlazingLedPanel() {
 
     g.ratesSourced === false
       ? h('p', { className: 'mt-3 text-base leading-6 text-white/80' },
-          'Window rates are our own estimate rather than a supplier rate card, so treat this as a guide and expect an installer’s quote to differ. Door prices come from real completed jobs.')
+          'Window rates here are our own estimate, not yet checked against what these jobs actually sell for, so treat this as a guide and expect an installer’s quote to differ.')
       : null,
   ]);
 }
@@ -6623,7 +6623,7 @@ function buildDetailOptions() {
         opt('georgian', georgian.name, georgian.detail),
       ]),
       h('p', { className: 'mt-2 text-base leading-7 text-zinc-600' },
-        `Georgian bars add about ${georgian.upliftPct}% to each window. That is our own figure from typical trade prices, not a supplier’s — your installer confirms it.`),
+        `Georgian bars add about ${georgian.upliftPct}% to each window. That is a typical figure for bars, not a price worked out for your windows — your installer confirms it.`),
     ]);
   };
 
@@ -6944,7 +6944,7 @@ function buildDetailOptions() {
          what clears `ratesSourced`. */
       g.ratesSourced === false
         ? h('p', { className: 'mt-2 text-base leading-7 text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2' },
-            'Window rates are our own estimate rather than a supplier rate card, so treat this figure as a guide and expect an installer’s quote to differ. Door prices come from real completed jobs.')
+            'Window rates here are our own estimate, not yet checked against what these jobs actually sell for, so treat this figure as a guide and expect an installer’s quote to differ.')
         : null,
 
       /* Under the headline rather than beside it now: the headline IS the
