@@ -14,6 +14,19 @@
      exactly the browser that needs the fallback. First thing in the head, so
      no styled frame is ever painted with the wrong class. -->
 <script>document.documentElement.classList.remove('no-js');</script>
+<!-- Which of the four routes this document is showing, set before the body is
+     read (29 September). The main script hides the other routes' sections, but
+     it runs at the very end, and by then the browser had already started
+     fetching their pictures — the /how-we-price before/after was downloaded on
+     every homepage visit. Same rule as PAGE in the main script; the CSS below
+     keeps those sections out of layout from the first paint. -->
+<script>(function(){var p=location.pathname.replace(/\/+$/,'')||'/';document.documentElement.setAttribute('data-route',p==='/design'?'design':p==='/installers'?'installers':p==='/how-we-price'?'pricing':'home');})();</script>
+<style>
+html[data-route="home"] [data-page]:not([data-page="home"]),
+html[data-route="design"] [data-page]:not([data-page="design"]),
+html[data-route="installers"] [data-page]:not([data-page="installers"]),
+html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
+</style>
 
 <title>See Every Facet Of Your Home — A Fair Price For Windows | Facet Pro</title>
 <meta name="description" content="See new windows and doors on your own house and what they cost, in about a minute — no home visit, no salesman, no obligation. Walls, roof and roofline price off the same photo when you are ready.">
@@ -470,11 +483,11 @@
     <figure class="mt-4 lg:mt-0 max-w-[640px]">
       <div class="grid grid-cols-2 gap-2 sm:gap-3">
         <div class="relative rounded-xl overflow-hidden border border-zinc-200 bg-white">
-          <img src="/assets/work/home-windows-white-sm.jpg" srcset="/assets/work/home-windows-white-sm.jpg 600w, /assets/work/home-windows-white.jpg 1200w" sizes="(min-width: 1024px) 280px, (min-width: 640px) 320px, 50vw" alt="Illustration: a red-brick garden room with white sash windows" width="600" height="450" loading="eager" decoding="async" class="w-full aspect-[4/3] object-cover">
+          <img src="/assets/work/home-windows-white-sm.jpg" srcset="/assets/work/home-windows-white-400.jpg 400w, /assets/work/home-windows-white-sm.jpg 600w, /assets/work/home-windows-white.jpg 1200w" fetchpriority="high" sizes="(min-width: 1024px) 280px, (min-width: 640px) 320px, 34vw" alt="Illustration: a red-brick garden room with white sash windows" width="600" height="450" loading="eager" decoding="async" class="w-full aspect-[4/3] object-cover bg-zinc-100">
           <span class="absolute bottom-2 left-2 text-base px-2 py-0.5 rounded-full bg-white text-zinc-900 font-semibold border border-zinc-200">Before</span>
         </div>
         <div class="relative rounded-xl overflow-hidden border border-zinc-200 bg-white">
-          <img src="/assets/work/home-windows-black-sm.jpg" srcset="/assets/work/home-windows-black-sm.jpg 600w, /assets/work/home-windows-black.jpg 1200w" sizes="(min-width: 1024px) 280px, (min-width: 640px) 320px, 50vw" alt="Illustration: the same garden room with black windows" width="600" height="450" loading="eager" decoding="async" class="w-full aspect-[4/3] object-cover">
+          <img src="/assets/work/home-windows-black-sm.jpg" srcset="/assets/work/home-windows-black-400.jpg 400w, /assets/work/home-windows-black-sm.jpg 600w, /assets/work/home-windows-black.jpg 1200w" fetchpriority="high" sizes="(min-width: 1024px) 280px, (min-width: 640px) 320px, 34vw" alt="Illustration: the same garden room with black windows" width="600" height="450" loading="eager" decoding="async" class="w-full aspect-[4/3] object-cover bg-zinc-100">
           <span class="absolute bottom-2 left-2 text-base px-2 py-0.5 rounded-full bg-emerald-600 text-white font-semibold">After</span>
         </div>
       </div>
@@ -489,44 +502,53 @@
     </figure>
     </div>
     <h2 class="mt-8 text-lg font-semibold text-zinc-900">Or start with what you&rsquo;d like to change</h2>
+    <!-- First-visit speed (29 September): the homepage fetched about 1 MB of
+         pictures before the cards appeared, blank white boxes for a moment on
+         a phone signal. Each card now offers 320/480/640px versions and the
+         browser takes the smallest that is sharp at its size (on a phone,
+         sizes is set a little under the real width so a 3x screen takes the
+         480px file: sharp to the eye at a third of the weight); the before/after
+         pair asks to load first; every picture sits on a light grey tile, so
+         a slow load looks like a tile, not a hole; and the /how-we-price pair,
+         hidden on the homepage, no longer loads here at all (lazy). -->
     <div class="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
       <a href="/design?journey=windows" class="group rounded-2xl overflow-hidden border border-zinc-200 bg-white hover:border-zinc-900 transition">
-        <img src="/assets/products/windows.jpg" alt="Anthracite bay windows on a brick house" width="640" height="480" class="w-full aspect-[4/3] object-cover" loading="eager" decoding="async">
+        <img src="/assets/products/windows.jpg" srcset="/assets/products/windows-320.jpg 320w, /assets/products/windows-480.jpg 480w, /assets/products/windows.jpg 640w" sizes="(min-width: 1024px) 180px, (min-width: 640px) 31vw, 32vw" alt="Anthracite bay windows on a brick house" width="640" height="480" class="w-full aspect-[4/3] object-cover bg-zinc-100" loading="eager" decoding="async">
         <span class="block p-3 sm:p-4">
           <span class="block text-lg font-medium">Windows</span>
           <span class="block mt-0.5 text-base leading-7 text-zinc-600">New windows, any style</span>
         </span>
       </a>
       <a href="/design?journey=doors" class="group rounded-2xl overflow-hidden border border-zinc-200 bg-white hover:border-zinc-900 transition">
-        <img src="/assets/products/doors-grey-porch.jpg" alt="Illustration: a dark grey composite front door with glazed panels in a red-brick porch" width="640" height="480" class="w-full aspect-[4/3] object-cover" loading="eager" decoding="async">
+        <img src="/assets/products/doors-grey-porch.jpg" srcset="/assets/products/doors-grey-porch-320.jpg 320w, /assets/products/doors-grey-porch-480.jpg 480w, /assets/products/doors-grey-porch.jpg 640w" sizes="(min-width: 1024px) 180px, (min-width: 640px) 31vw, 32vw" alt="Illustration: a dark grey composite front door with glazed panels in a red-brick porch" width="640" height="480" class="w-full aspect-[4/3] object-cover bg-zinc-100" loading="eager" decoding="async">
         <span class="block p-3 sm:p-4">
           <span class="block text-lg font-medium">Doors</span>
           <span class="block mt-0.5 text-base leading-7 text-zinc-600">Front, back, patio and bifold</span>
         </span>
       </a>
       <a href="/design?journey=roofline" class="group rounded-2xl overflow-hidden border border-zinc-200 bg-white hover:border-zinc-900 transition">
-        <img src="/assets/products/roofline-grey.jpg" alt="Illustration: grey fascia and soffit with black guttering and a downpipe on a brick house" width="640" height="480" class="w-full aspect-[4/3] object-cover" loading="eager" decoding="async">
+        <img src="/assets/products/roofline-grey.jpg" srcset="/assets/products/roofline-grey-320.jpg 320w, /assets/products/roofline-grey-480.jpg 480w, /assets/products/roofline-grey.jpg 640w" sizes="(min-width: 1024px) 180px, (min-width: 640px) 31vw, 32vw" alt="Illustration: grey fascia and soffit with black guttering and a downpipe on a brick house" width="640" height="480" class="w-full aspect-[4/3] object-cover bg-zinc-100" loading="eager" decoding="async">
         <span class="block p-3 sm:p-4">
           <span class="block text-lg font-medium">Roof edge &amp; gutters</span>
           <span class="block mt-0.5 text-base leading-7 text-zinc-600">Fascias, soffits and guttering</span>
         </span>
       </a>
       <a href="/design?journey=roof" class="group rounded-2xl overflow-hidden border border-zinc-200 bg-white hover:border-zinc-900 transition">
-        <img src="/assets/products/roofs-slate-aerial.jpg" alt="Illustration: a slate roof on a red-brick semi-detached house, seen from above" width="640" height="480" class="w-full aspect-[4/3] object-cover" loading="eager" decoding="async">
+        <img src="/assets/products/roofs-slate-aerial.jpg" srcset="/assets/products/roofs-slate-aerial-320.jpg 320w, /assets/products/roofs-slate-aerial-480.jpg 480w, /assets/products/roofs-slate-aerial.jpg 640w" sizes="(min-width: 1024px) 180px, (min-width: 640px) 31vw, 32vw" alt="Illustration: a slate roof on a red-brick semi-detached house, seen from above" width="640" height="480" class="w-full aspect-[4/3] object-cover bg-zinc-100" loading="eager" decoding="async">
         <span class="block p-3 sm:p-4">
           <span class="block text-lg font-medium">Roofs</span>
           <span class="block mt-0.5 text-base leading-7 text-zinc-600">Slate, tile and clay</span>
         </span>
       </a>
       <a href="/design?journey=cladding" class="group rounded-2xl overflow-hidden border border-zinc-200 bg-white hover:border-zinc-900 transition">
-        <img src="/assets/products/walls-grey-clad.jpg" alt="Illustration: a detached house clad in dark grey weatherboard, with grey windows" width="640" height="480" class="w-full aspect-[4/3] object-cover" loading="eager" decoding="async">
+        <img src="/assets/products/walls-grey-clad.jpg" srcset="/assets/products/walls-grey-clad-320.jpg 320w, /assets/products/walls-grey-clad-480.jpg 480w, /assets/products/walls-grey-clad.jpg 640w" sizes="(min-width: 1024px) 180px, (min-width: 640px) 31vw, 32vw" alt="Illustration: a detached house clad in dark grey weatherboard, with grey windows" width="640" height="480" class="w-full aspect-[4/3] object-cover bg-zinc-100" loading="eager" decoding="async">
         <span class="block p-3 sm:p-4">
           <span class="block text-lg font-medium">Walls</span>
           <span class="block mt-0.5 text-base leading-7 text-zinc-600">A new finish: render or cladding</span>
         </span>
       </a>
       <a href="/cost/conservatory-cost-uk" class="group rounded-2xl overflow-hidden border border-zinc-200 bg-white hover:border-zinc-900 transition">
-        <img src="/assets/products/conservatory-brick-base.jpg" alt="Illustration: a white conservatory with a brick dwarf wall on a red-brick house" width="640" height="480" class="w-full aspect-[4/3] object-cover" loading="eager" decoding="async">
+        <img src="/assets/products/conservatory-brick-base.jpg" srcset="/assets/products/conservatory-brick-base-320.jpg 320w, /assets/products/conservatory-brick-base-480.jpg 480w, /assets/products/conservatory-brick-base.jpg 640w" sizes="(min-width: 1024px) 180px, (min-width: 640px) 31vw, 32vw" alt="Illustration: a white conservatory with a brick dwarf wall on a red-brick house" width="640" height="480" class="w-full aspect-[4/3] object-cover bg-zinc-100" loading="eager" decoding="async">
         <span class="block p-3 sm:p-4">
           <span class="block text-lg font-medium">Conservatories</span>
           <span class="block mt-0.5 text-base leading-7 text-zinc-600">Guide prices by style</span>
@@ -677,11 +699,11 @@
       <figure class="relative">
         <div class="grid grid-cols-2 gap-2 sm:gap-3">
           <div class="relative rounded-xl overflow-hidden bg-white/5">
-            <img src="/assets/work/detached-before-sm.jpg" alt="An example detached brick house with tired white window frames" width="600" height="450" loading="eager" decoding="async" class="w-full h-full object-cover aspect-[4/3]">
+            <img src="/assets/work/detached-before-sm.jpg" alt="An example detached brick house with tired white window frames" width="600" height="450" loading="lazy" decoding="async" class="w-full h-full object-cover aspect-[4/3]">
             <figcaption class="absolute top-2 left-2 text-base px-2 py-1 rounded-full bg-black/70 text-white/90 font-semibold">Before</figcaption>
           </div>
           <div class="relative rounded-xl overflow-hidden bg-white/5">
-            <img src="/assets/work/detached-after-sm.jpg" alt="The same house as Facet Pro showed it with anthracite windows; the brick, door and roofline unchanged" width="600" height="450" loading="eager" decoding="async" class="w-full h-full object-cover aspect-[4/3]">
+            <img src="/assets/work/detached-after-sm.jpg" alt="The same house as Facet Pro showed it with anthracite windows; the brick, door and roofline unchanged" width="600" height="450" loading="lazy" decoding="async" class="w-full h-full object-cover aspect-[4/3]">
             <figcaption class="absolute top-2 left-2 text-base px-2 py-1 rounded-full bg-white text-zinc-900 font-semibold">After</figcaption>
           </div>
         </div>
