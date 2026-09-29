@@ -473,18 +473,27 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
     </div>
     <!-- What the product does, at a glance, above the choice.
 
-         29 September, evening: Mike chose a single feature house for the first
-         screen in place of the garden-room before/after — anthracite windows,
-         a bay and a red composite door on a brick house. It is an AI-generated
-         illustration (supplied by Mike), not a customer's house and not a
-         Facet Pro render, so the caption and the alt text say "Illustration".
-         The garden-room pair still opens the Windows journey. See
+         29 September, late: Mike's facetpro_before_after_slider.png — number
+         22 before (tired white windows and door) and after (anthracite
+         aluminium windows, red composite door). Both halves are AI-generated
+         illustrations, not a customer's house and not a Facet Pro render, so
+         the caption and the alt text say "Illustration". The "after" also has
+         a new driveway and plants, which Facet Pro does not change or price,
+         so the caption says that too — the rule is not to show a result the
+         tool cannot give. Labels and slider handle cropped out. See
          assets/work/PROVENANCE.md and test/homepage-pair.test.js. -->
     <figure class="mt-4 lg:mt-0 max-w-[640px]">
-      <div class="rounded-xl overflow-hidden border border-zinc-200 bg-white">
-        <img src="/assets/work/home-feature-22-800.jpg" srcset="/assets/work/home-feature-22-480.jpg 480w, /assets/work/home-feature-22-800.jpg 800w, /assets/work/home-feature-22-1200.jpg 1200w" fetchpriority="high" sizes="(min-width: 1024px) 580px, (min-width: 640px) 640px, 60vw" alt="Illustration: a brick house with anthracite windows, a bay window and a red composite front door" width="800" height="533" loading="eager" decoding="async" class="w-full aspect-[3/2] object-cover bg-zinc-100">
+      <div class="grid grid-cols-2 gap-2 sm:gap-3">
+        <div class="relative rounded-xl overflow-hidden border border-zinc-200 bg-white">
+          <img src="/assets/work/home-22-before-sm.jpg" srcset="/assets/work/home-22-before-400.jpg 400w, /assets/work/home-22-before-sm.jpg 600w, /assets/work/home-22-before.jpg 1200w" fetchpriority="high" sizes="(min-width: 1024px) 280px, (min-width: 640px) 320px, 34vw" alt="Illustration: a brick house with old white windows and a worn white front door" width="600" height="450" loading="eager" decoding="async" class="w-full aspect-[4/3] object-cover bg-zinc-100">
+          <span class="absolute bottom-2 left-2 text-base px-2 py-0.5 rounded-full bg-white text-zinc-900 font-semibold border border-zinc-200">Before</span>
+        </div>
+        <div class="relative rounded-xl overflow-hidden border border-zinc-200 bg-white">
+          <img src="/assets/work/home-22-after-sm.jpg" srcset="/assets/work/home-22-after-400.jpg 400w, /assets/work/home-22-after-sm.jpg 600w, /assets/work/home-22-after.jpg 1200w" fetchpriority="high" sizes="(min-width: 1024px) 280px, (min-width: 640px) 320px, 34vw" alt="Illustration: the same house with anthracite aluminium windows and a red composite front door" width="600" height="450" loading="eager" decoding="async" class="w-full aspect-[4/3] object-cover bg-zinc-100">
+          <span class="absolute bottom-2 left-2 text-base px-2 py-0.5 rounded-full bg-emerald-600 text-white font-semibold">After</span>
+        </div>
       </div>
-      <figcaption class="mt-2 text-base leading-7 text-zinc-600">Illustration: anthracite windows and a red composite front door. Facet Pro shows changes like these on a photo of your own house.</figcaption>
+      <figcaption class="mt-2 text-base leading-7 text-zinc-600">Illustration: the same house with anthracite aluminium windows and a red composite door. The new driveway and plants are part of the illustration, not the estimate.</figcaption>
       <!-- The second half of the promise, straight after the picture. It goes
            to the same place as Upload my house, because the price is priced
            from their photograph. -->

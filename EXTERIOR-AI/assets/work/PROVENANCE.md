@@ -15,6 +15,17 @@ The files carry no EXIF and no origin markers — they have been stripped — so
 the provenance cannot be recovered from the images. It has to come from whoever
 put them there.
 
+## The homepage pair: `home-22-before*.jpg` / `home-22-after*.jpg` (29 September 2026, late)
+
+Replaces the single feature house (below) on the homepage's first screen, at Mike's request.
+
+| File | What it is | Source |
+|---|---|---|
+| `home-22-before.jpg` (1200×900), `-sm` (600), `-400` | **AI-generated illustration** of "number 22" before. Not a customer's house, not a Facet Pro render. | Left panel of Mike's `facetpro_before_after_slider.png` (3630×1280), crop (200,60)–(1779,1244), "BEFORE" label and slider handle cropped out |
+| `home-22-after.jpg`, `-sm`, `-400` | **AI-generated illustration** of the same house after: anthracite aluminium windows, red composite door — and a new driveway and plants, which Facet Pro does not change or price. | Right panel, crop (2050,60)–(3629,1244), "AFTER" label cropped out |
+
+Caption says "Illustration" and that the driveway and plants are not part of the estimate. Never caption as a real job or as something Facet Pro made, and never put it in Real Homes.
+
 ## The homepage feature house: `home-feature-22-*.jpg` (29 September 2026, evening)
 
 Chosen by Mike as the single picture on the homepage's first screen, replacing the garden-room before/after pair below (which still opens the Windows journey).

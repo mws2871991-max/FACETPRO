@@ -17,12 +17,18 @@ test('the homepage pair is labelled an illustration, in the caption and the alt 
   const at = html.indexOf('id="choose-heading"');
   const fig = html.slice(html.indexOf('<figure', at), html.indexOf('</figure>', at));
   const imgs = [...fig.matchAll(/<img src="([^"]+)"[^>]*alt="([^"]+)"/g)];
-  assert.strictEqual(imgs.length, 1);
+  assert.strictEqual(imgs.length, 2);
   for (const [, src, alt] of imgs) {
-    assert.match(src, /home-feature-22-800\.jpg$/);
+    assert.match(src, /home-22-(before|after)-sm\.jpg$/);
     assert.ok(fs.existsSync(path.join(root, src)), `${src} is missing`);
     assert.match(alt, /^Illustration:/);
   }
   assert.match(fig, /<figcaption[^>]*>Illustration:/);
   assert.ok(!/Facet Pro made/.test(fig), 'an illustration must not be called a Facet Pro render');
+});
+
+test('the pair says the driveway and plants are not part of the estimate', () => {
+  const at = html.indexOf('id="choose-heading"');
+  const fig = html.slice(html.indexOf('<figure', at), html.indexOf('</figure>', at));
+  assert.match(fig, /driveway and plants are part of the illustration, not the estimate/);
 });

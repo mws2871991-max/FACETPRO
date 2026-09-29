@@ -18,7 +18,7 @@ const home = html.slice(html.lastIndexOf('<section', at), html.indexOf('</sectio
 
 test('every card and the before/after offer smaller versions that exist', () => {
   const imgs = [...home.matchAll(/<img [^>]*>/g)].map(m => m[0]);
-  assert.strictEqual(imgs.length, 7);
+  assert.strictEqual(imgs.length, 8);
   for (const img of imgs) {
     const srcset = (img.match(/srcset="([^"]+)"/) || [])[1];
     assert.ok(srcset, `no srcset: ${img.slice(0, 80)}`);
@@ -31,9 +31,9 @@ test('every card and the before/after offer smaller versions that exist', () => 
   for (const f of small) assert.ok(fs.statSync(path.join(root, f)).size < 40 * 1024, `${f} should be under 40 KB`);
 });
 
-test('the feature picture asks to load first', () => {
-  const pair = [...home.matchAll(/<img [^>]*home-feature[^>]*>/g)].map(m => m[0]);
-  assert.strictEqual(pair.length, 1);
+test('the before/after asks to load first', () => {
+  const pair = [...home.matchAll(/<img [^>]*home-22-[^>]*>/g)].map(m => m[0]);
+  assert.strictEqual(pair.length, 2);
   for (const img of pair) assert.match(img, /fetchpriority="high"/);
 });
 
