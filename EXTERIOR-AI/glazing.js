@@ -1114,6 +1114,7 @@ function priceGlazing({ windows, totalCount, selections, rates, houseType , open
 
   let supplyFit = 0;
   let upperStoreyCount = 0;
+  let bayUnits = 0;
   const byBand = {};
 
   if (windowsIncluded) {
@@ -1138,6 +1139,7 @@ function priceGlazing({ windows, totalCount, selections, rates, houseType , open
       const bayHere = w.isBay || isBay;
       const unit = band.supplyFit * styleMult * windowColourMult * barsMult * materialMult * (bayHere ? (rates.bayUplift ?? 1) : 1);
       supplyFit += unit * scale;
+      if (bayHere) bayUnits += scale;
       upperStoreyCount += scale * w.upperShare;
       byBand[w.bandId] = (byBand[w.bandId] || 0) + scale;
     }
@@ -1189,8 +1191,13 @@ function priceGlazing({ windows, totalCount, selections, rates, houseType , open
      the same way supplyFit is, because the answer describes their windows
      rather than the four visible in the photograph. Nothing to adjust when the
      windows are staying put. */
-  const openers = windowsIncluded
-    ? openerAdjustment(rates, [{ count: Math.round(totalCount) }], openerCount)
+  /* Bays are left out of it. The bay price (catalogue.glazing.stylesNote) is
+     Mike's settled figure for a bay with its two openers already in it, so
+     the "how many open" answer — which describes an ordinary window — added
+     on top of a bay counted its openers twice. */
+  const openerUnits = Math.max(0, Math.round(totalCount - bayUnits));
+  const openers = windowsIncluded && openerUnits > 0
+    ? openerAdjustment(rates, [{ count: openerUnits }], openerCount)
     : 0;
 
   let net = supplyFit + doors + access + disposal + openers;
