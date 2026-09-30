@@ -2021,10 +2021,10 @@ function journeyExcludes(group) {
 // The exact wording the homeowner agrees to. Sent with the lead and stored, so
 // there's a record of what was consented to and when — bump CONSENT_VERSION
 // whenever CONSENT_WORDING changes, and keep the on-screen label identical.
-const CONSENT_VERSION = '2026-09-29';
+const CONSENT_VERSION = '2026-09-30';
 const CONSENT_WORDING = {
   emailPack: 'Email me my design pack — my visualisation and indicative estimate.',
-  installerQuotes: 'Yes, I\u2019d like quotes. Please pass my name, postcode, email address and phone number, together with my design and estimate, to up to three vetted installers covering my area, so they can contact me about quoting for this work and arranging a survey. I understand they may contact me by email, by telephone and by text message, including if my number is registered with the Telephone Preference Service, and that each installer is responsible for its own use of my details.',
+  installerQuotes: 'Yes, I\u2019d like quotes. Please pass my name, postcode, email address and phone number, together with my design, my estimate and my answers about the project, to up to three vetted installers covering my area, so they can contact me about quoting for this work and arranging a survey. I understand they may contact me by email, by telephone and by text message, including if my number is registered with the Telephone Preference Service, and that each installer is responsible for its own use of my details.',
   terms: 'I\u2019ve read and agree to the Terms of Use and the Privacy Notice.',
 };
 
@@ -8260,7 +8260,10 @@ function leadSummary() {
 
   /* Two figures that are not addable — the same rule the total bar follows. */
   const wall = state.price && priced.length ? fmtMoney(state.price.total) : null;
-  const glaz = state.glazing?.price ? `${fmtMoney(state.glazing.range.low)}–${fmtMoney(state.glazing.range.high)}` : null;
+  /* The same range the page shows — publishedRange — not the narrower one
+     underneath it (launch review: three ranges for one job). */
+  const glazShown = state.glazing?.price ? publishedRange(state.glazing) : null;
+  const glaz = glazShown ? `${fmtMoney(glazShown.low)}–${fmtMoney(glazShown.high)}` : null;
   if (wall) rows.push(['Estimated ' + (priced.length === 1 ? names[priced[0]] : 'walls, roof and roofline'), wall]);
   if (glaz) rows.push(['Estimated windows and doors', glaz]);
 
@@ -8806,6 +8809,14 @@ function buildSaveFraming() {
          thing they read before deciding is what an installer will receive.
          Nothing here is an input; it is a receipt. */
       leadSummary(),
+      /* Not for people: off-screen, not tabbable, hidden from screen readers,
+         and ignored by password managers. A script filling every input fills
+         this one too, and the server refuses the lead (launch review). */
+      h('div', { 'aria-hidden': 'true', style: { position: 'absolute', left: '-10000px', width: '1px', height: '1px', overflow: 'hidden' } }, [
+        h('label', { for: 'lead-website' }, 'Leave this empty'),
+        h('input', { type: 'text', id: 'lead-website', name: 'website', tabindex: '-1', autocomplete: 'off',
+          onInput: (e) => { state.contact.website = e.target.value; } }),
+      ]),
       /* Three boxes, all unticked. The optional ones come first so the
          required one reads as the last step rather than the price of the
          others. No pre-selection, no nudging styling, no bundling — the two
@@ -8994,8 +9005,9 @@ function buildInstaller() {
        figure with a precision neither has. */
     const estimateOf = (lead) => {
       const walls = Number(lead.price) || 0;
-      const low = Number(lead.glazing?.range?.low) || 0;
-      const high = Number(lead.glazing?.range?.high) || 0;
+      const shown = publishedRange(lead.glazing);
+      const low = Number(shown?.low) || 0;
+      const high = Number(shown?.high) || 0;
       if (!walls && !low) return null;
       return { low: walls + low, high: walls + (high || low) };
     };
@@ -9912,6 +9924,12 @@ async function sendDesignPack() {
       body: JSON.stringify({
         name: state.contact.name,
         email: state.contact.email,
+        /* The hidden field below. A person never fills it. */
+        website: state.contact.website || undefined,
+        /* The photo the windows were counted from, and how many open — so the
+           lead is priced exactly as the page priced it (launch review). */
+        glazingDetectionId: state.detectionId || undefined,
+        openerCount: state.openerCount ?? undefined,
         phone: state.contact.phone,
         postcode: state.contact.postcode || state.postcode,
         // What the homeowner was actually shown for windows and doors, and

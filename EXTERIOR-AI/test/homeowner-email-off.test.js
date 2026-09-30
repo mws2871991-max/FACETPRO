@@ -42,7 +42,7 @@ const saveWith = (port, consent) => fetch(`http://127.0.0.1:${port}/api/lead`, {
   body: JSON.stringify({
     name: 'Jane', email: 'jane@example.com', postcode: 'SW11 4NP',
     claddingId: 'sage-slate', footprintM2: 100,
-    consent: { terms: true, version: 'test', ...consent },
+    consent: { terms: true, version: '2026-09-30', ...consent },
   }),
 });
 
@@ -112,7 +112,7 @@ test('somebody nobody covers is not told their enquiry was sent on', async (t) =
     body: JSON.stringify({
       name: 'Jane', email: 'jane@example.com', postcode: 'M1 1AE',
       claddingId: 'sage-slate', footprintM2: 100,
-      consent: { terms: true, installerQuotes: true, emailPack: false, version: 'test' },
+      consent: { terms: true, installerQuotes: true, emailPack: false, version: '2026-09-30' },
     }),
   });
   const body = await save.json();

@@ -93,7 +93,7 @@ test('an absurd trim length does not either', async () => {
 test('a tampered area never reaches a stored lead', async () => {
   const { body } = await post('/api/lead', {
     name: 'Mallory', email: 'm@example.com', footprintM2: 999999999,
-    claddingId: 'sage-slate', consent: { terms: true, version: 'v' },
+    claddingId: 'sage-slate', consent: { terms: true, version: '2026-09-30' },
   });
   assert.strictEqual(body.lead.price < 200000, true, `stored £${body.lead?.price}`);
   assert.notStrictEqual(body.lead.measurementSource, 'manual_entry',
@@ -139,11 +139,12 @@ test('long fields are capped, not stored whole', async () => {
   const { status, body } = await post('/api/lead', {
     name: 'A'.repeat(20000), email: 'a@example.com',
     phone: 'B'.repeat(20000), postcode: 'C'.repeat(20000),
-    claddingId: 'sage-slate', consent: { terms: true, version: 'v' },
+    claddingId: 'sage-slate', consent: { terms: true, version: '2026-09-30' },
   });
   assert.strictEqual(status, 200);
   assert.strictEqual(body.lead.name.length, 100);
-  assert.strictEqual(body.lead.phone.length, 32);
+  // No quotes asked for, so no phone stored at all (launch review) — capped or not.
+  assert.strictEqual(body.lead.phone, '');
   assert.strictEqual(body.lead.postcode.length, 12);
 });
 
@@ -151,7 +152,7 @@ test('and a body too large to be a lead never gets parsed', async () => {
   // 20MB was the global limit; only the two photo endpoints need that room.
   const { status, body } = await post('/api/lead', {
     name: 'A'.repeat(500000), email: 'a@example.com',
-    claddingId: 'sage-slate', consent: { terms: true, version: 'v' },
+    claddingId: 'sage-slate', consent: { terms: true, version: '2026-09-30' },
   });
   assert.strictEqual(status, 413, JSON.stringify(body).slice(0, 120));
 });
@@ -159,7 +160,7 @@ test('and a body too large to be a lead never gets parsed', async () => {
 test('whitespace is trimmed, so " " is not a name', async () => {
   const { status, body } = await post('/api/lead', {
     name: '   ', email: 'a@example.com', claddingId: 'sage-slate',
-    consent: { terms: true, version: 'v' },
+    consent: { terms: true, version: '2026-09-30' },
   });
   assert.strictEqual(status, 400, JSON.stringify(body));
 });
@@ -167,7 +168,7 @@ test('whitespace is trimmed, so " " is not a name', async () => {
 test('a single-letter TLD is not an email address', async () => {
   const { status } = await post('/api/lead', {
     name: 'Jane', email: 'a@b.c', claddingId: 'sage-slate',
-    consent: { terms: true, version: 'v' },
+    consent: { terms: true, version: '2026-09-30' },
   });
   assert.strictEqual(status, 400);
 });

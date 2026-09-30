@@ -43,7 +43,7 @@ const PERSONAL = {
   email: 'jane@example.com',
   phone: '07700 900123',
   postcode: 'SW11 4NP',
-  consent: { terms: true, installerQuotes: true, version: 'v' },
+  consent: { terms: true, installerQuotes: true, version: '2026-09-30' },
 };
 
 test('the server tells the page capture is off', async () => {

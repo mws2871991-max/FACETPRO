@@ -51,7 +51,7 @@ const save = async (fields) => {
 test('quotes without a usable postcode are refused', async () => {
   // Missing, half a postcode, and something that is not one at all.
   for (const postcode of ['', 'SW11', 'somewhere in london']) {
-    const { status, body } = await save({ postcode, consent: { terms: true, installerQuotes: true, version: 'test' } });
+    const { status, body } = await save({ postcode, consent: { terms: true, installerQuotes: true, version: '2026-09-30' } });
     assert.strictEqual(status, 400, JSON.stringify(postcode));
     assert.strictEqual(body.reason, 'postcode_required_for_quotes');
     assert.match(body.error, /postcode/i);
@@ -60,7 +60,7 @@ test('quotes without a usable postcode are refused', async () => {
 
 test('the design still saves without one when no quotes were asked for', async () => {
   const { status, body } = await save({
-    postcode: '', consent: { terms: true, installerQuotes: false, emailPack: false, version: 'test' },
+    postcode: '', consent: { terms: true, installerQuotes: false, emailPack: false, version: '2026-09-30' },
   });
   assert.strictEqual(status, 200, 'we have no reason to know where they live');
   assert.strictEqual(body.lead.postcode, '');

@@ -2,7 +2,13 @@
 
 A lead stores the version tag and the exact wording it was shown (`consent.version`, `consent.wording`). This file keeps each version's installer wording side by side, so anyone checking a record can see what changed and when. Add a row whenever `CONSENT_VERSION` in `index.html` changes, and save a screenshot of the form next to it.
 
-## 2026-09-29 (current)
+## 2026-09-30 (current)
+
+Yes, I'd like quotes. Please pass my name, postcode, email address and phone number, together with my design, my estimate and my answers about the project, to up to three vetted installers covering my area, so they can contact me about quoting for this work and arranging a survey. I understand they may contact me by email, by telephone and by text message, including if my number is registered with the Telephone Preference Service, and that each installer is responsible for its own use of my details.
+
+Changed: added "my answers about the project", because the quote-step answers (and the readiness score worked out from them) go to installers with the enquiry. From this version the server holds the wording (consent.js) and stores its own copy; the browser's copy is not stored.
+
+## 2026-09-29
 
 Yes, I'd like quotes. Please pass my name, postcode, email address and phone number, together with my design and estimate, to up to three vetted installers covering my area, so they can contact me about quoting for this work and arranging a survey. I understand they may contact me by email, by telephone and by text message, including if my number is registered with the Telephone Preference Service, and that each installer is responsible for its own use of my details.
 

@@ -57,7 +57,7 @@ test('a lead nobody is configured to receive is still recorded as such', async (
     body: JSON.stringify({
       name: 'Jane', email: 'jane@example.com', postcode: 'SW11 4NP',
       claddingId: 'sage-slate', roofId: 'terracotta', trimId: 'cedar',
-      consent: { terms: true, installerQuotes: true, emailPack: true, version: 'v' },
+      consent: { terms: true, installerQuotes: true, emailPack: true, version: '2026-09-30' },
     }),
   });
   assert.strictEqual(res.status, 200, 'the homeowner is still served');

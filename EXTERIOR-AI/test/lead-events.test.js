@@ -82,12 +82,12 @@ async function waitFor(leadId, predicate, what, ms = 15000) {
 const countOf = (type) => (list) => list.filter(e => e.type.startsWith(type)).length;
 
 test('consent is recorded as its own event, with the wording version', async () => {
-  const lead = await submit({ terms: true, installerQuotes: true, emailPack: true, version: 'v3' });
+  const lead = await submit({ terms: true, installerQuotes: true, emailPack: true, version: '2026-09-30' });
   await settle();
 
   const recorded = (await events(lead.id)).find(e => e.type === 'consent.recorded');
   assert.ok(recorded, 'no consent event');
-  assert.strictEqual(recorded.detail.version, 'v3',
+  assert.strictEqual(recorded.detail.version, '2026-09-30',
     'which wording they agreed to is the part that matters six years later');
   assert.strictEqual(recorded.detail.installerQuotes, true);
   assert.ok(recorded.eventId, 'every event carries its own id, separate from the lead');
@@ -96,7 +96,7 @@ test('consent is recorded as its own event, with the wording version', async () 
 test('the trail names which buyer, not how many', async () => {
   /* "delivered to 1 of 2" cannot answer an invoice dispute. Anglian pays £100
      and Zenith £130; the log has to say which one, and what they pay. */
-  const lead = await submit({ terms: true, installerQuotes: true, emailPack: true, version: 'v3' });
+  const lead = await submit({ terms: true, installerQuotes: true, emailPack: true, version: '2026-09-30' });
   const all = await waitFor(lead.id, (l) => countOf('delivery.')(l) === 2,
     'both delivery events');
 
@@ -116,7 +116,7 @@ test('the trail names which buyer, not how many', async () => {
 });
 
 test('a lead nobody consented to share leaves a positive record of that', async () => {
-  const lead = await submit({ terms: true, installerQuotes: false, emailPack: true, version: 'v3' });
+  const lead = await submit({ terms: true, installerQuotes: false, emailPack: true, version: '2026-09-30' });
   await settle();
 
   const withheld = (await events(lead.id)).find(e => e.type === 'routing.withheld');
@@ -128,7 +128,7 @@ test('the trail carries no contact details — it is what happened, not who', as
   /* This is what keeps the log outside the erasure path. If a name could reach
      it, withdrawal would have to choose between honouring the request and
      keeping its own evidence that it honoured it. */
-  const lead = await submit({ terms: true, installerQuotes: true, emailPack: true, version: 'v3' });
+  const lead = await submit({ terms: true, installerQuotes: true, emailPack: true, version: '2026-09-30' });
   await settle();
 
   const serialised = JSON.stringify(await events(lead.id));
@@ -142,7 +142,7 @@ test('the trail survives the erasure of the lead it describes', async () => {
   /* The point of the whole table. After a full withdrawal the lead is redacted
      and its ancillary records are purged; what must remain is the account of
      what was done, or there is no way to show the request was honoured. */
-  const lead = await submit({ terms: true, installerQuotes: true, emailPack: true, version: 'v3' });
+  const lead = await submit({ terms: true, installerQuotes: true, emailPack: true, version: '2026-09-30' });
   const before = await waitFor(lead.id, (l) => countOf('delivery.')(l) === 2,
     'the lead to finish being delivered before withdrawing it');
   assert.ok(before.length >= 3, 'expected consent, routing and delivery events');

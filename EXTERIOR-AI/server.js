@@ -21,6 +21,8 @@ const routing = require('./routing');
 const glazing = require('./glazing');
 const resume = require('./resume');
 const leadscore = require('./leadscore');
+const leadview = require('./leadview');
+const consentText = require('./consent');
 const { isTestTraffic } = require('./testtraffic');
 
 const { buildRenderPrompt } = require('./renderprompt');
@@ -368,6 +370,28 @@ const leadLimiter = rateLimit({
   standardHeaders: true, legacyHeaders: false,
   message: { error: 'Too many submissions — please wait a minute.' }
 });
+/* Leads per day: per connection and overall (launch review). In memory, like
+   the detect and render caps' per-IP map — one replica, reset at UTC midnight. */
+const LEAD_DAILY_PER_IP = Number.parseInt(process.env.LEAD_DAILY_PER_IP || '10', 10) || 10;
+const LEAD_DAILY_TOTAL = Number.parseInt(process.env.LEAD_DAILY_TOTAL || '300', 10) || 300;
+let leadDay = '';
+let leadCounts = new Map();
+let leadTotal = 0;
+function takeLeadAllowance(req) {
+  const today = new Date().toISOString().slice(0, 10);
+  if (today !== leadDay) { leadDay = today; leadCounts = new Map(); leadTotal = 0; }
+  const key = rateLimit.ipKeyGenerator(String(req.ip || 'unknown'), 56);
+  const mine = leadCounts.get(key) || 0;
+  if (mine >= LEAD_DAILY_PER_IP) return 'You’ve saved a lot of designs today. Please try again tomorrow, or email us.';
+  if (leadTotal >= LEAD_DAILY_TOTAL) {
+    console.error(`Daily lead limit (${LEAD_DAILY_TOTAL}) reached — refusing further leads until midnight UTC.`);
+    return 'We can’t save designs just now. Please try again later.';
+  }
+  if (leadCounts.size > 20000) leadCounts = new Map();
+  leadCounts.set(key, mine + 1);
+  leadTotal += 1;
+  return null;
+}
 /* Withdrawing has to stay easy — Article 7(3) says as easy as giving consent
    was — so this is loose enough never to block a real person changing their
    mind, and tight enough that the token isn't worth guessing at 2^192. */
@@ -492,8 +516,11 @@ const DAILY_PER_IP = {
 };
 const PER_IP_MAX_KEYS = 5000;
 const PER_IP_SALT = crypto.randomBytes(16).toString('hex');
+/* IPv6 grouped to its /56, as express-rate-limit does: one household or
+   phone network hands out a whole block, and counting each address in it as
+   a new visitor let a single connection use the whole day's allowance. */
 const perIpKey = (req) => crypto.createHash('sha256')
-  .update(PER_IP_SALT).update(String((req && req.ip) || 'unknown'))
+  .update(PER_IP_SALT).update(rateLimit.ipKeyGenerator(String((req && req.ip) || 'unknown'), 56))
   .digest('hex').slice(0, 16);
 let perIpUsage = new Map();
 
@@ -927,7 +954,8 @@ async function deliverAndRecord(lead, plan) {
   }
 
   let results;
-  const { withdrawTokenHash: _hash, ...forInstaller } = lead;
+  /* Only what the consent wording lists — see leadview.js. */
+  const forInstaller = leadview.forInstaller(lead);
   try {
     results = await delivery.deliverLead(forInstaller, chosen, { fetchImpl: (...a) => fetch(...a) });
   } catch (err) {
@@ -1477,7 +1505,15 @@ const SITE_MODE = (process.env.SITE_MODE || 'beta').toLowerCase() === 'live' ? '
    A lost lead costs a hundred pounds and you find out. Quietly collecting
    personal data you cannot lawfully explain, or produce on request, is not
    recoverable. The default belongs on the side of the mistake you can undo. */
-const LEAD_CAPTURE = (process.env.LEAD_CAPTURE || 'off').toLowerCase() !== 'off';
+/* On only when it is plainly asked for (launch review, 29 September). This
+   was "anything but off", so LEAD_CAPTURE=false, 0 or no switched capture ON —
+   the opposite of what the person typing it meant, on the one switch that
+   decides whether personal data is taken at all. */
+const LEAD_CAPTURE_RAW = String(process.env.LEAD_CAPTURE || 'off').trim().toLowerCase();
+const LEAD_CAPTURE = ['on', 'true', '1', 'yes'].includes(LEAD_CAPTURE_RAW);
+if (!LEAD_CAPTURE && !['off', 'false', '0', 'no', ''].includes(LEAD_CAPTURE_RAW)) {
+  console.warn(`LEAD_CAPTURE="${process.env.LEAD_CAPTURE}" is not understood — lead capture stays OFF. Use LEAD_CAPTURE=on to take details.`);
+}
 
 /* ── GET /healthz ──
    For the host's health check. Deliberately says almost nothing: whether the
@@ -2590,7 +2626,12 @@ function pickById(list, id, fields) {
 function resolveGlazing(body) {
   if (!catalogue.glazing) return null;
   if (!body.windowStyleId && !body.doorStyleId) return null;
-  const record = body.detectionId ? detectionRecords.get(String(body.detectionId)) : null;
+  /* The photo the windows were counted from. Sent separately from
+     detectionId, which the lead also uses to decide whether the wall area
+     was measured — so a photo that counted the windows but could not size
+     the walls no longer prices the windows as a typical house. */
+  const glazingId = body.glazingDetectionId || body.detectionId;
+  const record = glazingId ? detectionRecords.get(String(glazingId)) : null;
   try {
     const result = glazing.estimateGlazing({
       detections: record?.detections || [],
@@ -2610,6 +2651,8 @@ function resolveGlazing(body) {
       },
       rates: catalogue.glazing,
       windowCountOverride: body.windowCount,
+      /* How many open — the page prices it, so the lead must. */
+      openerCount: body.openerCount,
       /* The lead must carry the figure the homeowner saw, so it is priced the
          same way the page priced it: the front from the photo, and the back
          and sides only if they told us how many. */
@@ -3644,7 +3687,20 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
      on every retention run and every withdrawal. Generous versions of real
      limits: E.164 is 15 digits plus formatting, a UK postcode is at most 8
      characters, and RFC 5321 caps an address at 254. */
-  const cap = (value, max) => String(value ?? '').trim().slice(0, max);
+  /* Control characters stripped too (launch review): the name goes into an
+     email subject line, and a CR/LF there is how extra headers get in. */
+  const cap = (value, max) => String(value ?? '').replace(/[\u0000-\u001f\u007f]+/g, ' ').trim().slice(0, max);
+
+  /* A field no person can see or reach (hidden, off-screen, not tabbable).
+     Anything typed into it came from a script filling every input. */
+  if (String(req.body?.website || '').trim()) {
+    return res.status(400).json({ error: 'Something went wrong saving your design. Please try again.' });
+  }
+  /* A daily ceiling, per connection and overall, so a script cannot send a
+     stream of branded emails to strangers or fake enquiries to installers who
+     pay for each one. Far above what any homeowner does. */
+  const leadCap = takeLeadAllowance(req);
+  if (leadCap) return res.status(429).json({ error: leadCap, reason: 'lead_daily_limit' });
   const name = cap(req.body?.name, 100);
   const email = cap(req.body?.email, 254);
   const phone = cap(req.body?.phone, 32);
@@ -3662,6 +3718,16 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
      anyone, which is what the homeowner asked for. */
   if (!consent || consent.terms !== true) {
     return res.status(400).json({ error: 'Please agree to the Terms before saving your design.' });
+  }
+  /* The words are ours, not the browser's (launch review). A version we do
+     not know cannot be evidence of anything, so it may save a design but may
+     not send anyone's details to an installer. */
+  const shownWording = consentText.wordingFor(String(consent.version || ''));
+  if (consent.installerQuotes === true && !shownWording) {
+    return res.status(400).json({
+      error: 'This page is out of date. Please reload it and tick the box again — nothing has been sent.',
+      reason: 'consent_version_unknown',
+    });
   }
   /* Refused rather than accepted quietly, and refused before anything is
      stored. If we cannot email them, we cannot send the withdrawal link, and
@@ -3721,7 +3787,9 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
   const lead = {
     ts: new Date().toISOString(),
     id: newLeadId(),
-    name, email, phone: phone || '', postcode: postcode || '',
+    /* Phone only when they asked for quotes — the notice says so, and it is
+       only an installer who would ring. */
+    name, email, phone: consent.installerQuotes === true ? (phone || '') : '', postcode: postcode || '',
     selections: hasPricedWork ? price.selections : {},
     price: hasPricedWork ? price.total : null,
     priceBreakdown: hasPricedWork ? price : null,
@@ -3766,13 +3834,13 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
        boolean. Withdrawal is recorded the same way when it happens. */
     consent: {
       at: new Date().toISOString(),
-      version: String(consent.version || '').slice(0, 40),
+      version: shownWording ? String(consent.version) : `unknown:${String(consent.version || '').slice(0, 32)}`,
       terms: consent.terms === true,
       installerQuotes: consent.installerQuotes === true,
       emailPack: consent.emailPack === true,
-      wording: typeof consent.wording === 'object' && consent.wording
-        ? Object.fromEntries(Object.entries(consent.wording).slice(0, 5).map(([k, v]) => [k, String(v).slice(0, 800)]))
-        : { legacy: String(consent.wording || '').slice(0, 1000) },
+      /* Our copy of the words for that version; what the browser sent is not
+         stored, because it is not evidence of anything. */
+      wording: shownWording ? { ...shownWording } : null,
       /* Hashed, not raw. A consent record is kept six years; the access log
          hashes IPs and keeps them twelve months, so storing a raw address
          here treated the same identifier two different ways in one codebase
@@ -3848,7 +3916,19 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
      server.close() waits for open HTTP connections, and this deliberately is
      not one: the response has already gone. So it is held here and drained
      below rather than left to the forced-exit timer. */
-  const delivery = deliverAndRecord(lead, plan)
+  /* Their details do not go to installers until they have had the email
+     with the link to stop it (launch review). If that email failed, the lead
+     is held — stored, and recorded as held — for the owner to resend. */
+  const heldPlan = (plan && homeownerEmail.attempted && !homeownerEmail.sent) ? null : plan;
+  if (plan && !heldPlan) {
+    lead.deliveryHeld = 'homeowner email failed';
+    record('deliveries', {
+      ts: new Date().toISOString(), leadId: lead.id, total: 0, delivered: 0, failed: 0, results: [],
+      withheld: 'homeowner email with the withdrawal link failed to send — held until it is resent',
+    }).catch(() => {});
+    console.error(`Lead ${lead.id}: held — the homeowner's email did not send, so their details were not passed to installers.`);
+  }
+  const delivery = (lead.deliveryHeld ? Promise.resolve() : deliverAndRecord(lead, plan))
     .catch(err =>
       console.error(`Lead ${lead.id}: delivery threw after the response:`, err?.stack || err?.message || err))
     .finally(() => pendingDeliveries.delete(delivery));

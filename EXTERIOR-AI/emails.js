@@ -54,6 +54,17 @@ const selectionsLine = (price) => {
   return named.length ? named.join(' / ') : 'No wall, roof or roofline work chosen';
 };
 
+/* The window and door range everybody is shown — the page, the summary, the
+   installer portal and both emails (launch review: there were three). */
+const shownRange = (g) => (g ? (g.marketRange || g.range || null) : null);
+
+/* "Aluminium · Casement · Anthracite", from the lead's own preferences. */
+const glazingSpec = (lead) => {
+  const w = lead.preferences?.windows || {};
+  return [w.material?.id === 'aluminium' ? w.material.name : null, w.style?.name, w.colour?.name, w.bars?.name]
+    .filter(Boolean).join(' · ');
+};
+
 /* The windows, part by part: what was counted, what was measured, what is a
    typical size. Whoever forwards this lead needs to know which sizes to
    check on survey before the installer quotes them as measured. */
@@ -61,9 +72,11 @@ const windowsRow = (lead) => {
   const g = lead.glazing;
   if (!g) return '';
   const lines = Array.isArray(g.countBasis?.lines) ? g.countBasis.lines : [];
-  const range = g.range ? ` · ${money(g.range.low)}–${money(g.range.high)}` : '';
+  const r = shownRange(g);
+  const range = r ? ` · ${money(r.low)}–${money(r.high)}` : '';
   const head = Number.isFinite(g.windowCount) ? `<strong>${escapeHtml(g.windowCount)} in all</strong>${range}` : '';
-  return row('Windows', [head, ...lines.map(escapeHtml)].filter(Boolean).join('<br>'));
+  const spec = glazingSpec(lead);
+  return row('Windows', [head, spec ? escapeHtml(spec) : '', ...lines.map(escapeHtml)].filter(Boolean).join('<br>'));
 };
 
 function leadNotificationHtml(lead, price) {
@@ -118,6 +131,37 @@ function installerList(recipients) {
    with the same build-up as the site, repeats the planning-estimate caveat
    rather than burying it, and tells them how to get their data removed. */
 
+/* Windows and doors in the homeowner's own email (launch review: a
+   windows-only design used to arrive with no estimate in it at all). The same
+   range the page showed them. */
+function glazingBlockHtml(lead) {
+  const g = lead.glazing;
+  const r = shownRange(g);
+  if (!g || !r) return '';
+  const spec = glazingSpec(lead);
+  const door = lead.preferences?.windows?.door?.name;
+  return `<h2 style="font-size:15px;margin:26px 0 8px;font-weight:600">Windows and doors</h2>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;background:#fff;border-radius:12px;padding:8px">
+      ${Number.isFinite(g.windowCount) && g.price?.windowsIncluded !== false ? row('Windows', escapeHtml(`${g.windowCount}${spec ? ` · ${spec}` : ''}`)) : ''}
+      ${door ? row('Door', escapeHtml(door)) : ''}
+      ${row('Estimated, fitted, inc VAT', `<strong>${money(r.low)} – ${money(r.high)}</strong>`)}
+    </table>`;
+}
+function glazingBlockText(lead) {
+  const g = lead.glazing;
+  const r = shownRange(g);
+  if (!g || !r) return [];
+  const spec = glazingSpec(lead);
+  const door = lead.preferences?.windows?.door?.name;
+  return [
+    'WINDOWS AND DOORS',
+    ...(Number.isFinite(g.windowCount) && g.price?.windowsIncluded !== false ? [`  Windows: ${g.windowCount}${spec ? ` · ${spec}` : ''}`] : []),
+    ...(door ? [`  Door: ${door}`] : []),
+    `  Estimated, fitted, inc VAT: ${money(r.low)} – ${money(r.high)}`,
+    '',
+  ];
+}
+
 function designPackHtml(lead, price, siteUrl, withdrawToken, recipients) {
   const site = safeUrl(siteUrl) || 'https://www.facetpro.co.uk';
   const base = site.replace(/\/$/, '');
@@ -141,9 +185,9 @@ function designPackHtml(lead, price, siteUrl, withdrawToken, recipients) {
      outright that we were passing details to installers who cover the area,
      when the caller had already established that none do. */
   const nextSteps = !shared
-    ? 'We haven\'t passed your details to anyone. If you would like quotes from installers, reply to this email and we will arrange it — and if you would rather we didn\'t, you need do nothing.'
+    ? 'We haven\'t passed your details to anyone. If you would like quotes from installers later, save your design again on the site and tick the box asking for quotes — and if you would rather we didn\'t, you need do nothing.'
     : named.length
-      ? 'They may contact you by email or telephone to talk it through and arrange a survey. There is no obligation to go ahead at any point.'
+      ? 'They may contact you by email, telephone or text message to talk it through and arrange a survey. There is no obligation to go ahead at any point.'
       : 'We don\'t currently have an installer covering your area, so we haven\'t passed your details to anyone. We\'ll let you know if that changes — your design and your estimate are saved either way.';
 
   return `<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:560px;margin:0 auto;color:#0F1012;background:#FBF8F3;padding:28px 24px">
@@ -180,6 +224,8 @@ function designPackHtml(lead, price, siteUrl, withdrawToken, recipients) {
       Based on a wall area of ${escapeHtml(price.footprintM2)} m².
     </p>` : ''}
 
+    ${glazingBlockHtml(lead)}
+
     <div style="background:#FFF7ED;border:1px solid #FCD34D;border-radius:12px;padding:14px 16px;margin:22px 0 0">
       <p style="font-size:13px;line-height:1.6;margin:0;color:#7c5b12">
         <strong>This is a planning estimate, not a fixed quote.</strong> Your final price depends on
@@ -214,7 +260,8 @@ function whatHappensNextText(lead, recipients) {
   const named = (recipients || []).filter(r => r && r.name);
   if (!shared) {
     return ["We haven't passed your details to anyone. If you would like quotes from",
-            'installers, reply to this email and we will arrange it.'];
+            'installers later, save your design again on the site and tick the box',
+            'asking for quotes.'];
   }
   if (!named.length) {
     return ["We don't currently have an installer covering your area, so we haven't",
@@ -223,8 +270,7 @@ function whatHappensNextText(lead, recipients) {
   }
   return ["We're passing your details and your design to:",
           ...named.map(r => `  ${r.name}`),
-          "If we can't reach any of them we'll let you know.",
-          'They may contact you by email or telephone to talk it through and arrange a',
+          'They may contact you by email, telephone or text message to talk it through and arrange a',
           'survey. There is no obligation to go ahead at any point.'];
 }
 
@@ -261,6 +307,7 @@ function designPackText(lead, price, siteUrl, withdrawToken, recipients) {
       `survey your home.`,
       ``,
     ] : []),
+    ...glazingBlockText(lead),
     `WHAT HAPPENS NEXT`,
     ...whatHappensNextText(lead, recipients),
     ``,
@@ -305,7 +352,7 @@ function sharingConfirmationHtml(lead, recipients, siteUrl, withdrawToken) {
         your details to anyone. We'll let you know if that changes.
       </p>`}
       <p style="font-size:14px;line-height:1.6;color:#3f3f46;margin:10px 0 0">
-        They may contact you by email or telephone to talk it through and arrange a survey.
+        They may contact you by email, telephone or text message to talk it through and arrange a survey.
         There is no obligation to go ahead at any point, and each of them is responsible
         for its own use of your details.
       </p>
@@ -340,7 +387,7 @@ function sharingConfirmationText(lead, recipients, siteUrl, withdrawToken) {
       : ["We don't currently have an installer covering your area, so we haven't passed",
          "your details to anyone. We'll let you know if that changes."]),
     '',
-    'They may contact you by email or telephone to talk it through and arrange a survey.',
+    'They may contact you by email, telephone or text message to talk it through and arrange a survey.',
     'There is no obligation to go ahead at any point.',
     '',
     `Changed your mind? Stop this at any time: ${withdrawToken ? `${base}/withdraw?t=${encodeURIComponent(withdrawToken)}` : `${base}/privacy`}`,

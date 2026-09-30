@@ -377,7 +377,7 @@ test('a lead is stored even when it cannot be emailed, and says so', async () =>
        details with no way to send them the link that undoes it. That refusal
        has its own tests; this one is about the lead surviving a failed
        notification. */
-    consent: { terms: true, installerQuotes: false, version: 'v' },
+    consent: { terms: true, installerQuotes: false, version: '2026-09-30' },
   });
   assert.strictEqual(status, 200);
   assert.ok(body.lead.id, 'the lead is saved regardless');
@@ -391,7 +391,7 @@ test('the price on a lead is recomputed, never taken from the client', async () 
     name: 'Mallory', email: 'm@example.com',
     claddingId: 'sage-slate', roofId: 'terracotta', trimId: 'cedar',
     price: 1, total: 1, priceBreakdown: { total: 1 },   // all ignored
-    consent: { terms: true, installerQuotes: false, version: 'v' },   // see above
+    consent: { terms: true, installerQuotes: false, version: '2026-09-30' },   // see above
   });
   assert.ok(body.lead.price > 1000, `price should be server-computed, got ${body.lead.price}`);
 });
@@ -399,7 +399,7 @@ test('the price on a lead is recomputed, never taken from the client', async () 
 test('an invalid email is refused', async () => {
   const { status } = await post('/api/lead', {
     name: 'A', email: 'not-an-email',
-    consent: { terms: true, installerQuotes: true, version: 'v' },
+    consent: { terms: true, installerQuotes: true, version: '2026-09-30' },
   });
   assert.strictEqual(status, 400);
 });

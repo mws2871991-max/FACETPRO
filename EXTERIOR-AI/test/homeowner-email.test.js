@@ -57,7 +57,7 @@ const save = async (consent) => {
     body: JSON.stringify({
       name: 'Jane', email: HOMEOWNER, postcode: 'SW11 4NP',
       claddingId: 'sage-slate', roofId: 'terracotta', trimId: 'cedar', footprintM2: 100,
-      consent: { terms: true, version: 'test', ...consent },
+      consent: { terms: true, version: '2026-09-30', ...consent },
     }),
   });
   const body = await res.json().catch(() => ({}));

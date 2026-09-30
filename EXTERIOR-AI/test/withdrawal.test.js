@@ -190,7 +190,7 @@ const makeLead = async () => {
   const { body } = await jsonPost('/api/lead', {
     name: 'Jane Doe', email: 'jane@example.com', phone: '07700900000', postcode: 'SW11 4NP',
     claddingId: 'sage-slate', roofId: 'terracotta', trimId: 'cedar', footprintM2: 100,
-    consent: { terms: true, installerQuotes: true, emailPack: true, version: 'test' },
+    consent: { terms: true, installerQuotes: true, emailPack: true, version: '2026-09-30' },
   });
   await new Promise(r => setTimeout(r, 200));      // delivery happens after the response
   // Swap in a token we know, since the raw one only ever existed in the email.

@@ -71,7 +71,7 @@ test('agreeing to the Terms is required', async () => {
 });
 
 test('a design saves with BOTH optional boxes unticked — the Article 7(4) fix', async () => {
-  const { status, body } = await send({ terms: true, installerQuotes: false, emailPack: false, version: 'v' });
+  const { status, body } = await send({ terms: true, installerQuotes: false, emailPack: false, version: '2026-09-30' });
   assert.strictEqual(status, 200, 'refusing to share must not cost you the service');
   assert.ok(body.lead.id);
   assert.strictEqual(body.lead.consent.installerQuotes, false);
@@ -92,26 +92,30 @@ test('a design saves with BOTH optional boxes unticked — the Article 7(4) fix'
   assert.match(d.withheld, /no consent/i, 'and the record says why');
 });
 
-test('each answer is recorded separately, with the wording shown', async () => {
-  const wording = {
-    terms: 'I have read and agree to the Terms of Use and the Privacy Notice.',
-    installerQuotes: 'Yes, I would like quotes. Please pass my details to up to three vetted installers…',
-    emailPack: 'Email me my design pack.',
-  };
-  const { body } = await send({ terms: true, installerQuotes: true, emailPack: false, version: '2026-08-01', wording });
+test('each answer is recorded separately, with the wording shown — the server\'s copy, not the browser\'s', async () => {
+  /* Since the launch review the words come from consent.js for the version
+     the page showed; whatever the browser sends as wording is not stored. */
+  const wording = { installerQuotes: 'Anything the browser likes' };
+  const { body } = await send({ terms: true, installerQuotes: true, emailPack: false, version: '2026-09-30', wording });
   const c = body.lead.consent;
   assert.strictEqual(c.terms, true);
   assert.strictEqual(c.installerQuotes, true);
   assert.strictEqual(c.emailPack, false);
-  assert.strictEqual(c.version, '2026-08-01');
-  assert.match(c.wording.installerQuotes, /three vetted installers/);
+  assert.strictEqual(c.version, '2026-09-30');
+  assert.strictEqual(c.wording.installerQuotes, require('../consent').VERSIONS['2026-09-30'].installerQuotes);
   assert.ok(c.at, 'and when');
+});
+
+test('an unknown consent version cannot send anyone\'s details', async () => {
+  const { status, body } = await send({ terms: true, installerQuotes: true, version: 'v' });
+  assert.strictEqual(status, 400);
+  assert.strictEqual(body.reason, 'consent_version_unknown');
 });
 
 test('absence and truthiness are both treated as "no"', async () => {
   // Only a real boolean true is consent. A missing key, or a truthy value
   // like 'yes' or 1, must never be read as agreement.
-  const { body } = await send({ terms: true, installerQuotes: 'yes', emailPack: 1, version: 'v' });
+  const { body } = await send({ terms: true, installerQuotes: 'yes', emailPack: 1, version: '2026-09-30' });
   assert.strictEqual(body.lead.consent.installerQuotes, false);
   assert.strictEqual(body.lead.consent.emailPack, false);
 });

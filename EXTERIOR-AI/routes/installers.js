@@ -148,7 +148,9 @@ module.exports = function installerRoutes({
         if (!Array.isArray(d?.results)) continue;
         if (d.results.some(r => r?.id === req.installer.id && r?.ok)) mine.add(d.leadId);
       }
-      leads = leads.filter(l => mine.has(l.id));
+      /* And only the fields the consent lists — the same view the webhook
+         sends (leadview.js). The operator's password still sees the record. */
+      leads = leads.filter(l => mine.has(l.id)).map(require('../leadview').forInstaller);
     }
 
     /* Their own decisions, so the portal can show a project as already accepted
