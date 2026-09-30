@@ -755,6 +755,11 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
       <div id="work-track" class="flex transition-transform duration-500 ease-out">
       <div class="w-full shrink-0 grid sm:grid-cols-2 gap-4 px-px">
 
+      <!-- Two portraits side by side, the landscape one across both columns
+           under them (30 September run-through). Three cards in a two-column
+           grid left the third alone on its row, at a different height from
+           the pair above. 16:9 on the wide card keeps every window and the
+           door; what it trims is sky and driveway. -->
       <figure class="work-card rounded-2xl overflow-hidden border border-zinc-200 bg-[#FDFCF9]">
         <div class="work-reveal aspect-[3/4]" role="slider" tabindex="0" aria-label="Drag to compare before and after" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
           <img src="/assets/work/hero-after.jpg" alt="A bay-fronted brick home after its window frames were recoloured anthracite" class="work-after w-full aspect-[3/4] object-cover" loading="lazy" decoding="async">
@@ -768,21 +773,6 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
           Window frames recoloured white to anthracite. Brick, roof tiles and guttering untouched.
         </figcaption>
       </figure>
-
-      <figure class="work-card rounded-2xl overflow-hidden border border-zinc-200 bg-[#FDFCF9]">
-        <div class="work-reveal aspect-[4/3]" role="slider" tabindex="0" aria-label="Drag to compare before and after" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
-          <img src="/assets/work/newbuild-after.jpg" alt="A modern yellow-brick detached home after its frames were recoloured anthracite" class="work-after w-full aspect-[4/3] object-cover" loading="lazy" decoding="async">
-          <img src="/assets/work/newbuild-before.jpg" alt="The same home before, with white frames" class="work-before w-full aspect-[4/3] object-cover" loading="lazy" decoding="async">
-          <span class="work-handle"><span class="work-grip" aria-hidden="true">◂▸</span></span>
-          <span class="absolute left-3 top-3 text-base px-2 py-1 rounded-full bg-white/95 border border-zinc-200">Before</span>
-          <span class="absolute right-3 top-3 text-base px-2 py-1 rounded-full bg-zinc-900/90 text-white">After</span>
-        </div>
-        <figcaption class="p-4 text-base leading-7 text-zinc-600">
-          <strong class="text-zinc-900">Modern detached, yellow brick</strong><br>
-          Every window recoloured white to anthracite, matching the existing front door.
-        </figcaption>
-      </figure>
-
       <figure class="work-card rounded-2xl overflow-hidden border border-zinc-200 bg-[#FDFCF9]">
         <div class="work-reveal aspect-[3/4]" role="slider" tabindex="0" aria-label="Drag to compare before and after" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
           <img src="/assets/work/tilehung-after.jpg" alt="A tile-hung detached home after its frames were recoloured slate grey" class="work-after w-full aspect-[3/4] object-cover" loading="lazy" decoding="async">
@@ -794,6 +784,19 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
         <figcaption class="p-4 text-base leading-7 text-zinc-600">
           <strong class="text-zinc-900">Tile-hung detached</strong><br>
           Frames recoloured cream to slate grey, including the bay. Tile hanging and brick untouched.
+        </figcaption>
+      </figure>
+      <figure class="work-card sm:col-span-2 rounded-2xl overflow-hidden border border-zinc-200 bg-[#FDFCF9]">
+        <div class="work-reveal aspect-[4/3] sm:aspect-[16/9]" role="slider" tabindex="0" aria-label="Drag to compare before and after" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
+          <img src="/assets/work/newbuild-after.jpg" alt="A modern yellow-brick detached home after its frames were recoloured anthracite" class="work-after w-full aspect-[4/3] sm:aspect-[16/9] object-cover" loading="lazy" decoding="async">
+          <img src="/assets/work/newbuild-before.jpg" alt="The same home before, with white frames" class="work-before w-full aspect-[4/3] sm:aspect-[16/9] object-cover" loading="lazy" decoding="async">
+          <span class="work-handle"><span class="work-grip" aria-hidden="true">◂▸</span></span>
+          <span class="absolute left-3 top-3 text-base px-2 py-1 rounded-full bg-white/95 border border-zinc-200">Before</span>
+          <span class="absolute right-3 top-3 text-base px-2 py-1 rounded-full bg-zinc-900/90 text-white">After</span>
+        </div>
+        <figcaption class="p-4 text-base leading-7 text-zinc-600">
+          <strong class="text-zinc-900">Modern detached, yellow brick</strong><br>
+          Every window recoloured white to anthracite, matching the existing front door.
         </figcaption>
       </figure>
 
@@ -931,7 +934,7 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
          a five-item list, a count, and the whole booking-and-chasing argument
          at once — commercially the best line on the page and too dense to land
          at a glance. Same content, read in two beats. -->
-    <p class="mt-6 serif text-[18px] md:text-[20px] tracking-tight">Five home improvements. Start with one photo of the front.</p>
+    <p class="mt-6 serif text-[22px] md:text-[28px] leading-tight tracking-tight">Five home improvements. Start with one photo of the front.</p>
     <!-- The booking-and-chasing clause came out on the 22 September review:
          "the customer doesn't need to be told repeatedly how frustrating
          traditional quoting is". They are told once in the hero and again in
@@ -1015,9 +1018,15 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
            The banner keeps its id, its amber styling and its SITE_MODE gate,
            so one env var still controls whether it appears at all. -->
       <strong>Windows and doors: what these jobs actually sell for. Walls, roof and roofline: UK material and labour rates.</strong>
-      Every figure is a planning estimate your installer confirms on survey.
-      And honest about what the estimate covers &mdash;
-      <a href="#honest-heading" class="inline-block py-3 underline">what your estimate includes</a>.
+      <!-- The planning-estimate sentence shows on /design only (30 September
+           run-through). On the homepage the section just above the FAQ says
+           it in full — not a quotation, and why it is a range — and that one
+           stays when SITE_MODE=live hides this notice. Saying it twice, two
+           screens apart, was the duplicate. The link pointed at a section
+           that only exists on /how-we-price, so on home and /design it went
+           nowhere; it now goes there. -->
+      <span data-page="design">Every figure is a planning estimate your installer confirms on survey.</span>
+      <a href="/how-we-price#honest-heading" class="inline-block py-3 underline">See what your estimate includes</a>.
     </p>
   </aside>
   <div data-page="design" id="mount-visualizer"></div>
