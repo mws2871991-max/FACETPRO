@@ -152,6 +152,36 @@ module.exports = function opsRoutes({
       if (rows.some(r => r.count > 0)) byDevice[d] = rows;
     }
 
+    /* SEO → upload → design → estimate → quote, one row per landing page
+       (30 September). The counters existed — seo_landing is counted by the
+       server when a guide is served, and every later stage carries the page
+       that sent them as from/<slug> — but nothing read them side by side, so
+       "which guide earns uploads?" still meant filtering byDay by hand.
+       Sorted by landings. Rates are against that page's own landings. */
+    const SEO_STEPS = [
+      ['landings', 'seo_landing'], ['openedTool', 'design_opened'], ['uploaded', 'upload_completed'],
+      ['sawTheirHouse', 'render_shown'], ['sawEstimate', 'estimate_viewed'],
+      ['savedDesign', 'design_saved'], ['askedForQuotes', 'quote_requested'],
+    ];
+    const slugs = new Set();
+    for (const k of Object.keys(counts)) { const m = /^from\/([^:]+):/.exec(k); if (m) slugs.add(m[1]); }
+    const pct = (n, d) => (d > 0 ? Math.round((n / d) * 1000) / 10 : null);
+    const bySeoPage = [...slugs].map(slug => {
+      const row = { page: slug === 'cost' ? '/cost' : (/^windows-/.test(slug) ? `/${slug}` : `/cost/${slug}`) };
+      for (const [name, stage] of SEO_STEPS) row[name] = counts[`from/${slug}:${stage}`] || 0;
+      row.uploadPct = pct(row.uploaded, row.landings);
+      row.quotePct = pct(row.askedForQuotes, row.landings);
+      return row;
+    }).sort((a, b) => b.landings - a.landings || b.uploaded - a.uploaded);
+    /* Which button on a guide was pressed: the one above the answer (hero),
+       the one after it (end), or the header. */
+    const byCtaPlace = {};
+    for (const place of ['hero', 'end', 'header']) {
+      const row = {};
+      for (const [name, stage] of SEO_STEPS.slice(1)) row[name] = counts[`cta/${place}:${stage}`] || 0;
+      if (Object.values(row).some(n => n > 0)) byCtaPlace[place] = row;
+    }
+
     /* The loop-backs, each against a step it can honestly be compared with.
 
        Reported beside the funnel rather than inside it: /api/funnel divides
@@ -188,12 +218,13 @@ module.exports = function opsRoutes({
     };
 
     res.setHeader('Cache-Control', 'no-store');
-    res.json({ days, keyKpi, funnel, branches, byJourney, byDevice, byDay,
+    res.json({ days, keyKpi, funnel, branches, byJourney, byDevice, bySeoPage, byCtaPlace, byDay,
       note: 'Counts are per stage, not per person — see the funnel table in store.js. '
         + 'byJourney counts only visitors who arrived on a journey; the totals above include everyone. '
         + 'byDevice splits by the width the page was rendered at, under 768px being mobile, and only covers stages recorded since that key shipped — an empty or short column is missing history rather than missing traffic. '
         + 'Each row carries firstSeen, the first day that counter recorded anything, and sameWindowAsPrevious. Where that is false, ofPreviousPct divides two counters with different amounts of history and is arithmetic rather than behaviour — render_shown over render_started read as 387% for that reason, the first having a month of history and the second days. Treat those as uncomparable rather than as findings. Note that firstSeen is first traffic, not the day the counter shipped, so a genuinely old but rarely-hit stage looks young. Where the window does match, a figure above 100% is real and means the chain is not strictly nested — the cost pages link straight into the tool, so design_opened outruns cta_clicked. '
         + 'byDay is the raw day-keyed breakdown, so it carries the prefixed counters in the same object as the plain stages — journey:…, from/…, device/… — where funnel, byJourney and byDevice present them already split out. Filter on the prefix before summing, or the same visit is counted more than once. '
+        + 'bySeoPage is one row per cost guide or area page: landings (served to a visitor, counted by the server), then each later step for visitors who arrived from that page; uploadPct and quotePct are against that page\'s landings. byCtaPlace splits the same steps by which button on the guide was pressed. Organic sessions and search terms are in Google Search Console, not here. '
         + 'Read a change against the days since it shipped: a figure that looks like a rate against thirty days of history is usually a few hours of numerator over a month of denominator.' });
   });
 
