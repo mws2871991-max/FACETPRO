@@ -93,3 +93,34 @@ test('a script filling every field is refused, and there is a daily ceiling', ()
 test('no installer delivery until the homeowner has the withdrawal link', () => {
   assert.match(read('server.js'), /lead\.deliveryHeld = 'homeowner email failed';/);
 });
+
+/* Second pass (30 September): the "most important" list. */
+test('missing AI keys give a homeowner a plain 503, never the variable name', () => {
+  const server = read('server.js');
+  assert.doesNotMatch(server, /error: 'ANTHROPIC_API_KEY not set/);
+  assert.doesNotMatch(server, /error: 'REPLICATE_API_TOKEN not set/);
+  assert.match(server, /reason: 'analysis_unavailable'/);
+  assert.match(server, /reason: 'render_unavailable'/);
+});
+
+test('a failed upload stays on step 1 with the reason and a way to try again', () => {
+  const html = read('index.html');
+  assert.match(html, /const uploadErrorNotice = state\.uploadError/);
+  assert.match(html, /'Try another photo'/);
+  assert.match(html, /That file isn’t a photo\./);
+  assert.doesNotMatch(html, /`We couldn’t read that photo: \$\{err\.message\}`/);
+});
+
+test('daily photo caps are raised for launch', () => {
+  const server = read('server.js');
+  assert.match(server, /envLimit\('DAILY_DETECT_LIMIT', 300\)/);
+  assert.match(server, /envLimit\('DAILY_RENDER_LIMIT', 200\)/);
+});
+
+test('a saved design brings back its front correction and openers', () => {
+  const resume = require('../resume');
+  const out = resume.buildPayload({ frontCount: 3, openerCount: 2 });
+  assert.strictEqual(out.frontCount, 3);
+  assert.strictEqual(out.openerCount, 2);
+  assert.match(read('index.html'), /if \(Number\.isFinite\(d\.openerCount\) && d\.openerCount >= 0\) state\.openerCount = d\.openerCount;/);
+});

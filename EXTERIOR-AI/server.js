@@ -460,8 +460,12 @@ function envLimit(name, fallback) {
 }
 
 const DAILY_LIMITS = {
-  detect: envLimit('DAILY_DETECT_LIMIT', 50),
-  render: envLimit('DAILY_RENDER_LIMIT', 50),
+  /* Raised for launch (29 September review): at 50, two or three
+     connections could use the whole day and every other visitor was told
+     "can't analyse photos right now" until midnight. Still the ceiling on
+     the AI bill — set lower in the environment to spend less. */
+  detect: envLimit('DAILY_DETECT_LIMIT', 300),
+  render: envLimit('DAILY_RENDER_LIMIT', 200),
 };
 
 const USAGE_FILE = path.join(store.DATA_DIR, 'usage.json');
@@ -1974,10 +1978,13 @@ function priceRange(selections, m2) {
   const area = m2 && m2 > 0 ? m2 : catalogue.defaultFootprintM2;
   const at = (a, f) => computePrice({ ...selections, footprintM2: a, trimLengthM: trimLengthAt(selections, f) }).total;
   const round500 = (n) => Math.round(n / 500) * 500;
-  return {
-    low: round500(at(area * (1 - PRIOR_AREA_UNCERTAINTY), 1 - PRIOR_AREA_UNCERTAINTY)),
-    high: round500(at(area * (1 + PRIOR_AREA_UNCERTAINTY), 1 + PRIOR_AREA_UNCERTAINTY)),
-  };
+  const low = round500(at(area * (1 - PRIOR_AREA_UNCERTAINTY), 1 - PRIOR_AREA_UNCERTAINTY));
+  const high = round500(at(area * (1 + PRIOR_AREA_UNCERTAINTY), 1 + PRIOR_AREA_UNCERTAINTY));
+  /* Nothing left to spread — a roofline-only job with its length told came
+     back as £6,500–£6,500 with the £6,522 total outside it (launch review).
+     No range is the honest answer then, as priceRangeFromArea already says. */
+  if (!(high > low)) return null;
+  return { low, high };
 }
 
 /* ── POST /api/quote ── */
@@ -2363,7 +2370,12 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set — see .env.example.' });
+  /* The cause is ours, so it is logged for us and the homeowner is told
+     what they can still do (launch review: they were shown the variable name). */
+  if (!apiKey) {
+    console.error('ANTHROPIC_API_KEY is not set — photo analysis is unavailable.');
+    return res.status(503).json({ error: 'Photo analysis isn’t available right now. You can still choose your house type, pick colours and get an estimate below.', plain: true, reason: 'analysis_unavailable' });
+  }
 
   // Checked last, after validation, so a malformed request doesn't spend quota.
   if (!consumeDailyQuota('detect', res, req)) return res.status(429).json(dailyLimitBody('detect'));
@@ -3343,7 +3355,10 @@ app.post('/api/render', renderLimiter, async (req, res) => {
   }
 
   const replicateKey = process.env.REPLICATE_API_TOKEN;
-  if (!replicateKey) return res.status(500).json({ error: 'REPLICATE_API_TOKEN not set — see .env.example.' });
+  if (!replicateKey) {
+    console.error('REPLICATE_API_TOKEN is not set — pictures are unavailable.');
+    return res.status(503).json({ error: 'We can’t draw the picture right now. Your design and estimate still work — please try the picture again later.', plain: true, reason: 'render_unavailable' });
+  }
 
   /* Resolve what was chosen against the catalogue, by id.
 

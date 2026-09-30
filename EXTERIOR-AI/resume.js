@@ -105,6 +105,10 @@ const NUMBER_FIELDS = {
   backPhotoCount: { min: 0, max: L.MAX_WINDOWS },
   // Side windows they told us about after a back photo; in backCount too.
   sideCount: { min: 0, max: L.MAX_WINDOWS },
+  /* Their correction to the front count, and how many windows open — both
+     change the price, so a saved design must bring them back (launch review). */
+  frontCount: { min: 0, max: L.MAX_WINDOWS },
+  openerCount: { min: 0, max: L.MAX_WINDOWS * 4 },
 };
 
 const cleanId = (v) => {

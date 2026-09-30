@@ -95,10 +95,10 @@ way to get this deployment wrong.
 | `LEAD_FROM_EMAIL` | for email | Must be on a **domain verified at resend.com/domains**. On Resend's test sender nothing reaches real homeowners, and the design-pack email refuses to send at all. |
 | `SITE_URL` | recommended | Absolute base for links inside emails. `https://www.facetpro.co.uk`. |
 | `SITE_MODE` | no | Defaults to `beta`. Set `live` to drop the beta badge and notices. |
-| `DAILY_DETECT_LIMIT` | no | Default 50. |
+| `DAILY_DETECT_LIMIT` | no | Default 300 (was 50 until launch). Photo analyses per UTC day, whole site. |
 | `DETECT_RATE_LIMIT` | no | Detection requests per minute per IP. Default 10, which is right for a homeowner. Exists so the test suite can send one photograph fifteen times on purpose; leave it unset in production. |
 | `INSTALLER_RATE_LIMIT` | no | Installer sign-in attempts per 15 minutes per IP. Default 20. Exists for the test suite; leave it unset in production. |
-| `DAILY_RENDER_LIMIT` | no | Default 50. The only thing bounding render spend. |
+| `DAILY_RENDER_LIMIT` | no | Default 200 (was 50 until launch). The only thing bounding render spend. |
 | `PORT` | no | The host sets this. |
 | `LEAD_CAPTURE` | no | Defaults to **`off`**. Only `on` (or `true`, `1`, `yes`) turns it on — since the 29 September launch review, `false`, `0` and `no` keep it off, and anything unrecognised is logged and treated as off. With `off` the form is replaced by an honest explanation and nothing personal is read, parsed or stored. Turn it on when the legal pages have no `[PLACEHOLDERS]` left, the ICO registration is done and `DATABASE_URL` is set — on a deployment the server refuses to start otherwise. |
 | `LEAD_DAILY_PER_IP` | no | Default `10`. Most designs one connection (IPv6 grouped by /56) can save in a UTC day. Stops a script sending branded emails to strangers or fake enquiries to installers. |

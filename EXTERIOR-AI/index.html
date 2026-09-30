@@ -2890,6 +2890,9 @@ function designChoices() {
     windowCount: state.windowCount,
     backCount: state.backCount,
     frontCount: state.frontCountOverride,
+    /* How many open — it moves the price, so a restored design needs it
+       (launch review: it came back priced as if nobody had answered). */
+    openerCount: state.openerCount ?? undefined,
     /* Not just how many, but how we know. Restored without this, a count read
        from a photograph comes back looking like a typed guess. */
     /* 'photo' only where the photograph's number is the one being priced. A
@@ -3052,6 +3055,8 @@ function applyDesign(d) {
   if (d.footprintM2 > 0) state.footprint = { area: d.footprintM2 };
   if (d.trimLengthM > 0) state.trimLengthM = d.trimLengthM;
   if (d.windowCount > 0) state.windowCount = d.windowCount;
+  if (Number.isFinite(d.openerCount) && d.openerCount >= 0) state.openerCount = d.openerCount;
+  if (Number.isFinite(d.frontCount) && d.frontCount >= 0) state.frontCountOverride = d.frontCount;
   if (Number.isFinite(d.backCount) && d.backCount >= 0) {
     state.backCount = d.backCount;
     /* A restored count is an answer they already gave, so it is not a guess
@@ -3755,9 +3760,37 @@ function buildUploadDetect() {
 
   const fileInput = h('input', {
     type: 'file', accept: 'image/*', className: 'hidden', 'aria-label': 'Upload a photo of your home',
-    onChange: (e) => { const f = e.target.files?.[0]; if (f) handleUpload(f); },
+    onChange: (e) => {
+      const f = e.target.files?.[0];
+      e.target.value = '';   // the same file again should still fire a change
+      if (!f) return;
+      /* Checked here as well as on the server: a document or a video is
+         turned away before anything is sent, with words a person can act on
+         (launch review). HEIC has no browser type on some systems, so its
+         name is allowed through and the server has the final say. */
+      if (!(f.type || '').startsWith('image/') && !/\.(heic|heif)$/i.test(f.name || '')) {
+        state.uploadError = 'That file isn’t a photo. Please choose a photo of the front of your house — a JPEG or PNG from your phone or camera.';
+        render();
+        return;
+      }
+      handleUpload(f);
+    },
   });
   sharedRefs.fileInput = fileInput;
+
+  /* A failed upload says so here, next to the button that fixes it, and the
+     page stays on this step (launch review: it used to scroll past its own
+     error into a cartoon house). */
+  const uploadErrorNotice = state.uploadError
+    ? h('div', { role: 'alert', className: 'mt-4 rounded-xl bg-[#FFF7ED] border border-amber-200 p-4' }, [
+        h('p', { className: 'text-lg leading-7 text-amber-900' }, state.uploadError),
+        h('button', {
+          type: 'button',
+          className: 'mt-3 px-5 min-h-[48px] rounded-full bg-zinc-900 text-white text-lg font-semibold',
+          onClick: () => { state.uploadError = null; sharedRefs.fileInput?.click(); },
+        }, 'Try another photo'),
+      ])
+    : null;
 
   // A capped detection is not a rejected photo. Keep it visible, explain what
   // still works, and point at the step that does.
@@ -4300,6 +4333,7 @@ function buildUploadDetect() {
           helpLine(),
         ]),
     capNotice,
+    uploadErrorNotice,
     h('div', { className: 'mt-6 grid md:grid-cols-[1.1fr_0.9fr] gap-6' }, [
       h('div', { className: 'rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-4' }, [
         fileInput,
@@ -7746,7 +7780,7 @@ async function generateRealRender() {
       state.roofNotInFrame = true;
       throw Object.assign(new Error(data.error), { plain: true });
     }
-    if (!res.ok) throw new Error(data.error || 'Render failed');
+    if (!res.ok) throw Object.assign(new Error(data.error || 'Render failed'), { plain: !!data.plain });
     state.renderUnavailable = false;
     state.roofNotInFrame = false;
     /* The rest was rendered and the roof was left out of the request, because
@@ -7770,7 +7804,8 @@ async function generateRealRender() {
     reachedStage('render_shown');
     U('Your new look is ready — drag the slider to compare');
   } catch (err) {
-    U(err.plain ? err.message : `We couldn’t create that picture: ${err.message}`);
+    // One message at a time: if the photo itself failed, that notice is the one to read.
+    if (!state.uploadError) U(err.plain ? err.message : 'We couldn’t create that picture just now. Your design and estimate still work — please try again in a minute.');
   } finally {
     state.rendering = false;
     stopRenderTimer();
@@ -9485,6 +9520,7 @@ async function handleRearUpload(file) {
 }
 
 async function handleUpload(file) {
+  state.uploadError = null;
   reachedStage('upload_started');
   /* The homeowner's clock starts here, not when the server receives anything.
      Everything before this is them choosing a photo; everything after is them
@@ -9567,7 +9603,8 @@ async function handleUpload(file) {
       state.detectUnavailable = data.reason === 'daily_limit';
       throw Object.assign(new Error(data.error || 'Busy right now — please try again later.'), { plain: true });
     }
-    if (!res.ok) throw new Error(data.error || 'Detection failed');
+    // Our own refusals (a bad file, analysis unavailable) are written for people; a crash is not.
+    if (!res.ok) throw Object.assign(new Error(data.error || 'Detection failed'), { plain: !!data.plain || res.status < 500 });
     state.detectUnavailable = false;
 
     state.detections = data.detections || [];
@@ -9622,7 +9659,23 @@ async function handleUpload(file) {
        lost patience" were the same gap between upload_started and
        upload_completed, and those want opposite fixes. */
     reachedStage('upload_failed');
-    U(err.plain ? err.message : `We couldn’t read that photo: ${err.message}`);
+    /* Plain words only. A server message meant for us (a missing key, a
+       provider's error text) is not something a homeowner can act on. */
+    /* The daily cap is the one failure that keeps the photo and carries on —
+       see capNotice. Everything else goes back to step 1 with the reason. */
+    if (state.detectUnavailable) {
+      U(err.message);
+    } else {
+    state.uploadError = err.plain
+      ? err.message
+      : 'We couldn’t read that photo. Please try another one — a clear photo of the whole front of the house, taken from across the road, works best.';
+    state.stage = 'landing';
+    state.uploadedImg = null;
+    state.uploadedBase64 = null;
+    render();
+    document.getElementById('your-photo')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+    }
   }
   /* Both, together. The windows panel prices before a photo exists — from the
      house-type prior — so without this the normal path was: pick a style, get
