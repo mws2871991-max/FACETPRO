@@ -881,7 +881,11 @@ async function leadEvent(type, leadId, detail = {}) {
   });
 }
 
-const planDelivery = (lead) => routing.chooseRecipients(LEAD_RECIPIENTS, lead, { max: MAX_INSTALLERS_PER_LEAD });
+const planDelivery = (lead) => routing.chooseRecipients(LEAD_RECIPIENTS, lead, {
+  max: MAX_INSTALLERS_PER_LEAD,
+  /* The installers named in the box they ticked, and nobody else. */
+  only: Array.isArray(lead.consent?.installerIds) ? lead.consent.installerIds : null,
+});
 
 /* Deliveries that are still in flight after their response has gone. Drained
    on shutdown — see the SIGTERM handler. */
@@ -3122,6 +3126,47 @@ app.post('/api/coverage', coverageLimiter, (req, res) => {
   });
 });
 
+/* ── POST /api/quote-installers ──
+   Who would receive this enquiry, by name, before the box is ticked
+   (30 September, ICO). Consent to be contacted has to name who will contact
+   you — "up to three vetted installers covering my area" is the wording the
+   ICO has fined lead generators for — so the quote form asks this for the
+   postcode typed and shows the names inside the consent box.
+
+   Built from the same fields the lead is, through the same functions, so the
+   trades it routes on are the ones the lead will carry. The ids come back
+   with the lead and delivery is limited to them (routing `only`): nobody
+   who was not named can receive the details.
+
+   /api/coverage above still answers with a count on the design page, where
+   nobody has asked to be contacted. Names are given here, on the step where
+   the homeowner is deciding whether to be — and the installers have agreed
+   to be named to the people they will be ringing. Same rate limit. */
+app.post('/api/quote-installers', coverageLimiter, (req, res) => {
+  const body = req.body || {};
+  const parsed = routing.parsePostcode(body.postcode);
+  if (!parsed) {
+    return res.status(400).json({ error: 'That doesn’t look like a UK postcode.', reason: 'unreadable_postcode' });
+  }
+  const footprint = resolveFootprint({ footprintM2: body.footprintM2, detectionId: body.detectionId, houseType: body.houseType });
+  const price = computePrice({ claddingId: body.claddingId, trimId: body.trimId, roofId: body.roofId,
+    footprintM2: footprint.m2, trimLengthM: body.trimLengthM });
+  const preview = {
+    id: `preview:${parsed.outward}`,
+    postcode: `${parsed.outward} 1AA`,
+    selections: price.priced.length ? price.selections : {},
+    conservatory: resolveConservatory(body.conservatoryStyleId),
+    glazing: resolveGlazing(body),
+    preferences: resolvePreferences(body),
+  };
+  const { chosen } = routing.chooseRecipients(LEAD_RECIPIENTS, preview, { max: MAX_INSTALLERS_PER_LEAD });
+  res.json({
+    outward: parsed.outward,
+    installers: chosen.map(r => ({ id: r.id, name: r.name })),
+    cap: MAX_INSTALLERS_PER_LEAD,
+  });
+});
+
 /* Window pricing and wall measurement live in routes/measure.js — fifth slice.
    detectionRecords is passed directly because it is a const Map mutated in
    place; contrast getUsage in routes/ops.js, which must be a getter because
@@ -3764,6 +3809,35 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
       reason: 'postcode_required_for_quotes',
     });
   }
+  /* The installers they were shown, by name (consent 2026-10-01). Each id
+     must be one we know, cover the postcode given, and there may be no more
+     than the cap. If the list has changed since the page asked — a contract
+     ended, the postcode was edited — nothing is sent and they are asked to
+     look again, because agreeing to A and B is not agreeing to C. */
+  let namedInstallers = null;
+  if (consent.installerQuotes === true && shownWording) {
+    if (consentText.namesInstallers(String(consent.version))) {
+      const ids = Array.isArray(consent.installerIds)
+        ? [...new Set(consent.installerIds.map(v => String(v).slice(0, 64)))]
+        : [];
+      const where = routing.parsePostcode(postcode);
+      const found = ids.map(id => LEAD_RECIPIENTS.find(r => r.id === id)).filter(r => r && routing.covers(r, where));
+      if (!ids.length || found.length !== ids.length || ids.length > MAX_INSTALLERS_PER_LEAD) {
+        return res.status(400).json({
+          error: 'The installers for your postcode have changed. Please check the names and tick the box again — nothing has been sent.',
+          reason: 'installers_changed',
+        });
+      }
+      namedInstallers = found.map(r => ({ id: r.id, name: r.name }));
+    } else if (IS_DEPLOYED) {
+      /* An older page, whose box named nobody. It may still save a design,
+         but on a real deployment it cannot send anyone's details. */
+      return res.status(400).json({
+        error: 'This page is out of date. Please reload it and tick the box again — nothing has been sent.',
+        reason: 'consent_version_unknown',
+      });
+    }
+  }
   if (consent.installerQuotes === true && !HOMEOWNER_EMAIL_ENABLED) {
     console.error('Refused installer-quotes consent: homeowner email is not configured, so no withdrawal link could be sent. Set RESEND_API_KEY and a LEAD_FROM_EMAIL on a verified domain.');
     return res.status(503).json({
@@ -3858,7 +3932,11 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
       emailPack: consent.emailPack === true,
       /* Our copy of the words for that version; what the browser sent is not
          stored, because it is not evidence of anything. */
-      wording: shownWording ? { ...shownWording } : null,
+      wording: shownWording
+        ? { ...shownWording, ...(namedInstallers ? { installerQuotes: consentText.fillInstallers(shownWording.installerQuotes, namedInstallers.map(i => i.name)) } : {}) }
+        : null,
+      /* Who they agreed to be contacted by. Delivery is limited to these. */
+      ...(namedInstallers ? { installerIds: namedInstallers.map(i => i.id), installers: namedInstallers } : {}),
       /* Hashed, not raw. A consent record is kept six years; the access log
          hashes IPs and keeps them twelve months, so storing a raw address
          here treated the same identifier two different ways in one codebase
@@ -3888,6 +3966,7 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
   await leadEvent('consent.recorded', lead.id, {
     version: lead.consent?.version ?? null,
     installerQuotes: lead.consent?.installerQuotes === true,
+    installerIds: lead.consent?.installerIds ?? null,
     emailPack: lead.consent?.emailPack === true,
     terms: lead.consent?.terms === true,
     leadScore: lead.leadScore?.score ?? null,

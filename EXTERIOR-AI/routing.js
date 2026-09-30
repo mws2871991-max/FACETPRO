@@ -128,7 +128,13 @@ function rotationOffset(leadId, n) {
 
 /* Who gets this lead, and — just as important for the delivery log — who did
    not and why. */
-function chooseRecipients(recipients, lead, { max = DEFAULT_MAX } = {}) {
+/* `only`: the installer ids the homeowner was shown by name when they ticked
+   the box (consent 2026-10-01 onwards). Nobody outside that list is ever
+   chosen, whatever the coverage says now — the consent names who may
+   contact them, so the routing cannot add anyone. Absent for older consent
+   versions, which named nobody. */
+function chooseRecipients(recipients, lead, { max = DEFAULT_MAX, only = null } = {}) {
+  const named = Array.isArray(only) ? new Set(only.map(String)) : null;
   const parsed = parsePostcode(lead?.postcode);
   const all = Array.isArray(recipients) ? recipients : [];
 
@@ -136,6 +142,10 @@ function chooseRecipients(recipients, lead, { max = DEFAULT_MAX } = {}) {
   const eligible = [];
   const skipped = [];
   for (const r of all) {
+    if (named && !named.has(String(r.id))) {
+      skipped.push({ id: r.id, name: r.name, reason: 'not named when the homeowner consented' });
+      continue;
+    }
     if (!covers(r, parsed)) {
       skipped.push({ id: r.id, name: r.name, reason: parsed ? 'does not cover this area' : 'no usable postcode, and this installer is area-restricted' });
       continue;

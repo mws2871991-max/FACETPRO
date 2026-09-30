@@ -2048,10 +2048,11 @@ function journeyExcludes(group) {
 // The exact wording the homeowner agrees to. Sent with the lead and stored, so
 // there's a record of what was consented to and when — bump CONSENT_VERSION
 // whenever CONSENT_WORDING changes, and keep the on-screen label identical.
-const CONSENT_VERSION = '2026-09-30';
+const CONSENT_VERSION = '2026-10-01';
 const CONSENT_WORDING = {
   emailPack: 'Email me my design pack — my visualisation and indicative estimate.',
-  installerQuotes: 'Yes, I\u2019d like quotes. Please pass my name, postcode, email address and phone number, together with my design, my estimate and my answers about the project, to up to three vetted installers covering my area, so they can contact me about quoting for this work and arranging a survey. I understand they may contact me by email, by telephone and by text message, including if my number is registered with the Telephone Preference Service, and that each installer is responsible for its own use of my details.',
+  /* {installers} is the names shown for their postcode (consent.js, ICO). */
+  installerQuotes: 'Yes, send my details to {installers} so they can quote for this project. They\u2019ll receive my name, postcode, email address and phone number, with my design, estimate and answers. They may contact me by email, phone or text about this project only, even if my number is on the Telephone Preference Service. This doesn\u2019t commit me to using any of them, and each is responsible for how it uses my details. I can withdraw at any time.',
   terms: 'I\u2019ve read and agree to the Terms of Use and the Privacy Notice.',
 };
 
@@ -2151,6 +2152,9 @@ const state = {
      Saving works with both optional boxes unticked. The visualisation and
      estimate are unaffected either way. */
   consent: { terms: false, installerQuotes: false, emailPack: false },
+  /* Who would receive a quote request for the postcode typed, by name —
+     { for, outward, list, loading, error }. See fetchQuoteInstallers. */
+  quoteInstallers: null,
   detectionId: null,      // server's handle on our detections — measuring needs it
   canMeasure: false,      // walls were found, so measuring is worth offering
   scaleReference: false,  // a door was found too, so the good method is available
@@ -8139,6 +8143,98 @@ function renderRefineOnly() {
   old.replaceWith(buildRefineEstimate());
 }
 
+/* ── Naming the installers at the consent box (30 September, ICO) ──
+
+   Consent to be contacted has to name who will contact you, so the box
+   shows the installers for the postcode typed, fetched from the server's
+   own routing. A change of postcode or of the names unticks the box: what
+   was agreed to was those names. */
+const joinNames = (names) => names.length <= 1 ? (names[0] || '')
+  : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+const quotePostcode = () => String(state.contact.postcode || state.postcode || '').trim().toUpperCase();
+
+let quoteInstallersTimer = null;
+function scheduleQuoteInstallers() {
+  clearTimeout(quoteInstallersTimer);
+  quoteInstallersTimer = setTimeout(fetchQuoteInstallers, 600);
+}
+
+async function fetchQuoteInstallers() {
+  if (!state.installerQuotesAvailable) return;
+  const pc = quotePostcode();
+  if (!postcodeLooksReal(pc)) {
+    if (state.quoteInstallers) { state.quoteInstallers = null; state.consent.installerQuotes = false; renderInstallerConsentOnly(); }
+    return;
+  }
+  if (state.quoteInstallers?.for === pc && !state.quoteInstallers.error) return;
+  const before = (state.quoteInstallers?.list || []).map(i => i.id).join(',');
+  state.quoteInstallers = { for: pc, loading: true, list: [] };
+  renderInstallerConsentOnly();
+  try {
+    const res = await fetch('/api/quote-installers', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        postcode: pc,
+        claddingId: state.cladding?.id, trimId: state.trim?.id, roofId: state.roof?.id,
+        footprintM2: state.footprint?.area || null, trimLengthM: state.trimLengthM || null,
+        detectionId: state.useMeasurement ? state.detectionId : null,
+        houseType: state.houseType, conservatoryStyleId: state.conservatoryId,
+        windowCount: state.windowCount,
+        ...state.prefs,
+      }),
+    });
+    const data = await res.json();
+    if (quotePostcode() !== pc) return;   // they have typed on since
+    state.quoteInstallers = res.ok
+      ? { for: pc, outward: data.outward, list: data.installers || [] }
+      : { for: pc, error: data.error || 'We couldn\u2019t check that just now.', list: [] };
+  } catch (_) {
+    state.quoteInstallers = { for: pc, error: 'We couldn\u2019t check that just now.', list: [] };
+  }
+  if (state.quoteInstallers.list.map(i => i.id).join(',') !== before) state.consent.installerQuotes = false;
+  renderInstallerConsentOnly();
+}
+
+function renderInstallerConsentOnly() {
+  const old = document.getElementById('installer-consent');
+  if (old) old.replaceWith(buildInstallerConsent());
+}
+
+/* The installer box, or what stands in for it until there are names. */
+function buildInstallerConsent() {
+  if (!state.installerQuotesAvailable) return h('div', { id: 'installer-consent' });
+  const q = state.quoteInstallers;
+  const pc = quotePostcode();
+  const ready = q && q.for === pc && !q.loading && !q.error && q.list.length > 0;
+  // A postcode carried over from the design page, not yet looked up.
+  if (postcodeLooksReal(pc) && (!q || q.for !== pc)) scheduleQuoteInstallers();
+  const note = (text, tone = 'zinc') => h('p', {
+    className: tone === 'amber'
+      ? 'text-base leading-7 text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2'
+      : 'text-base leading-7 text-zinc-700 bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2',
+  }, text);
+  let inner;
+  if (!postcodeLooksReal(pc)) {
+    inner = note('To get quotes, enter your postcode above. We\u2019ll show you which installers would contact you before you agree to anything.');
+  } else if (!q || q.for !== pc || q.loading) {
+    inner = note(`Checking which installers cover ${pc}\u2026`);
+  } else if (q.error) {
+    inner = note(q.error, 'amber');
+  } else if (!q.list.length) {
+    inner = note(`We don\u2019t have an installer covering ${q.outward} yet, so we can\u2019t ask for quotes there. Your design will still save.`, 'amber');
+  } else {
+    inner = consentBox('installerQuotes', [CONSENT_WORDING.installerQuotes.replace('{installers}', joinNames(q.list.map(i => i.name)))]);
+  }
+  if (ready && state.quote?.intent === 'quotes') {
+    inner = h('div', { className: `rounded-xl border-2 p-3 ${state.consent.installerQuotes ? 'border-emerald-600 bg-emerald-50' : 'border-amber-500 bg-amber-50'}` }, [
+      h('p', { className: 'text-lg font-semibold text-zinc-900' },
+        state.consent.installerQuotes ? '\u2713 Your quotes will be requested' : 'To get quotes from installers, tick this box:'),
+      inner,
+    ]);
+  }
+  return h('div', { id: 'installer-consent' }, [inner]);
+}
+
 /* One consent checkbox. Identical markup and styling for all three, so the
    optional ones carry no visual nudge relative to the required one. */
 function consentBox(key, label, { required = false } = {}) {
@@ -8477,6 +8573,7 @@ function buildSaveFraming() {
         className: `w-full px-3 py-2.5 rounded-xl border text-lg outline-none ${error ? 'border-red-500 focus:border-red-600' : 'border-zinc-200 focus:border-zinc-900'}`,
         onInput: (e) => {
           state.contact[key] = e.target.value;
+          if (key === 'postcode') scheduleQuoteInstallers();
           /* Clear the error as they fix it, without a full re-render — that
              would take the focus back out of the field they are typing in. */
           if (state.fieldErrors[key]) {
@@ -8920,15 +9017,7 @@ function buildSaveFraming() {
            this is the box that does what they asked for. Missing it means a
            saved design and no quotes, which is exactly the outcome nobody who
            clicked that button wanted. */
-        state.installerQuotesAvailable
-          ? (state.quote?.intent === 'quotes'
-              ? h('div', { className: `rounded-xl border-2 p-3 ${state.consent.installerQuotes ? 'border-emerald-600 bg-emerald-50' : 'border-amber-500 bg-amber-50'}` }, [
-                  h('p', { className: 'text-lg font-semibold text-zinc-900' },
-                    state.consent.installerQuotes ? '\u2713 Your quotes will be requested' : 'To get quotes from installers, tick this box:'),
-                  consentBox('installerQuotes', [CONSENT_WORDING.installerQuotes]),
-                ])
-              : consentBox('installerQuotes', [CONSENT_WORDING.installerQuotes]))
-          : null,
+        buildInstallerConsent(),
         /* Who pays, said where the choice is made (29 September). Taken off
            the reassurance section earlier because it answered a question
            nobody had asked there; here it is the question — the site says
@@ -8937,14 +9026,6 @@ function buildSaveFraming() {
         state.installerQuotesAvailable
           ? h('p', { className: 'text-base leading-7 text-zinc-600' },
               'How we\u2019re paid: installers pay us when we pass on an enquiry. You pay nothing, it doesn\u2019t change your estimate, and no installer can pay to be recommended.')
-          : null,
-        /* They checked their postcode and nobody covers it. The box stays —
-           they can still ask, and we still record that they did — but saying
-           nothing here and then emailing "we've sent your enquiry on" is the
-           contradiction worth avoiding. */
-        (state.installerQuotesAvailable && state.coverage && state.coverage.installers === 0)
-          ? h('p', { className: 'text-base leading-7 text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2' },
-              `We don't have an installer covering ${state.coverage.outward} yet. You can still ask — we'll save your design and let you know if that changes — but nobody will be contacting you just now.`)
           : null,
         consentBox('terms', [
           // Only this one needs markup, for the two links.
@@ -10093,13 +10174,22 @@ async function sendDesignPack() {
           terms: state.consent.terms,
           installerQuotes: state.consent.installerQuotes,
           emailPack: state.consent.emailPack,
+          /* The names in the box they ticked; delivery is limited to these. */
+          installerIds: state.consent.installerQuotes ? (state.quoteInstallers?.list || []).map(i => i.id) : undefined,
           version: CONSENT_VERSION,
           wording: CONSENT_WORDING,
         },
       })
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Lead submission failed');
+    if (!res.ok) {
+      if (data.reason === 'installers_changed') {
+        state.consent.installerQuotes = false;
+        state.quoteInstallers = null;
+        fetchQuoteInstallers();
+      }
+      throw new Error(data.error || 'Lead submission failed');
+    }
     // Only surface it in the installer list if this tab is actually signed in.
     if (state.installerAuthed) state.leads = [data.lead, ...state.leads];
     /* The design they saved, so the page can confirm it and offer sharing
