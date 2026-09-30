@@ -468,7 +468,11 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
          Says what legal/privacy.html says — test/photo-privacy.test.js. -->
     <details class="photo-privacy mt-1 text-base text-zinc-700 max-w-[60ch]">
       <summary class="cursor-pointer py-2.5 leading-6">Your original photo isn&rsquo;t stored. <span class="underline underline-offset-2">See how your photo is used</span></summary>
-      <p class="pb-2 leading-7 text-zinc-600">Your photo goes to the AI services that find the windows, doors, roof and walls and draw the new look. Once your picture has been made, the photo is deleted. It is never published, sold, or used to train anybody&rsquo;s AI. We keep the picture we make for you, your choices, and &mdash; for seven days &mdash; a fingerprint of the photo with its measurements, so the same photo always gives you the same price. <a href="/privacy#your-photograph" class="underline underline-offset-2">Full privacy notice</a></p>
+      <!-- Two sentences, not five (1 October, Mike): the first screen is house,
+           picture, price. The AI services and the seven-day fingerprint are
+           still said in full in the FAQ below ("What happens to my photo?")
+           and in the privacy notice this links to. -->
+      <p class="pb-2 leading-7 text-zinc-600">We use it only to make your picture. Once your picture has been made, the photo is deleted &mdash; never published, sold, or used to train AI. <a href="/privacy#your-photograph" class="underline underline-offset-2">Full details</a></p>
     </details>
     </div>
     <!-- What the product does, at a glance, above the choice.
@@ -4450,8 +4454,10 @@ function buildUploadDetect() {
             h('span', { className: 'underline underline-offset-2' }, 'See how your photo is used'),
           ]),
           h('p', { className: 'pb-2 leading-7' }, [
-            'Your photo goes to the AI services that find the windows, doors, roof and walls and draw the new look. Once your picture has been made, the photo is deleted. It is never published, sold, or used to train anybody’s AI. We keep the picture we make for you, your choices, and — for seven days — a fingerprint of the photo with its measurements, so the same photo always gives you the same price. ',
-            h('a', { href: '/privacy#your-photograph', className: 'underline underline-offset-2' }, 'Full privacy notice'),
+            /* Short at the button (1 October); the AI services and the
+               seven-day fingerprint are in the privacy notice it links to. */
+            'We use it only to make your picture. Once your picture has been made, the photo is deleted — never published, sold, or used to train AI. ',
+            h('a', { href: '/privacy#your-photograph', className: 'underline underline-offset-2' }, 'Full details'),
           ]),
         ]),
         /* Hidden while the photo is being read. "Choose a photo" would throw
