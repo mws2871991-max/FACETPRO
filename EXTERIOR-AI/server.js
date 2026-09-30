@@ -4231,6 +4231,10 @@ function logAccess(endpoint) {
         ts: new Date().toISOString(),
         endpoint,
         status: res.statusCode,
+        /* Who, not just that. An access log that cannot say which account
+           read an enquiry cannot answer the one question it exists for. The
+           installer's id, 'operator' for the shared password. */
+        who: req.installer ? (req.installer.id || 'operator') : 'operator',
         ipHash: hashIp(req.ip),
         userAgent: String(req.get('user-agent') || '').slice(0, 120),
       });
