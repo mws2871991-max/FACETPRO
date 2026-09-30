@@ -9235,6 +9235,15 @@ function buildInstaller() {
           ]) : null,
         ]),
 
+        /* What the homeowner agreed to, where the installer decides what to do
+           next: a quote they asked for, about this project, by the channels
+           the wording names, and nothing else. The consent handoff, §13. */
+        h('p', { className: 'mt-2 text-base text-white/80' }, [
+          h('span', { className: 'font-semibold' }, 'Permission: '),
+          `quote requested${lead.consent?.at ? ` ${new Date(lead.consent.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}`,
+          ' · contact about this project only, by email, phone or text · no marketing, no passing on',
+        ]),
+
         h('div', { className: 'mt-3 grid sm:grid-cols-[1fr_auto] gap-3 items-start' }, [
           h('div', {}, [
             reqs.length ? h('div', {}, [
@@ -9489,6 +9498,24 @@ function readCtaPlace() {
     ctaPlaceCache = ['hero', 'end', 'header'].includes(v) ? v : null;
   } catch (_) { ctaPlaceCache = null; }
   return ctaPlaceCache;
+}
+
+/* Ad campaign tags, when a paid link brought them (utm_source, utm_medium,
+   utm_campaign). Read once from the address, kept in memory only — nothing
+   is stored on the device — carried on to /design, and sent with a lead so
+   the enquiry records where it came from. Shape-checked again on the server. */
+let utmCache;
+function readUtm() {
+  if (utmCache !== undefined) return utmCache;
+  utmCache = {};
+  try {
+    const q = new URLSearchParams(location.search);
+    for (const k of ['utm_source', 'utm_medium', 'utm_campaign']) {
+      const v = q.get(k) || '';
+      if (/^[A-Za-z0-9_.-]{1,60}$/.test(v)) utmCache[k] = v;
+    }
+  } catch (_) { /* none */ }
+  return utmCache;
 }
 
 function readFromSlug() {
@@ -10157,6 +10184,10 @@ async function sendDesignPack() {
            toward door fitters on the strength of a click. What they actually
            chose is in the selections above, which is the thing to route on. */
         journeySource: state.journey,
+        /* Where the enquiry came from: the guide page and its button, and any
+           ad campaign tags. Counted separately in the funnel; recorded here so
+           the lead itself can say. */
+        source: { from: readFromSlug() || undefined, cta: readCtaPlace() || undefined, ...readUtm() },
         /* What the quote steps asked. Sent as answers, not as a score — the
            server validates each against a fixed list and scores the lead
            itself, so nothing here can inflate what an installer is charged
@@ -10377,6 +10408,7 @@ function designUrl(extra = {}) {
   const from = readFromSlug();
   if (journey) q.set('journey', journey);
   if (from) q.set('from', from);
+  for (const [k, v] of Object.entries(readUtm())) q.set(k, v);
   for (const [k, v] of Object.entries(extra)) if (v) q.set(k, v);
   const s = q.toString();
   return `/design${s ? `?${s}` : ''}`;

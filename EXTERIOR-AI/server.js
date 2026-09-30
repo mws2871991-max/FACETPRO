@@ -914,6 +914,57 @@ const planDelivery = (lead) => routing.chooseRecipients(LEAD_RECIPIENTS, lead, {
   only: Array.isArray(lead.consent?.installerIds) ? lead.consent.installerIds : null,
 });
 
+function resolveSource(raw) {
+  const src = (raw && typeof raw === 'object') ? raw : {};
+  const out = {};
+  if (/^[a-z0-9-]{3,60}$/.test(String(src.from || ''))) out.from = String(src.from);
+  if (['hero', 'end', 'header'].includes(src.cta)) out.cta = src.cta;
+  for (const k of ['utm_source', 'utm_medium', 'utm_campaign']) {
+    if (/^[A-Za-z0-9_.-]{1,60}$/.test(String(src[k] || ''))) out[k] = String(src[k]);
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+/* The privacy notice version in force, read from the notice itself so it
+   cannot drift from what the page says. Stored with every consent. */
+const PRIVACY_VERSION = (() => {
+  try {
+    return fs.readFileSync(path.join(__dirname, 'legal', 'privacy.html'), 'utf8').match(/Version ([0-9.]+)/)?.[1] || null;
+  } catch (_) { return null; }
+})();
+
+/* Is this lead still one the homeowner wants shared? Read from the store,
+   not from the object in hand, which is a snapshot from before any
+   withdrawal. */
+async function stillConsentsToShare(leadId) {
+  let rows = [];
+  try { rows = await store.readAll('leads'); } catch (_) { return true; }   // cannot tell: the pre-send state stands
+  const current = rows.find(l => l.id === leadId);
+  return !!(current && !current.redacted && current.consent?.installerQuotes === true && !current.consent?.withdrawnAt);
+}
+
+async function tellIfWithdrawnDuringDelivery(lead, results) {
+  const got = (results || []).filter(r => r.ok);
+  if (!got.length || await stillConsentsToShare(lead.id)) return;
+  let rows = [];
+  try { rows = await store.readAll('leads'); } catch (_) { /* treated as a full withdrawal below */ }
+  const current = rows.find(l => l.id === lead.id);
+  const scope = (!current || current.redacted) ? 'all' : 'installerQuotes';
+  const at = new Date().toISOString();
+  const payload = withdrawal.withdrawalPayload(lead.id, scope, at);
+  const notified = [];
+  for (const r of got) {
+    const config = LEAD_RECIPIENTS.find(c => c.id === r.id);
+    if (!config) { notified.push({ id: r.id, name: r.name, ok: false, error: 'recipient no longer configured — tell them by hand' }); continue; }
+    notified.push(await delivery.deliverTo(config, payload, { fetchImpl: (...a) => fetch(...a) }));
+  }
+  await record('withdrawals', {
+    ts: at, leadId: lead.id, scope, during: 'delivery',
+    recipientsNotified: notified.map(n => ({ id: n.id, name: n.name, ok: n.ok, status: n.status ?? null, error: n.error ?? null })),
+  });
+  console.warn(`Lead ${lead.id}: withdrawn while being delivered — told ${notified.filter(n => n.ok).length} of ${notified.length} installer(s).`);
+}
+
 /* Deliveries that are still in flight after their response has gone. Drained
    on shutdown — see the SIGTERM handler. */
 const pendingDeliveries = new Set();
@@ -988,6 +1039,20 @@ async function deliverAndRecord(lead, plan) {
     return;
   }
 
+  /* Asked again, right before sending (the withdrawal race). The lead was
+     stored a moment ago, and the withdrawal link is in the email that went
+     out alongside it — someone can use it before this line runs. */
+  if (!(await stillConsentsToShare(lead.id))) {
+    await record('deliveries', {
+      ts: new Date().toISOString(), leadId: lead.id, postcode: lead.postcode || null,
+      total: 0, delivered: 0, failed: 0, results: [], routing: routingRecord,
+      withheld: 'consent withdrawn before sending',
+    });
+    await leadEvent('routing.withheld', lead.id, { reason: 'consent withdrawn before sending' });
+    console.log(`Lead ${lead.id}: not sent — consent was withdrawn before delivery.`);
+    return;
+  }
+
   let results;
   /* Only what the consent wording lists — see leadview.js. */
   const forInstaller = leadview.forInstaller(lead);
@@ -1027,6 +1092,11 @@ async function deliverAndRecord(lead, plan) {
     results,
     routing: routingRecord,
   });
+
+  /* And once more after. A withdrawal that lands while the webhooks are in
+     flight finds no delivery record yet, so /api/withdraw tells nobody; the
+     installers who were mid-receipt have to hear it from here. */
+  await tellIfWithdrawnDuringDelivery(lead, results);
 
   for (const r of results.filter(x => !x.ok)) {
     console.error(`Lead ${lead.id}: delivery to ${r.name} FAILED after ${r.attempts} attempt(s) — ${r.error}`);
@@ -3999,6 +4069,10 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
        they want. Somebody can arrive from the doors page and design a whole
        exterior, so routing weights on the selections above, never on this. */
     journeySource: JOURNEY_SOURCES.includes(journeySource) ? journeySource : null,
+    /* Where the enquiry came from: the guide page (?from=), which button on
+       it, and ad campaign tags. Shape-checked, never trusted for anything
+       but reporting. */
+    source: resolveSource(req.body?.source),
     /* The window and door estimate, recomputed here rather than taken from
        the request — the same rule as the wall area. It is what the homeowner
        was shown, so the installer should see the same figure and know which
@@ -4022,6 +4096,8 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
     consent: {
       at: new Date().toISOString(),
       version: shownWording ? String(consent.version) : `unknown:${String(consent.version || '').slice(0, 32)}`,
+      /* Which privacy notice was in force when they agreed. */
+      privacyVersion: PRIVACY_VERSION,
       terms: consent.terms === true,
       installerQuotes: consent.installerQuotes === true,
       emailPack: consent.emailPack === true,
@@ -4062,6 +4138,7 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
     version: lead.consent?.version ?? null,
     installerQuotes: lead.consent?.installerQuotes === true,
     installerIds: lead.consent?.installerIds ?? null,
+    privacyVersion: lead.consent?.privacyVersion ?? null,
     emailPack: lead.consent?.emailPack === true,
     terms: lead.consent?.terms === true,
     leadScore: lead.leadScore?.score ?? null,
