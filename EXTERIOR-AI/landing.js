@@ -217,6 +217,13 @@ function roofFor(catalogue, m2) {
   });
 }
 
+/* Who operates this site, in the footer of every guide — the same line
+   index.html carries, from the same company.json, so the two cannot disagree.
+   See the comment on that footer for why it is there at all. */
+const COMPANY = require('./company.json');
+const COMPANY_LINE = `${COMPANY.legalName}, a company registered in ${COMPANY.jurisdiction} `
+  + `no. ${COMPANY.companyNumber}. Registered office: ${COMPANY.registeredOffice}.`;
+
 /* ── THE PAGES ──────────────────────────────────────────────────────────── */
 
 /* Cost pages. `slug` is the URL and the search intent; `build` returns the
@@ -1165,6 +1172,7 @@ ${related ? `<nav class="related"><h2>Related costs</h2><ul>${related.map(r =>
 </main>
 <footer class="site"><div class="wrap">
   Facet Pro &middot; <a href="/privacy">Privacy notice</a> &middot; <a href="/terms">Terms of use</a>
+  <p class="company">${escapeHtml(COMPANY_LINE)}</p>
 </div></footer>
 </body></html>`;
 }

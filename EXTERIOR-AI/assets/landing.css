@@ -95,6 +95,10 @@
   /* The reason to follow one of these links, said quietly beside it. */
   nav.related .rel-note{color:#52525b;font-size:16px}
   footer.site{border-top:1px solid #e4e4e7;margin-top:48px}
+/* The company identity under the footer links, on every guide. Quieter than
+   the links above it: there to be found, not to be read first. */
+footer.site .company{margin:.6rem 0 0;font-size:.85rem;line-height:1.5;color:#6b7280;max-width:70ch}
+
   footer.site .wrap{padding:20px 18px;font-size:16px;color:#52525b}
   a{color:#0F1012}
   @media(min-width:640px){h1{font-size:38px}.wrap{padding:32px 24px 80px}}
