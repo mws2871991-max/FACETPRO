@@ -50,7 +50,9 @@ const FILES = { '/privacy': 'privacy.html', '/terms': 'terms.html' };
 const legalDir = path.join(__dirname, '..', 'legal');
 
 /* The same definition the app uses: a placeholder is its brackets. */
-const PLACEHOLDER = /\[[A-Z][^\]]{2,200}\]/g;
+// The same pattern as routes/pages.js — it had a 200-character cap, so the long ADR note in terms.html
+// went unseen by the test while the server still (rightly) counted it.
+const PLACEHOLDER = /\[[A-Z][^\]]{2,}\]/g;
 const bracketsIn = (file) =>
   (fs.readFileSync(path.join(legalDir, file), 'utf8').match(PLACEHOLDER) || []).length;
 
