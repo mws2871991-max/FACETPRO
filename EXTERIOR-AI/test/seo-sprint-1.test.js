@@ -151,3 +151,10 @@ test('the tool\'s own price endpoint takes the material too', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'routes', 'measure.js'), 'utf8');
   assert.match(src, /windowMaterialId: \(catalogue\.glazing\?\.materials \|\| \[\]\)\.some/);
 });
+
+test('a saved design keeps its frame material', () => {
+  const resume = require('../resume');
+  assert.ok(resume.ID_FIELDS.includes('windowMaterialId'));
+  const out = resume.buildPayload({ windowStyleId: 'casement', windowMaterialId: 'aluminium' });
+  assert.strictEqual(out.windowMaterialId, 'aluminium');
+});

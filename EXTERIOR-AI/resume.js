@@ -73,6 +73,9 @@ const isCode = (raw) => new RegExp(`^[${ALPHABET}]{${CODE_LENGTH}}$`).test(norma
 const ID_FIELDS = [
   'claddingId', 'trimId', 'roofId',
   'windowStyleId', 'doorStyleId', 'windowDoorColourId', 'windowBarsId',
+  /* Frame material (29 September). Without it a saved aluminium design came
+     back priced as uPVC — about a fifth lower than what was saved. */
+  'windowMaterialId',
   'fasciaId', 'soffitId', 'gutteringId', 'rooflineCladdingId',
   'conservatoryStyleId', 'houseType',
   /* Where the back-and-sides count came from: 'photo' or 'told'. Absent means

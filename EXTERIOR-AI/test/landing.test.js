@@ -517,3 +517,11 @@ test('the five pages added on 29 September exist, and only where there is a sour
   assert.ok(slugs.includes('aluminium-window-prices'));
   assert.ok((catalogue.glazing.materials || []).some(m => m.id === 'aluminium'));
 });
+
+/* 29 September launch review: the price tables overflowed a 390px phone on
+   eleven guides after row headers were set to nowrap. */
+test('row headers wrap by word, never mid-word and never forced onto one line', () => {
+  const css = fs.readFileSync(path.join(__dirname, '..', 'assets', 'landing.css'), 'utf8');
+  assert.ok(!/th\[scope=row\]\{white-space:nowrap\}/.test(css));
+  assert.match(css, /tbody th\{overflow-wrap:break-word\}/);
+});

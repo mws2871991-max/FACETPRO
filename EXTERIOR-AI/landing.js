@@ -496,7 +496,7 @@ const COST_PAGES = [
            than in a footnote — a conservatory's price turns on size, glazing,
            groundworks and access, none of which a photograph of the front of a
            house can tell anybody. Guide bands are what we honestly have. */
-        answer: `Between ${money(cheapest.priceMin)} and ${money(dearest.priceMax)} depending on style and size — a ${cheapest.name.toLowerCase()} is the cheapest way in, an ${dearest.name.toLowerCase()} the most expensive. These are guide ranges, not quotations: unlike the window, door, wall and roof figures on this site, they are not computed from a supplier rate card.`,
+        answer: `Between ${money(cheapest.priceMin)} and ${money(dearest.priceMax)} depending on style and size — a ${cheapest.name.toLowerCase()} is the cheapest way in, an ${dearest.name.toLowerCase()} the most expensive. These are guide ranges, not quotations: unlike the window, door, wall and roof figures on this site, they are not worked out from our price list for a house like yours.`,
         sections: [
           { heading: 'By style', table: {
             head: ['Style', 'Best for', 'Guide range'],
@@ -561,12 +561,13 @@ const COST_PAGES = [
      rates as the rendering page.
 
      Deliberately NOT built yet, because the number would be ours and not
-     checked: aluminium windows (no aluminium rate in the catalogue at all),
-     flush casement (x1.15 has no source note), and bay window replacement
+     checked: flush casement (x1.15 has no source note), and bay window replacement
      (x1.45 on a single unit — a real bay is three to five panes and its
      price wants Mike's figure, not a multiplier). "12 windows" is answered by
      the 10-window page's 8–12 table, and "roof replacement" is the same
-     search as "new roof", so a second page would only compete with the first. */
+     search as "new roof", so a second page would only compete with the first.
+     (Aluminium was on this list until Mike gave the figure — see
+     aluminium-window-prices below.) */
   {
     slug: 'composite-door-cost',
     title: 'Composite Door Cost UK 2026 | Fitted Prices & Guide',
