@@ -86,3 +86,30 @@ test('the refusal tells a homeowner something they can act on', () => {
   assert.match(src.slice(at, at + 220), /normal photo from your phone or camera/,
     'it should say what to do instead');
 });
+
+test('a promise the privacy notice makes is checked on every deploy', () => {
+  /* /privacy tells homeowners "Enquiries are backed up every day, and we test
+     that we can restore them." Railway's Postgres backups are OFF until
+     somebody switches them on, and this process cannot see those schedules —
+     so the only honest thing it can do is refuse to let the claim pass
+     unremarked once capture is on.
+
+     Loud rather than fatal: refusing to boot would take a working site down
+     over a setting in another dashboard. But it sits beside the placeholder
+     guard because they are the same kind of thing — a sentence on a legal
+     page that somebody has to keep true. */
+  const privacy = fs.readFileSync(path.join(__dirname, '..', 'legal', 'privacy.html'), 'utf8');
+  assert.match(privacy, /backed up every day, and we test that we can restore them/,
+    'the claim has changed — update this guard, or drop the guard with it');
+
+  assert.match(src, /if \(LEAD_CAPTURE && !process\.env\.BACKUPS_CONFIRMED\)/,
+    'nothing checks that the backup promise has been kept');
+  const at = src.indexOf('BACKUPS_CONFIRMED');
+  assert.match(src.slice(at, at + 700), /backed up every day/,
+    'the warning should quote the promise it is protecting');
+  assert.match(src.slice(at, at + 700), /Railway/,
+    'and say where to go and do it');
+
+  const deploy = fs.readFileSync(path.join(__dirname, '..', 'DEPLOY.md'), 'utf8');
+  assert.ok(deploy.includes('BACKUPS_CONFIRMED'), 'the setting is not documented');
+});

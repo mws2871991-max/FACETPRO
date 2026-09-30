@@ -5061,6 +5061,23 @@ function checkProductionConfig() {
     warn.push('INSTALLER_TOKEN_SECRET is not set — a secret is generated at boot, so every installer is signed out on each deploy. openssl rand -base64 32');
   }
 
+  /* A promise the privacy notice makes on our behalf.
+ *
+ * It says, to every homeowner who reads it: "Enquiries are backed up every
+ * day, and we test that we can restore them." Railway's Postgres backups are
+ * OFF until somebody switches them on, and the schedules are not something
+ * this process can see — so the only honest thing it can do is refuse to let
+ * the claim go unremarked while capture is on.
+ *
+ * Loud rather than fatal. Refusing to boot would take a working site down
+ * over a setting in another dashboard, and the failure this guards against is
+ * losing enquiries we have not started collecting yet. But it is checked on
+ * every deploy, beside the placeholder guard, because the two are the same
+ * kind of thing: a sentence on a legal page that somebody has to keep true. */
+  if (LEAD_CAPTURE && !process.env.BACKUPS_CONFIRMED) {
+    warn.push('LEAD_CAPTURE is on and BACKUPS_CONFIRMED is not set. /privacy tells homeowners "Enquiries are backed up every day, and we test that we can restore them" — switch on Daily and Weekly in Railway → Postgres → Backups, do one test restore, then set BACKUPS_CONFIRMED=<the date you tested it>.');
+  }
+
   /* Operator visibility. Not fatal — the site serves homeowners perfectly well
      without it — but unset means /api/ops, /api/funnel, /api/deliveries and
      /api/measurements all return 503 together, which is exactly the failure

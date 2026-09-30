@@ -99,6 +99,14 @@ way to get this deployment wrong.
 | `DETECT_RATE_LIMIT` | no | Detection requests per minute per IP. Default 10, which is right for a homeowner. Exists so the test suite can send one photograph fifteen times on purpose; leave it unset in production. |
 | `INSTALLER_RATE_LIMIT` | no | Installer sign-in attempts per 15 minutes per IP. Default 20. Exists for the test suite; leave it unset in production. |
 | `DAILY_RENDER_LIMIT` | no | Default 200 (was 50 until launch). The only thing bounding render spend. |
+- `BACKUPS_CONFIRMED` — the date you last tested restoring the database, e.g.
+  `2026-10-01`. Nothing reads the value; the startup check only looks for it,
+  and warns on every deploy while `LEAD_CAPTURE` is on and it is missing.
+  /privacy tells homeowners "Enquiries are backed up every day, and we test
+  that we can restore them", Railway's Postgres backups are OFF until somebody
+  switches them on, and this process cannot see those schedules. Switch on
+  Daily and Weekly in Railway → Postgres → Backups, do one test restore, then
+  set this. It is a promise on a legal page, not a preference.
 - `IP_HASH_SECRET` — key for the IP hashes stored on consent records and in the
   access log. Those are kept six years and twelve months respectively, and an
   UNKEYED hash of an IPv4 address is a lookup, not a hash: recovering one took
