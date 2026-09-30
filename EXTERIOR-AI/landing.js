@@ -777,7 +777,12 @@ const COST_PAGES = [
     intent: '12 window replacement cost',
     description: 'What replacing twelve windows costs in the UK, fitted and inc VAT — typical of a 4-bed detached — with ten to fourteen windows side by side.',
     build: (c) => {
-      const twelve = windowJob(c, { count: 12, houseType: 'detached' });
+      /* The headline and the table are worked out the same way as every other
+         "N windows" figure on the site, so "12 windows" is one price whichever
+         guide shows it (30 September run-through: this page and the 12 row on
+         the 10-window page differed). The detached house is the example. */
+      const twelve = windowJob(c, { count: 12 });
+      const det = windowJob(c, { count: 12, houseType: 'detached' });
       const alu = windowJob(c, { count: 12, houseType: 'detached', materialId: 'aluminium' });
       return {
         answer: `${money(twelve.low)} to ${money(twelve.high)} fitted, inc VAT — around ${money(twelve.perWindowLow)} to ${money(twelve.perWindowHigh)} a window in uPVC.`,
@@ -785,7 +790,7 @@ const COST_PAGES = [
           { heading: 'Twelve windows, and either side of it', table: {
             head: ['Windows', 'Estimated cost fitted, inc VAT'],
             rows: [10, 11, 12, 13, 14].map(n => {
-              const j = windowJob(c, { count: n, houseType: 'detached' });
+              const j = windowJob(c, { count: n });
               return [String(n), `${money(j.low)} – ${money(j.high)}`];
             }),
           } },
@@ -794,11 +799,11 @@ const COST_PAGES = [
             'Then how many open, the material (uPVC or aluminium), the style (casement, flush or sash), and access — on a detached house more of the twelve are upstairs, and upstairs windows need a tower or, on a tall house, scaffolding. VAT is in every figure.',
           ] },
           { heading: 'Example: a 4-bed detached', paras: [
-            `Twelve windows in white uPVC: ${money(twelve.low)} to ${money(twelve.high)} fitted, inc VAT. The same twelve in aluminium: ${money(alu.low)} to ${money(alu.high)}.`,
+            `Twelve windows in white uPVC on a 4-bed detached: ${money(det.low)} to ${money(det.high)} fitted, inc VAT — a little different from the table above because a detached house has a different mix of window sizes. The same twelve in aluminium: ${money(alu.low)} to ${money(alu.high)}.`,
           ] },
         ],
         faqs: [
-          { q: 'How much does it cost to replace 12 windows?', a: `About ${money(twelve.low)} to ${money(twelve.high)} fitted, inc VAT, for twelve uPVC casements on a detached house.` },
+          { q: 'How much does it cost to replace 12 windows?', a: `About ${money(twelve.low)} to ${money(twelve.high)} fitted, inc VAT, for twelve uPVC casements.` },
           { q: 'How long does it take to fit 12 windows?', a: 'Usually two days for a fitting team, sometimes three if several are large or hard to reach.' },
           { q: 'Is it cheaper per window to do all twelve?', a: 'Yes, per window: access and setting up are paid once across more windows.' },
         ],

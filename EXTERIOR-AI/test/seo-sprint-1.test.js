@@ -186,3 +186,11 @@ test('every guide links to the cornerstone, and roofline is linked from roof and
   const src = fs.readFileSync(path.join(__dirname, '..', 'routes', 'pages.js'), 'utf8');
   assert.match(src, /req\.path\.endsWith\('\/'\)/);
 });
+
+test('"12 windows" is one price on every guide that shows it', () => {
+  const c = require('../catalogue.json');
+  const twelvePage = landing.COST_PAGES.find(p => p.slug === '12-window-replacement-cost').build(c);
+  const tenPage = landing.COST_PAGES.find(p => p.slug === '10-window-replacement-cost').build(c);
+  const row = tenPage.sections[0].table.rows.find(r => r[0] === '12')[1];
+  assert.ok(twelvePage.answer.startsWith(row.replace(' – ', ' to ')), `${twelvePage.answer} vs ${row}`);
+});

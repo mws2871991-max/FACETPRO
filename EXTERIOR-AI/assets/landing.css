@@ -82,7 +82,7 @@
      who came for the number. Lighter than .cta-block on purpose — the dark
      block at the foot of the page is still the close, and two identical black
      slabs on one page would read as an advert either side of an article. */
-  .journey-hero{margin:0 0 28px;padding:22px 20px;background:#FBF8F3;border:1px solid #e4e4e7;border-radius:18px}
+  .journey-hero{margin:16px 0 28px;padding:22px 20px;background:#FBF8F3;border:1px solid #e4e4e7;border-radius:18px}
   .journey-hero h2{margin:0;font-size:21px;line-height:1.25}
   .journey-hero p{margin:8px 0 0;color:#52525b}
   .journey-hero a.cta{margin:16px 0 0;background:#0F1012;color:#fff}
