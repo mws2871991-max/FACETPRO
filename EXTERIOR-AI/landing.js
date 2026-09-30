@@ -154,6 +154,7 @@ function rooflineFor(catalogue, metres) {
     perM: Math.round(perM * vat),
     total: Math.round((net + scaffolding + waste) * vat),
     scaffolding: Math.round(scaffolding * vat),
+    exScaffold: Math.round((net + waste) * vat),
   };
 }
 
@@ -169,9 +170,35 @@ function wallsFor(catalogue, m2) {
       material: c.materialLabel || c.materialType || '',
       perM2: Math.round((c.pricePerM2 + labour) * vat),
       total: Math.round((net + waste + (catalogue.scaffoldingCost || 0)) * vat),
+      /* The same figures with the scaffold taken out, for the one page that
+         prices several trades at once. A scaffold goes up once however many
+         jobs are done off it — see house-exterior-renovation-cost. */
+      exScaffold: Math.round((net + waste) * vat),
+      scaffolding: Math.round((catalogue.scaffoldingCost || 0) * vat),
     };
   });
   return { m2, rows };
+}
+
+/* The roof area a typical semi's guide should quote — the SAME figure the
+   visualiser will give the same customer.
+ *
+ * The guides used a flat 80 m2 while the tool derived 85 x 0.55 = 47 for a
+ * semi, so /cost/new-roof-cost quoted roughly two-thirds more for a re-roof
+ * than the visualiser it links to. Both cannot be right, and a customer who
+ * follows the link sees the site disagree with itself about their own roof.
+ *
+ * Derived here rather than typed, from the same wall prior and the same ratio
+ * the visualiser uses, so the two cannot drift apart again. The ratio itself
+ * is still unsourced and still too low if a pitch is allowed for — that
+ * argument is at server.js ROOF_AREA_FROM_WALL and in
+ * notes/roof-area-needs-a-source.md, and it is not settled by making two
+ * wrong numbers agree. It is settled by measuring real roofs. What this does
+ * fix is the site quoting two prices for one job. */
+const SEMI_WALL_M2 = 85;          // measure.HOUSE_TYPE_PRIORS.semi.wallM2
+function roofM2ForSemi(catalogue) {
+  const ratio = catalogue.wholeHouse?.roofAreaFromWall ?? 0.55;
+  return Math.round(SEMI_WALL_M2 * ratio);
 }
 
 function roofFor(catalogue, m2) {
@@ -184,6 +211,8 @@ function roofFor(catalogue, m2) {
       name: r.name,
       perM2: Math.round((r.pricePerM2 + labour) * vat),
       total: Math.round((net + waste + (catalogue.scaffoldingCost || 0)) * vat),
+      exScaffold: Math.round((net + waste) * vat),
+      scaffolding: Math.round((catalogue.scaffoldingCost || 0) * vat),
     };
   });
 }
@@ -415,13 +444,20 @@ const COST_PAGES = [
     intent: 'new roof cost UK',
     description: 'New roof and re-roofing costs per square metre and for a typical house, including scaffolding and waste, inc VAT.',
     build: (c) => {
-      const rows = roofFor(c, 80);
+      /* The same roof the visualiser will quote this customer. This page used
+         a flat 80 m² against the tool's derived 47 for a semi, so one re-roof
+         came out roughly two-thirds dearer here than in the tool this page
+         links to. Figures in test/one-price-per-job.test.js — not here,
+         because a price typed into this file is a price that will one day
+         contradict the product. */
+      const roofM2 = roofM2ForSemi(c);
+      const rows = roofFor(c, roofM2);
       const cheapest = rows.reduce((a, b) => (a.perM2 <= b.perM2 ? a : b));
       return {
-        answer: `From about ${money(cheapest.perM2)} per m², so roughly ${money(cheapest.total)} on an 80 m² roof including scaffolding and waste.`,
+        answer: `From about ${money(cheapest.perM2)} per m², so roughly ${money(cheapest.total)} on a ${roofM2} m² roof — a typical semi — including scaffolding and waste.`,
         sections: [
-          { heading: 'By covering, on 80 m²', table: {
-            head: ['Covering', 'Per m² inc VAT', '80 m² roof inc VAT'],
+          { heading: `By covering, on ${roofM2} m²`, table: {
+            head: ['Covering', 'Per m² inc VAT', `${roofM2} m² roof inc VAT`],
             rows: rows.map(r => [r.name, money(r.perM2), money(r.total)]),
           } },
           { heading: 'What this does not include', paras: [
@@ -527,9 +563,24 @@ const COST_PAGES = [
       const walls = wallsFor(c, 90);
       const cheapWall = walls.rows.reduce((a, b) => (a.perM2 <= b.perM2 ? a : b));
       const roofline = rooflineFor(c, 30);
-      const roof = roofFor(c, 80).reduce((a, b) => (a.perM2 <= b.perM2 ? a : b));
-      const low = win.low + doors.low + cheapWall.total + roofline.total + roof.total;
-      const high = win.high + doors.high + cheapWall.total + roofline.total + roof.total;
+      const roofM2 = roofM2ForSemi(c);
+      const roof = roofFor(c, roofM2).reduce((a, b) => (a.perM2 <= b.perM2 ? a : b));
+      /* The scaffold goes up ONCE.
+ *
+ * wallsFor, rooflineFor and roofFor each include a full scaffold in their
+ * total, because each is also sold on its own page where the scaffold is
+ * genuinely theirs. Adding those three totals together charged it three
+ * times over on a job that needs one, so this page was two scaffolds too
+ * high while its own "What moves the price" section said that
+ * doing the work together "saves paying twice for the same scaffold". The
+ * page contradicted itself, in the customer's favour to read and against
+ * them to pay. Found by the launch review of 29 September.
+ *
+ * The table below itemises each trade without the scaffold and gives it its
+ * own row, so the column adds up to the total in front of the reader. */
+      const scaffold = roofline.scaffolding;
+      const low = win.low + doors.low + cheapWall.exScaffold + roofline.exScaffold + roof.exScaffold + scaffold;
+      const high = win.high + doors.high + cheapWall.exScaffold + roofline.exScaffold + roof.exScaffold + scaffold;
       return {
         answer: `${money(low)} to ${money(high)} for a typical semi doing windows, front door, walls, roofline and roof together.`,
         sections: [
@@ -538,9 +589,10 @@ const COST_PAGES = [
             rows: [
               ['8 windows', `${money(win.low)} – ${money(win.high)}`],
               ['Composite front door', `${money(doors.low)} – ${money(doors.high)}`],
-              [`Walls, 90 m² (${cheapWall.name})`, money(cheapWall.total)],
-              ['Fascias, soffits, guttering, 30 m', money(roofline.total)],
-              [`Roof, 80 m² (${roof.name})`, money(roof.total)],
+              [`Walls, 90 m² (${cheapWall.name})`, money(cheapWall.exScaffold)],
+              ['Fascias, soffits, guttering, 30 m', money(roofline.exScaffold)],
+              [`Roof, ${roofM2} m² (${roof.name})`, money(roof.exScaffold)],
+              ['Scaffolding, once for all of it', money(scaffold)],
             ],
           } },
           { heading: 'Why the total is not five quotes added up', paras: [

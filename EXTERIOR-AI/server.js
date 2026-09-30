@@ -1752,7 +1752,10 @@ function computePrice({ claddingId, trimId, roofId, footprintM2, trimLengthM }) 
      because changing it moves every roof price on the site.
 
      See notes/roof-area-needs-a-source.md. */
-  const ROOF_AREA_FROM_WALL = 0.55;
+  /* Read from the catalogue now, not typed here, so the cost guides and the
+     visualiser cannot quote different roofs for the same house — they did
+     until 30 September. The reasoning above is unchanged and still open. */
+  const ROOF_AREA_FROM_WALL = catalogue.wholeHouse?.roofAreaFromWall ?? 0.55;
   const roofArea = claddingArea * ROOF_AREA_FROM_WALL;
   // Same reasoning as the wall area: the perimeter of a house is bounded too.
   const trimAsked = Number(trimLengthM);
