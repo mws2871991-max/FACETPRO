@@ -172,3 +172,17 @@ test('near-miss cost URLs redirect to the page they mean; nonsense still 404s', 
   const src = fs.readFileSync(path.join(__dirname, '..', 'routes', 'pages.js'), 'utf8');
   assert.match(src, /res\.redirect\(301, `\/cost\/\$\{to\}`\)/);
 });
+
+test('every guide links to the cornerstone, and roofline is linked from roof and render', () => {
+  for (const p of landing.COST_PAGES) {
+    if (p.slug === 'house-exterior-renovation-cost') continue;
+    assert.ok(render(p.slug).includes('href="/cost/house-exterior-renovation-cost"'), `${p.slug} → cornerstone`);
+  }
+  for (const s of ['new-roof-cost', 'house-rendering-cost', 'cladding-cost']) {
+    const html = render(s);
+    const rel = html.slice(html.indexOf('<nav class="related">'));
+    assert.ok(rel.includes('href="/cost/fascia-soffit-replacement-cost"'), `${s} → roofline`);
+  }
+  const src = fs.readFileSync(path.join(__dirname, '..', 'routes', 'pages.js'), 'utf8');
+  assert.match(src, /req\.path\.endsWith\('\/'\)/);
+});

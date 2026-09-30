@@ -1192,12 +1192,19 @@ ${related ? `<nav class="related"><h2>Related costs</h2><ul>${related.map(r =>
 /* Roofline and cladding added 29 September: the same argument, and adding
    the cladding page shifted the rotation so that nothing linked to the
    roofline page at all. */
-const SHARES_SCAFFOLD = [['new-roof-cost', 'house-rendering-cost'], ['fascia-soffit-replacement-cost', 'cladding-cost']];
+/* 30 September: roofline paired with roof and rendering too. The production
+   crawl found the fascia guide the least linked-to (7 links, 4 from other
+   guides), and it is the job most often done off the same scaffold as a
+   re-roof or a render. A page can now have more than one partner. */
+const SHARES_SCAFFOLD = [
+  ['new-roof-cost', 'house-rendering-cost'],
+  ['fascia-soffit-replacement-cost', 'cladding-cost'],
+  ['new-roof-cost', 'fascia-soffit-replacement-cost'],
+  ['house-rendering-cost', 'fascia-soffit-replacement-cost'],
+];
 
-const scaffoldPartner = (slug) => {
-  const pair = SHARES_SCAFFOLD.find(p => p.includes(slug));
-  return pair ? pair.find(s => s !== slug) : null;
-};
+const scaffoldPartners = (slug) => SHARES_SCAFFOLD
+  .filter(p => p.includes(slug)).map(p => p.find(s => s !== slug));
 
 /* Front door and windows, pinned to each other for the same reason, minus the
    scaffold: they are the commonest combined job this site prices, and the
@@ -1228,8 +1235,8 @@ function relatedFor(slug) {
 
   // The scaffold partner first, ahead of same-trade, because it is the only
   // link here that changes what the job costs.
-  const partnerSlug = scaffoldPartner(slug);
-  const partner = partnerSlug ? rotated.filter(p => p.slug === partnerSlug) : [];
+  const partnerSlugs = scaffoldPartners(slug);
+  const partner = rotated.filter(p => partnerSlugs.includes(p.slug));
   const pairedSlug = pairedPage(slug);
   const paired = pairedSlug ? rotated.filter(p => p.slug === pairedSlug) : [];
   /* Up first: the category hub, so every guide links to its parent. */
@@ -1238,12 +1245,18 @@ function relatedFor(slug) {
   const ordered = [...up, ...partner, ...paired, ...sameTrade, ...rest]
     .filter((p, i, a) => a.indexOf(p) === i);
 
-  return ordered.slice(0, 5)
+  /* Every guide points at the cornerstone — the whole-exterior page — as its
+     last related link, because that is where somebody pricing one job finds
+     the rest (30 September crawl: it had the fewest links in of any guide). */
+  const cornerstone = COST_PAGES.find(p => p.slug === CATEGORIES.exterior.hub);
+  let top = ordered.slice(0, 5);
+  if (cornerstone && slug !== cornerstone.slug && !top.includes(cornerstone)) top = [...top.slice(0, 4), cornerstone];
+  return top
     .map(p => ({
       href: `/cost/${p.slug}`,
       label: crumbName(p.title),
       /* Said on the link itself, because it is the reason to follow it. */
-      note: p.slug === partnerSlug ? 'shares the same scaffold as this job' : null,
+      note: partnerSlugs.includes(p.slug) ? 'shares the same scaffold as this job' : null,
     }));
 }
 

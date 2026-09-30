@@ -140,6 +140,13 @@ module.exports = function pageRoutes({
   });
 
   router.get('/cost/:slug', perMinute(120, 'Too many requests — please wait a moment.'), (req, res, next) => {
+    /* One address per guide: /cost/x/ answered 200 alongside /cost/x. The
+       canonical already pointed at the one without the slash; this makes
+       it a redirect too, so links and analytics agree (30 September crawl). */
+    if (req.path.length > 1 && req.path.endsWith('/')) {
+      const q = req.originalUrl.slice(req.path.length);
+      return res.redirect(301, req.path.replace(/\/+$/, '') + q);
+    }
     const html = landing.renderCostPage(req.params.slug, {
       catalogue, siteUrl: SITE_URL.replace(/\/$/, ''), siteMode: SITE_MODE,
     });
