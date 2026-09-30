@@ -520,6 +520,33 @@ const DAILY_PER_IP = {
 };
 const PER_IP_MAX_KEYS = 5000;
 const PER_IP_SALT = crypto.randomBytes(16).toString('hex');
+
+/* Hashing an IP address without a key does not pseudonymise it.
+ *
+ * Two places store `ipHash` — the consent record, kept six years, and the
+ * access log, kept twelve months — and both used a bare SHA-256 of the
+ * address. There are only 4.3 billion IPv4 addresses, so the hash is a
+ * lookup, not a one-way function: recovering one from its stored hash took
+ * 0.2 seconds and under 150,000 hashes on this machine. The comment above the
+ * consent record said "Hashed, not raw", which was true and gave an assurance
+ * the hash could not keep. Launch review item 20.
+ *
+ * Keyed, so the same address gives the same value for us and no value at all
+ * to anybody without the key — which is what the record is for: evidencing
+ * that two consents came from the same place.
+ *
+ * The key must be STABLE, or that correlation breaks at every deploy. It is
+ * taken from IP_HASH_SECRET, falling back to the installer token secret,
+ * which is already set and already long-lived. With neither, a per-process
+ * random key: safe, but correlation lasts only as long as the container, and
+ * the startup check says so rather than leaving it to be discovered. */
+const IP_HASH_KEY = process.env.IP_HASH_SECRET
+  || process.env.INSTALLER_TOKEN_SECRET
+  || crypto.randomBytes(32).toString('hex');
+const IP_HASH_KEYED = !!(process.env.IP_HASH_SECRET || process.env.INSTALLER_TOKEN_SECRET);
+const hashIp = (ip) => (ip
+  ? crypto.createHmac('sha256', IP_HASH_KEY).update(String(ip)).digest('hex').slice(0, 12)
+  : null);
 /* IPv6 grouped to its /56, as express-rate-limit does: one household or
    phone network hands out a whole block, and counting each address in it as
    a new visitor let a single connection use the whole day's allowance. */
@@ -2062,6 +2089,9 @@ function newLeadId() {
 // Anthropic rejects images over 5MB, so anything larger is a wasted call and
 // a wasted daily slot. Client-side downscaling makes this rare; the guard is
 // what stops it costing anything when it happens.
+/* Pixels, not bytes. See readImage: a highly compressible PNG is a small file
+   and an enormous decode. */
+const MAX_IMAGE_MEGAPIXELS = Number.parseFloat(process.env.MAX_IMAGE_MEGAPIXELS || '40') || 40;
 const ANTHROPIC_MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const REPLICATE_MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
@@ -2143,6 +2173,24 @@ function readImage(image, declaredMime, { requireDeclared = true } = {}) {
   }
   if (declared && found.mime !== declared) {
     return { ok: false, status: 400, error: 'That file isn’t the type it says it is. Please upload the photo again.' };
+  }
+  /* Refused on its dimensions, before anything decodes it.
+ *
+ * The byte limits above bound the FILE, and a PNG compresses far better than
+ * the pixels it becomes: a 15,000 x 15,000 image of mostly one colour is a
+ * small upload and about 900 MB once decoded, which is enough to take the
+ * container down. hold.js decodes every render into full RGBA buffers, twice,
+ * so the real ceiling is several times the raw figure.
+ *
+ * sniffImage has already read the dimensions out of the header without
+ * decoding anything, so this costs nothing. Forty megapixels is far above any
+ * phone — a 48-megapixel camera writes about 8,000 x 6,000 and the client
+ * downscales to 1,600 before upload — and far below the point where memory
+ * becomes a weapon. Launch review item 24. */
+  const megapixels = (found.width * found.height) / 1e6;
+  if (megapixels > MAX_IMAGE_MEGAPIXELS) {
+    return { ok: false, status: 400,
+      error: `That photo is ${Math.round(megapixels)} megapixels, which is larger than we can work with. Please use a normal photo from your phone or camera.` };
   }
   return { ok: true, mime: found.mime, width: found.width, height: found.height, buffer, payload };
 }
@@ -3943,7 +3991,7 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
          — with the stricter treatment on the less sensitive record. The hash
          still evidences that two consents came from the same place, which is
          what it is for. */
-      ipHash: req.ip ? crypto.createHash('sha256').update(String(req.ip)).digest('hex').slice(0, 12) : null,
+      ipHash: hashIp(req.ip),
     },
     withdrawTokenHash,
     status: 'New lead'
@@ -4183,7 +4231,7 @@ function logAccess(endpoint) {
         ts: new Date().toISOString(),
         endpoint,
         status: res.statusCode,
-        ipHash: crypto.createHash('sha256').update(String(req.ip || '')).digest('hex').slice(0, 12),
+        ipHash: hashIp(req.ip),
         userAgent: String(req.get('user-agent') || '').slice(0, 120),
       });
     });
@@ -4968,6 +5016,9 @@ function checkProductionConfig() {
      that went unnoticed. */
   if (!process.env.INSTALLER_PASSWORD) {
     warn.push('INSTALLER_PASSWORD is not set — /api/ops, /api/funnel, /api/deliveries and /api/measurements all return 503.');
+  }
+  if (!IP_HASH_KEYED) {
+    warn.push('Neither IP_HASH_SECRET nor INSTALLER_TOKEN_SECRET is set — stored IP hashes use a key that dies with this container, so two consents from the same address will not match across a deploy.');
   }
 
   /* The gap the storage guard above cannot see.

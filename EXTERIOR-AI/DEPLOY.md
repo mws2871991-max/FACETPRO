@@ -99,6 +99,20 @@ way to get this deployment wrong.
 | `DETECT_RATE_LIMIT` | no | Detection requests per minute per IP. Default 10, which is right for a homeowner. Exists so the test suite can send one photograph fifteen times on purpose; leave it unset in production. |
 | `INSTALLER_RATE_LIMIT` | no | Installer sign-in attempts per 15 minutes per IP. Default 20. Exists for the test suite; leave it unset in production. |
 | `DAILY_RENDER_LIMIT` | no | Default 200 (was 50 until launch). The only thing bounding render spend. |
+- `IP_HASH_SECRET` — key for the IP hashes stored on consent records and in the
+  access log. Those are kept six years and twelve months respectively, and an
+  UNKEYED hash of an IPv4 address is a lookup, not a hash: recovering one took
+  0.2 seconds in testing. Falls back to `INSTALLER_TOKEN_SECRET`, and failing
+  that to a key that dies with the container — which is safe but stops two
+  consents from the same address matching across a deploy, and the startup
+  check says so. Launch review item 20.
+- `MAX_IMAGE_MEGAPIXELS` — default 40. The byte limits bound the uploaded FILE;
+  this bounds the decoded PIXELS, because a highly compressible PNG can be a
+  small upload and hundreds of megabytes once decoded, and the render path
+  decodes into full RGBA buffers twice. Checked from the image header before
+  anything is decoded. A 48-megapixel phone writes about 8,000 x 6,000 and the
+  browser downscales to 1,600 before upload, so 40 is far above any real
+  photograph. Launch review item 24.
 | `PORT` | no | The host sets this. |
 | `LEAD_CAPTURE` | no | Defaults to **`off`**. Only `on` (or `true`, `1`, `yes`) turns it on — since the 29 September launch review, `false`, `0` and `no` keep it off, and anything unrecognised is logged and treated as off. With `off` the form is replaced by an honest explanation and nothing personal is read, parsed or stored. Turn it on when the legal pages have no `[PLACEHOLDERS]` left, the ICO registration is done and `DATABASE_URL` is set — on a deployment the server refuses to start otherwise. |
 | `LEAD_DAILY_PER_IP` | no | Default `10`. Most designs one connection (IPv6 grouped by /56) can save in a UTC day. Stops a script sending branded emails to strangers or fake enquiries to installers. |
