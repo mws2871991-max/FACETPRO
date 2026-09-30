@@ -89,3 +89,36 @@ test('the server sends the boxes, from the same place as the count', () => {
   assert.match(g, /function frontWindowBoxes\(detections, aspectRatio = null\) \{[\s\S]{0,400}windowCandidates\(detections, aspectRatio\)\.kept/,
     'frontWindowBoxes no longer reads the same units as the count');
 });
+
+test('a customer waiting for a render is shown their own house', () => {
+  /* Walked on a phone on 30 September. For the thirty to forty-five seconds a
+     render takes — the stretch of this journey that matters most — the picture
+     panel filled with a grey block carrying two white rectangles and a dark
+     one. That is the colour-preview schematic, which is right for somebody
+     playing with a colour before they have uploaded anything, and wrong here:
+     on the windows journey no cladding is chosen, so the block is default grey
+     and its shapes are walls, a roof and a door, none of which they asked to
+     change. It reads as a broken image, not as work in progress.
+
+     Their own photograph reads as neither, and is the truthful thing to show:
+     nothing has changed yet. */
+  const at = page.indexOf('} else if (state.rendering && state.uploadedImg) {');
+  assert.ok(at > 0, 'the waiting state has gone back to the schematic');
+  const block = page.slice(at, at + 2200);   // the label sits at ~1580; 1600 cut it mid-match
+  assert.match(block, /src: state\.uploadedImg/, 'it should show the photograph they gave us');
+  assert.match(block, /Making your picture…/, 'and say plainly that it is still being made');
+  assert.match(block, /animate-pulse motion-reduce:animate-none/,
+    'a pulse says "in progress", and must stop for anyone who asks for less motion');
+
+  /* The schematic still exists for the case it was written for. */
+  assert.match(page, /colour preview`\)/, 'the colour preview schematic was removed rather than narrowed');
+});
+
+test('the classes that fix reach the stylesheet', () => {
+  /* A Tailwind class renders unstyled until build:css runs, the suite stays
+     green either way, and only a browser notices. */
+  const css = fs.readFileSync(path.join(__dirname, '..', 'assets', 'app.css'), 'utf8');
+  for (const cls of ['animate-pulse', 'opacity-70']) {
+    assert.ok(css.includes(cls), `${cls} is used in index.html but is not in the built stylesheet`);
+  }
+});

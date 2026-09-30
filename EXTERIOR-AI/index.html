@@ -4679,6 +4679,33 @@ function buildVisualizer() {
         className: 'w-full h-full object-cover',
       }),
     ]);
+  } else if (state.rendering && state.uploadedImg) {
+    /* While the picture is being made, show THEIR house.
+ *
+ * The schematic below is right when somebody is playing with a colour before
+ * they have uploaded anything. It is wrong for the thirty to forty-five
+ * seconds a render takes, which is the stretch of this journey that matters
+ * most: the customer has just given us a photograph of their home and the
+ * panel fills with a grey block carrying two white rectangles and a dark one.
+ * On the windows journey no cladding has been chosen, so the block is the
+ * default grey and the shapes are walls, a roof and a door — none of which
+ * they asked to change. Walked on a phone on 30 September, it does not read
+ * as "working", it reads as a broken image or a cartoon.
+ *
+ * Their own photograph reads as neither. It is the truthful thing to show —
+ * nothing has changed yet — and the status line underneath already says what
+ * is happening and how long it takes. Slightly faded and gently pulsing so it
+ * is plainly a picture in progress rather than the finished answer. */
+    afterPane = h('div', { className: 'absolute inset-0', style: { clipPath: `inset(0 ${100 - state.afterPct}% 0 0)` } }, [
+      h('img', {
+        src: state.uploadedImg,
+        alt: 'Your home, while the new picture is being made',
+        className: 'w-full h-full object-cover opacity-70 animate-pulse motion-reduce:animate-none',
+      }),
+      h('div', {
+        className: 'absolute left-3 bottom-3 text-base px-2 py-1 rounded-full bg-zinc-900 text-white whitespace-nowrap',
+      }, 'Making your picture…'),
+    ]);
   } else {
     afterPane = h('div', { className: 'absolute inset-0', style: { clipPath: `inset(0 ${100 - state.afterPct}% 0 0)` } }, [
       /* The colour, not the photograph.
