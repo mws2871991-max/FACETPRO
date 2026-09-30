@@ -131,11 +131,28 @@ test('a measured photograph is still a range — this is the one that regressed'
     `the computed total ${q.total} should fall inside its own range ${q.range.low}–${q.range.high}`);
 });
 
-test('a figure the homeowner typed is exact, because the Terms say it overrides', async () => {
+test('a figure the homeowner typed is theirs — but the price around it is ours', async () => {
+  /* This asserted `range === null`, on the reasoning that their own number is
+     not ours to widen. Half of that still holds and is still asserted below:
+     the area comes back exactly as typed.
+
+     The other half was wrong, and the launch review caught it (item 17). Their
+     number settles the QUANTITY and says nothing about the PRICE — the rate
+     per square metre, the labour, the waste and the scaffolding are all still
+     ours and all still estimates. One figure to the pound claimed a precision
+     nobody has, on a site whose footer promises every figure is a range. In
+     one case it produced £6,500–£6,500 with a £6,522 total outside it.
+
+     So the area is untouched and the price carries the rate uncertainty that
+     remains — glazing's own narrowest band, which it already applies when a
+     homeowner types a window count for exactly these reasons. */
   const q = await quote({ houseType: 'detached', footprintM2: 120 });
   assert.strictEqual(q.footprintSource, 'manual_entry');
-  assert.strictEqual(q.exact, true, 'their own number is not ours to widen');
-  assert.strictEqual(q.range, null);
+  assert.strictEqual(q.exact, true, 'the SIZE is still theirs, and still says so');
+  assert.strictEqual(q.footprintM2, 120, 'their own number was widened after all');
+  assert.ok(q.range, 'a told area should still carry a price range');
+  assert.ok(q.range.low <= q.total && q.total <= q.range.high,
+    `total ${q.total} outside its own range ${JSON.stringify(q.range)}`);
   assert.ok(q.total > 0);
 });
 

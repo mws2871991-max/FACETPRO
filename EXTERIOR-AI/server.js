@@ -1971,6 +1971,30 @@ function resolveFootprint({ footprintM2, detectionId, houseType }) {
    ±25% matches the uncertainty measure.js already attaches to a prior. */
 const PRIOR_AREA_UNCERTAINTY = 0.25;
 
+/* What is still unknown once the homeowner has told us the size.
+ *
+ * A told wall area or roofline length used to return one exact figure, to the
+ * pound, with no range at all — on a site whose every other figure is a range
+ * and whose footer says "every figure: a planning estimate, shown as a range,
+ * confirmed by your installer's survey". Launch review item 17.
+ *
+ * The reasoning for it was that the number is theirs and the Terms say theirs
+ * overrides ours. That is right about the QUANTITY and says nothing about the
+ * PRICE: the rate per square metre, the labour, the waste percentage and the
+ * scaffolding are all still ours, and all still estimates. A certain quantity
+ * times an uncertain rate is an uncertain total, and printing it to the pound
+ * claims a precision nobody has.
+ *
+ * glazing.js already settled this exact question the other way round and is
+ * followed here rather than reasoned afresh: when a homeowner types a WINDOW
+ * COUNT it does not go exact, it takes UNCERTAINTY.door — the narrowest band
+ * it has — because the count is theirs and the rates are ours. 0.18 is that
+ * same number, reused rather than invented, for the same situation.
+ *
+ * Applied to the total, never to their measurement: their figure is not
+ * widened, the price either side of it is. */
+const TOLD_SIZE_UNCERTAINTY = 0.18;   // = glazing.js UNCERTAINTY.door
+
 /* The same job for a band somebody else already computed.
 
    priceRange() above widens a single area by a fixed percentage, which is
@@ -2002,6 +2026,22 @@ function priceRangeFromArea(selections, band) {
   const low = round500(at(band.low, 1 - PRIOR_AREA_UNCERTAINTY));
   const high = round500(at(band.high, 1 + PRIOR_AREA_UNCERTAINTY));
   // A band narrow enough to round to one figure is not a range worth showing.
+  return high > low ? { low, high } : null;
+}
+
+/* A band around a total whose quantities are already settled.
+ *
+ * Nothing here varies the area or the length — those came from the homeowner.
+ * What varies is the price, by the rate uncertainty that remains. Rounded to
+ * the same £500 as every other range on the page so the three cannot be told
+ * apart by their shape, and floored at zero because a range must never open
+ * below nothing. */
+function priceRangeAroundTotal(total) {
+  const round500 = (n) => Math.round(n / 500) * 500;
+  const low = Math.max(0, round500(total * (1 - TOLD_SIZE_UNCERTAINTY)));
+  const high = round500(total * (1 + TOLD_SIZE_UNCERTAINTY));
+  /* Too small to round into two different figures: a job of a few hundred
+     pounds. One number is the honest answer there, as it is elsewhere. */
   return high > low ? { low, high } : null;
 }
 
@@ -2045,9 +2085,11 @@ app.post('/api/quote', (req, res) => {
        an unmeasured house carries the ±25% around the house-type prior. Only a
        figure the homeowner typed in themselves is exact, because that one is
        theirs and the Terms say it overrides everything. */
+    /* Still true, and still worth saying: the SIZE is theirs, not our guess.
+       It no longer means the price has no range — see TOLD_SIZE_UNCERTAINTY. */
     exact: footprint.exact,
     range: footprint.exact
-      ? null
+      ? priceRangeAroundTotal(price.total)
       : footprint.areaBand
         ? priceRangeFromArea({ claddingId, trimId, roofId, trimLengthM }, footprint.areaBand)
         : priceRange({ claddingId, trimId, roofId, trimLengthM }, footprint.m2),
