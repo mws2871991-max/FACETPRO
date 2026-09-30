@@ -267,7 +267,11 @@ test('the market range is far wider than our measurement error', () => {
   const r = sourced();
   const ours = (r.range.high - r.range.low) / r.price.total;
   const market = (r.marketRange.high - r.marketRange.low) / r.price.total;
-  assert.ok(market > ours * 2,
+  /* At door-measured confidence this is exactly 2x by construction: ±18%
+     (0.36) against 0.88x–1.6x (0.72). Which side of the line it lands on was
+     decided by pound rounding, and flipped when the rates changed on 30
+     September — so allow the rounding, a couple of pounds, and no more. */
+  assert.ok(market >= ours * 2 - 2 / r.price.total,
     `market spread ${market.toFixed(2)} should dwarf our own ${ours.toFixed(2)}`);
 });
 
@@ -324,7 +328,9 @@ test('a door costs the homeowner what the trade says it settles at', () => {
      What made it survive was a `source` field that claimed the conversion had
      already been done. It had not. So this asserts the number a homeowner
      actually reads, not the number in the file. */
-  const SETTLED_INC_VAT = { composite: 2000, bifold: 4000 };
+  /* uPVC, composite, double and sliding: Mike's settled prices, 30 September
+     2026. Bifold: the figure from 6 August, unchanged. */
+  const SETTLED_INC_VAT = { upvc: 1498, composite: 2743, double: 2693, sliding: 2090, bifold: 4000 };
   const gross = 1 + (RATES.vatPct / 100);
   for (const [id, inc] of Object.entries(SETTLED_INC_VAT)) {
     const door = RATES.doors.find(d => d.id === id);
@@ -539,20 +545,20 @@ test('the doors sit in the order the trade sells them', () => {
   assert.ok(p('upvc') < p('composite'), 'uPVC is not cheaper than composite');
   assert.ok(p('composite') < p('bifold'), 'a composite door costs more than a bifold');
   assert.ok(p('bifold') < p('bifold-3m'), 'a 3 m bifold is not dearer than a narrower one');
-  assert.strictEqual(p('sliding'), p('double'), 'sliding and double are quoted alike and were stored alike');
+  /* Quoted alike by Anglian and stored alike until 30 September; Mike's
+     settled figures put French/double doors £600 above a sliding patio door. */
+  assert.ok(p('sliding') < p('double'), 'a sliding patio door is not cheaper than French doors');
 });
 
-test('the new doors were derived on the same basis as the one already here', () => {
-  /* base = Anglian settled / 1.6. The composite was in the catalogue before
-     that rule was written down, so it is the check on the rule: if the
-     arithmetic is right it reproduces a figure nobody derived that way. */
+test('the bifolds are still derived from list on the rule they were written with', () => {
+  /* base = Anglian list less 40%, / 1.6. It used to be checked against the
+     composite, uPVC and sliding doors too; those are now Mike's settled
+     prices (30 September) and no longer come from a list, so only the
+     bifolds are left on the rule. */
   const vat = 1 + (catalogue.glazing.vatPct / 100);
   const fromList = (listInc) => (listInc * 0.6) / 1.6 / vat;
   const p = (id) => catalogue.glazing.doors.find(d => d.id === id).supplyFit;
-  assert.ok(Math.abs(fromList(5401) - p('composite')) / p('composite') < 0.03,
-    'the rule does not reproduce the composite door already in the catalogue');
-  assert.ok(Math.abs(fromList(2893) - p('upvc')) / p('upvc') < 0.03, 'uPVC does not follow the rule');
-  assert.ok(Math.abs(fromList(5058) - p('sliding')) / p('sliding') < 0.03, 'sliding does not follow the rule');
+  assert.ok(Math.abs(fromList(13304) - p('bifold-3m')) / p('bifold-3m') < 0.03, 'the 3 m bifold does not follow the rule');
 });
 
 /* ── Bay panes, told apart by geometry rather than by what the model called

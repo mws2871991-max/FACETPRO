@@ -130,9 +130,17 @@ test('the minimum job charge finally reaches the jobs it was written for', () =>
      whole-house window total buried it every time. A single uPVC door is
      exactly the case it exists for — the van, the survey and the day are the
      same whether it is one door or eleven windows. */
-  const r = glaze({ doorStyleId: 'upvc', windowStyleId: 'none' });
+  /* Since 30 September the cheapest real door (uPVC, £1,248 net) is above
+     the £950 floor, so no single catalogue door reaches it any more. The
+     floor is still the rule, so it is checked on a door priced under it. */
+  const rates = JSON.parse(JSON.stringify(catalogue.glazing));
+  rates.doors.find(d => d.id === 'upvc').supplyFit = 600;
+  const r = glazing.estimateGlazing({ detections: [], houseType: 'semi', rates,
+    selections: { doorStyleId: 'upvc', windowStyleId: 'none' } });
   assert.strictEqual(r.price.minimumApplied, true);
-  assert.ok(r.price.total >= catalogue.glazing.minJobCharge);
+  assert.ok(r.price.total >= rates.minJobCharge);
+  assert.strictEqual(glaze({ doorStyleId: 'upvc', windowStyleId: 'none' }).price.minimumApplied, false,
+    'a real uPVC door is over the minimum on its own');
 });
 
 test('asking for windows still prices windows', () => {

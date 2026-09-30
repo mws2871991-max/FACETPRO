@@ -290,3 +290,30 @@ that.
 - The four window size bands, on the same terms.
 - Whether the gap between the two installers holds across all sizes or widens
   on the larger units.
+
+## 30 September 2026: Mike's settled prices, fitted, inc VAT
+
+All white uPVC, 1200 x 1200, one opener unless stated, at the keener
+installer's level (the same base the estimate range sits on: 0.88x-1.6x).
+
+| Item | Inc VAT | Stored (net) | Was |
+|---|---|---|---|
+| Casement | £876 | standard band £730 | £708 |
+| Flush casement (1 fixed, 1 opening) | £1,190 | style x1.36 | x1.15, unsourced |
+| Sliding sash | £2,279 | style x2.60 | x1.65 |
+| Aluminium casement, colour included | £1,904 | material x2.17 | x1.25 ("about 25% more", 29 Sep) |
+| Bay, 2.4 m three-sided (45 / 150 / 45 cm, 120 cm high), two openers, poles included | £2,402 | xlarge band £1,460 x bayUplift 1.37 | x1.45, unsourced |
+| uPVC back door | £1,498 | £1,248 | £904 |
+| Composite door | £2,743 | £2,286 | £1,667 |
+| French / double doors | £2,693 | £2,244 | £1,581 |
+| Sliding patio door | £2,090 | £1,742 | £1,581 |
+
+Assumption, labelled: only the standard window size was priced, so the small,
+large and extra-large bands were scaled by the same 730/708.
+
+Unchanged: the bifolds (still Anglian list less 40%, / 1.6), openers, access,
+disposal, minimum job charge, colour and Georgian bar uplifts.
+
+The doors moved by 35-40% while the casement moved 3%. Mike confirmed the door
+figures are the keener installer's settled price, so the old door base (Anglian
+/ 1.6) was too low.

@@ -619,38 +619,39 @@
         "id": "small",
         "label": "Small",
         "maxAreaM2": 0.75,
-        "supplyFit": 504,
+        "supplyFit": 520,
         "example": "600 x 900 \u2014 WC, landing, porch"
       },
       {
         "id": "standard",
         "label": "Standard",
         "maxAreaM2": 1.6,
-        "supplyFit": 708,
+        "supplyFit": 730,
         "example": "1200 x 1200 \u2014 most bedroom and lounge windows"
       },
       {
         "id": "large",
         "label": "Large",
         "maxAreaM2": 2.6,
-        "supplyFit": 1032,
+        "supplyFit": 1064,
         "example": "1800 x 1350 \u2014 front lounge, patio-side"
       },
       {
         "id": "xlarge",
         "label": "Extra large",
         "maxAreaM2": null,
-        "supplyFit": 1416,
+        "supplyFit": 1460,
         "example": "Picture windows and wide mullioned units"
       }
     ],
     "styleMultipliers": {
       "casement": 1,
-      "flush": 1.15,
-      "sliding-sash": 1.65,
+      "flush": 1.36,
+      "sliding-sash": 2.6,
       "bay": 1
     },
-    "bayUplift": 1.45,
+    "bayUplift": 1.37,
+    "stylesNote": "Mike Sheehan's settled prices, 30 September 2026, fitted inc VAT, white uPVC, 1200 x 1200 with one opener unless stated: casement £876 (so the standard band is £730 net; the other bands are scaled by the same 730/708 — an assumption, only the standard size was priced), flush casement (one fixed, one opening) £1,190 = 1.36x, sliding sash £2,279 = 2.60x. Bay: a 2.4 m three-sided bay, two openers, poles included, £2,402 = £2,002 net, which is the extra-large band (£1,460) x 1.37. Mike's measurements: 45 / 150 / 45 cm wide, 120 cm high. The bay figure already has its two openers in it; if a homeowner answers the opener question, that adjustment still applies on top (glazing.js openerAdjustment), so a bay can read one opener high.",
     "georgianBarUplift": 1.12,
     "georgianBarNote": "Georgian bars, per window, as a multiple of the window price. Our own figure from typical UK trade pricing (bars commonly add about 10-15% to a window), not a supplier rate card; replace when one lands.",
     "nonWhiteUplift": 1.08,
@@ -664,31 +665,31 @@
       {
         "id": "aluminium",
         "name": "Aluminium",
-        "multiplier": 1.25,
+        "multiplier": 2.17,
         "colourIncluded": true
       }
     ],
-    "materialsNote": "Frame material, windows only. Every window band price is uPVC. Aluminium: Mike Sheehan's figure from 24 years selling windows, 29 September 2026 \u2014 about 25% more than the same window in uPVC, with the colour included in that (powder-coated), so the non-white uplift is not added again. Styles apply on top as for uPVC.",
+    "materialsNote": "Frame material, windows only. Every window band price is uPVC. Aluminium: Mike Sheehan's settled price, 30 September 2026 \u2014 a 1200 x 1200 aluminium casement, one opener, fitted, \u00a31,904 inc VAT against \u00a3876 for the same window in uPVC, so 2.17x. Colour is included (powder-coated), so the non-white uplift is not added again. This replaces the 29 September 'about 25% more', which was too low. Styles apply on top as for uPVC.",
     "doors": [
       {
         "id": "upvc",
         "name": "uPVC front or back door",
-        "supplyFit": 904
+        "supplyFit": 1248
       },
       {
         "id": "composite",
         "name": "Composite Door",
-        "supplyFit": 1667
+        "supplyFit": 2286
       },
       {
         "id": "double",
         "name": "Double doors",
-        "supplyFit": 1581
+        "supplyFit": 2244
       },
       {
         "id": "sliding",
         "name": "Sliding patio door",
-        "supplyFit": 1581
+        "supplyFit": 1742
       },
       {
         "id": "bifold",
@@ -716,6 +717,6 @@
     "openerCost": 324,
     "typicalOpeners": 1,
     "openerNote": "Cost of one opening light, net, on top of the band price. The bands assume one opener, which is the common case. Derived from a standard window quoted at \u00a3950 with none and \u00a32,247 with two, less the 40% discount: \u00a3570 and \u00a31,348 inclusive, so \u00a3389 inclusive per opener, \u00a3324 net. Flat rather than scaled by band, because an opening light is hardware and frame rather than glass \u2014 it costs much the same in a small window as a large one. One measured product; revisit when there are more.",
-    "doorNote": "Prices are net; VAT is added at the end. The new entries were derived on the same basis as the composite door already here: Anglian's list price, less the 40% discount routinely available, divided by 1.6 to bring it to the keener installer the rest of the catalogue describes. The check that the rule holds: composite comes out at \u00a32,025 against the \u00a32,000 already stored. Sliding and double doors are quoted at the same figure by Anglian and are stored the same. Bifold width rests on two points only \u2014 the existing entry and a 3 m unit at \u00a313,304 list \u2014 so anything between them is not modelled and anything above 3 m is not priced."
+    "doorNote": "Prices are net; VAT is added at the end. uPVC, composite, double (French) and sliding patio doors are Mike Sheehan's settled prices, 30 September 2026, fitted inc VAT: uPVC back door \u00a31,498, composite \u00a32,743, French/double doors \u00a32,693, sliding patio \u00a32,090 \u2014 stored net (divided by 1.2). The bifolds are unchanged: derived from Anglian's list price less the 40% discount routinely available, divided by 1.6 to bring it to the keener installer. Bifold width rests on two points only \u2014 the 2.4 m entry and a 3 m unit at \u00a313,304 list \u2014 so anything between them is not modelled and anything above 3 m is not priced."
   }
 }

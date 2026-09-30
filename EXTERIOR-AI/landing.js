@@ -612,10 +612,10 @@ const COST_PAGES = [
      national-installer prices; cladding uses the same material and labour
      rates as the rendering page.
 
-     Deliberately NOT built yet, because the number would be ours and not
-     checked: flush casement (x1.15 has no source note), and bay window replacement
-     (x1.45 on a single unit — a real bay is three to five panes and its
-     price wants Mike's figure, not a multiplier). "12 windows" is answered by
+     Not built yet: flush casement and bay window replacement. Both were
+     unsourced multipliers until 30 September, when Mike gave settled prices
+     (a 1200 x 1200 flush casement, and a 2.4 m three-sided bay with poles —
+     catalogue.glazing.stylesNote), so either can now have a page. "12 windows" is answered by
      the 10-window page's 8–12 table, and "roof replacement" is the same
      search as "new roof", so a second page would only compete with the first.
      (Aluminium was on this list until Mike gave the figure — see
@@ -734,7 +734,7 @@ const COST_PAGES = [
             rows,
           } },
           { heading: 'Why a sash costs more', paras: [
-            'A sliding sash is two frames that move inside a box, with balances to hold them where you leave them. There is more to make and more to fit than a casement that hinges open, and it shows in the price: a sash is roughly two-thirds more than a casement of the same size.',
+            'A sliding sash is two frames that move inside a box, with balances to hold them where you leave them. There is more to make and more to fit than a casement that hinges open, and it shows in the price: a sash is about two and a half times the price of a casement of the same size.',
             'These figures are for replacement sash windows. Restoring or draught-proofing original timber sashes is a different trade with its own prices, and nothing on this page covers it. If your house is listed or in a conservation area, check with the council before replacing them at all.',
           ] },
         ],
@@ -1376,7 +1376,7 @@ const EXTRAS = {
       faqs: [
         { q: 'How much does a new window cost in the UK?', a: `About ${money(semi.perWindowLow)} to ${money(semi.perWindowHigh)} per window fitted for a standard uPVC casement, inc VAT, when several are done together. One small window on its own costs more per window because of the minimum charge.` },
         { q: 'How much do windows cost for a 3-bed house?', a: `About ${money(semi.low)} to ${money(semi.high)} for eight uPVC windows on a 3-bed semi, fitted and inc VAT.` },
-        { q: 'Are aluminium windows more expensive than uPVC?', a: 'Yes — about a quarter more for the same window, with the colour included in that.' },
+        { q: 'Are aluminium windows more expensive than uPVC?', a: 'Yes — a little over twice the price of the same window in uPVC, with the colour included in that.' },
         { q: 'Why do window quotes vary so much?', a: 'Mostly because of which company quotes. The same windows to the same specification can settle at very different prices with different installers, which is why the figure here is a range.' },
       ],
     };
@@ -1422,7 +1422,7 @@ const EXTRAS = {
           head: ['Frame', 'Eight windows fitted, inc VAT'],
           rows: [['uPVC, white', `${money(u.low)} – ${money(u.high)}`], ['Aluminium, colour included', `${money(a.low)} – ${money(a.high)}`]],
         }, paras: [
-          'uPVC is the lower-cost frame and the one most UK homes have. Aluminium costs about a quarter more for the same window; its frames are slimmer for the same strength, and a coloured finish is part of its price rather than an extra.',
+          'uPVC is the lower-cost frame and the one most UK homes have. Aluminium costs a little over twice as much for the same window; its frames are slimmer for the same strength, and a coloured finish is part of its price rather than an extra.',
           'Neither is right for every house. The choice usually comes down to budget, the look you want, and how large the glazed areas are.',
         ] },
         { heading: 'Example: a 3-bed semi in uPVC', paras: [
@@ -1432,7 +1432,7 @@ const EXTRAS = {
       faqs: [
         { q: 'How much is a uPVC window fitted?', a: `From about ${money(c.glazing.windowBands[1].supplyFit * vat)} for a standard 1200 × 1200 window, supplied and fitted, inc VAT — more once access is added, and more with some companies than others.` },
         { q: 'Does colour cost extra on uPVC?', a: `A non-white finish such as anthracite adds about ${Math.round(((c.glazing.nonWhiteUplift || 1) - 1) * 100)}% to the window price.` },
-        { q: 'Is uPVC cheaper than aluminium?', a: 'For the same window, yes — aluminium is about a quarter more.' },
+        { q: 'Is uPVC cheaper than aluminium?', a: 'For the same window, yes — aluminium is a little over twice the price.' },
       ],
     };
   },

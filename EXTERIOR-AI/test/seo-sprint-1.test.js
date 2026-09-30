@@ -123,7 +123,9 @@ test('aluminium is priced by the engine at the catalogue figure, colour included
   const u = job({});
   const a = job({ windowMaterialId: 'aluminium' });
   const aAnth = job({ windowMaterialId: 'aluminium', windowDoorColourId: 'anthracite' });
-  assert.ok(a.low > u.low * 1.15 && a.low < u.low * 1.3, 'about a quarter more');
+  /* Mike, 30 September: £1,904 against £876 for the same window, 2.17x. The
+     whole job moves by less, because access, disposal and the door do not. */
+  assert.ok(a.low > u.low * 1.6 && a.low < u.low * 2.2, 'a little over twice the windows');
   assert.deepStrictEqual(aAnth, a, 'colour is included on aluminium');
   assert.deepStrictEqual(job({ windowMaterialId: 'nonsense' }), u, 'an unknown material prices as uPVC');
 });

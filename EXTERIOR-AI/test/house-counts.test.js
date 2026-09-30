@@ -142,10 +142,10 @@ test('the bays the pipeline finds, against the bays the houses have', () => {
 
 test('a mislabelled bay is worth knowing the price of', () => {
   /* Recorded so the decision is made against a number rather than a feeling.
-     bayUplift is 1.45; on the newbuild that single word is £765 on a £6,776
-     job, and the homeowner has no way to tell. */
+     bayUplift is 1.37 (Mike's 2.4 m bay, 30 September); on the newbuild that
+     single word is several hundred pounds, and the homeowner has no way to tell. */
   const cat = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'catalogue.json'), 'utf8'));
-  assert.strictEqual(cat.glazing.bayUplift, 1.45, 'the uplift moved — re-measure what a wrong bay costs');
+  assert.strictEqual(cat.glazing.bayUplift, 1.37, 'the uplift moved — re-measure what a wrong bay costs');
 
   const nb = houses.find(h => h.house === 'newbuild-before');
   const without = JSON.parse(JSON.stringify(nb.detections))
