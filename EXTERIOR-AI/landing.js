@@ -1666,7 +1666,16 @@ function renderAreaPage(slug, { catalogue, siteUrl, siteMode, recipients = [] })
   const where = def.region ? def.town : `${def.town}${def.county ? `, ${def.county}` : ''}`;
 
   const coverage = covering.length
-    ? `<p>We currently work with ${covering.length} vetted installer${covering.length === 1 ? '' : 's'} covering ${escapeHtml(where)}. If you ask for quotes, your design goes to up to three of them &mdash; and only if you ask.</p>`
+    /* "Vetted" is a claim about a checking process, and ours is not written
+       down or evidenced yet — the installer agreement's clause 6.3 is what
+       would make it true. The consent wording dropped it on 1 October for the
+       same reason, naming the actual installers instead, and the ICO has
+       fined lead generators over exactly this kind of description (Join the
+       Triboo, 2023). It cannot be true in the consent box and false here.
+
+       What is left is true and no weaker: we have a contract with them and
+       they cover the postcode. Put it back when 6.3 is signed and evidenced. */
+    ? `<p>We currently work with ${covering.length} installer${covering.length === 1 ? '' : 's'} covering ${escapeHtml(where)}. If you ask for quotes, your design goes to up to three of them &mdash; and only if you ask.</p>`
     : `<p>We are still signing up installers who cover ${escapeHtml(where)}, so we cannot promise you quotes here yet. The visualiser and the estimate work exactly the same &mdash; use them to find out what your house could look like and what it should cost, and we will tell you if that changes.</p>`;
 
   const body = `<div class="answer"><strong>The short answer</strong><span>${escapeHtml(
@@ -1684,7 +1693,7 @@ ${table({
 </section>
 <section><h2>Installers covering ${escapeHtml(where)}</h2>
 ${coverage}
-<p class="muted">We are not an installer and we do not do the work. We visualise and cost your project, and pass it to vetted installers if &mdash; and only if &mdash; you ask us to.</p>
+<p class="muted">We are not an installer and we do not do the work. We visualise and cost your project, and pass it to installers we work with if &mdash; and only if &mdash; you ask us to.</p>
 </section>
 <section><h2>Why start with a photograph</h2>
 <p>A local quote over the phone is a guess with a postcode attached. The thing that actually decides your price is your own elevation: how many windows, how big, how many open, and how much wall there is. A photograph of the front answers all four for the front, in about a minute, without anybody coming to your house — and the back and sides take a second photo or a number.</p>

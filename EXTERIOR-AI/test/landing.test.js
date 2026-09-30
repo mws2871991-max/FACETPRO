@@ -367,7 +367,10 @@ test('an area with installers states the real number', () => {
     { id: 'c', name: 'C', areas: ['M1'], trades: [] },      // elsewhere
   ];
   const html = landing.renderAreaPage('windows-basildon', { ...OPTS, recipients });
-  assert.match(html, /2 vetted installers/, 'should count only those covering SS14');
+  /* "vetted" came out on 1 October — a claim about a checking process that is
+     not written down yet (installer agreement 6.3), dropped from the consent
+     wording for the same reason. The count is what this test is about. */
+  assert.match(html, /2 installers/, 'should count only those covering SS14');
 });
 
 test('no page invents social proof or accreditation', () => {
