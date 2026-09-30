@@ -128,7 +128,7 @@ module.exports = function designRoutes({ perMinute, record, SITE_URL }) {
     <img src="${emails.escapeHtml(imageUrl)}" alt="A home exterior visualised by Facet Pro">
     <div class="body">
       <h1>See what my house could look like with Facet Pro.</h1>
-      <p>This is one photograph, visualised and costed &mdash; no survey, no showroom, nobody calling round.</p>
+      <p>This is one photograph, visualised and costed &mdash; no measuring, no showroom, nobody calling round.</p>
       <a class="cta" href="${emails.escapeHtml(siteUrl)}/">Try it on your house &rarr;</a>
       <p class="muted">Free to try &middot; One photo &middot; No sales call unless you ask</p>
     </div>
