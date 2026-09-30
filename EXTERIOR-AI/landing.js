@@ -1710,6 +1710,49 @@ ${areas}`;
   });
 }
 
+/* Where a near-miss cost URL should go (30 September).
+
+   A reviewer following links "from memory" landed on /cost/window-replacement-
+   cost (no -uk) and /new-windows-cost-uk (no /cost/), both 404s, while the real
+   pages were up. People and other sites will type these the same way, so each
+   gets a permanent redirect to the page it obviously means, rather than a
+   dead end. Only exact, unambiguous matches: the slug with or without "-uk",
+   plural or singular door/window, or a cost slug at the site root. Anything
+   else stays a 404 — guessing wider sends people to the wrong page. */
+const COST_ALIASES = {
+  'window-replacement-cost': 'window-replacement-cost-uk',
+  'windows-replacement-cost': 'window-replacement-cost-uk',
+  'new-windows-cost': 'new-windows-cost-uk',
+  'new-window-cost': 'new-windows-cost-uk',
+  'upvc-window-cost': 'upvc-window-prices',
+  'upvc-windows-cost': 'upvc-window-prices',
+  'aluminium-windows-cost': 'aluminium-window-prices',
+  'aluminium-window-cost': 'aluminium-window-prices',
+  'front-door-cost': 'front-door-replacement-cost',
+  'composite-doors-cost': 'composite-door-cost',
+  'bifold-door-cost': 'bifold-doors-cost',
+  'patio-door-cost': 'patio-doors-cost',
+  'french-door-cost': 'french-doors-cost',
+  'sash-window-cost': 'sash-windows-cost',
+  'conservatory-cost': 'conservatory-cost-uk',
+  'fascia-soffit-cost': 'fascia-soffit-replacement-cost',
+  'fascia-and-soffit-cost': 'fascia-soffit-replacement-cost',
+  'roof-replacement-cost': 'new-roof-cost',
+  'house-render-cost': 'house-rendering-cost',
+  'rendering-cost': 'house-rendering-cost',
+  'house-cladding-cost': 'cladding-cost',
+  'exterior-renovation-cost': 'house-exterior-renovation-cost',
+};
+function costRedirectFor(slug) {
+  const s = String(slug || '').toLowerCase().replace(/\/+$/, '');
+  const exists = (x) => COST_PAGES.some(p => p.slug === x);
+  if (s !== slug && exists(s)) return s;                 // case only
+  if (COST_ALIASES[s] && exists(COST_ALIASES[s])) return COST_ALIASES[s];
+  if (exists(`${s}-uk`)) return `${s}-uk`;
+  if (s.endsWith('-uk') && exists(s.slice(0, -3))) return s.slice(0, -3);
+  return null;
+}
+
 /* Every landing URL, for the sitemap and for the tests. One source, so a page
    cannot exist without being listed or be listed without existing. */
 function allPaths() {
@@ -1722,7 +1765,7 @@ function allPaths() {
 
 module.exports = {
   COST_PAGES, AREA_PAGES,
-  renderCostPage, renderAreaPage, renderCostIndex, allPaths, categoryFor, CATEGORIES,
+  renderCostPage, renderAreaPage, renderCostIndex, allPaths, categoryFor, CATEGORIES, costRedirectFor, COST_ALIASES,
   CAVEAT, BETA_NOTICE,
   _internals: { asFraction, vatMult, windowJob, doorPrices, rooflineFor, wallsFor, roofFor, escapeHtml, money },
 };

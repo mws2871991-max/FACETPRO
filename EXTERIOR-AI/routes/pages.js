@@ -145,8 +145,12 @@ module.exports = function pageRoutes({
     });
     /* next() rather than a 404 here, so an unknown slug falls through to the
        ordinary not-found handler and gets the same response as any other missing
-       path. Two 404 pages is two things to keep consistent. */
-    if (!html) return next();
+       path. Two 404 pages is two things to keep consistent. A near miss
+       ("-uk" left off, a plural, a capital) is sent to the page it means. */
+    if (!html) {
+      const to = landing.costRedirectFor(req.params.slug);
+      return to ? res.redirect(301, `/cost/${to}`) : next();
+    }
     landingCacheHeader(res);
     res.type('html').send(html);
     countSeoLanding(req, req.params.slug);
@@ -166,7 +170,13 @@ module.exports = function pageRoutes({
          could not honour. An area with nobody configured says so. */
       recipients: LEAD_RECIPIENTS,
     });
-    if (!html) return next();
+    if (!html) {
+      /* A cost guide asked for at the root — /new-windows-cost-uk — is the
+         same page one folder down. */
+      const slug = String(req.params.slug || '');
+      const to = landing.COST_PAGES.some(p => p.slug === slug) ? slug : landing.costRedirectFor(slug);
+      return to ? res.redirect(301, `/cost/${to}`) : next();
+    }
     landingCacheHeader(res);
     res.type('html').send(html);
     countSeoLanding(req, req.params.slug);

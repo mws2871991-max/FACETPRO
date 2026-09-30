@@ -158,3 +158,17 @@ test('a saved design keeps its frame material', () => {
   const out = resume.buildPayload({ windowStyleId: 'casement', windowMaterialId: 'aluminium' });
   assert.strictEqual(out.windowMaterialId, 'aluminium');
 });
+
+test('near-miss cost URLs redirect to the page they mean; nonsense still 404s', () => {
+  assert.strictEqual(landing.costRedirectFor('window-replacement-cost'), 'window-replacement-cost-uk');
+  assert.strictEqual(landing.costRedirectFor('new-windows-cost'), 'new-windows-cost-uk');
+  assert.strictEqual(landing.costRedirectFor('New-Windows-Cost-UK'), 'new-windows-cost-uk');
+  assert.strictEqual(landing.costRedirectFor('conservatory-cost'), 'conservatory-cost-uk');
+  assert.strictEqual(landing.costRedirectFor('roof-replacement-cost'), 'new-roof-cost');
+  assert.strictEqual(landing.costRedirectFor('something-else'), null);
+  for (const to of Object.values(landing.COST_ALIASES)) {
+    assert.ok(landing.COST_PAGES.some(p => p.slug === to), `alias points at a missing page: ${to}`);
+  }
+  const src = fs.readFileSync(path.join(__dirname, '..', 'routes', 'pages.js'), 'utf8');
+  assert.match(src, /res\.redirect\(301, `\/cost\/\$\{to\}`\)/);
+});
