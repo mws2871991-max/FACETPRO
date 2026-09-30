@@ -95,3 +95,38 @@ test('a guessed size is still the wider band', async () => {
       `telling us the size widened the answer: told ${JSON.stringify(told.range)} vs guessed ${JSON.stringify(guessed.range)}`);
   }
 });
+
+test('a roofline-only job with its length told still gets a range', async () => {
+  /* The review's own example, and the case the first pass missed. When the
+     only trade being priced has a quantity the homeowner gave us, varying the
+     area moves nothing and the band collapses — which reads as "no
+     uncertainty" and is really "no QUANTITY uncertainty". The rates are still
+     ours. It produced £6,500–£6,500 with the total outside it. */
+  const q = await quote(TOLD_ROOFLINE);
+  assert.ok(q.range, 'a roofline-only job with a told length still has no range');
+  assert.ok(q.range.high > q.range.low, `collapsed again: ${JSON.stringify(q.range)}`);
+  assert.ok(q.range.low <= q.total && q.total <= q.range.high,
+    `total ${q.total} outside ${JSON.stringify(q.range)}`);
+  assert.strictEqual(q.trimLengthM, 42, 'their length was widened');
+});
+
+test('every shape of quote keeps its total inside its own range', async () => {
+  /* The property the review was really asking for, swept rather than sampled. */
+  const shapes = [
+    { name: 'guessed everything', body: { houseType: 'semi' } },
+    { name: 'told wall area', body: TOLD_WALL },
+    { name: 'told roofline', body: TOLD_ROOFLINE },
+    { name: 'told both', body: { ...TOLD_WALL, trimLengthM: 42, trimId: 'ink-trim' } },
+    { name: 'walls only, guessed', body: { claddingId: 'alabaster', trimId: 'none', roofId: 'none', houseType: 'detached' } },
+    { name: 'roof only, guessed', body: { claddingId: 'none', trimId: 'none', roofId: 'slate-roof', houseType: 'semi' } },
+  ];
+  const bad = [];
+  for (const s of shapes) {
+    const q = await quote(s.body);
+    if (!q.range) { if (q.total > 1000) bad.push(`${s.name}: £${q.total} with no range at all`); continue; }
+    if (!(q.range.low <= q.total && q.total <= q.range.high)) {
+      bad.push(`${s.name}: total ${q.total} outside ${JSON.stringify(q.range)}`);
+    }
+  }
+  assert.deepStrictEqual(bad, [], `\n  ${bad.join('\n  ')}\n`);
+});

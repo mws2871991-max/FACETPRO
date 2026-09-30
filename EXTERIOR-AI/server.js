@@ -2025,8 +2025,10 @@ function priceRangeFromArea(selections, band) {
   const round500 = (n) => Math.round(n / 500) * 500;
   const low = round500(at(band.low, 1 - PRIOR_AREA_UNCERTAINTY));
   const high = round500(at(band.high, 1 + PRIOR_AREA_UNCERTAINTY));
-  // A band narrow enough to round to one figure is not a range worth showing.
-  return high > low ? { low, high } : null;
+  /* A collapsed band does not mean there is no uncertainty — it means every
+     quantity in this job was told to us, so moving them moves nothing. What
+     is left is the rate, and that has a width. See priceRangeAroundTotal. */
+  return high > low ? { low, high } : priceRangeAroundTotal(at(band.low, 1));
 }
 
 /* A band around a total whose quantities are already settled.
@@ -2051,10 +2053,13 @@ function priceRange(selections, m2) {
   const round500 = (n) => Math.round(n / 500) * 500;
   const low = round500(at(area * (1 - PRIOR_AREA_UNCERTAINTY), 1 - PRIOR_AREA_UNCERTAINTY));
   const high = round500(at(area * (1 + PRIOR_AREA_UNCERTAINTY), 1 + PRIOR_AREA_UNCERTAINTY));
-  /* Nothing left to spread — a roofline-only job with its length told came
-     back as £6,500–£6,500 with the £6,522 total outside it (launch review).
-     No range is the honest answer then, as priceRangeFromArea already says. */
-  if (!(high > low)) return null;
+  /* Nothing left to spread, because every quantity was told to us — a
+     roofline-only job with its length given came back as £6,500–£6,500 with
+     the £6,522 total outside it (launch review item 17). That is not an
+     absence of uncertainty, it is the absence of QUANTITY uncertainty; the
+     rates are still ours. Hand it to the band that widens the price instead
+     of the measurements. */
+  if (!(high > low)) return priceRangeAroundTotal(at(area, 1));
   return { low, high };
 }
 
