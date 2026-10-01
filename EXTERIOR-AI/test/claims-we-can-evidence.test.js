@@ -82,3 +82,29 @@ test('removing the claim did not remove the information', () => {
   assert.match(none, /still signing up installers/i,
     'with no installers the page should say so rather than imply coverage');
 });
+
+test('the FENSA claim is tied to the installers it is about', () => {
+  /* "Our window and door installers are FENSA registered" is shown under the
+     render and beside the quote form — read at the moment somebody decides
+     whether to hand over their details. Mike confirmed on 1 October 2026 that
+     every glazing installer taking leads is registered, and installer
+     agreement 6.2 holds the proof.
+
+     What this guards is the future. The claim covers whoever is in
+     LEAD_RECIPIENTS, which is empty today; adding an installer without their
+     registration makes a published sentence false for everybody reading it.
+     This test is the place that says so out loud — it cannot check FENSA's
+     register, and does not pretend to. */
+  const page = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  const at = page.indexOf("const INSTALLER_VETTING =");
+  assert.ok(at > 0, 'the claim has moved — check what keeps it true');
+  const context = page.slice(Math.max(0, at - 1300), at);
+  assert.match(context, /FENSA/, 'the claim no longer records what it rests on');
+  assert.match(context, /6\.2/, 'it no longer points at where the proof is held');
+  assert.match(context, /LEAD_RECIPIENTS/,
+    'it no longer says that adding an installer is what can make it false');
+
+  /* And it is one constant, so changing it changes every place it appears. */
+  const uses = (page.match(/INSTALLER_VETTING/g) || []).length;
+  assert.ok(uses >= 3, 'the claim should be stated from one constant, not retyped');
+});
