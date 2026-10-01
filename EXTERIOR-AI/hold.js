@@ -93,7 +93,12 @@ function sample(src, fx, fy, out) {
 
 /* Returns { buffer, restored } — restored false means the render is exactly
    what came in, and why is in `reason` for the log. */
-function restoreDoor({ render, renderMime, original, originalMime, detections }) {
+function restoreDoor(opts) {
+  /* Destructured inside, not in the signature: a default only
+     catches undefined, and these must refuse null too. Everything
+     else here is written so a bad input is a refusal rather than a
+     throw — this is the one path that was not. */
+  const { render, renderMime, original, originalMime, detections } = opts || {};
   const untouched = (reason) => ({ buffer: render, restored: false, reason });
   try {
     if (!/png/i.test(renderMime || '')) return untouched('render is not a PNG');
@@ -261,7 +266,12 @@ const MIN_FILL = 0.12;        // sparser than this is an outline (bargeboards), 
 const MAX_RESTORE_SHARE = 0.35;
 const SOFT_R = 2;             // px of feathering at a restored edge
 
-function restoreSurroundings({ render, renderMime, original, originalMime, detections, keepDoor = false }) {
+function restoreSurroundings(opts) {
+  /* Destructured inside, not in the signature: a default only
+     catches undefined, and these must refuse null too. Everything
+     else here is written so a bad input is a refusal rather than a
+     throw — this is the one path that was not. */
+  const { render, renderMime, original, originalMime, detections, keepDoor = false } = opts || {};
   const untouched = (reason) => ({ buffer: render, restored: false, reason, patches: 0 });
   try {
     if (!/png/i.test(renderMime || '')) return untouched('render is not a PNG');
@@ -361,7 +371,12 @@ const FRAME_LINE_SHARE = 0.6;     // a column/row this much frame-coloured is a 
 const MAX_MULLION = 0.12;         // of the window's width; wider "frame" is a dark pane
 const EDGE_PANE_SHARE = 0.25;     // a run touching the window's edge this wide is glass, not a sliver of brick
 
-function drawGeorgianBars({ render, renderMime, original, originalMime, detections }) {
+function drawGeorgianBars(opts) {
+  /* Destructured inside, not in the signature: a default only
+     catches undefined, and these must refuse null too. Everything
+     else here is written so a bad input is a refusal rather than a
+     throw — this is the one path that was not. */
+  const { render, renderMime, original, originalMime, detections } = opts || {};
   const untouched = (reason) => ({ buffer: render, drawn: false, reason, panes: 0 });
   try {
     if (!/png/i.test(renderMime || '')) return untouched('render is not a PNG');
@@ -589,7 +604,12 @@ const MASK_ON = 160;
    length reads worse than one left alone. */
 const NOT_OURS_MARGIN_PCT = 1.5;
 
-function restoreOutsideMask({ render, renderMime, original, originalMime, mask, maskMime, notOurs = [] }) {
+function restoreOutsideMask(opts) {
+  /* Destructured inside, not in the signature: a default only
+     catches undefined, and these must refuse null too. Everything
+     else here is written so a bad input is a refusal rather than a
+     throw — this is the one path that was not. */
+  const { render, renderMime, original, originalMime, mask, maskMime, notOurs = [] } = opts || {};
   const untouched = (reason) => ({ buffer: render, restored: false, reason, insideShare: 0 });
   try {
     if (!/png/i.test(renderMime || '')) return untouched('render is not a PNG');
@@ -757,7 +777,12 @@ const hexToRgb = (hex) => {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 };
 
-function correctFrameColour({ render, renderMime, original, originalMime, mask, maskMime, hex }) {
+function correctFrameColour(opts) {
+  /* Destructured inside, not in the signature: a default only
+     catches undefined, and these must refuse null too. Everything
+     else here is written so a bad input is a refusal rather than a
+     throw — this is the one path that was not. */
+  const { render, renderMime, original, originalMime, mask, maskMime, hex } = opts || {};
   const untouched = (reason) => ({ buffer: render, corrected: false, reason, share: 0, from: null });
   try {
     if (!/png/i.test(renderMime || '')) return untouched('render is not a PNG');
