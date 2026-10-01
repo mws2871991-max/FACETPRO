@@ -27,6 +27,7 @@
 
 const { PNG } = require('pngjs');
 const jpeg = require('jpeg-js');
+const { detectionList } = require('./geometry');
 
 const MIN_DOOR_CONFIDENCE = 0.6;
 /* Out past the detected box, as a fraction of its size, so the seam lands
@@ -47,13 +48,13 @@ const FEATHER = 0.12;
 
 // Windows are changing, so the restore must never reach into one.
 function windowBoxes(detections) {
-  return (detections || [])
+  return detectionList(detections)
     .filter(d => d && d.type === 'window' && Number(d.w_pct) > 0 && Number(d.h_pct) > 0)
     .map(d => ({ x: Number(d.x_pct), y: Number(d.y_pct), w: Number(d.w_pct), h: Number(d.h_pct) }));
 }
 
 function doorBox(detections) {
-  const doors = (detections || [])
+  const doors = detectionList(detections)
     .filter(d => d && d.type === 'door-front' && Number(d.confidence) >= MIN_DOOR_CONFIDENCE
       && Number(d.w_pct) > 0 && Number(d.h_pct) > 0)
     .sort((a, b) => Number(b.confidence) - Number(a.confidence));
@@ -278,7 +279,7 @@ function restoreSurroundings(opts) {
     const src = decode(original, originalMime || '');
     if (!src) return untouched('photograph type not handled');
     const keepTypes = keepDoor ? new Set(['window', 'door-front']) : new Set(['window']);
-    const keepBoxes = (detections || [])
+    const keepBoxes = detectionList(detections)
       .filter(d => d && keepTypes.has(d.type) && Number(d.w_pct) > 0 && Number(d.h_pct) > 0);
     if (!keepBoxes.length) return untouched('no windows to keep');
 
@@ -382,7 +383,7 @@ function drawGeorgianBars(opts) {
     if (!/png/i.test(renderMime || '')) return untouched('render is not a PNG');
     const src = decode(original, originalMime || '');
     if (!src) return untouched('photograph type not handled');
-    const keepBoxes = (detections || [])
+    const keepBoxes = detectionList(detections)
       .filter(d => d && d.type === 'window' && Number(d.w_pct) > 0 && Number(d.h_pct) > 0);
     if (!keepBoxes.length) return untouched('no windows detected');
 

@@ -93,6 +93,22 @@ const DOOR_TYPES = new Set(['door-front']);
 const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
 const isFiniteNumber = (n) => typeof n === 'number' && Number.isFinite(n);
 
+/* A list of detections, or an empty one. The companion to box(): that rejects
+   an unusable detection, this rejects an unusable list.
+
+   `detections || []` was the pattern here and in glazing.js, and it is not
+   enough — it catches null and undefined and lets every other wrong type
+   through to `.filter`, which then throws. Fuzzing the counting path on 1
+   October found 96 calls out of 512 crashing that way, and 64 of 160 in this
+   file, where doorReference and observedDoorShape had no guard at all and
+   threw on undefined. What reaches these functions is parsed model JSON, so
+   an object where an array was expected is a real shape, and a count that
+   throws is a page that shows a homeowner nothing. Returning [] gives them
+   the no-detections answer, which is the honest one. */
+function detectionList(detections) {
+  return Array.isArray(detections) ? detections : [];
+}
+
 /* A detection's box as percentages of the frame, or null if it is not usable.
    Clamped to the frame, because a model will occasionally return a box that
    hangs off the edge of the photograph. */
@@ -150,7 +166,7 @@ const shapeRatio = (b, aspectRatio) =>
  * say which way they used.
  */
 function doorReference(detections, aspectRatio) {
-  const doors = detections
+  const doors = detectionList(detections)
     .filter(d => DOOR_TYPES.has(d?.type))
     .map(d => ({ b: box(d), confidence: Number(d?.confidence) || 0 }))
     .filter(d => d.b && d.b.h >= 2);   // implausibly small box — reject rather than divide by it
@@ -187,7 +203,7 @@ const sawDoorBox = (detections) => detections.some(d => DOOR_TYPES.has(d?.type) 
    guessing about — would be missing from the evidence used to set
    MIN_DOOR_RATIO. The rejects are the interesting half. */
 function observedDoorShape(detections, aspectRatio) {
-  const shapes = detections
+  const shapes = detectionList(detections)
     .filter(d => DOOR_TYPES.has(d?.type))
     .map(d => box(d))
     .filter(Boolean)
@@ -290,7 +306,7 @@ const SUBJECT_MIN_SIDE_PCT = 40;   // a degenerate box means bad detections
 const SUBJECT_MIN_CLEAR_PCT = 3;   // no clear side means no neighbour to remove
 
 function subjectBox(detections) {
-  const list = Array.isArray(detections) ? detections : [];
+  const list = detectionList(detections);
 
   let hasAnchor = false;
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -384,7 +400,7 @@ const ROOF_MIN_H_PCT = 20;
    is nothing to judge, and refusing on no evidence would break photographs
    that work today. */
 function roofFraming(detections) {
-  const list = Array.isArray(detections) ? detections : [];
+  const list = detectionList(detections);
   const tallest = (pred) => list
     .filter(d => d && pred(d))
     .map(d => box(d))
@@ -407,7 +423,7 @@ function roofFraming(detections) {
 
 module.exports = {
   DOOR_HEIGHT_M, DOOR_LEAF_RATIO, MIN_DOOR_RATIO, MAX_DOOR_RATIO, DOOR_TYPES,
-  clamp, isFiniteNumber, box, intersectionPct, shapeRatio,
+  clamp, isFiniteNumber, box, detectionList, intersectionPct, shapeRatio,
   doorReference, sawDoorBox, observedDoorShape,
   subjectBox, SUBJECT_MARGIN_PCT, SUBJECT_BOUND_TYPES, SUBJECT_ANCHOR_TYPES, SUBJECT_VERTICAL_TYPES,
   roofFraming, TILED_WALL_LABEL, ROOF_MIN_H_PCT,

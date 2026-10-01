@@ -48,7 +48,7 @@
 
 /* Shared with measure.js. These lived in both files as identical copies, and
    the fanlight bug had to be found in each of them separately. */
-const { clamp, isFiniteNumber, box, doorReference, subjectBox } = require('./geometry');
+const { clamp, isFiniteNumber, box, detectionList, doorReference, subjectBox } = require('./geometry');
 
 const { DOOR_HEIGHT_M } = require('./measure');
 
@@ -659,7 +659,7 @@ function isFanlight(b, label, door) {
 /* Where the row's roofline is, when detection gives one: the top of the
    widest fascia, gutter or soffit box. Null when there is none to read. */
 function roofLineY(detections) {
-  const lines = (detections || [])
+  const lines = detectionList(detections)
     .filter(d => ['fascia', 'guttering', 'soffit'].includes(d?.type))
     .map(d => box(d))
     .filter(b => b && b.w >= 50);
@@ -685,26 +685,26 @@ function neighboursRoofWindow(b, roofLine) {
 }
 
 function windowCandidates(detections, aspectRatio = null) {
-  const subject = subjectBox(detections || []);
+  const subject = subjectBox(detections);
   const roofLine = roofLineY(detections);
   /* Every doorway in shot, and which one is ours. Optional throughout: a
      caller with no aspect ratio gets exactly the behaviour it got before this
      rule existed. */
-  const doorBoxes = (detections || [])
+  const doorBoxes = detectionList(detections)
     .filter(d => d?.type === 'door-front')
     .map(d => box(d))
     .filter(Boolean);
   const ourDoor = (isFiniteNumber(aspectRatio) && aspectRatio > 0 && doorBoxes.length > 1)
-    ? (doorReference(detections || [], aspectRatio) || {}).b || null
+    ? (doorReference(detections, aspectRatio) || {}).b || null
     : null;
   /* The doorway, for telling a fanlight from a window. Taken straight off the
      detections rather than through doorReference, because this wants where the
      door is and not whether it is fit to measure against — a door too oddly
      shaped to be a ruler still has a fanlight over it. */
-  const doorD = (detections || []).find(d => d?.type === 'door-front' && box(d));
+  const doorD = detectionList(detections).find(d => d?.type === 'door-front' && box(d));
   const doorB = doorD ? box(doorD) : null;
 
-  const confident = (detections || [])
+  const confident = detectionList(detections)
     .filter(d => d?.type === 'window' && (Number(d?.confidence) || 0) >= MIN_CONFIDENCE);
 
   let sidelights = 0;
