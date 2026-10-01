@@ -604,12 +604,17 @@ const MASK_ON = 160;
    length reads worse than one left alone. */
 const NOT_OURS_MARGIN_PCT = 1.5;
 
+/* Below this share of a window's middle covered by the mask, the mask has
+   missed that window (see restoreOutsideMask). A window the mask found reads
+   far above it: glass and frame are both "window" to segmentation. */
+const MASK_MIN_COVER = 0.08;
+
 function restoreOutsideMask(opts) {
   /* Destructured inside, not in the signature: a default only
      catches undefined, and these must refuse null too. Everything
      else here is written so a bad input is a refusal rather than a
      throw — this is the one path that was not. */
-  const { render, renderMime, original, originalMime, mask, maskMime, notOurs = [] } = opts || {};
+  const { render, renderMime, original, originalMime, mask, maskMime, notOurs = [], ours = [] } = opts || {};
   const untouched = (reason) => ({ buffer: render, restored: false, reason, insideShare: 0 });
   try {
     if (!/png/i.test(renderMime || '')) return untouched('render is not a PNG');
@@ -658,6 +663,40 @@ function restoreOutsideMask(opts) {
       }));
     const notOurWindow = (x, y) => cuts.some(c => x >= c.x0 && x <= c.x1 && y >= c.y0 && y <= c.y1);
 
+    /* A window of ours the mask missed is held by its box instead.
+
+       IMG_2068, 1 October: a bay-fronted terrace, anthracite casements. The
+       two upstairs windows changed; the bay came back exactly the photograph,
+       pixel for pixel, the same as the brick beside it. Either the
+       segmentation found "window" upstairs and not the bay (a painted bay
+       full of net curtains, with pillars, may not read as one to it), or the
+       model left the bay alone; this answers the first, judgeRender the
+       second.
+
+       Each of our windows is checked against the mask in the middle of its
+       box. Under MASK_MIN_COVER means the mask does not know that window, and
+       the box stands in for it: the render is kept there, as the patch hold
+       would keep it. That keeps the bay's pillars along with its frames if
+       the model repaints them, which is the smaller wrong and the one the
+       prompt already argues against. Everywhere the mask did find, it still
+       decides. */
+    const mOn = (x, y) => {
+      const mx = Math.min(m.width - 1, Math.max(0, Math.round((x + 0.5) * m.width / W - 0.5)));
+      const my = Math.min(m.height - 1, Math.max(0, Math.round((y + 0.5) * m.height / H - 0.5)));
+      return m.data[(my * m.width + mx) * 4] >= MASK_ON;
+    };
+    const fills = [];
+    for (const b of (Array.isArray(ours) ? ours : [])) {
+      if (!b || !['x', 'y', 'w', 'h'].every(k => Number.isFinite(Number(b[k]))) || !(b.w > 0) || !(b.h > 0)) continue;
+      const bx0 = Math.max(0, Math.floor(Number(b.x) * W / 100)), bx1 = Math.min(W - 1, Math.ceil((Number(b.x) + Number(b.w)) * W / 100));
+      const by0 = Math.max(0, Math.floor(Number(b.y) * H / 100)), by1 = Math.min(H - 1, Math.ceil((Number(b.y) + Number(b.h)) * H / 100));
+      const ix = Math.round((bx1 - bx0) * 0.15), iy = Math.round((by1 - by0) * 0.15);
+      let on = 0, all = 0;
+      for (let y = by0 + iy; y <= by1 - iy; y += 2) for (let x = bx0 + ix; x <= bx1 - ix; x += 2) { all++; if (mOn(x, y)) on++; }
+      if (all && on / all < MASK_MIN_COVER) fills.push({ x0: bx0, x1: bx1, y0: by0, y1: by1 });
+    }
+    const filledWindow = (x, y) => fills.some(c => x >= c.x0 && x <= c.x1 && y >= c.y0 && y <= c.y1);
+
     /* Nearest neighbour for the mask — it is a binary decision and bilinear
        would only invent grey along every edge to threshold again. The
        photograph keeps the bilinear sample it has always had. */
@@ -667,7 +706,7 @@ function restoreOutsideMask(opts) {
       for (let x = 0; x < W; x++) {
         const mx = Math.min(m.width - 1, Math.max(0, Math.round((x + 0.5) * m.width / W - 0.5)));
         const my = Math.min(m.height - 1, Math.max(0, Math.round((y + 0.5) * m.height / H - 0.5)));
-        if (m.data[(my * m.width + mx) * 4] >= MASK_ON && !notOurWindow(x, y)) { inside++; continue; }   // our window: keep the render
+        if ((m.data[(my * m.width + mx) * 4] >= MASK_ON || filledWindow(x, y)) && !notOurWindow(x, y)) { inside++; continue; }   // our window: keep the render
         sample(src, (x + 0.5) * (src.width / W) - 0.5, (y + 0.5) * (src.height / H) - 0.5, px);
         const i = (y * W + x) * 4;
         out.data[i] = px[0]; out.data[i + 1] = px[1]; out.data[i + 2] = px[2];
@@ -682,7 +721,7 @@ function restoreOutsideMask(opts) {
     if (share < 0.01) return untouched(`mask covers only ${(share * 100).toFixed(1)}% of the frame`);
     if (share > 0.8) return untouched(`mask covers ${(share * 100).toFixed(0)}% of the frame`);
 
-    return { buffer: PNG.sync.write(out), restored: true, reason: null, insideShare: share };
+    return { buffer: PNG.sync.write(out), restored: true, reason: null, insideShare: share, windowsFilled: fills.length };
   } catch (err) {
     return untouched(err?.message || 'mask hold failed');
   }

@@ -3194,11 +3194,14 @@ async function keepRender(replicateUrl, restore = null) {
               /* Same rule that decided the count decides this. A window we
                  will not charge for is a window we will not repaint. */
               notOurs: glazing.neighbourWindowBoxes(detections, detectionAspectRatio),
+              /* And ours, so a window the mask missed is held by its box
+                 rather than put back to the photograph (IMG_2068's bay). */
+              ours: glazing.frontWindowBoxes(detections, detectionAspectRatio),
             })
           : { restored: false, reason: 'no mask' };
         if (masked.restored) {
           bytes = masked.buffer;
-          obs.record('render', 'held the render to the window mask', { inside: masked.insideShare.toFixed(3) });
+          obs.record('render', 'held the render to the window mask', { inside: masked.insideShare.toFixed(3), windowsFilled: masked.windowsFilled || 0 });
         } else {
           if (restore.mask) obs.record('render', 'window mask not used', { reason: masked.reason });
           const held = restoreSurroundings({ render: bytes, ...common, keepDoor: !restore.door });
@@ -3522,6 +3525,10 @@ const MISS_CHECKS = {
   roof: { types: ['roof'], min: 0.35 },
   cladding: { types: ['cladding'], min: 0.30 },
 };
+/* One window of ours left alone while another plainly changed. See the
+   windows branch in judgeRender. */
+const WINDOW_CHANGED = 0.35;
+const WINDOW_MISSED = 0.12;
 /* Leave room after a retry to store the image and answer. */
 const RETRY_NEEDS_MS = 30_000;
 
@@ -3546,6 +3553,25 @@ async function judgeRender(url, trades, original) {
   const missed = [];
   let worst = Infinity;
   for (const trade of trades) {
+    /* Windows are judged one by one, not as a total (1 October, IMG_2068).
+       A frame recolour moves most of a window box, glass and nets included
+       (upstairs read about 0.9), so a total over three windows hides the one
+       that was left alone. The miss is relative: one of ours barely changed
+       while another plainly did. Relative, so a colour close to the old one
+       (white on white) is never called a miss and never buys a retry. */
+    if (trade === 'windows') {
+      const ours = glazing.frontWindowBoxes(detections, found.aspectRatio)
+        .map(b => ({ x_pct: b.x, y_pct: b.y, w_pct: b.w, h_pct: b.h }));
+      const shares = ours.map(b => changedShare({ render: bytes, renderMime: mime, original: original.buffer, originalMime: original.mime, boxes: [b] }))
+        .filter(v => v !== null);
+      if (shares.length < 2) continue;
+      const hi = Math.max(...shares), lo = Math.min(...shares);
+      if (hi >= WINDOW_CHANGED && lo < WINDOW_MISSED) {
+        missed.push('windows');
+        worst = Math.min(worst, lo / WINDOW_MISSED);
+      }
+      continue;
+    }
     const check = MISS_CHECKS[trade];
     const boxes = detections.filter(d => d && check.types.includes(d.type) && Number(d.w_pct) > 0 && Number(d.h_pct) > 0);
     const share = changedShare({ render: bytes, renderMime: mime, original: original.buffer, originalMime: original.mime, boxes });
@@ -3842,6 +3868,7 @@ app.post('/api/render', renderLimiter, async (req, res) => {
     const trades = [
       ...(roof && !roofUnsupported ? ['roof'] : []),
       ...(cladding ? ['cladding'] : []),
+      ...(glazingColour && windowStyle ? ['windows'] : []),
     ];
     if (trades.length) {
       const original = { buffer: img.buffer, mime: img.mime,
