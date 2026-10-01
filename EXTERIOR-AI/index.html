@@ -1253,6 +1253,9 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
   <section data-page="home" id="faq" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="faq-heading">
     <h2 id="faq-heading" class="serif text-[26px] md:text-[32px] tracking-tight">Questions homeowners ask</h2>
     <div class="mt-6 divide-y divide-zinc-200 border-y border-zinc-200">
+      <!-- Order (1 October): the fears first, in the order they stop
+           people (being rung, the price, the photo, who does the work),
+           then the practical questions. -->
 
             <!-- Section 09 of the copy handoff rates this the highest-conversion
            objection on the page, and nothing answered it directly. Placed
@@ -1280,23 +1283,6 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
       </details>
 
       <details class="group">
-        <summary class="flex items-center justify-between gap-4 py-4"><h3 class="text-lg font-medium">Do I need to measure my house first?</h3><span class="chev text-zinc-600 transition-transform" aria-hidden="true">⌄</span></summary>
-        <p class="pb-4 text-lg leading-6 text-zinc-600 max-w-[72ch]">No. Start with a clear photo of the front of your home &mdash; Facet Pro uses the visible features and proportions in it to size the job. If anything looks wrong, correct it with one tap and the estimate updates.</p>
-      </details>
-
-      <details class="group">
-        <summary class="flex items-center justify-between gap-4 py-4"><h3 class="text-lg font-medium">Will you change my window frames in the picture?</h3><span class="chev text-zinc-600 transition-transform" aria-hidden="true">⌄</span></summary>
-        <!-- "where it can", not "to what you chose". The picture is one call to
-             an image model, and frame colour in particular has been the choice
-             it most often leaves alone. Promising it outright is the kind of
-             claim a homeowner checks against the screen in front of them and
-             finds false — so the sentence says what is true, and the line
-             after it says the thing that protects them: the estimate prices
-             the choice whether or not the picture managed to show it. -->
-        <p class="pb-4 text-lg leading-6 text-zinc-600 max-w-[72ch]">Yes. Pick a style and a frame colour and the after picture is generated from your own photo — keeping your home's perspective, lighting and shadows, and showing the frames and door you chose where it can. Nothing is added, removed or resized. It's a realistic guide to help you choose, not a guarantee of the finished installation — and if the picture hasn't changed something you asked for, your estimate still prices what you chose.</p>
-      </details>
-
-      <details class="group">
         <summary class="flex items-center justify-between gap-4 py-4"><h3 class="text-lg font-medium">What happens to my photo?</h3><span class="chev text-zinc-600 transition-transform" aria-hidden="true">⌄</span></summary>
         <!-- Rewritten to agree with legal/privacy.html exactly, rather than
              approximately. The old answer said only design choices, the
@@ -1312,18 +1298,35 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
       </details>
 
       <details class="group">
+        <summary class="flex items-center justify-between gap-4 py-4"><h3 class="text-lg font-medium">Does Facet Pro do the work?</h3><span class="chev text-zinc-600 transition-transform" aria-hidden="true">⌄</span></summary>
+        <p class="pb-4 text-lg leading-6 text-zinc-600 max-w-[72ch]">No. Facet Pro creates the design and the estimate. If you ask for quotes, it goes to installers who arrange a survey and quote properly. There is no obligation to go ahead.</p>
+      </details>
+
+      <details class="group">
+        <summary class="flex items-center justify-between gap-4 py-4"><h3 class="text-lg font-medium">Do I need to measure my house first?</h3><span class="chev text-zinc-600 transition-transform" aria-hidden="true">⌄</span></summary>
+        <p class="pb-4 text-lg leading-6 text-zinc-600 max-w-[72ch]">No. Start with a clear photo of the front of your home &mdash; Facet Pro uses the visible features and proportions in it to size the job. If anything looks wrong, correct it with one tap and the estimate updates.</p>
+      </details>
+
+      <details class="group">
         <summary class="flex items-center justify-between gap-4 py-4"><h3 class="text-lg font-medium">How long does it take?</h3><span class="chev text-zinc-600 transition-transform" aria-hidden="true">⌄</span></summary>
         <p class="pb-4 text-lg leading-6 text-zinc-600 max-w-[72ch]">Finding the windows, doors, roof and cladding takes about half a minute. Colour changes and prices update instantly. A full photorealistic render of your home can take up to a minute.</p>
       </details>
 
       <details class="group">
-        <summary class="flex items-center justify-between gap-4 py-4"><h3 class="text-lg font-medium">Can I still price cladding, render or a new roof?</h3><span class="chev text-zinc-600 transition-transform" aria-hidden="true">⌄</span></summary>
-        <p class="pb-4 text-lg leading-6 text-zinc-600 max-w-[72ch]">Yes — that is rather the point. Windows, doors, walls, roofline and roof all start from the photo you already uploaded. The front is measured from it; the back is a second photo or a number you give us; and anything still unseen, like the roof, is clearly marked as an estimate. Most people start with the windows and add the rest once they can see what the whole job comes to. Conservatories are the exception: we show guide ranges by style to help you compare, because a conservatory's price turns on size, glazing, groundworks and access rather than on anything a photograph of the front can tell us.</p>
+        <summary class="flex items-center justify-between gap-4 py-4"><h3 class="text-lg font-medium">Will you change my window frames in the picture?</h3><span class="chev text-zinc-600 transition-transform" aria-hidden="true">⌄</span></summary>
+        <!-- "where it can", not "to what you chose". The picture is one call to
+             an image model, and frame colour in particular has been the choice
+             it most often leaves alone. Promising it outright is the kind of
+             claim a homeowner checks against the screen in front of them and
+             finds false — so the sentence says what is true, and the line
+             after it says the thing that protects them: the estimate prices
+             the choice whether or not the picture managed to show it. -->
+        <p class="pb-4 text-lg leading-6 text-zinc-600 max-w-[72ch]">Yes. Pick a style and a frame colour and the after picture is generated from your own photo — keeping your home's perspective, lighting and shadows, and showing the frames and door you chose where it can. Nothing is added, removed or resized. It's a realistic guide to help you choose, not a guarantee of the finished installation — and if the picture hasn't changed something you asked for, your estimate still prices what you chose.</p>
       </details>
 
       <details class="group">
-        <summary class="flex items-center justify-between gap-4 py-4"><h3 class="text-lg font-medium">Does Facet Pro do the work?</h3><span class="chev text-zinc-600 transition-transform" aria-hidden="true">⌄</span></summary>
-        <p class="pb-4 text-lg leading-6 text-zinc-600 max-w-[72ch]">No. Facet Pro creates the design and the estimate. If you ask for quotes, it goes to installers who arrange a survey and quote properly. There is no obligation to go ahead.</p>
+        <summary class="flex items-center justify-between gap-4 py-4"><h3 class="text-lg font-medium">Can I still price cladding, render or a new roof?</h3><span class="chev text-zinc-600 transition-transform" aria-hidden="true">⌄</span></summary>
+        <p class="pb-4 text-lg leading-6 text-zinc-600 max-w-[72ch]">Yes — that is rather the point. Windows, doors, walls, roofline and roof all start from the photo you already uploaded. The front is measured from it; the back is a second photo or a number you give us; and anything still unseen, like the roof, is clearly marked as an estimate. Most people start with the windows and add the rest once they can see what the whole job comes to. Conservatories are the exception: we show guide ranges by style to help you compare, because a conservatory's price turns on size, glazing, groundworks and access rather than on anything a photograph of the front can tell us.</p>
       </details>
 
     </div>
