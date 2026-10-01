@@ -494,7 +494,7 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
         </div>
         <div class="relative rounded-xl overflow-hidden border border-zinc-200 bg-white">
           <img src="/assets/work/home-22-after-sm.jpg" srcset="/assets/work/home-22-after-400.jpg 400w, /assets/work/home-22-after-sm.jpg 600w, /assets/work/home-22-after.jpg 1200w" fetchpriority="high" sizes="(min-width: 1024px) 280px, (min-width: 640px) 320px, 34vw" alt="Illustration: the same house with anthracite aluminium windows and a red composite front door" width="600" height="450" loading="eager" decoding="async" class="w-full aspect-[4/3] object-cover bg-zinc-100">
-          <span class="absolute bottom-2 left-2 text-base px-2 py-0.5 rounded-full bg-emerald-600 text-white font-semibold">After</span>
+          <span class="absolute bottom-2 left-2 text-base px-2 py-0.5 rounded-full bg-emerald-700 text-white font-semibold">After</span>
         </div>
       </div>
       <figcaption class="mt-2 text-base leading-7 text-zinc-600">Illustration: the same house with anthracite aluminium windows and a red composite door. The new driveway and plants are part of the illustration, not the estimate.</figcaption>
@@ -976,6 +976,11 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
     <button type="button" class="mt-6 cta px-7 py-4 rounded-full text-lg font-semibold transition min-h-[52px]" onclick="reachedStage('steps_cta_click'); goToUpload()">Upload my house</button>
   </section>
 
+  <!-- The tool's own top heading (launch review item 27). An h2 lifted to
+       level 1 by applyPage, like the installer and pricing headings, because
+       one document serves every route and the homepage must keep a single
+       h1. Hidden from sight: the visible headings on /design are the steps. -->
+  <h2 data-page="design" id="design-heading" class="sr-only">Design your home: see new windows, doors and exterior finishes on a photo of your house</h2>
   <div data-page="design" id="mount-choose"></div>
   <div data-page="design" id="mount-upload"></div>
   <div data-page="design" id="mount-triage"></div>
@@ -2750,6 +2755,7 @@ const PAGE_HEADING = {
   home: 'choose-heading',
   installers: 'installers-heading',
   pricing: 'pricing-heading',
+  design: 'design-heading',
 };
 
 function applyPage() {
@@ -3305,7 +3311,7 @@ async function chooserSwatch(sw) {
 }
 
 function buildChooser() {
-  const empty = h('div', { id: 'mount-choose' });
+  const empty = h('div', {});
   const j = state.journey;
   if (!j || !JOURNEYS[j] || state.uploadedImg || state.resumedDesign || state.stage !== 'landing') return empty;
   const wd = state.catalogue?.windowsDoors;
@@ -3409,7 +3415,7 @@ function buildChooser() {
      somewhere above the fold they have just scrolled past. */
   const showQuestion = () => requestAnimationFrame(() =>
     document.getElementById('choose-look-heading')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-  return h('div', { id: 'mount-choose', className: 'max-w-6xl mx-auto px-6 mt-8' }, [
+  return h('div', { className: 'max-w-6xl mx-auto px-6 mt-8' }, [
     h('section', { className: 'rounded-2xl bg-white border border-zinc-200 p-6 md:p-8', 'aria-labelledby': 'choose-look-heading' }, [
       h('p', { className: 'text-base text-zinc-600 font-semibold' }, journeyLabel(j) || ''),
       h('h2', { id: 'choose-look-heading', className: 'serif mt-1 text-[26px] md:text-[32px] tracking-tight scroll-mt-40' }, 'Choose the look'),
@@ -3484,7 +3490,7 @@ function buildChooser() {
 }
 
 function buildTriage() {
-  if (state.stage !== 'landing') return h('div', { id: 'mount-triage' });
+  if (state.stage !== 'landing') return h('div', {});
 
   /* Somebody who searched "house rendering cost" has already told us. Asking
      again — even with their answer pre-selected — is the thing that makes a
@@ -3493,7 +3499,7 @@ function buildTriage() {
      question is only asked of people who have not answered it. */
   const known = JOURNEYS[state.journey];
   if (known && !state.triageOpen) {
-    return h('div', { id: 'mount-triage', className: 'max-w-6xl mx-auto px-6 mt-10' }, [
+    return h('div', { className: 'max-w-6xl mx-auto px-6 mt-10' }, [
       h('section', { className: 'rounded-2xl border border-zinc-200 bg-white px-6 py-4 flex items-center justify-between gap-4 flex-wrap' }, [
         h('p', { className: 'text-lg leading-6 text-zinc-700' }, [
           h('span', { className: 'text-zinc-600' }, 'Your project: '),
@@ -3525,7 +3531,7 @@ function buildTriage() {
      the day they saved it. */
   /* A conservatory is an answer, even though it is not a journey. */
   if (state.conservatoryIntent && !state.triageOpen) {
-    return h('div', { id: 'mount-triage', className: 'max-w-6xl mx-auto px-6 mt-10' }, [
+    return h('div', { className: 'max-w-6xl mx-auto px-6 mt-10' }, [
       h('section', { className: 'rounded-2xl border border-zinc-200 bg-white px-6 py-4 flex items-center justify-between gap-4 flex-wrap' }, [
         h('p', { className: 'text-lg leading-6 text-zinc-700' }, [
           h('span', { className: 'text-zinc-600' }, 'Your project: '),
@@ -3542,7 +3548,7 @@ function buildTriage() {
   }
 
   if (state.resumedDesign && !state.triageOpen) {
-    return h('div', { id: 'mount-triage', className: 'max-w-6xl mx-auto px-6 mt-10' }, [
+    return h('div', { className: 'max-w-6xl mx-auto px-6 mt-10' }, [
       h('section', { className: 'rounded-2xl border border-zinc-200 bg-white px-6 py-4 flex items-center justify-between gap-4 flex-wrap' }, [
         h('p', { className: 'text-lg leading-6 text-zinc-700' }, [
           h('span', { className: 'text-zinc-600' }, 'Your saved design is back'),
@@ -3557,7 +3563,7 @@ function buildTriage() {
     ]);
   }
 
-  return h('div', { id: 'mount-triage', className: 'max-w-6xl mx-auto px-6 mt-10' }, [
+  return h('div', { className: 'max-w-6xl mx-auto px-6 mt-10' }, [
     h('section', { className: 'rounded-2xl border border-zinc-200 bg-white p-6 md:p-7' }, [
       h('h2', { className: 'serif text-[20px] md:text-[24px] tracking-tight' }, 'What are you looking for today?'),
       h('p', { className: 'mt-1 text-lg leading-6 text-zinc-600 max-w-[62ch]' },

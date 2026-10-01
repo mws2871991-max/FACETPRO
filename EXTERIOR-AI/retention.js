@@ -34,6 +34,11 @@ const PERIODS = {
   sharedEnquiryDays: 730,     // 24 months from last contact
   consentRecordDays: 2191,    // 6 years
   accessLogDays: 365,         // 12 months
+  /* The records around a lead (launch review item 19). Delivery log,
+     installer responses and failure copies belong to the enquiry: 24 months.
+     Withdrawals and lead events are the evidence of consent: 6 years. */
+  enquiryRecordDays: 730,
+  consentEvidenceDays: 2191,
   /* Operational events. Long enough to answer "what happened to that render
      last week" and to see a pattern across a few deploys, short enough that a
      fault log never becomes a history of the site. Nothing in it identifies a

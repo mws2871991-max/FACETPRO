@@ -665,11 +665,11 @@
       {
         "id": "aluminium",
         "name": "Aluminium",
-        "multiplier": 2.17,
+        "multiplier": 2.174,
         "colourIncluded": true
       }
     ],
-    "materialsNote": "Frame material, windows only. Every window band price is uPVC. Aluminium: Mike Sheehan's settled price, 30 September 2026 \u2014 a 1200 x 1200 aluminium casement, one opener, fitted, \u00a31,904 inc VAT against \u00a3876 for the same window in uPVC, so 2.17x. Colour is included (powder-coated), so the non-white uplift is not added again. This replaces the 29 September 'about 25% more', which was too low. Styles apply on top as for uPVC.",
+    "materialsNote": "Frame material, windows only. Every window band price is uPVC. Aluminium: Mike Sheehan's settled price, 30 September 2026 \u2014 a 1200 x 1200 aluminium casement, one opener, fitted, \u00a31,904 inc VAT against \u00a3876 for the same window in uPVC: 2.174x on the \u00a3730 standard band gives exactly \u00a31,904. Colour is included (powder-coated), so the non-white uplift is not added again. This replaces the 29 September 'about 25% more', which was too low. Styles apply on top as for uPVC.",
     "doors": [
       {
         "id": "upvc",

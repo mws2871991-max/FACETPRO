@@ -97,6 +97,9 @@
   footer.site{border-top:1px solid #e4e4e7;margin-top:48px}
 /* The company identity under the footer links, on every guide. Quieter than
    the links above it: there to be found, not to be read first. */
+/* 44px tap targets for Privacy and Terms (launch review item 28): they were
+   17px tall, the smallest controls on the guides. */
+footer.site .wrap>a{display:inline-block;padding:12px 2px;min-height:44px}
 footer.site .company{margin:.6rem 0 0;font-size:.85rem;line-height:1.5;color:#6b7280;max-width:70ch}
 
   footer.site .wrap{padding:20px 18px;font-size:16px;color:#52525b}

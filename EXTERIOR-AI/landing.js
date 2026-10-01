@@ -834,11 +834,16 @@ const COST_PAGES = [
       const vat = vatMult(c.glazing.vatPct ?? 20);
       const mat = (c.glazing.materials || []).find(m => m.id === 'aluminium');
       const mult = mat?.multiplier ?? 1;
-      const pct = Math.round((mult - 1) * 100);
+      /* Said the way a person would: "about 25% more" reads fine, "about
+         117% more" does not (1 October run-through). Past double, say it as
+         a multiple. Worked out from the catalogue either way. */
+      const more = mult >= 2
+        ? (mult < 2.3 ? 'a little over twice the price of' : `about ${mult.toFixed(1)} times the price of`)
+        : `about ${Math.round((mult - 1) * 100)}% more than`;
       const semi = windowJob(c, { count: 8, materialId: 'aluminium' });
       const semiU = windowJob(c, { count: 8 });
       return {
-        answer: `About ${money(semi.perWindowLow)} to ${money(semi.perWindowHigh)} per aluminium window fitted, so roughly ${money(semi.low)} to ${money(semi.high)} for eight, inc VAT — about ${pct}% more than uPVC for the same windows.`,
+        answer: `About ${money(semi.perWindowLow)} to ${money(semi.perWindowHigh)} per aluminium window fitted, so roughly ${money(semi.low)} to ${money(semi.high)} for eight, inc VAT — ${more} uPVC for the same windows.`,
         sections: [
           { heading: 'Price by size', table: {
             head: ['Size', 'Typical opening', 'Aluminium, supply and fit, inc VAT'],
@@ -853,7 +858,7 @@ const COST_PAGES = [
             }),
           } },
           { heading: 'Aluminium or uPVC', paras: [
-            `Aluminium costs about ${pct}% more than uPVC for the same window. Its frames are slimmer for the same strength, which suits large glazed areas and a modern look; uPVC is the lower-cost frame and what most UK homes have.`,
+            `Aluminium costs ${more} uPVC for the same window. Its frames are slimmer for the same strength, which suits large glazed areas and a modern look; uPVC is the lower-cost frame and what most UK homes have.`,
             'Neither is the right answer for every house — it comes down to budget, the look you want and the size of the glass.',
           ] },
           { heading: 'Colours and finishes', paras: [
@@ -868,7 +873,7 @@ const COST_PAGES = [
         ],
         faqs: [
           { q: 'How much does an aluminium window cost?', a: `From about ${money(c.glazing.windowBands[1].supplyFit * mult * vat)} for a standard 1200 × 1200 aluminium window, supplied and fitted, inc VAT — more once access is added, and more with some companies than others.` },
-          { q: 'Are aluminium windows more expensive than uPVC?', a: `Yes — about ${pct}% more for the same window, with the colour included.` },
+          { q: 'Are aluminium windows more expensive than uPVC?', a: `Yes — ${more} the same window in uPVC, with the colour included.` },
           { q: 'How much are aluminium windows for a 3-bed house?', a: `About ${money(semi.low)} to ${money(semi.high)} for eight windows, fitted and inc VAT.` },
         ],
       };

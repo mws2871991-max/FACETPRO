@@ -943,6 +943,56 @@ async function readFunnelDays(days = 30) {
   } catch (_) { return {}; }
 }
 
+/* For /healthz: can we reach the database at all. */
+async function ping() {
+  if (!pool) return true;
+  await pool.query('SELECT 1');
+  return true;
+}
+
+/* ── AGEING OUT THE RECORDS THAT ARE NOT LEADS ──
+   Retention swept leads, the access log and renders, and nothing else: the
+   delivery log, withdrawals, lead events, installer responses and failure
+   copies only ever grew (launch review item 19). Deleted by age in place —
+   not through mutate, which rewrites a whole table to drop a few rows. */
+const AGEABLE = {
+  deliveries: 'deliveries', withdrawals: 'withdrawals', leadEvents: 'lead_events',
+  leadResponses: 'lead_responses', notificationFailures: 'notification_failures',
+};
+async function pruneOlderThan(table, beforeIso) {
+  if (!AGEABLE[table]) throw new Error(`pruneOlderThan: ${table} is not an ageable table`);
+  if (pool) {
+    const { rowCount } = await pool.query(`DELETE FROM ${SCHEMA_NAME}.${AGEABLE[table]} WHERE ts < $1`, [beforeIso]);
+    return rowCount || 0;
+  }
+  const file = path.join(DATA_DIR, FILE_NAMES[table]);
+  try {
+    const all = fs.readFileSync(file, 'utf8').trim().split('\n').filter(Boolean).map(l => JSON.parse(l));
+    const kept = all.filter(r => !(String(r?.ts || '') < beforeIso));
+    if (kept.length !== all.length) fs.writeFileSync(file, kept.map(r => JSON.stringify(r)).join('\n') + (kept.length ? '\n' : ''));
+    return all.length - kept.length;
+  } catch (_) { return 0; }
+}
+
+/* The photograph fingerprints, on a timer as well as on write. Swept only
+   when a new photo arrived, so a quiet week kept the last ones past the
+   seven days the notice promises. */
+async function pruneDetectionCache(maxAgeMs) {
+  const cutoff = new Date(Date.now() - maxAgeMs).toISOString();
+  if (pool) {
+    const { rowCount } = await pool.query(`DELETE FROM ${SCHEMA_NAME}.detection_cache WHERE ts <= $1`, [cutoff]);
+    return rowCount || 0;
+  }
+  try {
+    const f = path.join(DATA_DIR, CACHE_FILE);
+    const all = JSON.parse(fs.readFileSync(f, 'utf8'));
+    let n = 0;
+    for (const [k, v] of Object.entries(all)) if (v.ts <= cutoff) { delete all[k]; n++; }
+    if (n) fs.writeFileSync(f, JSON.stringify(all));
+    return n;
+  } catch (_) { return 0; }
+}
+
 /* ── DETECTIONS, KEYED BY THE PHOTOGRAPH ──
    See the detection_cache table for why this exists and what it deliberately
    does not hold. The JSONL path keeps one file, which is all a development
@@ -1096,7 +1146,7 @@ async function end() {
 module.exports = {
   readOpsEvents, appendOpsEvent, pruneOpsEvents,
   ensureSchema, append, readAll, replaceAll, mutate, end, getResume, DATA_DIR, putRender, getRender, deleteRenders, staleRenderIds, hasDb: !!pool,
-  getDetectionCache, putDetectionCache,
+  getDetectionCache, putDetectionCache, pruneDetectionCache, pruneOlderThan, ping,
   countStage, readFunnel, readFunnelDays, recordMeasurement, readMeasurements,
   // Exported for tests: scraping these out of the source with a regex broke
   // the moment another table was added after leads.

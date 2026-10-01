@@ -1648,12 +1648,24 @@ function storageIsWritable() {
   return writable;
 }
 
-app.get('/healthz', (req, res) => {
+app.get('/healthz', async (req, res) => {
   const storageWritable = storageIsWritable();
-  res.status(storageWritable ? 200 : 503).json({
-    ok: storageWritable,
+  /* And the database, when there is one (launch review item 25). A process
+     that is up but cannot reach Postgres would otherwise report healthy while
+     every lead it took failed to save. Two seconds, then it counts as down. */
+  let database = null;
+  if (store.hasDb) {
+    database = await Promise.race([
+      store.ping().then(() => true, () => false),
+      new Promise(r => setTimeout(() => r(false), 2000)),
+    ]);
+  }
+  const ok = storageWritable && database !== false;
+  res.status(ok ? 200 : 503).json({
+    ok,
     mode: SITE_MODE,
     storageWritable,
+    ...(store.hasDb ? { database } : {}),
   });
 });
 
@@ -4244,9 +4256,9 @@ async function runRetention({ dryRun = false } = {}) {
     }
   } catch (_) { /* no render store yet, or none stale */ }
 
-  if (!p.redact.length && !p.delete.length && !p.accessLogExpired && !orphanRenderIds.length) {
-    return { kept: p.keep, redacted: 0, deleted: 0, accessLogRemoved: 0, rendersRemoved: 0, dryRun };
-  }
+  /* No early return any more: the records around leads and the photograph
+     fingerprints age out on their own clocks, so a day with no lead due is
+     not a day with nothing to do. */
 
   const summary = {
     ts: new Date().toISOString(),
@@ -4330,6 +4342,23 @@ async function runRetention({ dryRun = false } = {}) {
     } catch (err) {
       obs.record('storage', 'could not prune the operational events', { reason: err.message });
     }
+    /* The records around leads, by age. */
+    const before = (days) => new Date(Date.now() - days * retention.DAY).toISOString();
+    summary.recordsRemoved = {};
+    for (const [table, days] of [
+      ['deliveries', retention.PERIODS.enquiryRecordDays],
+      ['leadResponses', retention.PERIODS.enquiryRecordDays],
+      ['notificationFailures', retention.PERIODS.enquiryRecordDays],
+      ['withdrawals', retention.PERIODS.consentEvidenceDays],
+      ['leadEvents', retention.PERIODS.consentEvidenceDays],
+    ]) {
+      try { summary.recordsRemoved[table] = await store.pruneOlderThan(table, before(days)); }
+      catch (err) { console.error(`Retention: could not age out ${table}:`, err.message); }
+    }
+    /* Photograph fingerprints: seven days, whether or not a new photo came in. */
+    try { summary.recordsRemoved.photoFingerprints = await store.pruneDetectionCache(DETECTION_CACHE_MS); }
+    catch (err) { console.error('Retention: could not age out photo fingerprints:', err.message); }
+
     // The deletion itself is evidence that the policy is enforced.
     await record('retentionRuns', summary);
   }
@@ -4815,8 +4844,19 @@ const countSeoLanding = async (req, slug) => {
   } catch (err) { obs.record('funnel', 'could not record a stage', { stage: 'seo_landing', reason: err.message }); }
 };
 
+/* Wrong passwords for /investors, limited (launch review item 23). Only
+   failures count, so an investor reopening the page is never turned away;
+   ten wrong guesses in fifteen minutes from one address is somebody trying. */
+const investorLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, max: envLimit('INVESTOR_RATE_LIMIT', 10),
+  skipSuccessfulRequests: true,
+  keyGenerator: (req) => rateLimit.ipKeyGenerator(String(req.ip || 'unknown'), 56),
+  standardHeaders: true, legacyHeaders: false,
+  handler: (req, res) => res.status(429).type('text').send('Too many attempts. Please wait a quarter of an hour.'),
+});
+
 app.use(require('./routes/pages')({
-  perMinute, requireInvestorPassword, SITE_URL, __dirname,
+  perMinute, requireInvestorPassword: [investorLimiter, requireInvestorPassword], SITE_URL, __dirname,
   catalogue, SITE_MODE, LEAD_RECIPIENTS, countSeoLanding,
 }));
 
