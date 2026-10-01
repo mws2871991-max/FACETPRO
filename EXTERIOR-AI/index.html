@@ -458,9 +458,22 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
          interested. The id stays choose-heading: it is the page's one h1 and
          the route-heading map and tests point at it. -->
     <h1 id="choose-heading" class="serif mt-2 text-[34px] sm:text-[44px] leading-[1.05] tracking-tight">See your house. See the price.</h1>
-    <p class="mt-3 text-lg leading-7 text-zinc-700 max-w-[46ch]">Start with one photo of the front. Try new windows, doors, roofline, walls and more on your actual home.</p>
+    <!-- The sub-head carries the feeling; the h1 carries the promise.
+         It was a feature list with five nouns in it, and the three
+         reassurances under the button were the second and third things
+         anybody read. Eleven lines of the page's strongest copy describe
+         what will not happen to you — no measuring, no sales call, never
+         sold, not how well you negotiate — which is the right answer to
+         this category and buys permission rather than wanting. Nobody
+         spends fourteen thousand pounds because we promised not to
+         telephone them.
+         "Meaning to" is where these visitors actually are: this has been
+         deferred for years, not days, and years against one photo does
+         the work without an adjective. The reassurances are not cut —
+         they are moved to the drop area, where the hesitation is. -->
+    <p class="mt-3 text-lg leading-7 text-zinc-700 max-w-[46ch]">You&rsquo;ve been meaning to do the front for years. One photo, and you&rsquo;ll see it finished &mdash; and what it costs.</p>
     <button type="button" class="mt-5 cta w-full sm:w-auto px-7 py-4 rounded-full text-lg font-semibold transition min-h-[52px]" onclick="goToUpload()">Upload my house</button>
-    <p class="mt-3 text-base text-zinc-700">Free &middot; No measuring &middot; No sales call</p>
+    <p class="mt-3 text-base text-zinc-700">Free to try</p>
     <!-- The privacy answer at the moment of deciding (Mike, 29 September).
          This is a photograph of someone's home; the explanation lived in the
          FAQ, below the fold. Folded, so the first screen stays simple, and it
@@ -846,6 +859,33 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
            does not claim either. -->
       Every picture here is a photograph of a real house, before and after — not a render, and not a showroom.
     </p>
+  </section>
+
+  <!-- Why anybody would use this, said once.
+
+       The site had eleven lines about what will not happen to you — no
+       measuring, no sales call, never sold, not how well you negotiate — and
+       almost nothing about why you would want it. That is the right answer to
+       a category that spent forty years earning its distrust, and it buys
+       permission rather than wanting.
+
+       What it never named is the thing the product actually removes. The fear
+       in this decision is not the money, it is picking wrong and then looking
+       at it: five figures, twenty-five years, and in practice not undoable
+       without paying twice. That is what a picture of your own house is for.
+       Facet Pro was being sold as a picture-maker with a price attached.
+
+       Deliberately in this site's register and not a brochure's: dated,
+       numerate, concrete, no adjectives. "A swatch the size of a playing
+       card" is the same move as "24 years of selling them" — the specificity
+       is what keeps it credible. The moment this section says "transform" or
+       "dream home", every true line about the photograph being deleted gets
+       read as sales copy too.
+       The year is deliberately a plain sum: this copy is dated 2026. -->
+  <section data-page="pricing" class="mt-12" aria-labelledby="regret-heading">
+    <h2 id="regret-heading" class="serif text-[26px] md:text-[32px] leading-tight tracking-tight max-w-[30ch]">You&rsquo;ll look at this house every day for the next twenty years.</h2>
+    <p class="mt-4 text-lg leading-7 text-zinc-700 max-w-[58ch]">Anthracite looks right in a brochure. Nearly everyone picks a frame colour off a swatch the size of a playing card, in their kitchen, on an evening when somebody is selling to them &mdash; for something they will see every morning until 2046, and cannot change without paying for it twice.</p>
+    <p class="mt-3 text-lg leading-7 text-zinc-900 font-medium max-w-[58ch]">See it on your own brick first.</p>
   </section>
 
   <!-- UX/UI Optimisation handoff §2: a second CTA immediately after the first
@@ -3690,6 +3730,12 @@ function buildUploadDetect() {
           : state.journey === 'roofline'
           ? 'We only change the fascias, soffits and guttering. Your brickwork, your windows and the shape of your home stay exactly as they are.'
           : 'We only change the finish. Your brickwork, your windows and the shape of your home stay exactly as they are.'),
+      /* The reassurances from under the hero button, moved to where the
+         hesitation actually is. They are load-bearing — they are the reason
+         anybody uploads a photograph of their own home at all — but at the
+         top of the page they were competing with the reason to want it, and
+         winning. Catching doubt beats leading with it. */
+      h('div', { className: 'mt-4 text-base text-zinc-600' }, 'No measuring · No sales call · No pressure'),
     ]));
   }
 
@@ -4249,7 +4295,16 @@ function buildUploadDetect() {
   const detectionBadgeByStatus = {
     idle:      { className: 'bg-white/10 text-white',   text: 'Waiting for your photo' },
     detecting: { className: 'bg-amber-400 text-black',  text: 'Looking at your home…' },
-    success:   { className: 'bg-emerald-500 text-white', text: '✓ Your home has been analysed' },
+    /* "Your home has been analysed" was the word at the warmest moment in the
+       whole journey: somebody has just uploaded a photograph of their own
+       house and waited for it. Analysed is the vocabulary of a blood test or
+       a soil sample, in the passive voice, describing something done TO the
+       house — and the badge thirty seconds earlier is already warm and human
+       ("Looking at your home…"). The site was warm while it worked and cold
+       the instant it delivered.
+       Active, present, and it hands straight to the heading that follows it:
+       "Does that match your house?" */
+    success:   { className: 'bg-emerald-500 text-white', text: '✓ Here’s what we found on your house' },
     error:     state.detectUnavailable
       ? { className: 'bg-amber-400 text-black', text: 'Busy — colours still work' }
       : { className: 'bg-red-500 text-white',   text: '⚠ We couldn’t read that photo' },
