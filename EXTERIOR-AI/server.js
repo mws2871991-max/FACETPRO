@@ -3386,6 +3386,18 @@ app.use(require('./routes/measure')({
 /* One FLUX Kontext call, polled to a deadline. Returns { ok, url } or
    { ok: false, status, error } for the route to send. It never writes to the
    response itself, so a render can be tried twice (see MISS_CHECKS). */
+/* One more go when Replicate itself failed the prediction (2 October,
+   "Server side error", id fb54b764…): the customer would otherwise press the
+   button again and get the same wait. Only with time left before the
+   deadline, and paid for from the daily allowance like any retry. */
+async function runFluxOrRetry(args, res, req) {
+  const tried = await runFlux(args);
+  if (tried.ok || !tried.retryable) return tried;
+  if (args.deadlineAt - Date.now() <= RETRY_NEEDS_MS || !consumeDailyQuota('render', res, req)) return tried;
+  obs.record('render', 'Replicate failed the render; trying once more');
+  return runFlux(args);
+}
+
 async function runFlux({ prompt, inputImage, deadlineAt, replicateKey }) {
   // Never ask Replicate to hold the request past the deadline: a retry starts with less time left.
   const waitSeconds = Math.max(1, Math.min(60, Math.floor((deadlineAt - Date.now()) / 1000)));
@@ -3522,7 +3534,9 @@ async function runFlux({ prompt, inputImage, deadlineAt, replicateKey }) {
        already stopped is ninety seconds of a homeowner watching a spinner. */
     if (p.status === 'failed' || p.status === 'canceled') {
       obs.record('render', 'the render did not complete', { status: p.status, detail: p.error });
-      return { ok: false, status: 502, error: 'Render failed — try again.' };
+      /* retryable: Replicate's own failure, not ours (2 Oct: "Server side
+         error", id fb54b764…). The caller tries once more if time allows. */
+      return { ok: false, status: 502, error: 'Render failed — try again.', retryable: p.status === 'failed' };
     }
   }
   return { ok: false, status: 504, error: 'Render timed out — try again.' };
@@ -3890,7 +3904,7 @@ app.post('/api/render', renderLimiter, async (req, res) => {
         }).catch(() => null)
       : Promise.resolve(null);
 
-    const first = await runFlux({ prompt, inputImage, deadlineAt, replicateKey });
+    const first = await runFluxOrRetry({ prompt, inputImage, deadlineAt, replicateKey }, res, req);
     if (!first.ok) return res.status(first.status).json({ error: first.error });
     let url = first.url;
 

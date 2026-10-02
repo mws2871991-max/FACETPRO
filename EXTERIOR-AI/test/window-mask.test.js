@@ -194,7 +194,7 @@ test('the mask is asked for beside the render, not after it', () => {
      inside the render's own. */
   const src = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
   const startedAt = src.indexOf('const maskPromise');
-  const fluxAt = src.indexOf('const first = await runFlux');
+  const fluxAt = src.indexOf('const first = await runFlux'); // runFlux or runFluxOrRetry
   const awaitedAt = src.indexOf('const mask = await maskWithinGrace(maskPromise)');
   assert.ok(startedAt > 0 && fluxAt > 0 && awaitedAt > 0, 'the concurrent mask fetch has gone');
   assert.ok(startedAt < fluxAt, 'the mask must be started before the render is awaited');

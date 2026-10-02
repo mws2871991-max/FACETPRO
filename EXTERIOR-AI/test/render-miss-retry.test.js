@@ -23,7 +23,8 @@ test('roof and walls are judged, with thresholds between a hit and a miss', () =
 
 test('one retry, only with time left, and the better picture is kept', () => {
   const route = server.slice(server.indexOf("app.post('/api/render'"), server.indexOf('/* ── POST /api/lead ──'));
-  assert.equal((route.match(/await runFlux\(/g) || []).length, 2, 'expected the first try and exactly one retry');
+  /* runFluxOrRetry (2 Oct) is the first try; it retries only a prediction Replicate failed — see replicate-retry.test.js. */
+  assert.equal((route.match(/await runFlux(?:OrRetry)?\(/g) || []).length, 2, 'expected the first try and exactly one retry');
   assert.match(route, /deadlineAt - Date\.now\(\) > RETRY_NEEDS_MS/);
   assert.match(route, /again\.score >= verdict\.score/);
   assert.match(route, /missedChanges/);
