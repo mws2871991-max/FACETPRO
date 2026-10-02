@@ -103,6 +103,49 @@ function cropToBox(buffer, mime, box, marginPct = 0) {
   } catch (_) { return null; }
 }
 
+/* The pillars among every object segmentation found in the bay crop
+   (fetchObjectMasks). Kept: tall (at least half the crop's height), narrow
+   but wider than a frame stile, solid, and smooth in the photograph — stone
+   or render, not glass or net curtains. Measured on IMG_2068's bay: the
+   pillars' brightness varies by 14–26 (standard deviation), the curtains
+   and glass 31–40. Returns one crop-sized PNG mask, or null. */
+const PILLAR_PICK = { minH: 0.5, minW: 0.035, maxW: 0.2, minFill: 0.55, minAspect: 2.5, maxStd: 28, maxArea: 0.25 };
+function pillarsFromObjects({ masks, crop, cropMime = 'image/png' } = {}) {
+  try {
+    const src = decode(crop, cropMime);
+    if (!src || !Array.isArray(masks) || !masks.length) return null;
+    const W = src.width, H = src.height;
+    const union = new Uint8Array(W * H);
+    let kept = 0;
+    for (const mk of masks) {
+      const m = mk && decode(mk.buffer, mk.mime || '');
+      if (!m) continue;
+      let minX = W, maxX = -1, minY = H, maxY = -1, n = 0, sum = 0, sum2 = 0;
+      const on = [];
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        const mx = Math.min(m.width - 1, Math.round((x + 0.5) * m.width / W - 0.5));
+        const my = Math.min(m.height - 1, Math.round((y + 0.5) * m.height / H - 0.5));
+        if (m.data[(my * m.width + mx) * 4] < 128) continue;
+        const i = (y * W + x) * 4, l = (src.data[i] + src.data[i + 1] + src.data[i + 2]) / 3;
+        n++; sum += l; sum2 += l * l; on.push(y * W + x);
+        if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y;
+      }
+      if (!n) continue;
+      const bw = maxX - minX + 1, bh = maxY - minY + 1;
+      const std = Math.sqrt(Math.max(0, sum2 / n - (sum / n) ** 2));
+      if (bh < PILLAR_PICK.minH * H || bw < PILLAR_PICK.minW * W || bw > PILLAR_PICK.maxW * W) continue;
+      if (n / (bw * bh) < PILLAR_PICK.minFill || bh / bw < PILLAR_PICK.minAspect) continue;
+      if (n > PILLAR_PICK.maxArea * W * H || std > PILLAR_PICK.maxStd) continue;
+      for (const k of on) union[k] = 1;
+      kept++;
+    }
+    if (!kept) return null;
+    const out = new PNG({ width: W, height: H });
+    for (let k = 0; k < W * H; k++) { const v = union[k] ? 255 : 0; out.data[k * 4] = out.data[k * 4 + 1] = out.data[k * 4 + 2] = v; out.data[k * 4 + 3] = 255; }
+    return { buffer: PNG.sync.write(out), mime: 'image/png', kept };
+  } catch (_) { return null; }
+}
+
 /* Bilinear sample of the photograph at render coordinates, so a 600px photo
    laid into a 1184px render does not come back blocky. */
 function sample(src, fx, fy, out) {
@@ -1045,6 +1088,6 @@ function correctFrameColour(opts) {
   }
 }
 
-module.exports = { MASK_BOX_MARGIN_PCT, cropToBox,
+module.exports = { MASK_BOX_MARGIN_PCT, cropToBox, pillarsFromObjects, PILLAR_PICK,
   restorePillars, PILLAR_MAX_OF_BAY, restoreDoor, restoreSurroundings, restoreOutsideMask, correctFrameColour,
                    drawGeorgianBars, doorBox, changedShare, MASK_ON, rgbToLab, labToRgb, hexToRgb };

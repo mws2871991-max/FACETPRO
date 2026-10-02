@@ -264,4 +264,66 @@ async function maskWithinGrace(maskPromise, graceMs = GRACE_MS) {
   }
 }
 
-module.exports = { fetchWindowMask, fetchPillarMask, PILLAR_PROMPT, PILLAR_DILATE, maskWithinGrace, maskPrompt, MODEL_VERSION, MASK_INDEX, DILATE, MIN_BUDGET_MS, MAX_WAIT_MS, GRACE_MS };
+/* Every object in the picture, one mask each (meta/sam-2, automatic mask
+   generation). 2 October: asked by name for "pillar", segmentation took
+   79–88% of the bay on IMG_2068 whatever the wording or framing, so the
+   pillars are now picked by shape from all the objects instead — see
+   pillarsFromObjects in hold.js. Input and output checked against the
+   version's API page on 2 October: image, points_per_side; output
+   { combined_mask, individual_masks[] }. */
+const SAM2_VERSION = 'cbd95fb76192174268b6b303aeeb7a736e8dab0cbc38177f09db79b2299da30b';
+const OBJECT_MASK_LIMIT = 120;
+async function fetchObjectMasks({ image, mime, replicateKey, deadlineAt, fetchImpl = fetch, onNote } = {}) {
+  const note = isFn(onNote) ? onNote : () => {};
+  if (!replicateKey) { note('no Replicate token'); return null; }
+  if (!image || !image.length) { note('no photograph to segment'); return null; }
+  const budget = Number.isFinite(deadlineAt) ? deadlineAt - Date.now() : MAX_WAIT_MS;
+  if (budget < MIN_BUDGET_MS) { note(`only ${Math.max(0, Math.round(budget))}ms left`); return null; }
+  const waitMs = Math.min(MAX_WAIT_MS, budget - 2000);
+  const giveUpAt = Date.now() + waitMs;
+  const waitSeconds = Math.max(1, Math.min(60, Math.floor(waitMs / 1000)));
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), waitMs);
+  let pred;
+  try {
+    const res = await fetchImpl('https://api.replicate.com/v1/predictions', {
+      method: 'POST', signal: controller.signal,
+      headers: { 'Authorization': `Bearer ${replicateKey}`, 'Content-Type': 'application/json', 'Prefer': `wait=${waitSeconds}` },
+      body: JSON.stringify({ version: SAM2_VERSION, input: {
+        image: `data:${mime || 'image/png'};base64,${image.toString('base64')}`, points_per_side: 32 } }),
+    });
+    if (!res.ok) { note(`object segmentation refused (${res.status})`); return null; }
+    pred = await res.json();
+  } catch (err) {
+    note(`object segmentation call failed: ${err?.name === 'AbortError' ? 'timed out' : err?.message}`);
+    return null;
+  } finally { clearTimeout(timer); }
+  while (pred && (pred.status === 'starting' || pred.status === 'processing')) {
+    if (Date.now() > giveUpAt) { note('object segmentation still running at the deadline'); return null; }
+    await new Promise(r => setTimeout(r, 1500));
+    try {
+      const r = await fetchImpl(`https://api.replicate.com/v1/predictions/${pred.id}`, { headers: { 'Authorization': `Bearer ${replicateKey}` } });
+      if (!r.ok) { note(`object segmentation poll failed (${r.status})`); return null; }
+      pred = await r.json();
+    } catch (err) { note(`object segmentation poll failed: ${err?.message}`); return null; }
+  }
+  if (!pred || pred.status !== 'succeeded') { note(`object segmentation ${pred?.status || 'gone'}`); return null; }
+  const urls = (pred.output && Array.isArray(pred.output.individual_masks)) ? pred.output.individual_masks.slice(0, OBJECT_MASK_LIMIT) : [];
+  if (!urls.length) { note('object segmentation returned no masks'); return null; }
+  const masks = [];
+  for (let k = 0; k < urls.length; k += 8) {
+    if (Date.now() > giveUpAt) { note(`fetched ${masks.length} of ${urls.length} masks by the deadline`); break; }
+    const got = await Promise.all(urls.slice(k, k + 8).map(async (u) => {
+      try {
+        const r = await fetchImpl(u); if (!r.ok) return null;
+        const buffer = Buffer.from(await r.arrayBuffer());
+        const isPng = buffer.length > 8 && buffer[0] === 0x89 && buffer[1] === 0x50;
+        return buffer.length ? { buffer, mime: isPng ? 'image/png' : 'image/jpeg' } : null;
+      } catch (_) { return null; }
+    }));
+    for (const g of got) if (g) masks.push(g);
+  }
+  return masks.length ? masks : null;
+}
+
+module.exports = { fetchWindowMask, fetchPillarMask, fetchObjectMasks, SAM2_VERSION, PILLAR_PROMPT, PILLAR_DILATE, maskWithinGrace, maskPrompt, MODEL_VERSION, MASK_INDEX, DILATE, MIN_BUDGET_MS, MAX_WAIT_MS, GRACE_MS };

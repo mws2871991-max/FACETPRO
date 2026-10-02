@@ -26,8 +26,8 @@ const consentText = require('./consent');
 const { isTestTraffic } = require('./testtraffic');
 
 const { buildRenderPrompt } = require('./renderprompt');
-const { restoreDoor, restoreSurroundings, restoreOutsideMask, restorePillars, cropToBox, correctFrameColour, drawGeorgianBars, changedShare } = require('./hold');
-const { fetchWindowMask, fetchPillarMask, maskWithinGrace, GRACE_MS } = require('./windowmask');
+const { restoreDoor, restoreSurroundings, restoreOutsideMask, restorePillars, cropToBox, pillarsFromObjects, correctFrameColour, drawGeorgianBars, changedShare } = require('./hold');
+const { fetchWindowMask, fetchObjectMasks, maskWithinGrace, GRACE_MS } = require('./windowmask');
 /* How long a mask started at upload may take. Generous, because nothing is
    waiting on it — a cold start at 83s still lands well before most people have
    picked a colour, and the render only ever waits GRACE_MS for whatever state
@@ -3263,7 +3263,7 @@ async function keepRender(replicateUrl, restore = null) {
    prediction is cheap to repeat and the two failures behind this are both
    transient more often than not. It deliberately does not say the render
    failed, which would be a lie about the part that went right. */
-/* See restorePillars in hold.js and fetchPillarMask in windowmask.js. */
+/* See restorePillars in hold.js and fetchObjectMasks in windowmask.js, pillarsFromObjects in hold.js. */
 function holdBayPillars(bytes, mime, restore, detections, aspectRatio) {
   const bay = glazing.frontWindowBoxes(detections, aspectRatio).find(b => b.isBay) || null;
   const held = restorePillars({ render: bytes, renderMime: mime, original: restore.original,
@@ -3901,11 +3901,18 @@ app.post('/api/render', renderLimiter, async (req, res) => {
        on the full elevation the mask took 79% of the bay as one object. */
     const bayBox = hasBay ? (glazing.frontWindowBoxes(detectionRecord.detections || [], detectionRecord.aspectRatio).find(b => b.isBay) || null) : null;
     const bayCrop = (maskWanted && bayBox && wantsPillarMask(req.body)) ? cropToBox(img.buffer, img.mime, bayBox, 3) : null;
+    /* Every object in the bay crop, and the pillars picked from them by shape
+       (2 October: asked for by name, segmentation took 79–88% of the bay). */
     const pillarPromise = bayCrop
-      ? fetchPillarMask({
+      ? fetchObjectMasks({
           image: bayCrop.buffer, mime: bayCrop.mime, replicateKey, deadlineAt,
           onNote: (why) => obs.record('render', 'pillar mask not used', { reason: why }),
-        }).then(m => (m ? { ...m, box: bayCrop.box } : null)).catch(() => null)
+        }).then(masks => {
+          if (!masks) return null;
+          const picked = pillarsFromObjects({ masks, crop: bayCrop.buffer, cropMime: bayCrop.mime });
+          obs.record('render', 'pillars picked from objects', { objects: masks.length, kept: picked ? picked.kept : 0 });
+          return picked ? { buffer: picked.buffer, mime: picked.mime, box: bayCrop.box } : null;
+        }).catch(() => null)
       : Promise.resolve(null);
 
     const first = await runFluxOrRetry({ prompt, inputImage, deadlineAt, replicateKey }, res, req);

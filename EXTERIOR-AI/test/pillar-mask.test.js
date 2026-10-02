@@ -89,3 +89,44 @@ test('the server segments a crop of the bay, not the full elevation', () => {
   assert.match(server, /image: bayCrop\.buffer/);
   assert.match(server, /maskBox: restore\.pillarMaskBox/);
 });
+
+/* 0049: pillars picked by shape from every object segmentation finds. */
+const { pillarsFromObjects } = require('../hold');
+const C_W = 100, C_H = 60;
+const cropPng = (fn) => { const p = new PNG({ width: C_W, height: C_H });
+  for (let y = 0; y < C_H; y++) for (let x = 0; x < C_W; x++) { const v = fn(x, y); const i = (y * C_W + x) * 4;
+    p.data[i] = p.data[i + 1] = p.data[i + 2] = v; p.data[i + 3] = 255; } return PNG.sync.write(p); };
+// The photograph of the bay: smooth stone pillars at x 10–19 and 70–79, a stile at 30–31, textured curtains between.
+const crop = cropPng((x, y) => ((x >= 10 && x < 20) || (x >= 70 && x < 80) || x === 30 || x === 31) ? 220 : ((x * 7 + y * 13) % 2 ? 250 : 150));
+const obj = (fn) => ({ buffer: cropPng((x, y) => (fn(x, y) ? 255 : 0)), mime: 'image/png' });
+
+test('the pillars are picked out of every object by shape and smoothness', () => {
+  const masks = [
+    obj((x, y) => x >= 10 && x < 20 && y >= 2 && y < 58),          // pillar
+    obj((x, y) => x >= 70 && x < 80 && y >= 2 && y < 58),          // pillar
+    obj((x, y) => (x === 30 || x === 31) && y >= 2 && y < 58),     // frame stile: too thin
+    obj((x, y) => x >= 35 && x < 45 && y >= 2 && y < 58),          // a narrow pane of curtains: too textured
+    obj((x, y) => x >= 22 && x < 68 && y >= 5 && y < 55),          // the whole window: too wide
+    obj((x, y) => x >= 10 && x < 20 && y >= 2 && y < 15),          // a capital alone: too short
+  ];
+  const r = pillarsFromObjects({ masks, crop });
+  assert.ok(r, 'something kept');
+  assert.strictEqual(r.kept, 2);
+  const m = PNG.sync.read(r.buffer);
+  const at = (x, y) => m.data[(y * C_W + x) * 4];
+  assert.strictEqual(at(15, 30), 255); assert.strictEqual(at(75, 30), 255);
+  assert.strictEqual(at(30, 30), 0, 'stile not kept'); assert.strictEqual(at(40, 30), 0, 'curtains not kept');
+});
+
+test('nothing pillar-shaped, nothing kept', () => {
+  assert.strictEqual(pillarsFromObjects({ masks: [obj((x, y) => x >= 22 && x < 68)], crop }), null);
+  assert.strictEqual(pillarsFromObjects({ masks: [], crop }), null);
+});
+
+test('the server picks pillars from all objects in the bay crop', () => {
+  const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  assert.match(server, /fetchObjectMasks\(\{\s*image: bayCrop\.buffer/);
+  assert.match(server, /pillarsFromObjects\(\{ masks, crop: bayCrop\.buffer/);
+  const { SAM2_VERSION } = require('../windowmask');
+  assert.match(SAM2_VERSION, /^[0-9a-f]{64}$/);
+});
