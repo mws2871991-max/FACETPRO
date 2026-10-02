@@ -3910,8 +3910,9 @@ app.post('/api/render', renderLimiter, async (req, res) => {
         }).then(masks => {
           if (!masks) return null;
           const picked = pillarsFromObjects({ masks, crop: bayCrop.buffer, cropMime: bayCrop.mime });
-          obs.record('render', 'pillars picked from objects', { objects: masks.length, kept: picked ? picked.kept : 0 });
-          return picked ? { buffer: picked.buffer, mime: picked.mime, box: bayCrop.box } : null;
+          obs.record('render', 'pillars picked from objects', { objects: masks.length, kept: picked ? picked.kept : 0,
+            attached: picked ? picked.attached : 0, rejected: picked ? picked.rejected : null });
+          return (picked && picked.buffer) ? { buffer: picked.buffer, mime: picked.mime, box: bayCrop.box } : null;
         }).catch(() => null)
       : Promise.resolve(null);
 

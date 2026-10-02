@@ -107,7 +107,7 @@ test('the pillars are picked out of every object by shape and smoothness', () =>
     obj((x, y) => (x === 30 || x === 31) && y >= 2 && y < 58),     // frame stile: too thin
     obj((x, y) => x >= 35 && x < 45 && y >= 2 && y < 58),          // a narrow pane of curtains: too textured
     obj((x, y) => x >= 22 && x < 68 && y >= 5 && y < 55),          // the whole window: too wide
-    obj((x, y) => x >= 10 && x < 20 && y >= 2 && y < 15),          // a capital alone: too short
+    obj((x, y) => x >= 40 && x < 48 && y >= 2 && y < 12),          // something short, not on a pillar
   ];
   const r = pillarsFromObjects({ masks, crop });
   assert.ok(r, 'something kept');
@@ -119,7 +119,7 @@ test('the pillars are picked out of every object by shape and smoothness', () =>
 });
 
 test('nothing pillar-shaped, nothing kept', () => {
-  assert.strictEqual(pillarsFromObjects({ masks: [obj((x, y) => x >= 22 && x < 68)], crop }), null);
+  assert.strictEqual(pillarsFromObjects({ masks: [obj((x, y) => x >= 22 && x < 68)], crop }).buffer, null);
   assert.strictEqual(pillarsFromObjects({ masks: [], crop }), null);
 });
 
@@ -129,4 +129,24 @@ test('the server picks pillars from all objects in the bay crop', () => {
   assert.match(server, /pillarsFromObjects\(\{ masks, crop: bayCrop\.buffer/);
   const { SAM2_VERSION } = require('../windowmask');
   assert.match(SAM2_VERSION, /^[0-9a-f]{64}$/);
+});
+
+test('a capital or base sitting on a kept shaft is kept with it (0050)', () => {
+  const masks = [
+    obj((x, y) => x >= 10 && x < 20 && y >= 12 && y < 50),          // shaft
+    obj((x, y) => x >= 7 && x < 23 && y >= 4 && y < 12),            // capital on top: squat, wider
+    obj((x, y) => x >= 7 && x < 23 && y >= 50 && y < 57),           // base
+    obj((x, y) => x >= 40 && x < 56 && y >= 4 && y < 12),           // same shape, not on a shaft
+  ];
+  const r = pillarsFromObjects({ masks, crop });
+  assert.strictEqual(r.kept, 1); assert.strictEqual(r.attached, 2);
+  const m = PNG.sync.read(r.buffer); const at = (x, y) => m.data[(y * C_W + x) * 4];
+  assert.strictEqual(at(8, 8), 255, 'capital kept'); assert.strictEqual(at(8, 54), 255, 'base kept');
+  assert.strictEqual(at(45, 8), 0, 'a squat object elsewhere is not');
+  assert.ok(r.rejected.short >= 1, 'and the log says why the others were dropped');
+});
+
+test('a shaft held for 15% of the bay height is run the full height (0050)', () => {
+  const { PILLAR_SHAFT_MIN } = require('../hold');
+  assert.strictEqual(PILLAR_SHAFT_MIN, 0.15);
 });

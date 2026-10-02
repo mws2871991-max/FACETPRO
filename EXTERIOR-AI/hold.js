@@ -109,14 +109,19 @@ function cropToBox(buffer, mime, box, marginPct = 0) {
    or render, not glass or net curtains. Measured on IMG_2068's bay: the
    pillars' brightness varies by 14–26 (standard deviation), the curtains
    and glass 31–40. Returns one crop-sized PNG mask, or null. */
-const PILLAR_PICK = { minH: 0.5, minW: 0.035, maxW: 0.2, minFill: 0.55, minAspect: 2.5, maxStd: 28, maxArea: 0.25 };
+const PILLAR_PICK = { minH: 0.35, minW: 0.035, maxW: 0.2, minFill: 0.55, minAspect: 2.5, maxStd: 34, maxArea: 0.25 };
+/* Pass two: the carved capital and the base are their own objects, squat and
+   textured, so the shape test above throws them away (0049 on IMG_2068: 16
+   objects, 1 kept, capitals green). Any object sitting on a kept shaft —
+   centred over it, touching it top or bottom, not much wider, not tall — is
+   kept with it. */
+const PILLAR_ATTACH = { maxWidthX: 2.5, maxH: 0.35, gap: 0.04, maxStd: 60 };
 function pillarsFromObjects({ masks, crop, cropMime = 'image/png' } = {}) {
   try {
     const src = decode(crop, cropMime);
     if (!src || !Array.isArray(masks) || !masks.length) return null;
     const W = src.width, H = src.height;
-    const union = new Uint8Array(W * H);
-    let kept = 0;
+    const objs = [];
     for (const mk of masks) {
       const m = mk && decode(mk.buffer, mk.mime || '');
       if (!m) continue;
@@ -132,17 +137,40 @@ function pillarsFromObjects({ masks, crop, cropMime = 'image/png' } = {}) {
       }
       if (!n) continue;
       const bw = maxX - minX + 1, bh = maxY - minY + 1;
-      const std = Math.sqrt(Math.max(0, sum2 / n - (sum / n) ** 2));
-      if (bh < PILLAR_PICK.minH * H || bw < PILLAR_PICK.minW * W || bw > PILLAR_PICK.maxW * W) continue;
-      if (n / (bw * bh) < PILLAR_PICK.minFill || bh / bw < PILLAR_PICK.minAspect) continue;
-      if (n > PILLAR_PICK.maxArea * W * H || std > PILLAR_PICK.maxStd) continue;
-      for (const k of on) union[k] = 1;
-      kept++;
+      objs.push({ on, n, minX, maxX, minY, maxY, bw, bh, std: Math.sqrt(Math.max(0, sum2 / n - (sum / n) ** 2)) });
     }
-    if (!kept) return null;
+    /* Why each object was or was not a shaft, for the log: the next live test
+       should say which rule failed rather than leave it to be guessed. */
+    const why = (o) => {
+      if (o.bh < PILLAR_PICK.minH * H) return 'short';
+      if (o.bw < PILLAR_PICK.minW * W) return 'thin';
+      if (o.bw > PILLAR_PICK.maxW * W) return 'wide';
+      if (o.n / (o.bw * o.bh) < PILLAR_PICK.minFill) return 'hollow';
+      if (o.bh / o.bw < PILLAR_PICK.minAspect) return 'squat';
+      if (o.n > PILLAR_PICK.maxArea * W * H) return 'big';
+      if (o.std > PILLAR_PICK.maxStd) return 'textured';
+      return null;
+    };
+    const rejected = {};
+    const shafts = [];
+    for (const o of objs) { const r = why(o); if (r) rejected[r] = (rejected[r] || 0) + 1; else shafts.push(o); }
+    if (!shafts.length) return { buffer: null, kept: 0, attached: 0, rejected };
+    const kept = new Set(shafts);
+    let attached = 0;
+    for (const o of objs) {
+      if (kept.has(o)) continue;
+      const cx = (o.minX + o.maxX) / 2;
+      const on = shafts.find(sh => cx >= sh.minX && cx <= sh.maxX
+        && o.bw <= PILLAR_ATTACH.maxWidthX * sh.bw && o.bh <= PILLAR_ATTACH.maxH * H && o.std <= PILLAR_ATTACH.maxStd
+        && (Math.abs(o.maxY - sh.minY) <= PILLAR_ATTACH.gap * H || Math.abs(o.minY - sh.maxY) <= PILLAR_ATTACH.gap * H
+            || (o.minY < sh.minY && o.maxY > sh.minY) || (o.minY < sh.maxY && o.maxY > sh.maxY)));
+      if (on) { kept.add(o); attached++; }
+    }
+    const union = new Uint8Array(W * H);
+    for (const o of kept) for (const k of o.on) union[k] = 1;
     const out = new PNG({ width: W, height: H });
     for (let k = 0; k < W * H; k++) { const v = union[k] ? 255 : 0; out.data[k * 4] = out.data[k * 4 + 1] = out.data[k * 4 + 2] = v; out.data[k * 4 + 3] = 255; }
-    return { buffer: PNG.sync.write(out), mime: 'image/png', kept };
+    return { buffer: PNG.sync.write(out), mime: 'image/png', kept: shafts.length, attached, rejected };
   } catch (_) { return null; }
 }
 
@@ -831,7 +859,11 @@ const PILLAR_MAX_OF_BAY = 0.45;
    The whole column is then held, top to bottom of the bay: the carved capital
    and the base sit on the shaft, and segmentation asked for "pillar" finds
    the plain shaft and not the carving (IMG_2068, green, 2 October). */
-const PILLAR_SHAFT_MIN = 0.3;
+/* 0.3 → 0.15 (2 October, 0050): on IMG_2068 the shaft the object pick kept
+   held at ofBay 0.039 and its capital stayed green — a shaft that starts
+   below its capital and stops above its base is well under 30% of a bay box
+   that includes the roof edge and sill. */
+const PILLAR_SHAFT_MIN = 0.15;
 function restorePillars(opts) {
   const { render, renderMime, original, originalMime, mask, maskMime, bay = null, maskBox = null } = opts || {};
   const untouched = (reason) => ({ buffer: render, restored: false, reason, share: 0 });
@@ -1088,6 +1120,6 @@ function correctFrameColour(opts) {
   }
 }
 
-module.exports = { MASK_BOX_MARGIN_PCT, cropToBox, pillarsFromObjects, PILLAR_PICK,
+module.exports = { MASK_BOX_MARGIN_PCT, cropToBox, pillarsFromObjects, PILLAR_PICK, PILLAR_ATTACH, PILLAR_SHAFT_MIN,
   restorePillars, PILLAR_MAX_OF_BAY, restoreDoor, restoreSurroundings, restoreOutsideMask, correctFrameColour,
                    drawGeorgianBars, doorBox, changedShare, MASK_ON, rgbToLab, labToRgb, hexToRgb };
