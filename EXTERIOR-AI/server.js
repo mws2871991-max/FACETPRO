@@ -26,8 +26,8 @@ const consentText = require('./consent');
 const { isTestTraffic } = require('./testtraffic');
 
 const { buildRenderPrompt } = require('./renderprompt');
-const { restoreDoor, restoreSurroundings, restoreOutsideMask, correctFrameColour, drawGeorgianBars, changedShare } = require('./hold');
-const { fetchWindowMask, maskWithinGrace, GRACE_MS } = require('./windowmask');
+const { restoreDoor, restoreSurroundings, restoreOutsideMask, restorePillars, correctFrameColour, drawGeorgianBars, changedShare } = require('./hold');
+const { fetchWindowMask, fetchPillarMask, maskWithinGrace, GRACE_MS } = require('./windowmask');
 /* How long a mask started at upload may take. Generous, because nothing is
    waiting on it — a cold start at 83s still lands well before most people have
    picked a colour, and the render only ever waits GRACE_MS for whatever state
@@ -3201,6 +3201,7 @@ async function keepRender(replicateUrl, restore = null) {
           : { restored: false, reason: 'no mask' };
         if (masked.restored) {
           bytes = masked.buffer;
+          if (restore.pillarMask) bytes = holdBayPillars(bytes, mime, restore, detections, detectionAspectRatio);
           obs.record('render', 'held the render to the window mask', { inside: masked.insideShare.toFixed(3), windowsFilled: masked.windowsFilled || 0 });
         } else {
           if (restore.mask) obs.record('render', 'window mask not used', { reason: masked.reason });
@@ -3262,6 +3263,19 @@ async function keepRender(replicateUrl, restore = null) {
    prediction is cheap to repeat and the two failures behind this are both
    transient more often than not. It deliberately does not say the render
    failed, which would be a lie about the part that went right. */
+/* See restorePillars in hold.js and fetchPillarMask in windowmask.js. */
+function holdBayPillars(bytes, mime, restore, detections, aspectRatio) {
+  const bay = glazing.frontWindowBoxes(detections, aspectRatio).find(b => b.isBay) || null;
+  const held = restorePillars({ render: bytes, renderMime: mime, original: restore.original,
+    originalMime: restore.originalMime, mask: restore.pillarMask, maskMime: restore.pillarMaskMime, bay });
+  if (!held.restored) {
+    obs.record('render', 'bay pillars not held', { reason: held.reason });
+    return bytes;
+  }
+  obs.record('render', 'held the bay pillars to the photograph', { share: held.share.toFixed(4), ofBay: (held.ofBay || 0).toFixed(3) });
+  return held.buffer;
+}
+
 async function respondWithRender(res, url, extra = {}, restore = null) {
   try {
     return res.json({ ...await keepRender(url, restore), ...extra });
@@ -3582,6 +3596,18 @@ async function judgeRender(url, trades, original) {
   return { missed, score: worst };
 }
 
+/* The bay pillar hold (2 October), behind a switch while it is proved.
+
+   PILLAR_MASK=off (default) never runs it; =test runs it only for a request
+   that asks with experiments: ['pillar-mask'] (the page sends that when its
+   address has ?exp=pillar); =on runs it for every render of a bay. It costs
+   one extra segmentation call per bay render and never delays the picture
+   beyond the window mask's own grace. */
+const PILLAR_MASK_MODE = ['off', 'test', 'on'].includes(String(process.env.PILLAR_MASK || '').toLowerCase())
+  ? String(process.env.PILLAR_MASK).toLowerCase() : 'off';
+const wantsPillarMask = (body) => PILLAR_MASK_MODE === 'on'
+  || (PILLAR_MASK_MODE === 'test' && Array.isArray(body?.experiments) && body.experiments.includes('pillar-mask'));
+
 app.post('/api/render', renderLimiter, async (req, res) => {
   const { image, mimeType, claddingName, trimName, roofName,
           windowStyleName, doorStyleName, doorStyleId, windowDoorColourName,
@@ -3855,6 +3881,15 @@ app.post('/api/render', renderLimiter, async (req, res) => {
           onNote: (why) => obs.record('render', 'window mask not used', { reason: why }),
         }).catch(() => null);
 
+    /* The bay's pillars, asked for beside the window mask. Only on a bay,
+       only for a windows-only job, only behind the switch. */
+    const pillarPromise = (maskWanted && hasBay && wantsPillarMask(req.body))
+      ? fetchPillarMask({
+          image: img.buffer, mime: img.mime, replicateKey, deadlineAt,
+          onNote: (why) => obs.record('render', 'pillar mask not used', { reason: why }),
+        }).catch(() => null)
+      : Promise.resolve(null);
+
     const first = await runFlux({ prompt, inputImage, deadlineAt, replicateKey });
     if (!first.ok) return res.status(first.status).json({ error: first.error });
     let url = first.url;
@@ -3915,8 +3950,10 @@ app.post('/api/render', renderLimiter, async (req, res) => {
        so a mask that arrived after the grace is not thrown away — the person
        who tries anthracite next gets the one this render gave up waiting for. */
     if (maskRecord && mask && !maskRecord.windowMask) maskRecord.windowMask = mask;
+    const pillars = await maskWithinGrace(pillarPromise);
     const restorePlan = (doorRestore && mask)
-      ? { ...doorRestore, mask: mask.buffer, maskMime: mask.mime }
+      ? { ...doorRestore, mask: mask.buffer, maskMime: mask.mime,
+          ...(pillars ? { pillarMask: pillars.buffer, pillarMaskMime: pillars.mime } : {}) }
       : doorRestore;
 
     return respondWithRender(res, url, {

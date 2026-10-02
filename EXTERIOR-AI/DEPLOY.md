@@ -99,6 +99,7 @@ way to get this deployment wrong.
 | `DETECT_RATE_LIMIT` | no | Detection requests per minute per IP. Default 10, which is right for a homeowner. Exists so the test suite can send one photograph fifteen times on purpose; leave it unset in production. |
 | `INSTALLER_RATE_LIMIT` | no | Installer sign-in attempts per 15 minutes per IP. Default 20. Exists for the test suite; leave it unset in production. |
 | `DAILY_RENDER_LIMIT` | no | Default 200 (was 50 until launch). The only thing bounding render spend. |
+| `PILLAR_MASK` | no | `off` (default), `test` or `on`. Holds the pillars between bay windows to the photograph so they are not painted with the frames. `test` applies it only to renders from a page opened with `?exp=pillar`. One extra segmentation call per bay render. |
 - `BACKUPS_CONFIRMED` — the date you last tested restoring the database, e.g.
   `2026-10-01`. Nothing reads the value; the startup check only looks for it,
   and warns on every deploy while `LEAD_CAPTURE` is on and it is missing.

@@ -7901,6 +7901,9 @@ async function generateRealRender() {
            describes a slate roof. Null is fine — the server treats a missing
            or expired record as "no extra information" and renders as before. */
         detectionId: state.detectionId,
+        /* Trial features, only when the address asks (?exp=pillar). The
+           server ignores this unless PILLAR_MASK=test or on. */
+        experiments: /[?&]exp=pillar\b/.test(location.search) ? ['pillar-mask'] : undefined,
         /* Sent by name, and only when they have actually chosen. The render
            leaves frames alone unless there is something to change them to —
            see the prompt in server.js. */

@@ -728,6 +728,56 @@ function restoreOutsideMask(opts) {
   }
 }
 
+/* Put the pillars back (2 October). See fetchPillarMask in windowmask.js.
+
+   Inside the pillar mask the photograph; everywhere else the render as it
+   stands. Refuses a mask that cannot be a set of pillars: too small to be
+   anything, or so large it has taken the whole bay (and the frames with it)
+   — then the render is left exactly as it was. Bounded by the bay's box when
+   one is given, so a pillar next door or a porch column elsewhere on the
+   street is not this job's business either way. */
+const PILLAR_MIN_SHARE = 0.002;
+const PILLAR_MAX_OF_BAY = 0.45;
+function restorePillars(opts) {
+  const { render, renderMime, original, originalMime, mask, maskMime, bay = null } = opts || {};
+  const untouched = (reason) => ({ buffer: render, restored: false, reason, share: 0 });
+  try {
+    if (!/png/i.test(renderMime || '')) return untouched('render is not a PNG');
+    if (!mask || !mask.length) return untouched('no pillar mask');
+    const src = decode(original, originalMime || '');
+    if (!src) return untouched('photograph type not handled');
+    const m = decode(mask, maskMime || '');
+    if (!m) return untouched('mask type not handled');
+    const out = PNG.sync.read(render);
+    const W = out.width, H = out.height;
+    if (Math.abs(m.width / m.height - W / H) > 0.02) return untouched(`mask is ${m.width}x${m.height}, render is ${W}x${H}`);
+    let bx0 = 0, bx1 = W - 1, by0 = 0, by1 = H - 1;
+    if (bay && ['x', 'y', 'w', 'h'].every(k => Number.isFinite(Number(bay[k])))) {
+      bx0 = Math.max(0, Math.floor((Number(bay.x) - 2) * W / 100)); bx1 = Math.min(W - 1, Math.ceil((Number(bay.x) + Number(bay.w) + 2) * W / 100));
+      by0 = Math.max(0, Math.floor((Number(bay.y) - 2) * H / 100)); by1 = Math.min(H - 1, Math.ceil((Number(bay.y) + Number(bay.h) + 2) * H / 100));
+    }
+    const on = [];
+    for (let y = by0; y <= by1; y++) for (let x = bx0; x <= bx1; x++) {
+      const mx = Math.min(m.width - 1, Math.max(0, Math.round((x + 0.5) * m.width / W - 0.5)));
+      const my = Math.min(m.height - 1, Math.max(0, Math.round((y + 0.5) * m.height / H - 0.5)));
+      if (m.data[(my * m.width + mx) * 4] >= MASK_ON) on.push(y * W + x);
+    }
+    const share = on.length / (W * H);
+    const ofBay = on.length / ((bx1 - bx0 + 1) * (by1 - by0 + 1));
+    if (share < PILLAR_MIN_SHARE) return untouched(`pillar mask covers only ${(share * 100).toFixed(2)}% of the frame`);
+    if (bay && ofBay > PILLAR_MAX_OF_BAY) return untouched(`pillar mask covers ${(ofBay * 100).toFixed(0)}% of the bay — that is the window, not its pillars`);
+    const px = [0, 0, 0];
+    for (const k of on) {
+      const x = k % W, y = (k - x) / W;
+      sample(src, (x + 0.5) * (src.width / W) - 0.5, (y + 0.5) * (src.height / H) - 0.5, px);
+      out.data[k * 4] = px[0]; out.data[k * 4 + 1] = px[1]; out.data[k * 4 + 2] = px[2];
+    }
+    return { buffer: PNG.sync.write(out), restored: true, reason: null, share, ofBay };
+  } catch (err) {
+    return untouched(err?.message || 'pillar hold failed');
+  }
+}
+
 /* ── The colour the homeowner actually chose ──
  *
  * The last of the three ways this render goes wrong, and the only one that can
@@ -928,5 +978,6 @@ function correctFrameColour(opts) {
   }
 }
 
-module.exports = { restoreDoor, restoreSurroundings, restoreOutsideMask, correctFrameColour,
+module.exports = {
+  restorePillars, PILLAR_MAX_OF_BAY, restoreDoor, restoreSurroundings, restoreOutsideMask, correctFrameColour,
                    drawGeorgianBars, doorBox, changedShare, MASK_ON, rgbToLab, labToRgb, hexToRgb };

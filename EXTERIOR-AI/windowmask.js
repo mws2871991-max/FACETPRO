@@ -122,6 +122,9 @@ function maskPrompt({ changingDoor = false } = {}) {
  */
 async function fetchWindowMask({
   image, mime, replicateKey, deadlineAt, changingDoor = false, fetchImpl = fetch, onNote,
+  /* Another thing to segment instead of windows — the bay's pillars
+     (fetchPillarMask) — and how far to grow or shrink it. */
+  prompt = null, dilate = DILATE,
 } = {}) {
   const note = isFn(onNote) ? onNote : () => {};
   if (!replicateKey) { note('no Replicate token'); return null; }
@@ -159,11 +162,11 @@ async function fetchWindowMask({
         version: MODEL_VERSION,
         input: {
           image: dataUri,
-          mask_prompt: maskPrompt({ changingDoor }),
+          mask_prompt: prompt || maskPrompt({ changingDoor }),
           /* Deliberately empty. See the header: both negatives tried took the
              usable mask from 25.4% of the frame to 0.2%. */
           negative_mask_prompt: '',
-          adjustment_factor: DILATE,
+          adjustment_factor: dilate,
         },
       }),
     });
@@ -223,6 +226,24 @@ async function fetchWindowMask({
   }
 }
 
+/* The bay's pillars, as pixels (2 October, IMG_2068).
+
+   A painted bay's pillars, capitals and cornice are the same white as its
+   frames, and the render sometimes paints them with the frames: black and
+   soft green both did on a bay-fronted terrace, while dark grey did not.
+   The window mask cannot keep them back, because to segmentation the bay is
+   one window and the pillars are inside it. So ask for the pillars by name,
+   positively (a negative prompt swallows the window, see the header), and
+   put them back to the photograph after the render.
+
+   Shrunk rather than grown: a pillar mask that bleeds a few pixels onto the
+   frame beside it would put a white stripe down every painted frame. */
+const PILLAR_PROMPT = 'column, pillar, pilaster';
+const PILLAR_DILATE = -2;
+function fetchPillarMask(opts = {}) {
+  return fetchWindowMask({ ...opts, prompt: PILLAR_PROMPT, dilate: PILLAR_DILATE });
+}
+
 /* The mask if it is ready or nearly ready, null if it is not.
  *
  * Kept here rather than in the route so the number and the reasoning live with
@@ -240,4 +261,4 @@ async function maskWithinGrace(maskPromise, graceMs = GRACE_MS) {
   }
 }
 
-module.exports = { fetchWindowMask, maskWithinGrace, maskPrompt, MODEL_VERSION, MASK_INDEX, DILATE, MIN_BUDGET_MS, MAX_WAIT_MS, GRACE_MS };
+module.exports = { fetchWindowMask, fetchPillarMask, PILLAR_PROMPT, PILLAR_DILATE, maskWithinGrace, maskPrompt, MODEL_VERSION, MASK_INDEX, DILATE, MIN_BUDGET_MS, MAX_WAIT_MS, GRACE_MS };
