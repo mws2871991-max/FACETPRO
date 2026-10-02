@@ -3201,7 +3201,7 @@ async function keepRender(replicateUrl, restore = null) {
           : { restored: false, reason: 'no mask' };
         if (masked.restored) {
           bytes = masked.buffer;
-          if (restore.pillarMask) bytes = holdBayPillars(bytes, mime, restore, detections, detectionAspectRatio);
+          if (restore.pillarMasks) bytes = holdBayPillars(bytes, mime, restore);
           obs.record('render', 'held the render to the window mask', { inside: masked.insideShare.toFixed(3), windowsFilled: masked.windowsFilled || 0 });
         } else {
           if (restore.mask) obs.record('render', 'window mask not used', { reason: masked.reason });
@@ -3264,16 +3264,15 @@ async function keepRender(replicateUrl, restore = null) {
    transient more often than not. It deliberately does not say the render
    failed, which would be a lie about the part that went right. */
 /* See restorePillars in hold.js and fetchObjectMasks in windowmask.js, pillarsFromObjects in hold.js. */
-function holdBayPillars(bytes, mime, restore, detections, aspectRatio) {
-  const bay = glazing.frontWindowBoxes(detections, aspectRatio).find(b => b.isBay) || null;
-  const held = restorePillars({ render: bytes, renderMime: mime, original: restore.original,
-    originalMime: restore.originalMime, mask: restore.pillarMask, maskMime: restore.pillarMaskMime, maskBox: restore.pillarMaskBox, bay });
-  if (!held.restored) {
-    obs.record('render', 'bay pillars not held', { reason: held.reason });
-    return bytes;
+function holdBayPillars(bytes, mime, restore) {
+  for (const [n, pm] of restore.pillarMasks.entries()) {
+    const held = restorePillars({ render: bytes, renderMime: mime, original: restore.original,
+      originalMime: restore.originalMime, mask: pm.buffer, maskMime: pm.mime, maskBox: pm.box, bay: pm.bay });
+    if (!held.restored) { obs.record('render', 'bay pillars not held', { bay: n + 1, reason: held.reason }); continue; }
+    obs.record('render', 'held the bay pillars to the photograph', { bay: n + 1, share: held.share.toFixed(4), ofBay: (held.ofBay || 0).toFixed(3) });
+    bytes = held.buffer;
   }
-  obs.record('render', 'held the bay pillars to the photograph', { share: held.share.toFixed(4), ofBay: (held.ofBay || 0).toFixed(3) });
-  return held.buffer;
+  return bytes;
 }
 
 async function respondWithRender(res, url, extra = {}, restore = null) {
@@ -3617,6 +3616,8 @@ async function judgeRender(url, trades, original) {
    address has ?exp=pillar); =on runs it for every render of a bay. It costs
    one extra segmentation call per bay render and never delays the picture
    beyond the window mask's own grace. */
+/* At most this many bays per photograph get a pillar segmentation each. */
+const MAX_PILLAR_BAYS = 3;
 const PILLAR_MASK_MODE = ['off', 'test', 'on'].includes(String(process.env.PILLAR_MASK || '').toLowerCase())
   ? String(process.env.PILLAR_MASK).toLowerCase() : 'off';
 const wantsPillarMask = (body) => PILLAR_MASK_MODE === 'on'
@@ -3899,22 +3900,28 @@ app.post('/api/render', renderLimiter, async (req, res) => {
        only for a windows-only job, only behind the switch. */
     /* Segmented from a crop of the bay, not the whole house (2 October):
        on the full elevation the mask took 79% of the bay as one object. */
-    const bayBox = hasBay ? (glazing.frontWindowBoxes(detectionRecord.detections || [], detectionRecord.aspectRatio).find(b => b.isBay) || null) : null;
-    const bayCrop = (maskWanted && bayBox && wantsPillarMask(req.body)) ? cropToBox(img.buffer, img.mime, bayBox, 3) : null;
-    /* Every object in the bay crop, and the pillars picked from them by shape
+    /* Every bay, not just the first (0051): number 14 has a bay on each
+       floor, and the first-floor one was never looked at. One segmentation
+       per bay, all side by side. */
+    const bayBoxes = (hasBay && maskWanted && wantsPillarMask(req.body))
+      ? glazing.frontWindowBoxes(detectionRecord.detections || [], detectionRecord.aspectRatio).filter(b => b.isBay).slice(0, MAX_PILLAR_BAYS)
+      : [];
+    /* Every object in each bay crop, and the pillars picked from them by shape
        (2 October: asked for by name, segmentation took 79–88% of the bay). */
-    const pillarPromise = bayCrop
-      ? fetchObjectMasks({
+    const pillarPromise = Promise.all(bayBoxes.map((bayBox, n) => {
+      const bayCrop = cropToBox(img.buffer, img.mime, bayBox, 3);
+      if (!bayCrop) return Promise.resolve(null);
+      return fetchObjectMasks({
           image: bayCrop.buffer, mime: bayCrop.mime, replicateKey, deadlineAt,
-          onNote: (why) => obs.record('render', 'pillar mask not used', { reason: why }),
+          onNote: (why) => obs.record('render', 'pillar mask not used', { bay: n + 1, reason: why }),
         }).then(masks => {
           if (!masks) return null;
           const picked = pillarsFromObjects({ masks, crop: bayCrop.buffer, cropMime: bayCrop.mime });
-          obs.record('render', 'pillars picked from objects', { objects: masks.length, kept: picked ? picked.kept : 0,
+          obs.record('render', 'pillars picked from objects', { bay: n + 1, of: bayBoxes.length, objects: masks.length, kept: picked ? picked.kept : 0,
             attached: picked ? picked.attached : 0, rejected: picked ? picked.rejected : null });
-          return (picked && picked.buffer) ? { buffer: picked.buffer, mime: picked.mime, box: bayCrop.box } : null;
-        }).catch(() => null)
-      : Promise.resolve(null);
+          return (picked && picked.buffer) ? { buffer: picked.buffer, mime: picked.mime, box: bayCrop.box, bay: bayBox } : null;
+        }).catch(() => null);
+    })).then(list => { const got = list.filter(Boolean); return got.length ? got : null; });
 
     const first = await runFluxOrRetry({ prompt, inputImage, deadlineAt, replicateKey }, res, req);
     if (!first.ok) return res.status(first.status).json({ error: first.error });
@@ -3979,7 +3986,7 @@ app.post('/api/render', renderLimiter, async (req, res) => {
     const pillars = await maskWithinGrace(pillarPromise);
     const restorePlan = (doorRestore && mask)
       ? { ...doorRestore, mask: mask.buffer, maskMime: mask.mime,
-          ...(pillars ? { pillarMask: pillars.buffer, pillarMaskMime: pillars.mime, pillarMaskBox: pillars.box || null } : {}) }
+          ...(pillars ? { pillarMasks: pillars } : {}) }
       : doorRestore;
 
     return respondWithRender(res, url, {

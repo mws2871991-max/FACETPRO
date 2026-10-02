@@ -45,7 +45,7 @@ test('asked for positively, shrunk not grown, and off unless switched on', () =>
   assert.ok(PILLAR_DILATE < 0);
   const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
   assert.ok(server.includes("String(process.env.PILLAR_MASK).toLowerCase() : 'off';"), 'PILLAR_MASK defaults to off');
-  assert.match(server, /maskWanted && bayBox && wantsPillarMask\(req\.body\)/);
+  assert.match(server, /hasBay && maskWanted && wantsPillarMask\(req\.body\)/);
 });
 
 test('a shaft the mask found is held the full height of the bay, carved top included', () => {
@@ -87,7 +87,7 @@ test('the server segments a crop of the bay, not the full elevation', () => {
   const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
   assert.match(server, /cropToBox\(img\.buffer, img\.mime, bayBox, 3\)/);
   assert.match(server, /image: bayCrop\.buffer/);
-  assert.match(server, /maskBox: restore\.pillarMaskBox/);
+  assert.match(server, /maskBox: pm\.box/);
 });
 
 /* 0049: pillars picked by shape from every object segmentation finds. */
@@ -149,4 +149,39 @@ test('a capital or base sitting on a kept shaft is kept with it (0050)', () => {
 test('a shaft held for 15% of the bay height is run the full height (0050)', () => {
   const { PILLAR_SHAFT_MIN } = require('../hold');
   assert.strictEqual(PILLAR_SHAFT_MIN, 0.15);
+});
+
+test('every bay in the photograph gets its own pillar pick and hold (0051)', () => {
+  /* Number 14 (IMG_1830) has a bay on each floor; only the first was looked at. */
+  const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  assert.match(server, /\.filter\(b => b\.isBay\)\.slice\(0, MAX_PILLAR_BAYS\)/);
+  assert.match(server, /Promise\.all\(bayBoxes\.map\(/);
+  assert.match(server, /for \(const \[n, pm\] of restore\.pillarMasks\.entries\(\)\)/);
+  assert.match(server, /bay: pm\.bay/);
+  assert.doesNotMatch(server, /\.find\(b => b\.isBay\)/, 'nothing should pick only the first bay any more');
+});
+
+test('two bays: each one\'s pillars are held inside its own box', () => {
+  const W2 = 100, H2 = 100;
+  const mk = (fn) => { const p = new PNG({ width: W2, height: H2 });
+    for (let y = 0; y < H2; y++) for (let x = 0; x < W2; x++) { const v = fn(x, y); const i = (y * W2 + x) * 4;
+      p.data[i] = v[0]; p.data[i + 1] = v[1]; p.data[i + 2] = v[2]; p.data[i + 3] = 255; } return PNG.sync.write(p); };
+  const upper = { x: 20, y: 10, w: 60, h: 30 }, lower = { x: 20, y: 55, w: 60, h: 35 };
+  const inB = (x, y, b) => x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h;
+  const orig = mk(() => [235, 235, 235]);
+  let r = mk((x, y) => (inB(x, y, upper) || inB(x, y, lower) ? [20, 20, 20] : [235, 235, 235]));
+  for (const b of [upper, lower]) {
+    // a crop-sized mask with one pillar at crop x 4-10
+    const cw = b.w, ch = b.h; const p = new PNG({ width: cw, height: ch });
+    for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) { const on = x >= 4 && x < 10; const i = (y * cw + x) * 4;
+      p.data[i] = p.data[i + 1] = p.data[i + 2] = on ? 255 : 0; p.data[i + 3] = 255; }
+    const held = restorePillars({ render: r, renderMime: 'image/png', original: orig, originalMime: 'image/png',
+      mask: PNG.sync.write(p), maskMime: 'image/png', maskBox: b, bay: b });
+    assert.ok(held.restored, held.reason); r = held.buffer;
+  }
+  const at = (x, y) => PNG.sync.read(r).data[(y * W2 + x) * 4];
+  assert.strictEqual(at(26, 25), 235, 'upper bay pillar held');
+  assert.strictEqual(at(26, 70), 235, 'lower bay pillar held');
+  assert.strictEqual(at(50, 25), 20, 'upper frames keep the new colour');
+  assert.strictEqual(at(50, 70), 20, 'lower frames keep the new colour');
 });
