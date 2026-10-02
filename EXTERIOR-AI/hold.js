@@ -77,6 +77,32 @@ function decode(buffer, mime) {
   return null;
 }
 
+/* The photograph cut to a box given in percent, as a PNG, with the box that
+   was actually cut (clamped to the frame). For the pillar mask: on a whole
+   elevation the columns are a few per cent of the picture and segmentation
+   takes the bay as one object; given the bay alone they are its dominant
+   vertical structures. */
+function cropToBox(buffer, mime, box, marginPct = 0) {
+  try {
+    const src = decode(buffer, mime || '');
+    if (!src || !box || !['x', 'y', 'w', 'h'].every(k => Number.isFinite(Number(box[k])))) return null;
+    const x0 = Math.max(0, Math.floor((Number(box.x) - marginPct) * src.width / 100));
+    const y0 = Math.max(0, Math.floor((Number(box.y) - marginPct) * src.height / 100));
+    const x1 = Math.min(src.width, Math.ceil((Number(box.x) + Number(box.w) + marginPct) * src.width / 100));
+    const y1 = Math.min(src.height, Math.ceil((Number(box.y) + Number(box.h) + marginPct) * src.height / 100));
+    const w = x1 - x0, h = y1 - y0;
+    if (w < 16 || h < 16) return null;
+    const out = new PNG({ width: w, height: h });
+    for (let y = 0; y < h; y++) {
+      const from = ((y0 + y) * src.width + x0) * 4;
+      src.data.copy ? src.data.copy(out.data, y * w * 4, from, from + w * 4)
+        : out.data.set(src.data.subarray(from, from + w * 4), y * w * 4);
+    }
+    return { buffer: PNG.sync.write(out), mime: 'image/png',
+      box: { x: x0 * 100 / src.width, y: y0 * 100 / src.height, w: w * 100 / src.width, h: h * 100 / src.height } };
+  } catch (_) { return null; }
+}
+
 /* Bilinear sample of the photograph at render coordinates, so a 600px photo
    laid into a 1184px render does not come back blocky. */
 function sample(src, fx, fy, out) {
@@ -764,7 +790,7 @@ const PILLAR_MAX_OF_BAY = 0.45;
    the plain shaft and not the carving (IMG_2068, green, 2 October). */
 const PILLAR_SHAFT_MIN = 0.3;
 function restorePillars(opts) {
-  const { render, renderMime, original, originalMime, mask, maskMime, bay = null } = opts || {};
+  const { render, renderMime, original, originalMime, mask, maskMime, bay = null, maskBox = null } = opts || {};
   const untouched = (reason) => ({ buffer: render, restored: false, reason, share: 0 });
   try {
     if (!/png/i.test(renderMime || '')) return untouched('render is not a PNG');
@@ -775,7 +801,12 @@ function restorePillars(opts) {
     if (!m) return untouched('mask type not handled');
     const out = PNG.sync.read(render);
     const W = out.width, H = out.height;
-    if (Math.abs(m.width / m.height - W / H) > 0.02) return untouched(`mask is ${m.width}x${m.height}, render is ${W}x${H}`);
+    /* The mask covers maskBox (percent of the frame) when it was made from a
+       crop of the bay, the whole frame otherwise. */
+    const mb = maskBox && ['x', 'y', 'w', 'h'].every(k => Number.isFinite(Number(maskBox[k]))) && maskBox.w > 0 && maskBox.h > 0
+      ? { x: Number(maskBox.x), y: Number(maskBox.y), w: Number(maskBox.w), h: Number(maskBox.h) } : { x: 0, y: 0, w: 100, h: 100 };
+    const mbW = mb.w * W / 100, mbH = mb.h * H / 100, mbX = mb.x * W / 100, mbY = mb.y * H / 100;
+    if (Math.abs(m.width / m.height - mbW / mbH) > 0.03) return untouched(`mask is ${m.width}x${m.height}, its box is ${Math.round(mbW)}x${Math.round(mbH)}`);
     let bx0 = 0, bx1 = W - 1, by0 = 0, by1 = H - 1;
     if (bay && ['x', 'y', 'w', 'h'].every(k => Number.isFinite(Number(bay[k])))) {
       bx0 = Math.max(0, Math.floor((Number(bay.x) - 2) * W / 100)); bx1 = Math.min(W - 1, Math.ceil((Number(bay.x) + Number(bay.w) + 2) * W / 100));
@@ -783,8 +814,10 @@ function restorePillars(opts) {
     }
     const on = [];
     for (let y = by0; y <= by1; y++) for (let x = bx0; x <= bx1; x++) {
-      const mx = Math.min(m.width - 1, Math.max(0, Math.round((x + 0.5) * m.width / W - 0.5)));
-      const my = Math.min(m.height - 1, Math.max(0, Math.round((y + 0.5) * m.height / H - 0.5)));
+      const fx = (x + 0.5 - mbX) * m.width / mbW - 0.5, fy = (y + 0.5 - mbY) * m.height / mbH - 0.5;
+      if (fx < -0.5 || fy < -0.5 || fx > m.width - 0.5 || fy > m.height - 0.5) continue;   // outside the crop
+      const mx = Math.min(m.width - 1, Math.max(0, Math.round(fx)));
+      const my = Math.min(m.height - 1, Math.max(0, Math.round(fy)));
       if (m.data[(my * m.width + mx) * 4] >= MASK_ON) on.push(y * W + x);
     }
     const share = on.length / (W * H);
@@ -1012,6 +1045,6 @@ function correctFrameColour(opts) {
   }
 }
 
-module.exports = { MASK_BOX_MARGIN_PCT,
+module.exports = { MASK_BOX_MARGIN_PCT, cropToBox,
   restorePillars, PILLAR_MAX_OF_BAY, restoreDoor, restoreSurroundings, restoreOutsideMask, correctFrameColour,
                    drawGeorgianBars, doorBox, changedShare, MASK_ON, rgbToLab, labToRgb, hexToRgb };

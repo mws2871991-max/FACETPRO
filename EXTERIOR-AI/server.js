@@ -26,7 +26,7 @@ const consentText = require('./consent');
 const { isTestTraffic } = require('./testtraffic');
 
 const { buildRenderPrompt } = require('./renderprompt');
-const { restoreDoor, restoreSurroundings, restoreOutsideMask, restorePillars, correctFrameColour, drawGeorgianBars, changedShare } = require('./hold');
+const { restoreDoor, restoreSurroundings, restoreOutsideMask, restorePillars, cropToBox, correctFrameColour, drawGeorgianBars, changedShare } = require('./hold');
 const { fetchWindowMask, fetchPillarMask, maskWithinGrace, GRACE_MS } = require('./windowmask');
 /* How long a mask started at upload may take. Generous, because nothing is
    waiting on it — a cold start at 83s still lands well before most people have
@@ -3267,7 +3267,7 @@ async function keepRender(replicateUrl, restore = null) {
 function holdBayPillars(bytes, mime, restore, detections, aspectRatio) {
   const bay = glazing.frontWindowBoxes(detections, aspectRatio).find(b => b.isBay) || null;
   const held = restorePillars({ render: bytes, renderMime: mime, original: restore.original,
-    originalMime: restore.originalMime, mask: restore.pillarMask, maskMime: restore.pillarMaskMime, bay });
+    originalMime: restore.originalMime, mask: restore.pillarMask, maskMime: restore.pillarMaskMime, maskBox: restore.pillarMaskBox, bay });
   if (!held.restored) {
     obs.record('render', 'bay pillars not held', { reason: held.reason });
     return bytes;
@@ -3897,11 +3897,15 @@ app.post('/api/render', renderLimiter, async (req, res) => {
 
     /* The bay's pillars, asked for beside the window mask. Only on a bay,
        only for a windows-only job, only behind the switch. */
-    const pillarPromise = (maskWanted && hasBay && wantsPillarMask(req.body))
+    /* Segmented from a crop of the bay, not the whole house (2 October):
+       on the full elevation the mask took 79% of the bay as one object. */
+    const bayBox = hasBay ? (glazing.frontWindowBoxes(detectionRecord.detections || [], detectionRecord.aspectRatio).find(b => b.isBay) || null) : null;
+    const bayCrop = (maskWanted && bayBox && wantsPillarMask(req.body)) ? cropToBox(img.buffer, img.mime, bayBox, 3) : null;
+    const pillarPromise = bayCrop
       ? fetchPillarMask({
-          image: img.buffer, mime: img.mime, replicateKey, deadlineAt,
+          image: bayCrop.buffer, mime: bayCrop.mime, replicateKey, deadlineAt,
           onNote: (why) => obs.record('render', 'pillar mask not used', { reason: why }),
-        }).catch(() => null)
+        }).then(m => (m ? { ...m, box: bayCrop.box } : null)).catch(() => null)
       : Promise.resolve(null);
 
     const first = await runFluxOrRetry({ prompt, inputImage, deadlineAt, replicateKey }, res, req);
@@ -3967,7 +3971,7 @@ app.post('/api/render', renderLimiter, async (req, res) => {
     const pillars = await maskWithinGrace(pillarPromise);
     const restorePlan = (doorRestore && mask)
       ? { ...doorRestore, mask: mask.buffer, maskMime: mask.mime,
-          ...(pillars ? { pillarMask: pillars.buffer, pillarMaskMime: pillars.mime } : {}) }
+          ...(pillars ? { pillarMask: pillars.buffer, pillarMaskMime: pillars.mime, pillarMaskBox: pillars.box || null } : {}) }
       : doorRestore;
 
     return respondWithRender(res, url, {

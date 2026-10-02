@@ -45,7 +45,7 @@ test('asked for positively, shrunk not grown, and off unless switched on', () =>
   assert.ok(PILLAR_DILATE < 0);
   const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
   assert.ok(server.includes("String(process.env.PILLAR_MASK).toLowerCase() : 'off';"), 'PILLAR_MASK defaults to off');
-  assert.match(server, /maskWanted && hasBay && wantsPillarMask\(req\.body\)/);
+  assert.match(server, /maskWanted && bayBox && wantsPillarMask\(req\.body\)/);
 });
 
 test('a shaft the mask found is held the full height of the bay, carved top included', () => {
@@ -60,4 +60,32 @@ test('a shaft the mask found is held the full height of the bay, carved top incl
 
 test('the prompt asks for the shafts only (0044 took the whole bay)', () => {
   assert.doesNotMatch(PILLAR_PROMPT, /capital|corbel/);
+});
+
+test('the bay is cut out of the photograph for segmentation, and the box comes back', () => {
+  const { cropToBox } = require('../hold');
+  const c = cropToBox(original, 'image/png', bay, 0);
+  const p = PNG.sync.read(c.buffer);
+  assert.strictEqual(p.width, 60); assert.strictEqual(p.height, 40);
+  assert.deepStrictEqual(c.box, { x: 20, y: 40, w: 60, h: 40 });
+});
+
+test('a mask made from the crop lands back on the bay, not the whole frame', () => {
+  /* 60x40 mask of the bay alone: pillar shafts at crop x 10–16 and 44–50. */
+  const p = new PNG({ width: 60, height: 40 });
+  for (let y = 0; y < 40; y++) for (let x = 0; x < 60; x++) {
+    const on = (x >= 10 && x < 16) || (x >= 44 && x < 50); const i = (y * 60 + x) * 4;
+    p.data[i] = p.data[i + 1] = p.data[i + 2] = on ? 255 : 0; p.data[i + 3] = 255; }
+  const r = restorePillars({ ...base, mask: PNG.sync.write(p), maskBox: { x: 20, y: 40, w: 60, h: 40 } });
+  assert.ok(r.restored, r.reason);
+  assert.strictEqual(px(r.buffer, 32, 60), 235, 'left pillar (frame x 30–36) restored');
+  assert.strictEqual(px(r.buffer, 66, 60), 235, 'right pillar restored');
+  assert.strictEqual(px(r.buffer, 50, 60), 20, 'the window between keeps the render');
+});
+
+test('the server segments a crop of the bay, not the full elevation', () => {
+  const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  assert.match(server, /cropToBox\(img\.buffer, img\.mime, bayBox, 3\)/);
+  assert.match(server, /image: bayCrop\.buffer/);
+  assert.match(server, /maskBox: restore\.pillarMaskBox/);
 });
