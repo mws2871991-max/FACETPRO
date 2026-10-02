@@ -2,7 +2,7 @@
   "version": 2,
   "updated": "2026-08-06",
   "note": "Based on current UK material and labour rates, including scaffolding, a waste allowance and VAT.",
-  "internalNote": "Real UK material rates and quote methodology, taken from the actual facetpro.co.uk production backend (material_detector.py and quote_generator.py) \u2014 not invented placeholders. Not shown to homeowners; `note` is the customer-facing line rendered under the price breakdown.",
+  "internalNote": "Real UK material rates and quote methodology, taken from the actual facetpro.co.uk production backend (material_detector.py and quote_generator.py) — not invented placeholders. Not shown to homeowners; `note` is the customer-facing line rendered under the price breakdown.",
   "source": "homeai/backend/app/services/material_detector.py (ROOF_MATERIALS, CLADDING_MATERIALS) + quote_generator.py (labour rates, scaffolding, waste, VAT)",
   "cladding": [
     {
@@ -92,7 +92,7 @@
     "claddingPerM2": 15,
     "roofPerM2": 25,
     "note": "Fitting rates per square metre.",
-    "internalNote": "Real labour rates from quote_generator.py \u2014 \u00a315/m\u00b2 cladding, \u00a325/m\u00b2 roof."
+    "internalNote": "Real labour rates from quote_generator.py — £15/m² cladding, £25/m² roof."
   },
   "trimRates": {
     "fasciaPerM": 35,
@@ -102,7 +102,7 @@
     "gutteringPerM": 40,
     "gutteringLabourPerM": 15,
     "note": "Fascia, soffit and guttering rates per metre of roofline.",
-    "internalNote": "Real per-metre rates from quote_generator.py \u2014 fascia \u00a335/m + \u00a312/m labour, soffit \u00a330/m + \u00a312/m labour, guttering \u00a340/m + \u00a315/m labour. Colour choice (Coastal Fog/Ink Trim/Cedar) doesn't change the real cost, only the material rates do."
+    "internalNote": "Real per-metre rates from quote_generator.py — fascia £35/m + £12/m labour, soffit £30/m + £12/m labour, guttering £40/m + £15/m labour. Colour choice (Coastal Fog/Ink Trim/Cedar) doesn't change the real cost, only the material rates do."
   },
   "scaffoldingCost": 800,
   "wastePct": 0.1,
@@ -233,9 +233,9 @@
     "areaMinM2": 60,
     "areaMaxM2": 200,
     "areaDefaultM2": 95,
-    "internalNote": "Estimated illustrative finish prices, CSS textures only (no photos) \u2014 not the real quote. Two things worth knowing: 'White Render' and 'Cream Render' here (\u00a345/m\u00b2) are close to but different from the real Alabaster render swatch already priced at \u00a350/m\u00b2 in the cladding catalogue above, and 'Brick Slips' here (\u00a385/m\u00b2 of wall area) is a different product and unit than 'Brick Slip' in the Roofline & Cladding tab (\u00a3110 per linear metre of trim). Use the real cladding/roof/trim visualizer for a sourced quote.",
+    "internalNote": "Estimated illustrative finish prices, CSS textures only (no photos) — not the real quote. Two things worth knowing: 'White Render' and 'Cream Render' here (£45/m²) are close to but different from the real Alabaster render swatch already priced at £50/m² in the cladding catalogue above, and 'Brick Slips' here (£85/m² of wall area) is a different product and unit than 'Brick Slip' in the Roofline & Cladding tab (£110 per linear metre of trim). Use the real cladding/roof/trim visualizer for a sourced quote.",
     "roofAreaFromWall": 0.55,
-    "roofAreaFromWallNote": "Roof area as a share of exterior wall area. UNSOURCED \u2014 see notes/roof-area-needs-a-source.md and the comment at server.js ROOF_AREA_FROM_WALL. It is here rather than in two files so the visualiser and the cost guides cannot quote different roofs for the same house, which they did until 30 September: the guides used a flat 80 m2 while the tool used 85 x 0.55 = 47 m2 for a semi, so the same re-roof was about 12,900 pounds on the page and about 7,900 in the tool. Changing this number moves every roof price on the site; it needs real roofs, not a better guess."
+    "roofAreaFromWallNote": "Roof area as a share of exterior wall area. UNSOURCED — see notes/roof-area-needs-a-source.md and the comment at server.js ROOF_AREA_FROM_WALL. It is here rather than in two files so the visualiser and the cost guides cannot quote different roofs for the same house, which they did until 30 September: the guides used a flat 80 m2 while the tool used 85 x 0.55 = 47 m2 for a semi, so the same re-roof was about 12,900 pounds on the page and about 7,900 in the tool. Changing this number moves every roof price on the site; it needs real roofs, not a better guess."
   },
   "conservatories": {
     "note": "Broad guide ranges to help compare styles. A conservatory is priced on size, glazing, groundworks and access.",
@@ -381,7 +381,7 @@
         ]
       }
     ],
-    "internalNote": "ESTIMATED placeholder price ranges \u2014 unlike cladding/roof/trim above, these are NOT sourced from any real production data. Replace with real supplier/installer pricing whenever you have it."
+    "internalNote": "ESTIMATED placeholder price ranges — unlike cladding/roof/trim above, these are NOT sourced from any real production data. Replace with real supplier/installer pricing whenever you have it."
   },
   "windowsDoors": {
     "note": "Style and colour preview. Windows and doors are quoted separately, on frame size and glazing spec.",
@@ -402,7 +402,7 @@
         "id": "sliding-sash",
         "name": "Sliding Sash",
         "detail": "Slides up and down",
-        "description": "Two vertically sliding panels in a traditional box frame \u2014 period character with modern double glazing."
+        "description": "Two vertically sliding panels in a traditional box frame — period character with modern double glazing."
       },
       {
         "id": "bay",
@@ -424,13 +424,13 @@
         "id": "upvc",
         "name": "uPVC door",
         "detail": "Plastic door, front or back",
-        "description": "The everyday front or back door \u2014 uPVC frame and panel, weather-sealed and low maintenance. The most common choice, and the least expensive."
+        "description": "The everyday front or back door — uPVC frame and panel, weather-sealed and low maintenance. The most common choice, and the least expensive."
       },
       {
         "id": "composite",
         "name": "Composite Door",
         "detail": "Solid, strong front door",
-        "description": "Solid, high-security composite panel door \u2014 durable, low-maintenance, and available in any colour."
+        "description": "Solid, high-security composite panel door — durable, low-maintenance, and available in any colour."
       },
       {
         "id": "double",
@@ -489,7 +489,7 @@
         "hex": "#F5F0E6"
       }
     ],
-    "internalNote": "Style and colour preview only \u2014 window/door pricing depends on frame size, glazing spec, and installation, so no price range is shown here. Use the cladding/roof/trim visualizer above for a real priced quote."
+    "internalNote": "Style and colour preview only — window/door pricing depends on frame size, glazing spec, and installation, so no price range is shown here. Use the cladding/roof/trim visualizer above for a real priced quote."
   },
   "fsgc": {
     "note": "Guide per-metre prices for comparing profiles. Your estimate uses our standard sourced specification.",
@@ -536,7 +536,7 @@
         "id": "plain",
         "name": "Plain",
         "pricePerM": 32,
-        "tagline": "Solid board \u2014 for insulated roofs"
+        "tagline": "Solid board — for insulated roofs"
       },
       {
         "id": "vented",
@@ -575,7 +575,7 @@
         "id": "aluminium-seamless",
         "name": "Aluminium Seamless",
         "pricePerM": 68,
-        "tagline": "No joints \u2014 coastal/premium",
+        "tagline": "No joints — coastal/premium",
         "guaranteeYears": 40
       }
     ],
@@ -584,7 +584,7 @@
         "id": "vinyl",
         "name": "Vinyl",
         "pricePerM": 55,
-        "tagline": "Ship-lap light \u2014 budget refresh"
+        "tagline": "Ship-lap light — budget refresh"
       },
       {
         "id": "fibre-cement",
@@ -603,16 +603,16 @@
         "id": "brick-slip",
         "name": "Brick Slip",
         "pricePerM": 110,
-        "tagline": "Real brick, insulated \u2014 heritage",
+        "tagline": "Real brick, insulated — heritage",
         "guaranteeYears": 60
       }
     ],
-    "internalNote": "ESTIMATED per-metre guide prices for style comparison only \u2014 these are NOT the same numbers as the real, sourced trim rates used in the quote engine above (fascia \u00a335/m + \u00a312/m labour, soffit \u00a330/m + \u00a312/m labour, guttering \u00a340/m + \u00a315/m labour, from quote_generator.py), and cladding here is priced per linear metre for illustration whereas the real cladding catalogue is priced per m\u00b2 of wall area. Don't treat these as a real quote \u2014 use the visualizer above for that."
+    "internalNote": "ESTIMATED per-metre guide prices for style comparison only — these are NOT the same numbers as the real, sourced trim rates used in the quote engine above (fascia £35/m + £12/m labour, soffit £30/m + £12/m labour, guttering £40/m + £15/m labour, from quote_generator.py), and cladding here is priced per linear metre for illustration whereas the real cladding catalogue is priced per m² of wall area. Don't treat these as a real quote — use the visualizer above for that."
   },
   "glazing": {
     "note": "Guide prices for supply and fitting, per window and per door, including access and VAT.",
     "internalNote": "Door and window rates are settled prices from the owner's nearly 25 years selling for a national installer, confirmed 6 August 2026: they sit at the cheaper national installer's settled level, about 35-40% below Anglian settled (list less 40%). Deliberately so. Not a supplier rate card, which is why `sourced` is still false. See notes/glazing-rates-from-the-trade.md.",
-    "source": "Prices are what jobs settle at, from 24 years selling for a national installer, inclusive of VAT and stored net. The base is close to the keener of the two installers who buy leads here; Anglian settles about 1.6x higher on doors and 2x on a 3 m bifold, which is what the estimate range spans. Checked 2026-08-06 against Anglian list prices less the 40% discount routinely available. Not a supplier rate card. Openers are modelled: openerCost is the net cost of one opening part and typicalOpeners is how many the base rate already assumes, so a fixed light comes down and a three-opener window goes up \u2014 see notes/glazing-rates-from-the-trade.md.",
+    "source": "Prices are what jobs settle at, from 24 years selling for a national installer, inclusive of VAT and stored net. The base is close to the keener of the two installers who buy leads here; Anglian settles about 1.6x higher on doors and 2x on a 3 m bifold, which is what the estimate range spans. Checked 2026-08-06 against Anglian list prices less the 40% discount routinely available. Not a supplier rate card. Openers are modelled: openerCost is the net cost of one opening part and typicalOpeners is how many the base rate already assumes, so a fixed light comes down and a three-opener window goes up — see notes/glazing-rates-from-the-trade.md.",
     "sourced": true,
     "windowBands": [
       {
@@ -620,21 +620,21 @@
         "label": "Small",
         "maxAreaM2": 0.75,
         "supplyFit": 520,
-        "example": "600 x 900 \u2014 WC, landing, porch"
+        "example": "600 x 900 — WC, landing, porch"
       },
       {
         "id": "standard",
         "label": "Standard",
         "maxAreaM2": 1.6,
         "supplyFit": 730,
-        "example": "1200 x 1200 \u2014 most bedroom and lounge windows"
+        "example": "1200 x 1200 — most bedroom and lounge windows"
       },
       {
         "id": "large",
         "label": "Large",
         "maxAreaM2": 2.6,
         "supplyFit": 1064,
-        "example": "1800 x 1350 \u2014 front lounge, patio-side"
+        "example": "1800 x 1350 — front lounge, patio-side"
       },
       {
         "id": "xlarge",
@@ -669,7 +669,7 @@
         "colourIncluded": true
       }
     ],
-    "materialsNote": "Frame material, windows only. Every window band price is uPVC. Aluminium: Mike Sheehan's settled price, 30 September 2026 \u2014 a 1200 x 1200 aluminium casement, one opener, fitted, \u00a31,904 inc VAT against \u00a3876 for the same window in uPVC: 2.174x on the \u00a3730 standard band gives exactly \u00a31,904. Colour is included (powder-coated), so the non-white uplift is not added again. This replaces the 29 September 'about 25% more', which was too low. Styles apply on top as for uPVC.",
+    "materialsNote": "Frame material, windows only. Every window band price is uPVC. Aluminium: Mike Sheehan's settled price, 30 September 2026 — a 1200 x 1200 aluminium casement, one opener, fitted, £1,904 inc VAT against £876 for the same window in uPVC: 2.174x on the £730 standard band gives exactly £1,904. Colour is included (powder-coated), so the non-white uplift is not added again. This replaces the 29 September 'about 25% more', which was too low. Styles apply on top as for uPVC.",
     "doors": [
       {
         "id": "upvc",
@@ -716,7 +716,101 @@
     },
     "openerCost": 324,
     "typicalOpeners": 1,
-    "openerNote": "Cost of one opening light, net, on top of the band price. The bands assume one opener, which is the common case. Derived from a standard window quoted at \u00a3950 with none and \u00a32,247 with two, less the 40% discount: \u00a3570 and \u00a31,348 inclusive, so \u00a3389 inclusive per opener, \u00a3324 net. Flat rather than scaled by band, because an opening light is hardware and frame rather than glass \u2014 it costs much the same in a small window as a large one. One measured product; revisit when there are more.",
-    "doorNote": "Prices are net; VAT is added at the end. uPVC, composite, double (French) and sliding patio doors are Mike Sheehan's settled prices, 30 September 2026, fitted inc VAT: uPVC back door \u00a31,498, composite \u00a32,743, French/double doors \u00a32,693, sliding patio \u00a32,090 \u2014 stored net (divided by 1.2). The bifolds are unchanged: derived from Anglian's list price less the 40% discount routinely available, divided by 1.6 to bring it to the keener installer. Bifold width rests on two points only \u2014 the 2.4 m entry and a 3 m unit at \u00a313,304 list \u2014 so anything between them is not modelled and anything above 3 m is not priced."
+    "openerNote": "Cost of one opening light, net, on top of the band price. The bands assume one opener, which is the common case. Derived from a standard window quoted at £950 with none and £2,247 with two, less the 40% discount: £570 and £1,348 inclusive, so £389 inclusive per opener, £324 net. Flat rather than scaled by band, because an opening light is hardware and frame rather than glass — it costs much the same in a small window as a large one. One measured product; revisit when there are more.",
+    "doorNote": "Prices are net; VAT is added at the end. uPVC, composite, double (French) and sliding patio doors are Mike Sheehan's settled prices, 30 September 2026, fitted inc VAT: uPVC back door £1,498, composite £2,743, French/double doors £2,693, sliding patio £2,090 — stored net (divided by 1.2). The bifolds are unchanged: derived from Anglian's list price less the 40% discount routinely available, divided by 1.6 to bring it to the keener installer. Bifold width rests on two points only — the 2.4 m entry and a 3 m unit at £13,304 list — so anything between them is not modelled and anything above 3 m is not priced."
+  },
+  "driveways": {
+    "note": "Driveway planning estimates. Size is told, not measured: a front photograph cannot measure ground seen at an angle.",
+    "source": "MyBuilder driveway cost guide (updated 21 Aug 2026); BestBuilders average cost of a new driveway per m² 2026 (reviewed Jul 2026). Where the two differ, the wider range is used.",
+    "sourced": true,
+    "updated": "2026-10-02",
+    "internalNote": "Per-m² rates are the surface laid. Groundworks (dig out, new sub-base) are added separately because both guides list them as extra (MyBuilder £30–£50/m²). Waste removal from BestBuilders (£250–£700). Dropped kerb and drainage are NOT in the figure; they are named as exclusions. London/SE uplift (20–35%) is not applied, only stated. Whether a quote includes VAT varies by installer — say so, do not claim it.",
+    "materials": [
+      {
+        "id": "block-paving",
+        "name": "Block Paving",
+        "hex": "#8B6F5A",
+        "materialLabel": "Concrete block, laid in a pattern",
+        "perM2": [
+          80,
+          150
+        ],
+        "permeableNote": "Permeable block paving is available; standard blocks need drainage to a border or a planning application over 5 m²."
+      },
+      {
+        "id": "resin-bound",
+        "name": "Resin Bound",
+        "hex": "#B8A07A",
+        "materialLabel": "Resin-bound gravel, smooth and porous",
+        "perM2": [
+          80,
+          180
+        ],
+        "permeableNote": "Resin bound is usually porous."
+      },
+      {
+        "id": "tarmac",
+        "name": "Tarmac",
+        "hex": "#2F2F33",
+        "materialLabel": "Asphalt / tarmac",
+        "perM2": [
+          40,
+          75
+        ],
+        "permeableNote": "Standard tarmac is not porous: over 5 m² it needs drainage to a border, porous asphalt, or a planning application."
+      },
+      {
+        "id": "gravel",
+        "name": "Gravel",
+        "hex": "#B9B2A6",
+        "materialLabel": "Loose gravel on a stabilising grid",
+        "perM2": [
+          25,
+          70
+        ],
+        "permeableNote": "Gravel is porous."
+      }
+    ],
+    "sizes": [
+      {
+        "id": "one-car",
+        "name": "1 car",
+        "m2": [
+          15,
+          20
+        ]
+      },
+      {
+        "id": "two-cars",
+        "name": "2 cars",
+        "m2": [
+          35,
+          45
+        ]
+      },
+      {
+        "id": "three-cars",
+        "name": "3 or more cars",
+        "m2": [
+          55,
+          70
+        ]
+      }
+    ],
+    "groundworksPerM2": [
+      30,
+      50
+    ],
+    "wasteRemoval": [
+      250,
+      700
+    ],
+    "excluded": [
+      "A dropped kerb, if you need one — your council approves and usually builds it (typically £800–£2,500)",
+      "Drainage channels, if your installer finds they are needed (typically £60–£120 a metre)",
+      "Prices in London and the South East typically run 20–35% higher"
+    ],
+    "planning": "In England, a new driveway over 5 m² that does not let water soak away (or drain to a lawn or border) needs planning permission. Gravel, resin bound and permeable block paving usually do not. Flats, maisonettes and conservation areas can differ — check with your council.",
+    "noInstallerYet": "We don't have a driveway installer in our network yet, so this is a planning estimate only — we won't pass your details on for a driveway."
   }
 }

@@ -350,6 +350,19 @@ function buildRenderPrompt(sel = {}) {
       `Glass reflections must stay consistent with the original sky and surroundings.`);
   }
 
+  /* A new driveway (2 October 2026, behind DRIVEWAYS). Bounded in the same
+     sentence that asks for it, and again as scope below: the risk is the
+     public pavement and next door's drive, which are the same grey and sit
+     right beside it. */
+  const driveway = sel.driveway && sel.driveway.words ? sel.driveway : null;
+  if (driveway) {
+    changes.push(
+      `Replace the surface of this house's own driveway and front hardstanding — the ground between the front of the house ` +
+      `and its front boundary wall, fence or hedge — with ${driveway.words}. Re-lay it across the whole of that area, ` +
+      `following the existing outline exactly. Keep any car, bins, plants, steps and walls standing on it exactly where they are. ` +
+      `The public pavement and road beyond the boundary, and any neighbour's driveway or garden, do not change.`);
+  }
+
   // Nothing to ask for. The caller decides what to do about it; this refuses
   // to invent a request, which is how the whole problem started.
   if (!changes.length) return null;
@@ -365,7 +378,9 @@ function buildRenderPrompt(sel = {}) {
   else if (!windowStyle) holds.push(HOLDS.windowsOnly);
   // Held whatever was chosen: every change above is to this house only.
   holds.push('every neighbouring or attached house, including its roof, walls and windows');
-  holds.push('the garden, path, driveway, fencing, sky and everything beyond the house');
+  holds.push(driveway
+    ? 'the garden, lawn and planting, the public pavement and road, fencing, boundary walls, sky and everything beyond the house'
+    : 'the garden, path, driveway, fencing, sky and everything beyond the house');
 
   /* "Change only the roof" is a stronger sentence than any list of holds, and
      it is available exactly when one trade was chosen — which is the whole

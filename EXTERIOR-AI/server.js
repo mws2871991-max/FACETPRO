@@ -27,6 +27,7 @@ const { isTestTraffic } = require('./testtraffic');
 
 const { buildRenderPrompt } = require('./renderprompt');
 const { restoreDoor, restoreSurroundings, restoreOutsideMask, restorePillars, cropToBox, pillarsFromObjects, correctFrameColour, drawGeorgianBars, changedShare } = require('./hold');
+const driveways = require('./driveways');
 const { fetchWindowMask, fetchObjectMasks, maskWithinGrace, GRACE_MS } = require('./windowmask');
 /* How long a mask started at upload may take. Generous, because nothing is
    waiting on it — a cold start at 83s still lands well before most people have
@@ -1774,7 +1775,20 @@ function buildPublicCatalogue(c) {
 const publicCatalogue = buildPublicCatalogue(catalogue);
 
 app.get('/api/catalogue', (req, res) => {
+  /* Driveways appear only when switched on, or in test for ?exp=driveway. */
+  if (driveways.enabled({ query: req.query })) return res.json({ ...publicCatalogue, driveways: driveways.publicSection() });
   res.json(publicCatalogue);
+});
+
+/* ── POST /api/driveway-quote ── (2 October 2026, behind DRIVEWAYS)
+   A planning estimate for a driveway from a material and a told size. Not a
+   lead and not part of computePrice: there is no driveway installer yet, so
+   nothing here travels to one. See driveways.js. */
+app.post('/api/driveway-quote', express.json({ limit: '4kb' }), (req, res) => {
+  if (!driveways.enabled({ body: req.body, query: req.query })) return res.status(404).json({ error: 'Not available.' });
+  const est = driveways.estimate({ materialId: req.body?.materialId, sizeId: req.body?.sizeId });
+  if (!est) return res.status(400).json({ error: 'Choose a surface and a size.', reason: 'driveway_incomplete' });
+  res.json(est);
 });
 
 /* ── helper: compute price server-side from catalogue + selections ──
@@ -3626,7 +3640,7 @@ const wantsPillarMask = (body) => PILLAR_MASK_MODE === 'on'
 app.post('/api/render', renderLimiter, async (req, res) => {
   const { image, mimeType, claddingName, trimName, roofName,
           windowStyleName, doorStyleName, doorStyleId, windowDoorColourName,
-          windowDoorColourId, windowBarsId, detectionId } = req.body || {};
+          windowDoorColourId, windowBarsId, detectionId, drivewayId } = req.body || {};
   if (!image) return res.status(400).json({ error: 'image required' });
   if (typeof image !== 'string' || image.length < 10) return res.status(400).json({ error: 'Invalid image data.' });
   // Size is checked on the decoded bytes below, not on the base64 string —
@@ -3674,6 +3688,9 @@ app.post('/api/render', renderLimiter, async (req, res) => {
   const cladding = pick('cladding', req.body?.claddingId, claddingName);
   const trim = pick('trim', req.body?.trimId, trimName);
   const roof = pick('roof', req.body?.roofId, roofName);
+  /* A driveway, when the trial is on for this request (DRIVEWAYS). */
+  const drivewayMaterial = (drivewayId && driveways.enabled({ body: req.body })) ? driveways.material(drivewayId) : null;
+  const driveway = drivewayMaterial ? { id: drivewayMaterial.id, name: drivewayMaterial.name, words: driveways.promptWords(drivewayMaterial.id) } : null;
 
   /* Windows and doors change only when the homeowner has actually chosen
      something for them.
@@ -3783,7 +3800,7 @@ app.post('/api/render', renderLimiter, async (req, res) => {
   const doorRestore = (glazingColour && windowStyle && !cladding)
     ? { original: img.buffer, originalMime: img.mime, detectionId: detectionId ? String(detectionId) : null,
         fingerprint: imageFingerprint(img.buffer),
-        door: !doorStyle, surroundings: !trim && !(roof && !roofUnsupported),
+        door: !doorStyle, surroundings: !trim && !(roof && !roofUnsupported) && !driveway,
         bars: windowBarsId === 'georgian',
         /* The colour they actually picked, as a number rather than as prose.
            renderprompt can only describe it; this is what the correction
@@ -3802,6 +3819,7 @@ app.post('/api/render', renderLimiter, async (req, res) => {
     georgianBars: windowBarsId === 'georgian' && !!cladding,
     wallMaterials,
     hasBay,
+    driveway,
   });
 
   /* The roof was the only thing asked for and the photograph cannot show it.

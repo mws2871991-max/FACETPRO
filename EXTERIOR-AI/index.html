@@ -2112,6 +2112,9 @@ const CONSENT_WORDING = {
 
 const state = {
   status: "Getting your colours and prices ready…",
+  /* Driveway trial (DRIVEWAYS): a surface, a told size, and the planning
+     estimate for them. Only drawn when /api/catalogue returns driveways. */
+  driveway: { materialId: null, sizeId: 'two-cars', quote: null },
   uploadedImg: null,       // object URL for on-screen preview
   uploadedBase64: null,    // raw base64 (no data: prefix) for API calls
   uploadedMimeType: null,
@@ -2381,7 +2384,7 @@ function applyBetaMode() {
 
 async function loadCatalogue() {
   try {
-    const res = await fetch('/api/catalogue');
+    const res = await fetch('/api/catalogue' + (/[?&]exp=driveway\b/.test(location.search) ? '?exp=driveway' : ''));
     state.catalogue = await res.json();
     // Merge in real photo swatches (image field) from the catalogue —
     // SWATCHES starts as a plain colour-chip fallback until this loads.
@@ -5025,8 +5028,55 @@ function buildVisualizer() {
   const declined = ['Cladding', 'Trim', 'Roof'].filter(isDeclined);
   const declinedWords = { Cladding: 'the walls', Trim: 'the roofline', Roof: 'a roof' };
 
+  /* Driveway (trial). Its own row, not a swatch group: it needs a size as
+     well as a surface, and its estimate is separate from the house estimate
+     because no installer takes driveway work yet — the row says so. */
+  const dw = state.catalogue?.driveways || null;
+  const fetchDrivewayQuote = async () => {
+    state.driveway.quote = null;
+    if (!state.driveway.materialId) { render(); return; }
+    try {
+      const exps = /[?&]exp=driveway\b/.test(location.search) ? ['driveway'] : undefined;
+      const r = await fetch('/api/driveway-quote', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ materialId: state.driveway.materialId, sizeId: state.driveway.sizeId, experiments: exps }) });
+      state.driveway.quote = r.ok ? await r.json() : null;
+    } catch (_) { state.driveway.quote = null; }
+    render();
+  };
+  const pickDriveway = (key, value) => {
+    state.driveway[key] = value;
+    state.hasCustomised = true;
+    state.renderUrl = null; state.renderId = null; state.renderAspect = null;
+    fetchDrivewayQuote();
+  };
+  const chip = (active, label, onClick, hex) => h('button', {
+    type: 'button', 'aria-pressed': active ? 'true' : 'false', onClick,
+    className: `flex items-center gap-2 px-3.5 min-h-[44px] rounded-full border text-base transition ${active ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-900'}`,
+  }, [hex ? h('span', { className: 'w-5 h-5 rounded-full border border-black/10', style: { background: hex } }) : null, label]);
+  const q = state.driveway.quote;
+  const drivewayRow = dw ? h('div', { id: 'driveway', className: 'scroll-mt-24' }, [
+    h('h3', { className: 'text-base text-zinc-600 font-semibold' }, 'Driveway'),
+    h('div', { className: 'mt-2 flex flex-wrap gap-2' }, [
+      ...dw.materials.map(m => chip(state.driveway.materialId === m.id, m.name, () => pickDriveway('materialId', m.id), m.hex)),
+      chip(!state.driveway.materialId, 'Leave as it is', () => pickDriveway('materialId', null)),
+    ]),
+    state.driveway.materialId ? h('div', { className: 'mt-3' }, [
+      h('p', { className: 'text-base text-zinc-600' }, 'How big is it? (We can’t measure the ground from your photo.)'),
+      h('div', { className: 'mt-2 flex flex-wrap gap-2' }, dw.sizes.map(z => chip(state.driveway.sizeId === z.id, z.name, () => pickDriveway('sizeId', z.id)))),
+    ]) : null,
+    q ? h('div', { className: 'mt-3 rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4 grid gap-2' }, [
+      h('p', { className: 'text-base text-zinc-600' }, `Driveway planning estimate · ${q.material.name} · ${q.size.name} (about ${q.size.m2[0]}–${q.size.m2[1]} m², your figure)`),
+      h('p', { className: 'font-mono text-2xl' }, `£${q.low.toLocaleString('en-GB')} – £${q.high.toLocaleString('en-GB')}`),
+      h('p', { className: 'text-base text-zinc-600' }, 'Includes the new surface, digging out and a new base, and taking the waste away. Not included:'),
+      h('ul', { className: 'list-disc pl-5 text-base text-zinc-600' }, q.excluded.map(x => h('li', {}, x))),
+      h('p', { className: 'text-base text-zinc-600' }, q.permeableNote + ' ' + q.planning),
+      h('p', { className: 'text-base text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2' }, q.noInstallerYet),
+    ]) : null,
+  ]) : null;
+
   const groupsRow = [
     ...kept.map(buildGroup),
+    drivewayRow,
     declined.length
       ? h('details', { className: 'rounded-xl border border-zinc-200 bg-[#FDFCF9]' }, [
           h('summary', { className: 'cursor-pointer px-3 min-h-[44px] flex items-center text-base text-zinc-600' },
@@ -7903,7 +7953,12 @@ async function generateRealRender() {
         detectionId: state.detectionId,
         /* Trial features, only when the address asks (?exp=pillar). The
            server ignores this unless PILLAR_MASK=test or on. */
-        experiments: /[?&]exp=pillar\b/.test(location.search) ? ['pillar-mask'] : undefined,
+        experiments: (() => { const e = [];
+          if (/[?&]exp=pillar\b/.test(location.search)) e.push('pillar-mask');
+          if (/[?&]exp=driveway\b/.test(location.search)) e.push('driveway');
+          return e.length ? e : undefined; })(),
+        /* A driveway surface, when the trial shows the row (DRIVEWAYS). */
+        drivewayId: state.driveway?.materialId || undefined,
         /* Sent by name, and only when they have actually chosen. The render
            leaves frames alone unless there is something to change them to —
            see the prompt in server.js. */
@@ -10043,6 +10098,7 @@ let autoRenderDone = false;
    hand-rolled copy. The two it replaces each got it wrong in their own way. */
 function hasDrawableChange() {
   if ([state.cladding, state.trim, state.roof].some(sw => sw && !isNone(sw))) return true;
+  if (state.driveway?.materialId) return true;
   const g = glazingChoice();
   if (!g.windowDoorColourName) return false;
   const drawableDoor = !!g.doorStyleName && !isRearOpening(g.doorStyleId);
