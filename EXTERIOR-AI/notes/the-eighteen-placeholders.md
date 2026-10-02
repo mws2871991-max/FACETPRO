@@ -22,7 +22,7 @@ Four fields, one afternoon, and everything else in the notice hangs off them.
 | `[COMPANY LEGAL NAME]` | 2 | `legal/privacy.html:50`, `legal/terms.html:38` |
 | `[COMPANY NUMBER]` | 2 | `legal/privacy.html:52`, `legal/terms.html:38` |
 | `[REGISTERED ADDRESS]` | 2 | `legal/privacy.html:53`, `legal/terms.html:38` |
-| `[ICO REGISTRATION NUMBER]` | 1 | `legal/privacy.html:55` |
+| `[ICO REGISTRATION NUMBER]` | 0 | Removed 2 Oct 2026: fee paid, number not yet issued. Add the line back to `legal/privacy.html` ("Who we are" list) when the ICO register shows FACETPRO LTD. |
 
 The ICO number is the one with a lead time. Registration is an online form and
 a fee, but it is not instant, and `DEPLOY.md` already names it as a
