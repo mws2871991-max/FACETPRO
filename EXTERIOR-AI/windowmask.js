@@ -238,7 +238,7 @@ async function fetchWindowMask({
 
    Shrunk rather than grown: a pillar mask that bleeds a few pixels onto the
    frame beside it would put a white stripe down every painted frame. */
-const PILLAR_PROMPT = 'column, pillar, pilaster';
+const PILLAR_PROMPT = 'column, pillar, pilaster, column capital, corbel';
 const PILLAR_DILATE = -2;
 function fetchPillarMask(opts = {}) {
   return fetchWindowMask({ ...opts, prompt: PILLAR_PROMPT, dilate: PILLAR_DILATE });
