@@ -610,6 +610,14 @@ const NOT_OURS_MARGIN_PCT = 1.5;
    far above it: glass and frame are both "window" to segmentation. */
 const MASK_MIN_COVER = 0.08;
 
+/* How far outside one of our window boxes the mask is still believed, as a
+   percentage of the frame. IMG_2068, 2 October: the stone head above the
+   upstairs left window came back green, then dark grey. Segmentation called
+   the stone "window" and the mask kept the paint on it; the detection box for
+   that window starts at the bottom of the stone. Small, because the box is
+   already loose around the frame and the stonework begins right beside it. */
+const MASK_BOX_MARGIN_PCT = 0.5;
+
 function restoreOutsideMask(opts) {
   /* Destructured inside, not in the signature: a default only
      catches undefined, and these must refuse null too. Everything
@@ -698,6 +706,18 @@ function restoreOutsideMask(opts) {
     }
     const filledWindow = (x, y) => fills.some(c => x >= c.x0 && x <= c.x1 && y >= c.y0 && y <= c.y1);
 
+    /* The mask is only believed inside our windows. Without boxes (no
+       detection) it is believed everywhere, as before. */
+    const keep = (Array.isArray(ours) ? ours : [])
+      .filter(b => b && ['x', 'y', 'w', 'h'].every(k => Number.isFinite(Number(b[k]))) && b.w > 0 && b.h > 0)
+      .map(b => ({
+        x0: Math.floor((Number(b.x) - MASK_BOX_MARGIN_PCT) * W / 100),
+        x1: Math.ceil((Number(b.x) + Number(b.w) + MASK_BOX_MARGIN_PCT) * W / 100),
+        y0: Math.floor((Number(b.y) - MASK_BOX_MARGIN_PCT) * H / 100),
+        y1: Math.ceil((Number(b.y) + Number(b.h) + MASK_BOX_MARGIN_PCT) * H / 100),
+      }));
+    const inOurBox = (x, y) => !keep.length || keep.some(c => x >= c.x0 && x <= c.x1 && y >= c.y0 && y <= c.y1);
+
     /* Nearest neighbour for the mask — it is a binary decision and bilinear
        would only invent grey along every edge to threshold again. The
        photograph keeps the bilinear sample it has always had. */
@@ -707,7 +727,7 @@ function restoreOutsideMask(opts) {
       for (let x = 0; x < W; x++) {
         const mx = Math.min(m.width - 1, Math.max(0, Math.round((x + 0.5) * m.width / W - 0.5)));
         const my = Math.min(m.height - 1, Math.max(0, Math.round((y + 0.5) * m.height / H - 0.5)));
-        if ((m.data[(my * m.width + mx) * 4] >= MASK_ON || filledWindow(x, y)) && !notOurWindow(x, y)) { inside++; continue; }   // our window: keep the render
+        if (((m.data[(my * m.width + mx) * 4] >= MASK_ON && inOurBox(x, y)) || filledWindow(x, y)) && !notOurWindow(x, y)) { inside++; continue; }   // our window: keep the render
         sample(src, (x + 0.5) * (src.width / W) - 0.5, (y + 0.5) * (src.height / H) - 0.5, px);
         const i = (y * W + x) * 4;
         out.data[i] = px[0]; out.data[i + 1] = px[1]; out.data[i + 2] = px[2];
@@ -978,6 +998,6 @@ function correctFrameColour(opts) {
   }
 }
 
-module.exports = {
+module.exports = { MASK_BOX_MARGIN_PCT,
   restorePillars, PILLAR_MAX_OF_BAY, restoreDoor, restoreSurroundings, restoreOutsideMask, correctFrameColour,
                    drawGeorgianBars, doorBox, changedShare, MASK_ON, rgbToLab, labToRgb, hexToRgb };

@@ -52,3 +52,14 @@ test('the render check judges windows one by one, and only relative to each othe
   assert.match(server, /if \(hi >= WINDOW_CHANGED && lo < WINDOW_MISSED\)/);
   assert.match(server, /ours: glazing\.frontWindowBoxes\(detections, detectionAspectRatio\)/);
 });
+
+test('paint on stonework the mask calls window, outside our boxes, goes back to the photograph', () => {
+  /* IMG_2068, 2 October: the stone head above the upstairs left window. */
+  const head = { x: 8, y: 2, w: 24, h: 6 };   // above up1, outside its box
+  const r2 = png((x, y) => ([up1, head].some(b => inBox(x, y, b)) ? [40, 40, 45] : [230, 230, 230]));
+  const m2 = png((x, y) => ([up1, head, bay].some(b => inBox(x, y, b)) ? [255, 255, 255] : [0, 0, 0]));
+  const r = restoreOutsideMask({ ...base, render: r2, mask: m2, ours: [up1, bay] });
+  assert.ok(r.restored);
+  assert.strictEqual(px(r.buffer, 20, 4), 230, 'the stone head is the photograph again');
+  assert.strictEqual(px(r.buffer, 20, 20), 40, 'the window keeps its new colour');
+});
