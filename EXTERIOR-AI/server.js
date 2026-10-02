@@ -3640,7 +3640,7 @@ const wantsPillarMask = (body) => PILLAR_MASK_MODE === 'on'
 app.post('/api/render', renderLimiter, async (req, res) => {
   const { image, mimeType, claddingName, trimName, roofName,
           windowStyleName, doorStyleName, doorStyleId, windowDoorColourName,
-          windowDoorColourId, windowBarsId, detectionId, drivewayId } = req.body || {};
+          windowDoorColourId, windowBarsId, detectionId, drivewayId, drivewayStyleId, drivewayPatternId } = req.body || {};
   if (!image) return res.status(400).json({ error: 'image required' });
   if (typeof image !== 'string' || image.length < 10) return res.status(400).json({ error: 'Invalid image data.' });
   // Size is checked on the decoded bytes below, not on the base64 string —
@@ -3690,7 +3690,7 @@ app.post('/api/render', renderLimiter, async (req, res) => {
   const roof = pick('roof', req.body?.roofId, roofName);
   /* A driveway, when the trial is on for this request (DRIVEWAYS). */
   const drivewayMaterial = (drivewayId && driveways.enabled({ body: req.body })) ? driveways.material(drivewayId) : null;
-  const driveway = drivewayMaterial ? { id: drivewayMaterial.id, name: drivewayMaterial.name, words: driveways.promptWords(drivewayMaterial.id) } : null;
+  const driveway = drivewayMaterial ? { id: drivewayMaterial.id, name: drivewayMaterial.name, words: driveways.promptWords(drivewayMaterial.id, drivewayStyleId, drivewayPatternId) } : null;
 
   /* Windows and doors change only when the homeowner has actually chosen
      something for them.

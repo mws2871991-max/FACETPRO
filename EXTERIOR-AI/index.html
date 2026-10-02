@@ -2114,7 +2114,7 @@ const state = {
   status: "Getting your colours and prices ready…",
   /* Driveway trial (DRIVEWAYS): a surface, a told size, and the planning
      estimate for them. Only drawn when /api/catalogue returns driveways. */
-  driveway: { materialId: null, sizeId: 'two-cars', quote: null },
+  driveway: { materialId: null, styleId: null, patternId: 'herringbone-45', sizeId: 'two-cars', quote: null },
   uploadedImg: null,       // object URL for on-screen preview
   uploadedBase64: null,    // raw base64 (no data: prefix) for API calls
   uploadedMimeType: null,
@@ -5045,14 +5045,22 @@ function buildVisualizer() {
   };
   const pickDriveway = (key, value) => {
     state.driveway[key] = value;
+    /* A new surface starts on its first colour; a colour is not carried
+       across surfaces (Charcoal block paving is not a resin colour). */
+    if (key === 'materialId') {
+      const m = (dw?.materials || []).find(x => x.id === value);
+      state.driveway.styleId = m && m.styles && m.styles[0] ? m.styles[0].id : null;
+    }
     state.hasCustomised = true;
     state.renderUrl = null; state.renderId = null; state.renderAspect = null;
     fetchDrivewayQuote();
   };
-  const chip = (active, label, onClick, hex) => h('button', {
+  const chip = (active, label, onClick, hex, img) => h('button', {
     type: 'button', 'aria-pressed': active ? 'true' : 'false', onClick,
     className: `flex items-center gap-2 px-3.5 min-h-[44px] rounded-full border text-base transition ${active ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-900'}`,
-  }, [hex ? h('span', { className: 'w-5 h-5 rounded-full border border-black/10', style: { background: hex } }) : null, label]);
+  }, [img ? h('img', { src: img, alt: '', className: 'w-6 h-6 rounded-full object-cover border border-black/10' })
+         : hex ? h('span', { className: 'w-5 h-5 rounded-full border border-black/10', style: { background: hex } }) : null, label]);
+  const dwMat = (dw?.materials || []).find(x => x.id === state.driveway.materialId) || null;
   const q = state.driveway.quote;
   const drivewayRow = dw ? h('div', { id: 'driveway', className: 'scroll-mt-24' }, [
     h('h3', { className: 'text-base text-zinc-600 font-semibold' }, 'Driveway'),
@@ -5060,6 +5068,15 @@ function buildVisualizer() {
       ...dw.materials.map(m => chip(state.driveway.materialId === m.id, m.name, () => pickDriveway('materialId', m.id), m.hex)),
       chip(!state.driveway.materialId, 'Leave as it is', () => pickDriveway('materialId', null)),
     ]),
+    dwMat && dwMat.styles && dwMat.styles.length ? h('div', { className: 'mt-3' }, [
+      h('p', { className: 'text-base text-zinc-600' }, 'Colour'),
+      h('div', { className: 'mt-2 flex flex-wrap gap-2' }, dwMat.styles.map(st => chip(state.driveway.styleId === st.id, st.name, () => pickDriveway('styleId', st.id), st.hex, st.swatch))),
+    ]) : null,
+    dwMat && dwMat.patterns && dwMat.patterns.length ? h('div', { className: 'mt-3' }, [
+      h('p', { className: 'text-base text-zinc-600' }, 'Pattern'),
+      h('div', { className: 'mt-2 flex flex-wrap gap-2' }, dwMat.patterns.map(pt => chip(state.driveway.patternId === pt.id, pt.name, () => pickDriveway('patternId', pt.id), null, pt.swatch))),
+      h('p', { className: 'mt-1 text-base text-zinc-600' }, (dwMat.patterns.find(pt => pt.id === state.driveway.patternId) || {}).note || ''),
+    ]) : null,
     state.driveway.materialId ? h('div', { className: 'mt-3' }, [
       h('p', { className: 'text-base text-zinc-600' }, 'How big is it? (We can’t measure the ground from your photo.)'),
       h('div', { className: 'mt-2 flex flex-wrap gap-2' }, dw.sizes.map(z => chip(state.driveway.sizeId === z.id, z.name, () => pickDriveway('sizeId', z.id)))),
@@ -7959,6 +7976,8 @@ async function generateRealRender() {
           return e.length ? e : undefined; })(),
         /* A driveway surface, when the trial shows the row (DRIVEWAYS). */
         drivewayId: state.driveway?.materialId || undefined,
+        drivewayStyleId: state.driveway?.styleId || undefined,
+        drivewayPatternId: state.driveway?.patternId || undefined,
         /* Sent by name, and only when they have actually chosen. The render
            leaves frames alone unless there is something to change them to —
            see the prompt in server.js. */

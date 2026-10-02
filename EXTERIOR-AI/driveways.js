@@ -36,7 +36,11 @@ function publicSection() {
   if (!d) return null;
   return {
     note: d.note,
-    materials: d.materials.map(m => ({ id: m.id, name: m.name, hex: m.hex, materialLabel: m.materialLabel })),
+    materials: d.materials.map(m => ({
+      id: m.id, name: m.name, hex: m.hex, materialLabel: m.materialLabel,
+      styles: (m.styles || []).map(st => ({ id: st.id, name: st.name, hex: st.hex, swatch: st.swatch })),
+      patterns: (m.patterns || []).map(pt => ({ id: pt.id, name: pt.name, note: pt.note, swatch: `/assets/swatches/driveway/pattern-${pt.id}.png` })),
+    })),
     sizes: d.sizes.map(s => ({ id: s.id, name: s.name })),
     excluded: d.excluded, planning: d.planning, noInstallerYet: d.noInstallerYet, source: d.source,
   };
@@ -71,13 +75,32 @@ function estimate({ materialId, sizeId } = {}) {
   };
 }
 
-/* What the render is asked for, in the words the model is given. */
-const SURFACE_WORDS = {
-  'block-paving': 'new rectangular concrete block paving in a warm grey-brown, laid in a neat herringbone pattern with a contrasting edging course',
-  'resin-bound': 'a new smooth resin-bound gravel surface in a warm honey colour, seamless and even, with a neat edge',
-  'tarmac': 'new smooth, even black tarmac with a crisp edge',
-  'gravel': 'a fresh, level layer of pale grey-beige gravel, evenly spread, with a neat edging',
+/* What the render is asked for, in the words the model is given: the style's
+   own words (colour and finish), the block-paving pattern and border, and a
+   plain default for each surface when no style was sent. */
+const DEFAULT_WORDS = {
+  'block-paving': 'new natural grey concrete block paving',
+  'resin-bound': 'a smooth, seamless resin-bound gravel surface in silver grey',
+  'tarmac': 'new smooth, even black tarmac',
+  'gravel': 'fresh grey granite chippings',
+  'stone-setts': 'natural grey granite setts laid in neat rows',
+  'imprinted-concrete': 'new pattern-imprinted concrete in a slate-grey random ashlar stone pattern',
 };
-function promptWords(materialId) { return SURFACE_WORDS[String(materialId)] || null; }
+function promptWords(materialId, styleId, patternId) {
+  const m = material(materialId);
+  if (!m) return null;
+  const st = (m.styles || []).find(x => x.id === String(styleId || ''));
+  let words = st ? st.words : DEFAULT_WORDS[m.id];
+  if (m.id === 'block-paving') {
+    const pt = (m.patterns || []).find(x => x.id === String(patternId || '')) || (m.patterns || [])[0];
+    if (pt) words += ` ${pt.words}`;
+    if (m.border) words += `, ${m.border}`;
+  }
+  return words + ', with a neat edge';
+}
+function styleName(materialId, styleId) {
+  const m = material(materialId); const st = m && (m.styles || []).find(x => x.id === String(styleId || ''));
+  return st ? st.name : null;
+}
 
-module.exports = { mode, enabled, publicSection, estimate, material, size, promptWords, SURFACE_WORDS };
+module.exports = { mode, enabled, publicSection, estimate, material, size, promptWords, styleName, DEFAULT_WORDS };

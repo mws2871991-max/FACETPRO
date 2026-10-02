@@ -721,10 +721,10 @@
   },
   "driveways": {
     "note": "Driveway planning estimates. Size is told, not measured: a front photograph cannot measure ground seen at an angle.",
-    "source": "MyBuilder driveway cost guide (updated 21 Aug 2026); BestBuilders average cost of a new driveway per m² 2026 (reviewed Jul 2026). Where the two differ, the wider range is used.",
+    "source": "MyBuilder driveway cost guide (updated 21 Aug 2026); BestBuilders average cost of a new driveway per m² 2026 (reviewed Jul 2026). Where the two differ, the wider range is used. Natural stone blocks £80–£120 (MyBuilder); pattern concrete £90–£140 (BestBuilders).",
     "sourced": true,
     "updated": "2026-10-02",
-    "internalNote": "Per-m² rates are the surface laid. Groundworks (dig out, new sub-base) are added separately because both guides list them as extra (MyBuilder £30–£50/m²). Waste removal from BestBuilders (£250–£700). Dropped kerb and drainage are NOT in the figure; they are named as exclusions. London/SE uplift (20–35%) is not applied, only stated. Whether a quote includes VAT varies by installer — say so, do not claim it.",
+    "internalNote": "Per-m² rates are the surface laid. Groundworks (dig out, new sub-base) are added separately because both guides list them as extra (MyBuilder £30–£50/m²). Waste removal from BestBuilders (£250–£700). Dropped kerb and drainage are NOT in the figure; they are named as exclusions. London/SE uplift (20–35%) is not applied, only stated. Whether a quote includes VAT varies by installer — say so, do not claim it. Colour/style does not change the price; only material does.",
     "materials": [
       {
         "id": "block-paving",
@@ -735,7 +735,59 @@
           80,
           150
         ],
-        "permeableNote": "Permeable block paving is available; standard blocks need drainage to a border or a planning application over 5 m²."
+        "permeableNote": "Permeable block paving is available; standard blocks need drainage to a border or a planning application over 5 m².",
+        "styles": [
+          {
+            "id": "bp-charcoal",
+            "name": "Charcoal",
+            "hex": "#3E3F44",
+            "swatch": "/assets/swatches/driveway/bp-charcoal.png",
+            "words": "dark charcoal-grey concrete block paving"
+          },
+          {
+            "id": "bp-brindle",
+            "name": "Brindle",
+            "hex": "#8A5A44",
+            "swatch": "/assets/swatches/driveway/bp-brindle.png",
+            "words": "brindle concrete block paving — a mix of red, brown and charcoal blocks"
+          },
+          {
+            "id": "bp-natural",
+            "name": "Natural Grey",
+            "hex": "#9C9A94",
+            "swatch": "/assets/swatches/driveway/bp-natural.png",
+            "words": "natural light-grey concrete block paving"
+          },
+          {
+            "id": "bp-autumn",
+            "name": "Autumn (tumbled)",
+            "hex": "#A0764F",
+            "swatch": "/assets/swatches/driveway/bp-autumn.png",
+            "words": "tumbled, aged-look concrete block paving in warm autumn tones of buff, brown and red, with softened edges"
+          },
+          {
+            "id": "bp-buff",
+            "name": "Buff",
+            "hex": "#C7AE84",
+            "swatch": "/assets/swatches/driveway/bp-buff.png",
+            "words": "buff sandy-coloured concrete block paving"
+          }
+        ],
+        "patterns": [
+          {
+            "id": "herringbone-45",
+            "name": "Herringbone 45°",
+            "words": "laid in a 45-degree herringbone pattern",
+            "note": "The strongest pattern for cars."
+          },
+          {
+            "id": "herringbone-90",
+            "name": "Herringbone 90°",
+            "words": "laid in a 90-degree herringbone pattern",
+            "note": "Also strong; squarer look."
+          }
+        ],
+        "border": "with a contrasting single-block border along every edge"
       },
       {
         "id": "resin-bound",
@@ -746,7 +798,37 @@
           80,
           180
         ],
-        "permeableNote": "Resin bound is usually porous."
+        "permeableNote": "Resin bound is usually porous.",
+        "styles": [
+          {
+            "id": "rb-silver",
+            "name": "Silver Grey",
+            "hex": "#A7A9AC",
+            "swatch": "/assets/swatches/driveway/rb-silver.png",
+            "words": "a smooth, seamless resin-bound gravel surface in silver grey"
+          },
+          {
+            "id": "rb-gold",
+            "name": "Harvest Gold",
+            "hex": "#C9A45C",
+            "swatch": "/assets/swatches/driveway/rb-gold.png",
+            "words": "a smooth, seamless resin-bound gravel surface in warm golden tones"
+          },
+          {
+            "id": "rb-cappuccino",
+            "name": "Cappuccino",
+            "hex": "#A88B6E",
+            "swatch": "/assets/swatches/driveway/rb-cappuccino.png",
+            "words": "a smooth, seamless resin-bound gravel surface in a warm cappuccino brown"
+          },
+          {
+            "id": "rb-gunmetal",
+            "name": "Gunmetal",
+            "hex": "#55585E",
+            "swatch": "/assets/swatches/driveway/rb-gunmetal.png",
+            "words": "a smooth, seamless resin-bound gravel surface in dark gunmetal grey"
+          }
+        ]
       },
       {
         "id": "tarmac",
@@ -757,18 +839,118 @@
           40,
           75
         ],
-        "permeableNote": "Standard tarmac is not porous: over 5 m² it needs drainage to a border, porous asphalt, or a planning application."
+        "permeableNote": "Standard tarmac is not porous: over 5 m² it needs drainage to a border, porous asphalt, or a planning application.",
+        "styles": [
+          {
+            "id": "tm-black",
+            "name": "Black",
+            "hex": "#26272B",
+            "swatch": "/assets/swatches/driveway/tm-black.png",
+            "words": "new smooth, even black tarmac"
+          },
+          {
+            "id": "tm-red",
+            "name": "Red",
+            "hex": "#7E3B32",
+            "swatch": "/assets/swatches/driveway/tm-red.png",
+            "words": "new smooth, even red tarmac"
+          }
+        ]
       },
       {
         "id": "gravel",
         "name": "Gravel",
         "hex": "#B9B2A6",
-        "materialLabel": "Loose gravel on a stabilising grid",
+        "materialLabel": "Angular 14–20 mm chippings on a stabilising grid",
         "perM2": [
           25,
           70
         ],
-        "permeableNote": "Gravel is porous."
+        "permeableNote": "Gravel is porous.",
+        "styles": [
+          {
+            "id": "gv-cotswold",
+            "name": "Cotswold Buff",
+            "hex": "#D5C29A",
+            "swatch": "/assets/swatches/driveway/gv-cotswold.png",
+            "words": "fresh cream-to-buff Cotswold limestone chippings"
+          },
+          {
+            "id": "gv-golden",
+            "name": "Golden",
+            "hex": "#C79A55",
+            "swatch": "/assets/swatches/driveway/gv-golden.png",
+            "words": "fresh golden gravel in honey and amber tones"
+          },
+          {
+            "id": "gv-granite",
+            "name": "Granite Grey",
+            "hex": "#8E8E8E",
+            "swatch": "/assets/swatches/driveway/gv-granite.png",
+            "words": "fresh grey granite chippings"
+          },
+          {
+            "id": "gv-basalt",
+            "name": "Basalt",
+            "hex": "#3B3C3E",
+            "swatch": "/assets/swatches/driveway/gv-basalt.png",
+            "words": "fresh dark grey-black basalt chippings"
+          }
+        ]
+      },
+      {
+        "id": "stone-setts",
+        "name": "Stone Setts",
+        "hex": "#7D7A73",
+        "materialLabel": "Natural granite or sandstone setts",
+        "perM2": [
+          80,
+          120
+        ],
+        "permeableNote": "Setts are not porous unless laid with permeable joints: over 5 m² they need drainage to a border or a planning application.",
+        "styles": [
+          {
+            "id": "ss-granite",
+            "name": "Granite Grey",
+            "hex": "#7D7A73",
+            "swatch": "/assets/swatches/driveway/ss-granite.png",
+            "words": "natural grey granite setts, small and squarish with slightly uneven faces, laid in neat rows"
+          },
+          {
+            "id": "ss-sandstone",
+            "name": "Sandstone",
+            "hex": "#B39770",
+            "swatch": "/assets/swatches/driveway/ss-sandstone.png",
+            "words": "natural buff sandstone setts, small and squarish with riven faces, laid in neat rows"
+          }
+        ]
+      },
+      {
+        "id": "imprinted-concrete",
+        "name": "Pattern Imprinted Concrete",
+        "hex": "#8F8678",
+        "materialLabel": "Concrete printed with a stone or brick pattern",
+        "perM2": [
+          90,
+          140
+        ],
+        "permeableNote": "Imprinted concrete is not porous: over 5 m² it needs drainage to a border or a planning application.",
+        "styles": [
+          {
+            "id": "ic-ashlar",
+            "name": "Ashlar Slate",
+            "hex": "#6E6E70",
+            "swatch": "/assets/swatches/driveway/ic-ashlar.png",
+            "words": "new pattern-imprinted concrete in a slate-grey random ashlar stone pattern"
+          },
+          {
+            "id": "ic-cobble",
+            "name": "Old English Cobble",
+            "hex": "#8F8678",
+            "swatch": "/assets/swatches/driveway/ic-cobble.png",
+            "words": "new pattern-imprinted concrete in a weathered cobble-stone pattern, grey-brown"
+          }
+        ]
       }
     ],
     "sizes": [
@@ -811,6 +993,7 @@
       "Prices in London and the South East typically run 20–35% higher"
     ],
     "planning": "In England, a new driveway over 5 m² that does not let water soak away (or drain to a lawn or border) needs planning permission. Gravel, resin bound and permeable block paving usually do not. Flats, maisonettes and conservation areas can differ — check with your council.",
-    "noInstallerYet": "We don't have a driveway installer in our network yet, so this is a planning estimate only — we won't pass your details on for a driveway."
+    "noInstallerYet": "We don't have a driveway installer in our network yet, so this is a planning estimate only — we won't pass your details on for a driveway.",
+    "stylesSource": "Patterns: herringbone recommended for driveways (Beesley & Fildes; Homebuilding & Renovating). Colours: ranges stocked by UK merchants (Marshalls Drivesett Tegula, Bradstone, Stonemarket via Jewson/Travis Perkins/MKM); resin colours from Resin Bonded Aggregates' colour guide; gravel from MKM's driveway gravel guide. No sales-share data found: colours are what is widely stocked, not ranked."
   }
 }

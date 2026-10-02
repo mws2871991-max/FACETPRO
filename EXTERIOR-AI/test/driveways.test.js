@@ -45,7 +45,7 @@ test('the page gets names and sizes, never the rate card', () => {
 });
 
 test('the render asks for the driveway inside the boundary and stops holding it', () => {
-  const p = buildRenderPrompt({ driveway: { id: 'tarmac', name: 'Tarmac', words: d.promptWords('tarmac') } });
+  const p = buildRenderPrompt({ driveway: { id: 'tarmac', name: 'Tarmac', words: d.promptWords('tarmac', 'tm-black') } });
   assert.match(p, /this house's own driveway/);
   assert.match(p, /public pavement and road beyond the boundary/);
   assert.doesNotMatch(p, /the garden, path, driveway, fencing/, 'the driveway is no longer held');
@@ -67,4 +67,29 @@ test('page: driveway row only from the catalogue, sends the surface with the ren
   assert.match(h, /const dw = state\.catalogue\?\.driveways \|\| null;/);
   assert.match(h, /drivewayId: state\.driveway\?\.materialId \|\| undefined/);
   assert.match(h, /if \(state\.driveway\?\.materialId\) return true;/);
+});
+
+test('every surface has styles with a drawn swatch; block paving has herringbone patterns', () => {
+  const dw = catalogue.driveways;
+  for (const m of dw.materials) {
+    assert.ok(m.styles && m.styles.length, m.id);
+    for (const st of m.styles) assert.ok(fs.existsSync(path.join(__dirname, '..', st.swatch.replace(/^\//, ''))), st.swatch);
+  }
+  const bp = dw.materials.find(m => m.id === 'block-paving');
+  assert.deepStrictEqual(bp.patterns.map(p => p.id), ['herringbone-45', 'herringbone-90']);
+  for (const p of bp.patterns) assert.ok(fs.existsSync(path.join(__dirname, '..', 'assets/swatches/driveway', `pattern-${p.id}.png`)));
+  assert.ok(dw.materials.some(m => m.id === 'stone-setts') && dw.materials.some(m => m.id === 'imprinted-concrete'));
+  assert.match(dw.stylesSource, /No sales-share data found/);
+});
+
+test('the render words carry colour, pattern and border; a bad style falls back to the plain default', () => {
+  assert.match(d.promptWords('block-paving', 'bp-charcoal', 'herringbone-90'), /charcoal.*90-degree herringbone.*border/);
+  assert.match(d.promptWords('block-paving', 'bp-brindle'), /45-degree herringbone/, 'default pattern is 45°');
+  assert.strictEqual(d.promptWords('gravel', 'nonsense'), d.DEFAULT_WORDS.gravel + ', with a neat edge');
+  assert.strictEqual(d.promptWords('marble'), null);
+});
+
+test('colour never changes the price', () => {
+  const a = d.estimate({ materialId: 'resin-bound', sizeId: 'one-car' });
+  assert.strictEqual(a.low, 1900); assert.strictEqual(a.high, 5300);
 });
