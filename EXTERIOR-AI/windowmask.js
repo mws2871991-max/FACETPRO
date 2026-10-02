@@ -238,7 +238,10 @@ async function fetchWindowMask({
 
    Shrunk rather than grown: a pillar mask that bleeds a few pixels onto the
    frame beside it would put a white stripe down every painted frame. */
-const PILLAR_PROMPT = 'column, pillar, pilaster, column capital, corbel';
+/* 'column capital, corbel' was added on 2 Oct (0044) to catch the carved
+   tops; live, the mask then took 79% of the bay and was refused every time.
+   Back to the shafts only; restorePillars runs each shaft the bay's height. */
+const PILLAR_PROMPT = 'column, pillar, pilaster';
 const PILLAR_DILATE = -2;
 function fetchPillarMask(opts = {}) {
   return fetchWindowMask({ ...opts, prompt: PILLAR_PROMPT, dilate: PILLAR_DILATE });

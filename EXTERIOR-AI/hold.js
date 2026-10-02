@@ -758,6 +758,11 @@ function restoreOutsideMask(opts) {
    street is not this job's business either way. */
 const PILLAR_MIN_SHARE = 0.002;
 const PILLAR_MAX_OF_BAY = 0.45;
+/* A column of the bay is a shaft when the mask covers this much of its height.
+   The whole column is then held, top to bottom of the bay: the carved capital
+   and the base sit on the shaft, and segmentation asked for "pillar" finds
+   the plain shaft and not the carving (IMG_2068, green, 2 October). */
+const PILLAR_SHAFT_MIN = 0.3;
 function restorePillars(opts) {
   const { render, renderMime, original, originalMime, mask, maskMime, bay = null } = opts || {};
   const untouched = (reason) => ({ buffer: render, restored: false, reason, share: 0 });
@@ -786,6 +791,15 @@ function restorePillars(opts) {
     const ofBay = on.length / ((bx1 - bx0 + 1) * (by1 - by0 + 1));
     if (share < PILLAR_MIN_SHARE) return untouched(`pillar mask covers only ${(share * 100).toFixed(2)}% of the frame`);
     if (bay && ofBay > PILLAR_MAX_OF_BAY) return untouched(`pillar mask covers ${(ofBay * 100).toFixed(0)}% of the bay — that is the window, not its pillars`);
+    if (bay) {
+      const height = by1 - by0 + 1, perX = new Map();
+      for (const k of on) { const x = k % W; perX.set(x, (perX.get(x) || 0) + 1); }
+      const have = new Set(on);
+      for (const [x, n] of perX) {
+        if (n / height < PILLAR_SHAFT_MIN) continue;
+        for (let y = by0; y <= by1; y++) { const k = y * W + x; if (!have.has(k)) { have.add(k); on.push(k); } }
+      }
+    }
     const px = [0, 0, 0];
     for (const k of on) {
       const x = k % W, y = (k - x) / W;

@@ -47,3 +47,17 @@ test('asked for positively, shrunk not grown, and off unless switched on', () =>
   assert.ok(server.includes("String(process.env.PILLAR_MASK).toLowerCase() : 'off';"), 'PILLAR_MASK defaults to off');
   assert.match(server, /maskWanted && hasBay && wantsPillarMask\(req\.body\)/);
 });
+
+test('a shaft the mask found is held the full height of the bay, carved top included', () => {
+  /* IMG_2068, green, 2 October: the shafts held, the capitals stayed green. */
+  const shaftOnly = png((x, y) => (pillar(x, y) && y >= 50 && y < 76 ? [255, 255, 255] : [0, 0, 0]));
+  const r = restorePillars({ ...base, mask: shaftOnly });
+  assert.ok(r.restored, r.reason);
+  assert.strictEqual(px(r.buffer, 32, 42), 235, 'the capital above the shaft is the photograph');
+  assert.strictEqual(px(r.buffer, 32, 78), 235, 'and the base below it');
+  assert.strictEqual(px(r.buffer, 50, 42), 20, 'the frame between pillars keeps its colour');
+});
+
+test('the prompt asks for the shafts only (0044 took the whole bay)', () => {
+  assert.doesNotMatch(PILLAR_PROMPT, /capital|corbel/);
+});
