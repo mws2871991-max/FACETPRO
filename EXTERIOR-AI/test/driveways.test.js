@@ -65,8 +65,8 @@ test('server: gated quote route, catalogue only when enabled, surroundings hold 
 test('page: driveway row only from the catalogue, sends the surface with the render', () => {
   const h = read('index.html');
   assert.match(h, /const dw = state\.catalogue\?\.driveways \|\| null;/);
-  assert.match(h, /drivewayId: state\.driveway\?\.materialId \|\| undefined/);
-  assert.match(h, /if \(state\.driveway\?\.materialId\) return true;/);
+  assert.match(h, /drivewayId: \(state\.driveway\?\.existing === 'yes' && state\.driveway\?\.materialId\) \|\| undefined/);
+  assert.match(h, /if \(state\.driveway\?\.existing === 'yes' && state\.driveway\?\.materialId\) return true;/);
 });
 
 test('every surface has styles with a drawn swatch; block paving has herringbone patterns', () => {
@@ -92,4 +92,80 @@ test('the render words carry colour, pattern and border; a bad style falls back 
 test('colour never changes the price', () => {
   const a = d.estimate({ materialId: 'resin-bound', sizeId: 'one-car' });
   assert.strictEqual(a.low, 1900); assert.strictEqual(a.high, 5300);
+});
+
+/* 0054 — after the first live tests (2 Oct): number 14's wall demolished,
+   bins and handrail removed; resin drawn as loose gravel. */
+const { PNG } = require('pngjs');
+const { restoreInsideMask, KEEP_MAX_OF_GROUND } = require('../hold');
+
+test('only an existing driveway is drawn or priced; a front garden gets advice, not a picture', () => {
+  assert.strictEqual(d.hasExisting('yes'), true);
+  assert.strictEqual(d.hasExisting('no'), false);
+  assert.strictEqual(d.hasExisting(undefined), false);
+  const s = read('server.js');
+  assert.match(s, /if \(!driveways\.hasExisting\(req\.body\?\.existing\)\)/);
+  assert.match(s, /drivewayId && driveways\.hasExisting\(drivewayExisting\) && driveways\.enabled/);
+  const pub = d.publicSection();
+  assert.match(pub.existingQuestion, /driveway in front of the house now/);
+  assert.match(pub.noDrivewayAdvice, /taking down a wall or fence/);
+  assert.match(pub.noDrivewayAdvice, /don't show it on your photo or price it/);
+});
+
+test('walls, fences, railings, bins and cars are segmented and put back', () => {
+  assert.match(d.KEEP_PROMPT, /garden wall.*fence.*railing.*handrail.*wheelie bin.*car/);
+  assert.doesNotMatch(d.KEEP_PROMPT, /pavement|driveway|paving/, 'never segment the thing being changed');
+  const s = read('server.js');
+  assert.match(s, /prompt: driveways\.KEEP_PROMPT/);
+  assert.match(s, /restoreInsideMask\(\{ render: bytes, \.\.\.common, mask: restore\.keepMask/);
+});
+
+const W = 100, H = 100;
+const png = (fn) => { const p = new PNG({ width: W, height: H });
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const v = fn(x, y); const i = (y * W + x) * 4;
+    p.data[i] = v[0]; p.data[i + 1] = v[1]; p.data[i + 2] = v[2]; p.data[i + 3] = 255; } return PNG.sync.write(p); };
+const wall = (x, y) => y >= 70 && y < 80;                       // a low wall across the front
+const bin = (x, y) => x >= 80 && x < 90 && y >= 60 && y < 75;
+const photo = png((x, y) => wall(x, y) ? [180, 60, 50] : bin(x, y) ? [30, 120, 40] : y >= 55 ? [120, 120, 120] : [200, 190, 180]);
+const render = png((x, y) => y >= 55 ? [40, 40, 45] : [200, 190, 180]);   // everything below 55 paved charcoal
+const at = (buf, x, y) => PNG.sync.read(buf).data[(y * W + x) * 4];
+
+test('the wall and bin come back; the new paving around them stays', () => {
+  const mask = png((x, y) => (wall(x, y) || bin(x, y)) ? [255, 255, 255] : [0, 0, 0]);
+  const r = restoreInsideMask({ render, renderMime: 'image/png', original: photo, originalMime: 'image/png', mask, maskMime: 'image/png', fromYPct: 50 });
+  assert.ok(r.restored, r.reason);
+  assert.strictEqual(at(r.buffer, 50, 75), 180, 'wall is the photograph');
+  assert.strictEqual(at(r.buffer, 85, 65), 30, 'bin is the photograph');
+  assert.strictEqual(at(r.buffer, 30, 90), 40, 'the new driveway stays');
+});
+
+test('a keep mask that has swallowed the ground is refused', () => {
+  const mask = png((x, y) => y >= 55 ? [255, 255, 255] : [0, 0, 0]);
+  const r = restoreInsideMask({ render, renderMime: 'image/png', original: photo, originalMime: 'image/png', mask, maskMime: 'image/png', fromYPct: 50 });
+  assert.strictEqual(r.restored, false);
+  assert.match(r.reason, /that is the driveway/);
+  assert.ok(KEEP_MAX_OF_GROUND <= 0.5);
+});
+
+test('nothing above the front door and nothing inside our windows is touched', () => {
+  const mask = png(() => [255, 255, 255].map((v, i) => v)).toString ? png((x, y) => (wall(x, y) || (y < 40) || (x >= 10 && x < 20 && y >= 60 && y < 70)) ? [255, 255, 255] : [0, 0, 0]) : null;
+  const r = restoreInsideMask({ render, renderMime: 'image/png', original: photo, originalMime: 'image/png', mask, maskMime: 'image/png',
+    fromYPct: 50, ours: [{ x: 10, y: 58, w: 10, h: 14 }] });
+  assert.ok(r.restored, r.reason);
+  assert.strictEqual(at(r.buffer, 50, 20), 200, 'above the door: unchanged render');
+  assert.strictEqual(at(r.buffer, 15, 65), 40, 'inside our window box: the render');
+});
+
+test('resin is described as bound and solid, never loose', () => {
+  for (const st of catalogue.driveways.materials.find(m => m.id === 'resin-bound').styles) {
+    assert.match(st.words, /no loose stones and no gravel/);
+    assert.match(st.words, /fixed together in clear resin/);
+  }
+});
+
+test('a driveway prompt holds walls, bins, railings and the house number by name', () => {
+  const p = buildRenderPrompt({ driveway: { id: 'block-paving', name: 'Block Paving', words: d.promptWords('block-paving', 'bp-charcoal') } });
+  assert.match(p, /Do not remove, move or rebuild any wall, fence, gate, railing, handrail, step, bin, car or plant/);
+  assert.match(p, /the house number, door number, letterbox and any sign/);
+  assert.match(p, /do not make it bigger/);
 });

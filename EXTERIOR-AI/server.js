@@ -26,7 +26,7 @@ const consentText = require('./consent');
 const { isTestTraffic } = require('./testtraffic');
 
 const { buildRenderPrompt } = require('./renderprompt');
-const { restoreDoor, restoreSurroundings, restoreOutsideMask, restorePillars, cropToBox, pillarsFromObjects, correctFrameColour, drawGeorgianBars, changedShare } = require('./hold');
+const { restoreDoor, restoreSurroundings, restoreOutsideMask, restoreInsideMask, doorBox, restorePillars, cropToBox, pillarsFromObjects, correctFrameColour, drawGeorgianBars, changedShare } = require('./hold');
 const driveways = require('./driveways');
 const { fetchWindowMask, fetchObjectMasks, maskWithinGrace, GRACE_MS } = require('./windowmask');
 /* How long a mask started at upload may take. Generous, because nothing is
@@ -1786,6 +1786,10 @@ app.get('/api/catalogue', (req, res) => {
    nothing here travels to one. See driveways.js. */
 app.post('/api/driveway-quote', express.json({ limit: '4kb' }), (req, res) => {
   if (!driveways.enabled({ body: req.body, query: req.query })) return res.status(404).json({ error: 'Not available.' });
+  /* Resurfacing only (0054): a front garden is not priced as a driveway. */
+  if (!driveways.hasExisting(req.body?.existing)) {
+    return res.status(400).json({ error: 'We only price resurfacing an existing driveway.', reason: 'no_existing_driveway' });
+  }
   const est = driveways.estimate({ materialId: req.body?.materialId, sizeId: req.body?.sizeId });
   if (!est) return res.status(400).json({ error: 'Choose a surface and a size.', reason: 'driveway_incomplete' });
   res.json(est);
@@ -3183,6 +3187,17 @@ async function keepRender(replicateUrl, restore = null) {
         if (held.restored) bytes = held.buffer;
         else obs.record('render', 'kept door not restored', { reason: held.reason });
       }
+      /* Driveway jobs: the wall, fence, railings, bins and car back to the
+         photograph, below the top of the front door, never inside our windows. */
+      if (restore.keepMask) {
+        const door = doorBox(detections);
+        const kept = restoreInsideMask({ render: bytes, ...common, mask: restore.keepMask, maskMime: restore.keepMaskMime,
+          ours: glazing.frontWindowBoxes(detections, detectionAspectRatio), fromYPct: door ? door.y : 40 });
+        if (kept.restored) {
+          bytes = kept.buffer;
+          obs.record('render', 'held walls, bins and railings to the photograph', { share: kept.share.toFixed(4), ofGround: kept.ofGround.toFixed(3) });
+        } else obs.record('render', 'walls, bins and railings not held', { reason: kept.reason });
+      }
       /* After the door, so a restored door is already the photograph and
          reads as unchanged. When the door is being replaced it is one of the
          things asked for, and is kept like the windows. */
@@ -3632,6 +3647,8 @@ async function judgeRender(url, trades, original) {
    beyond the window mask's own grace. */
 /* At most this many bays per photograph get a pillar segmentation each. */
 const MAX_PILLAR_BAYS = 3;
+/* Grown slightly so the edge of a wall or bin is put back whole. */
+const DRIVEWAY_KEEP_DILATE = 4;
 const PILLAR_MASK_MODE = ['off', 'test', 'on'].includes(String(process.env.PILLAR_MASK || '').toLowerCase())
   ? String(process.env.PILLAR_MASK).toLowerCase() : 'off';
 const wantsPillarMask = (body) => PILLAR_MASK_MODE === 'on'
@@ -3640,7 +3657,7 @@ const wantsPillarMask = (body) => PILLAR_MASK_MODE === 'on'
 app.post('/api/render', renderLimiter, async (req, res) => {
   const { image, mimeType, claddingName, trimName, roofName,
           windowStyleName, doorStyleName, doorStyleId, windowDoorColourName,
-          windowDoorColourId, windowBarsId, detectionId, drivewayId, drivewayStyleId, drivewayPatternId } = req.body || {};
+          windowDoorColourId, windowBarsId, detectionId, drivewayId, drivewayStyleId, drivewayPatternId, drivewayExisting } = req.body || {};
   if (!image) return res.status(400).json({ error: 'image required' });
   if (typeof image !== 'string' || image.length < 10) return res.status(400).json({ error: 'Invalid image data.' });
   // Size is checked on the decoded bytes below, not on the base64 string —
@@ -3689,7 +3706,10 @@ app.post('/api/render', renderLimiter, async (req, res) => {
   const trim = pick('trim', req.body?.trimId, trimName);
   const roof = pick('roof', req.body?.roofId, roofName);
   /* A driveway, when the trial is on for this request (DRIVEWAYS). */
-  const drivewayMaterial = (drivewayId && driveways.enabled({ body: req.body })) ? driveways.material(drivewayId) : null;
+  /* Only when they said there is a driveway now (0054): asked to lay one in
+     a walled front garden, the render demolished the wall. */
+  const drivewayMaterial = (drivewayId && driveways.hasExisting(drivewayExisting) && driveways.enabled({ body: req.body }))
+    ? driveways.material(drivewayId) : null;
   const driveway = drivewayMaterial ? { id: drivewayMaterial.id, name: drivewayMaterial.name, words: driveways.promptWords(drivewayMaterial.id, drivewayStyleId, drivewayPatternId) } : null;
 
   /* Windows and doors change only when the homeowner has actually chosen
@@ -3941,6 +3961,17 @@ app.post('/api/render', renderLimiter, async (req, res) => {
         }).catch(() => null);
     })).then(list => { const got = list.filter(Boolean); return got.length ? got : null; });
 
+    /* What a driveway job must not touch — the garden wall, fence, railings,
+       bins, car — segmented beside the render and put back afterwards
+       (restoreInsideMask). Wording alone did not hold them (0054). */
+    const keepPromise = driveway
+      ? fetchWindowMask({
+          image: img.buffer, mime: img.mime, replicateKey, deadlineAt,
+          prompt: driveways.KEEP_PROMPT, dilate: DRIVEWAY_KEEP_DILATE,
+          onNote: (why) => obs.record('render', 'driveway keep mask not used', { reason: why }),
+        }).catch(() => null)
+      : Promise.resolve(null);
+
     const first = await runFluxOrRetry({ prompt, inputImage, deadlineAt, replicateKey }, res, req);
     if (!first.ok) return res.status(first.status).json({ error: first.error });
     let url = first.url;
@@ -4002,10 +4033,17 @@ app.post('/api/render', renderLimiter, async (req, res) => {
        who tries anthracite next gets the one this render gave up waiting for. */
     if (maskRecord && mask && !maskRecord.windowMask) maskRecord.windowMask = mask;
     const pillars = await maskWithinGrace(pillarPromise);
-    const restorePlan = (doorRestore && mask)
+    let restorePlan = (doorRestore && mask)
       ? { ...doorRestore, mask: mask.buffer, maskMime: mask.mime,
           ...(pillars ? { pillarMasks: pillars } : {}) }
       : doorRestore;
+    const keep = await maskWithinGrace(keepPromise);
+    if (driveway && !keep) obs.record('render', 'driveway keep mask not ready in time', { graceMs: GRACE_MS });
+    if (keep) {
+      restorePlan = { ...(restorePlan || { original: img.buffer, originalMime: img.mime,
+        detectionId: detectionId ? String(detectionId) : null, fingerprint: imageFingerprint(img.buffer) }),
+        keepMask: keep.buffer, keepMaskMime: keep.mime };
+    }
 
     return respondWithRender(res, url, {
       roofSkipped: roofUnsupported || undefined,

@@ -724,7 +724,7 @@
     "source": "MyBuilder driveway cost guide (updated 21 Aug 2026); BestBuilders average cost of a new driveway per m² 2026 (reviewed Jul 2026). Where the two differ, the wider range is used. Natural stone blocks £80–£120 (MyBuilder); pattern concrete £90–£140 (BestBuilders).",
     "sourced": true,
     "updated": "2026-10-02",
-    "internalNote": "Per-m² rates are the surface laid. Groundworks (dig out, new sub-base) are added separately because both guides list them as extra (MyBuilder £30–£50/m²). Waste removal from BestBuilders (£250–£700). Dropped kerb and drainage are NOT in the figure; they are named as exclusions. London/SE uplift (20–35%) is not applied, only stated. Whether a quote includes VAT varies by installer — say so, do not claim it. Colour/style does not change the price; only material does.",
+    "internalNote": "Per-m² rates are the surface laid. Groundworks (dig out, new sub-base) are added separately because both guides list them as extra (MyBuilder £30–£50/m²). Waste removal from BestBuilders (£250–£700). Dropped kerb and drainage are NOT in the figure; they are named as exclusions. London/SE uplift (20–35%) is not applied, only stated. Whether a quote includes VAT varies by installer — say so, do not claim it. Colour/style does not change the price; only material does. 0054: resurfacing only — the homeowner must say there is a driveway now; a front garden is never drawn or priced (a render invented demolition on number 14). Resin wording strengthened after it rendered as loose gravel twice.",
     "materials": [
       {
         "id": "block-paving",
@@ -805,28 +805,28 @@
             "name": "Silver Grey",
             "hex": "#A7A9AC",
             "swatch": "/assets/swatches/driveway/rb-silver.png",
-            "words": "a smooth, seamless resin-bound gravel surface in silver grey"
+            "words": "a smooth, solid resin-bound surface in silver grey — small stones fixed together in clear resin into one flat, seamless, hard surface like a pavement, with no loose stones and no gravel"
           },
           {
             "id": "rb-gold",
             "name": "Harvest Gold",
             "hex": "#C9A45C",
             "swatch": "/assets/swatches/driveway/rb-gold.png",
-            "words": "a smooth, seamless resin-bound gravel surface in warm golden tones"
+            "words": "a smooth, solid resin-bound surface in warm golden tones — small stones fixed together in clear resin into one flat, seamless, hard surface like a pavement, with no loose stones and no gravel"
           },
           {
             "id": "rb-cappuccino",
             "name": "Cappuccino",
             "hex": "#A88B6E",
             "swatch": "/assets/swatches/driveway/rb-cappuccino.png",
-            "words": "a smooth, seamless resin-bound gravel surface in a warm cappuccino brown"
+            "words": "a smooth, solid resin-bound surface in a warm cappuccino brown — small stones fixed together in clear resin into one flat, seamless, hard surface like a pavement, with no loose stones and no gravel"
           },
           {
             "id": "rb-gunmetal",
             "name": "Gunmetal",
             "hex": "#55585E",
             "swatch": "/assets/swatches/driveway/rb-gunmetal.png",
-            "words": "a smooth, seamless resin-bound gravel surface in dark gunmetal grey"
+            "words": "a smooth, solid resin-bound surface in dark gunmetal grey — small stones fixed together in clear resin into one flat, seamless, hard surface like a pavement, with no loose stones and no gravel"
           }
         ]
       },
@@ -994,6 +994,18 @@
     ],
     "planning": "In England, a new driveway over 5 m² that does not let water soak away (or drain to a lawn or border) needs planning permission. Gravel, resin bound and permeable block paving usually do not. Flats, maisonettes and conservation areas can differ — check with your council.",
     "noInstallerYet": "We don't have a driveway installer in our network yet, so this is a planning estimate only — we won't pass your details on for a driveway.",
-    "stylesSource": "Patterns: herringbone recommended for driveways (Beesley & Fildes; Homebuilding & Renovating). Colours: ranges stocked by UK merchants (Marshalls Drivesett Tegula, Bradstone, Stonemarket via Jewson/Travis Perkins/MKM); resin colours from Resin Bonded Aggregates' colour guide; gravel from MKM's driveway gravel guide. No sales-share data found: colours are what is widely stocked, not ranked."
+    "stylesSource": "Patterns: herringbone recommended for driveways (Beesley & Fildes; Homebuilding & Renovating). Colours: ranges stocked by UK merchants (Marshalls Drivesett Tegula, Bradstone, Stonemarket via Jewson/Travis Perkins/MKM); resin colours from Resin Bonded Aggregates' colour guide; gravel from MKM's driveway gravel guide. No sales-share data found: colours are what is widely stocked, not ranked.",
+    "existingQuestion": "Is there a driveway in front of the house now?",
+    "existingAnswers": [
+      {
+        "id": "yes",
+        "name": "Yes — a driveway or parking space"
+      },
+      {
+        "id": "no",
+        "name": "No — a front garden, path or wall"
+      }
+    ],
+    "noDrivewayAdvice": "Turning a front garden into a driveway is a different job from resurfacing one: it usually means taking down a wall or fence, a dropped kerb that your council must approve (typically £800–£2,500), and sometimes planning permission. It needs someone to look at it in person, so we don't show it on your photo or price it here."
   }
 }

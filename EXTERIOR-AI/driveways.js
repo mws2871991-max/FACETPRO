@@ -43,8 +43,21 @@ function publicSection() {
     })),
     sizes: d.sizes.map(s => ({ id: s.id, name: s.name })),
     excluded: d.excluded, planning: d.planning, noInstallerYet: d.noInstallerYet, source: d.source,
+    existingQuestion: d.existingQuestion, existingAnswers: d.existingAnswers, noDrivewayAdvice: d.noDrivewayAdvice,
   };
 }
+
+/* Resurfacing only (0054). Number 14 has a walled front garden, not a drive:
+   asked for a driveway, the render knocked the wall down and took the bins
+   and handrail away — real construction the estimate never priced. So the
+   homeowner says whether there is a driveway now, and only 'yes' is drawn
+   or priced. */
+const hasExisting = (v) => String(v || '') === 'yes';
+
+/* What must not change when a driveway is redone, segmented from the
+   photograph and put back afterwards (restoreInsideMask in hold.js). Not the
+   house wall: 'garden wall' and 'boundary wall' name the low wall in front. */
+const KEEP_PROMPT = 'garden wall, boundary wall, fence, gate, railing, handrail, wheelie bin, car';
 
 function material(id) { const d = D(); return d ? d.materials.find(m => m.id === String(id)) || null : null; }
 function size(id) { const d = D(); return d ? d.sizes.find(s => s.id === String(id)) || null : null; }
@@ -80,7 +93,7 @@ function estimate({ materialId, sizeId } = {}) {
    plain default for each surface when no style was sent. */
 const DEFAULT_WORDS = {
   'block-paving': 'new natural grey concrete block paving',
-  'resin-bound': 'a smooth, seamless resin-bound gravel surface in silver grey',
+  'resin-bound': 'a smooth, solid resin-bound surface in silver grey — small stones fixed together in clear resin into one flat, seamless, hard surface like a pavement, with no loose stones and no gravel',
   'tarmac': 'new smooth, even black tarmac',
   'gravel': 'fresh grey granite chippings',
   'stone-setts': 'natural grey granite setts laid in neat rows',
@@ -103,4 +116,4 @@ function styleName(materialId, styleId) {
   return st ? st.name : null;
 }
 
-module.exports = { mode, enabled, publicSection, estimate, material, size, promptWords, styleName, DEFAULT_WORDS };
+module.exports = { mode, enabled, publicSection, estimate, material, size, promptWords, styleName, DEFAULT_WORDS, hasExisting, KEEP_PROMPT };

@@ -2114,7 +2114,7 @@ const state = {
   status: "Getting your colours and prices ready…",
   /* Driveway trial (DRIVEWAYS): a surface, a told size, and the planning
      estimate for them. Only drawn when /api/catalogue returns driveways. */
-  driveway: { materialId: null, styleId: null, patternId: 'herringbone-45', sizeId: 'two-cars', quote: null },
+  driveway: { existing: null, materialId: null, styleId: null, patternId: 'herringbone-45', sizeId: 'two-cars', quote: null },
   uploadedImg: null,       // object URL for on-screen preview
   uploadedBase64: null,    // raw base64 (no data: prefix) for API calls
   uploadedMimeType: null,
@@ -5034,11 +5034,11 @@ function buildVisualizer() {
   const dw = state.catalogue?.driveways || null;
   const fetchDrivewayQuote = async () => {
     state.driveway.quote = null;
-    if (!state.driveway.materialId) { render(); return; }
+    if (!state.driveway.materialId || state.driveway.existing !== 'yes') { render(); return; }
     try {
       const exps = /[?&]exp=driveway\b/.test(location.search) ? ['driveway'] : undefined;
       const r = await fetch('/api/driveway-quote', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ materialId: state.driveway.materialId, sizeId: state.driveway.sizeId, experiments: exps }) });
+        body: JSON.stringify({ existing: state.driveway.existing, materialId: state.driveway.materialId, sizeId: state.driveway.sizeId, experiments: exps }) });
       state.driveway.quote = r.ok ? await r.json() : null;
     } catch (_) { state.driveway.quote = null; }
     render();
@@ -5060,14 +5060,21 @@ function buildVisualizer() {
     className: `flex items-center gap-2 px-3.5 min-h-[44px] rounded-full border text-base transition ${active ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-200 hover:border-zinc-900'}`,
   }, [img ? h('img', { src: img, alt: '', className: 'w-6 h-6 rounded-full object-cover border border-black/10' })
          : hex ? h('span', { className: 'w-5 h-5 rounded-full border border-black/10', style: { background: hex } }) : null, label]);
-  const dwMat = (dw?.materials || []).find(x => x.id === state.driveway.materialId) || null;
+  const dwMat = state.driveway.existing === 'yes' ? ((dw?.materials || []).find(x => x.id === state.driveway.materialId) || null) : null;
   const q = state.driveway.quote;
   const drivewayRow = dw ? h('div', { id: 'driveway', className: 'scroll-mt-24' }, [
     h('h3', { className: 'text-base text-zinc-600 font-semibold' }, 'Driveway'),
-    h('div', { className: 'mt-2 flex flex-wrap gap-2' }, [
+    /* Asked first (0054): only an existing driveway is redrawn or priced. */
+    h('p', { className: 'mt-1 text-base text-zinc-600' }, dw.existingQuestion),
+    h('div', { className: 'mt-2 flex flex-wrap gap-2' }, (dw.existingAnswers || []).map(a =>
+      chip(state.driveway.existing === a.id, a.name, () => pickDriveway('existing', a.id)))),
+    state.driveway.existing === 'no'
+      ? h('p', { className: 'mt-3 text-base leading-7 text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2' }, dw.noDrivewayAdvice)
+      : null,
+    state.driveway.existing === 'yes' ? h('div', { className: 'mt-3 flex flex-wrap gap-2' }, [
       ...dw.materials.map(m => chip(state.driveway.materialId === m.id, m.name, () => pickDriveway('materialId', m.id), m.hex)),
       chip(!state.driveway.materialId, 'Leave as it is', () => pickDriveway('materialId', null)),
-    ]),
+    ]) : null,
     dwMat && dwMat.styles && dwMat.styles.length ? h('div', { className: 'mt-3' }, [
       h('p', { className: 'text-base text-zinc-600' }, 'Colour'),
       h('div', { className: 'mt-2 flex flex-wrap gap-2' }, dwMat.styles.map(st => chip(state.driveway.styleId === st.id, st.name, () => pickDriveway('styleId', st.id), st.hex, st.swatch))),
@@ -5077,7 +5084,7 @@ function buildVisualizer() {
       h('div', { className: 'mt-2 flex flex-wrap gap-2' }, dwMat.patterns.map(pt => chip(state.driveway.patternId === pt.id, pt.name, () => pickDriveway('patternId', pt.id), null, pt.swatch))),
       h('p', { className: 'mt-1 text-base text-zinc-600' }, (dwMat.patterns.find(pt => pt.id === state.driveway.patternId) || {}).note || ''),
     ]) : null,
-    state.driveway.materialId ? h('div', { className: 'mt-3' }, [
+    (state.driveway.existing === 'yes' && state.driveway.materialId) ? h('div', { className: 'mt-3' }, [
       h('p', { className: 'text-base text-zinc-600' }, 'How big is it? (We can’t measure the ground from your photo.)'),
       h('div', { className: 'mt-2 flex flex-wrap gap-2' }, dw.sizes.map(z => chip(state.driveway.sizeId === z.id, z.name, () => pickDriveway('sizeId', z.id)))),
     ]) : null,
@@ -7975,7 +7982,8 @@ async function generateRealRender() {
           if (/[?&]exp=driveway\b/.test(location.search)) e.push('driveway');
           return e.length ? e : undefined; })(),
         /* A driveway surface, when the trial shows the row (DRIVEWAYS). */
-        drivewayId: state.driveway?.materialId || undefined,
+        drivewayId: (state.driveway?.existing === 'yes' && state.driveway?.materialId) || undefined,
+        drivewayExisting: state.driveway?.existing || undefined,
         drivewayStyleId: state.driveway?.styleId || undefined,
         drivewayPatternId: state.driveway?.patternId || undefined,
         /* Sent by name, and only when they have actually chosen. The render
@@ -10117,7 +10125,7 @@ let autoRenderDone = false;
    hand-rolled copy. The two it replaces each got it wrong in their own way. */
 function hasDrawableChange() {
   if ([state.cladding, state.trim, state.roof].some(sw => sw && !isNone(sw))) return true;
-  if (state.driveway?.materialId) return true;
+  if (state.driveway?.existing === 'yes' && state.driveway?.materialId) return true;
   const g = glazingChoice();
   if (!g.windowDoorColourName) return false;
   const drawableDoor = !!g.doorStyleName && !isRearOpening(g.doorStyleId);

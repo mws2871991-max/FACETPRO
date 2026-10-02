@@ -845,6 +845,55 @@ function restoreOutsideMask(opts) {
   }
 }
 
+/* Put back what a driveway job must not touch (0054): the garden wall,
+   fence, railings, bins and car, segmented from the photograph. Inside the
+   mask the photograph, everywhere else the render. Only below the top of the
+   front door (a boundary wall is lower than that; the house above is not this
+   step's business), and never inside one of our windows. Refuses a mask that
+   has swallowed most of the ground — that is the driveway itself, and holding
+   it would undo the job. */
+const KEEP_MIN_SHARE = 0.001;
+const KEEP_MAX_OF_GROUND = 0.5;
+function restoreInsideMask(opts) {
+  const { render, renderMime, original, originalMime, mask, maskMime, ours = [], fromYPct = 40 } = opts || {};
+  const untouched = (reason) => ({ buffer: render, restored: false, reason, share: 0 });
+  try {
+    if (!/png/i.test(renderMime || '')) return untouched('render is not a PNG');
+    if (!mask || !mask.length) return untouched('no keep mask');
+    const src = decode(original, originalMime || '');
+    if (!src) return untouched('photograph type not handled');
+    const m = decode(mask, maskMime || '');
+    if (!m) return untouched('mask type not handled');
+    const out = PNG.sync.read(render);
+    const W = out.width, H = out.height;
+    if (Math.abs(m.width / m.height - W / H) > 0.02) return untouched(`mask is ${m.width}x${m.height}, render is ${W}x${H}`);
+    const y0 = Math.max(0, Math.min(H - 1, Math.floor(Number(fromYPct) * H / 100)));
+    const boxes = (Array.isArray(ours) ? ours : [])
+      .filter(b => b && ['x', 'y', 'w', 'h'].every(k => Number.isFinite(Number(b[k]))))
+      .map(b => ({ x0: Number(b.x) * W / 100, x1: (Number(b.x) + Number(b.w)) * W / 100, y0: Number(b.y) * H / 100, y1: (Number(b.y) + Number(b.h)) * H / 100 }));
+    const inOurs = (x, y) => boxes.some(b => x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1);
+    const on = [];
+    for (let y = y0; y < H; y++) for (let x = 0; x < W; x++) {
+      const mx = Math.min(m.width - 1, Math.max(0, Math.round((x + 0.5) * m.width / W - 0.5)));
+      const my = Math.min(m.height - 1, Math.max(0, Math.round((y + 0.5) * m.height / H - 0.5)));
+      if (m.data[(my * m.width + mx) * 4] >= MASK_ON && !inOurs(x, y)) on.push(y * W + x);
+    }
+    const share = on.length / (W * H);
+    const ofGround = on.length / Math.max(1, W * (H - y0));
+    if (share < KEEP_MIN_SHARE) return untouched(`keep mask covers only ${(share * 100).toFixed(2)}% of the frame`);
+    if (ofGround > KEEP_MAX_OF_GROUND) return untouched(`keep mask covers ${(ofGround * 100).toFixed(0)}% of the ground — that is the driveway, not what stands on it`);
+    const px = [0, 0, 0];
+    for (const k of on) {
+      const x = k % W, y = (k - x) / W;
+      sample(src, (x + 0.5) * (src.width / W) - 0.5, (y + 0.5) * (src.height / H) - 0.5, px);
+      out.data[k * 4] = px[0]; out.data[k * 4 + 1] = px[1]; out.data[k * 4 + 2] = px[2];
+    }
+    return { buffer: PNG.sync.write(out), restored: true, reason: null, share, ofGround };
+  } catch (err) {
+    return untouched(err?.message || 'keep hold failed');
+  }
+}
+
 /* Put the pillars back (2 October). See fetchPillarMask in windowmask.js.
 
    Inside the pillar mask the photograph; everywhere else the render as it
@@ -1120,6 +1169,6 @@ function correctFrameColour(opts) {
   }
 }
 
-module.exports = { MASK_BOX_MARGIN_PCT, cropToBox, pillarsFromObjects, PILLAR_PICK, PILLAR_ATTACH, PILLAR_SHAFT_MIN,
+module.exports = { restoreInsideMask, KEEP_MAX_OF_GROUND, MASK_BOX_MARGIN_PCT, cropToBox, pillarsFromObjects, PILLAR_PICK, PILLAR_ATTACH, PILLAR_SHAFT_MIN,
   restorePillars, PILLAR_MAX_OF_BAY, restoreDoor, restoreSurroundings, restoreOutsideMask, correctFrameColour,
                    drawGeorgianBars, doorBox, changedShare, MASK_ON, rgbToLab, labToRgb, hexToRgb };

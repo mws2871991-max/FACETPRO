@@ -359,7 +359,8 @@ function buildRenderPrompt(sel = {}) {
     changes.push(
       `Replace the surface of this house's own driveway and front hardstanding — the ground between the front of the house ` +
       `and its front boundary wall, fence or hedge — with ${driveway.words}. Re-lay it across the whole of that area, ` +
-      `following the existing outline exactly. Keep any car, bins, plants, steps and walls standing on it exactly where they are. ` +
+      `following the existing outline exactly — do not make it bigger. Do not remove, move or rebuild any wall, fence, gate, ` +
+      `railing, handrail, step, bin, car or plant: every one of them stays exactly where it is, unchanged. ` +
       `The public pavement and road beyond the boundary, and any neighbour's driveway or garden, do not change.`);
   }
 
@@ -379,7 +380,8 @@ function buildRenderPrompt(sel = {}) {
   // Held whatever was chosen: every change above is to this house only.
   holds.push('every neighbouring or attached house, including its roof, walls and windows');
   holds.push(driveway
-    ? 'the garden, lawn and planting, the public pavement and road, fencing, boundary walls, sky and everything beyond the house'
+    ? 'the garden, lawn and planting, the public pavement and road, fencing, boundary walls, gates, railings, handrails, bins, ' +
+      'any car, the house number, door number, letterbox and any sign, sky and everything beyond the house'
     : 'the garden, path, driveway, fencing, sky and everything beyond the house');
 
   /* "Change only the roof" is a stronger sentence than any list of holds, and
