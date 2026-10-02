@@ -3238,6 +3238,8 @@ async function keepRender(replicateUrl, restore = null) {
           if (held.restored) bytes = held.buffer;
           else obs.record('render', 'kept surroundings not restored', { reason: held.reason });
         }
+        /* After the fallback, not inside it, so the hold order stays readable. */
+        if (!masked.restored && restore.pillarMasks) obs.record('render', 'bay pillars not held', { reason: 'window mask was not used, so the pillar hold did not run', bays: restore.pillarMasks.length });
       }
       /* The colour, once the picture is held to the right place.
  *
@@ -3955,8 +3957,10 @@ app.post('/api/render', renderLimiter, async (req, res) => {
         }).then(masks => {
           if (!masks) return null;
           const picked = pillarsFromObjects({ masks, crop: bayCrop.buffer, cropMime: bayCrop.mime });
+          /* Flat values only: observability drops nested objects, which is how
+             0050's rejection reasons never reached the log (0055). */
           obs.record('render', 'pillars picked from objects', { bay: n + 1, of: bayBoxes.length, objects: masks.length, kept: picked ? picked.kept : 0,
-            attached: picked ? picked.attached : 0, rejected: picked ? picked.rejected : null });
+            attached: picked ? picked.attached : 0, rejected: picked ? picked.reasons || '' : '', candidates: picked ? picked.candidates || '' : '' });
           return (picked && picked.buffer) ? { buffer: picked.buffer, mime: picked.mime, box: bayCrop.box, bay: bayBox } : null;
         }).catch(() => null);
     })).then(list => { const got = list.filter(Boolean); return got.length ? got : null; });
@@ -4033,6 +4037,10 @@ app.post('/api/render', renderLimiter, async (req, res) => {
        who tries anthracite next gets the one this render gave up waiting for. */
     if (maskRecord && mask && !maskRecord.windowMask) maskRecord.windowMask = mask;
     const pillars = await maskWithinGrace(pillarPromise);
+    /* The three silent ways a pick never became a hold (0055): not back in
+       time, or back but with no window mask to ride on. Each says so now. */
+    if (bayBoxes.length && !pillars) obs.record('render', 'bay pillars not held', { reason: 'pillar pick not ready in time or kept nothing', graceMs: GRACE_MS });
+    if (pillars && !(doorRestore && mask)) obs.record('render', 'bay pillars not held', { reason: 'no window mask for this render', bays: pillars.length });
     let restorePlan = (doorRestore && mask)
       ? { ...doorRestore, mask: mask.buffer, maskMime: mask.mime,
           ...(pillars ? { pillarMasks: pillars } : {}) }

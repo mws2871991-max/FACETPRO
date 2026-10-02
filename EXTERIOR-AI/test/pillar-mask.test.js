@@ -185,3 +185,30 @@ test('two bays: each one\'s pillars are held inside its own box', () => {
   assert.strictEqual(at(50, 25), 20, 'upper frames keep the new colour');
   assert.strictEqual(at(50, 70), 20, 'lower frames keep the new colour');
 });
+
+test('the pick log is flat, so it survives observability (0055)', () => {
+  const masks = [
+    obj((x, y) => x >= 10 && x < 20 && y >= 2 && y < 58),
+    obj((x, y) => x >= 22 && x < 68 && y >= 5 && y < 55),
+    obj((x, y) => x >= 40 && x < 48 && y >= 2 && y < 12),
+  ];
+  const r = pillarsFromObjects({ masks, crop });
+  assert.strictEqual(typeof r.reasons, 'string');
+  assert.match(r.reasons, /wide:1/); assert.match(r.reasons, /short:1/);
+  assert.match(r.candidates, /^w10h93f1\.00a5\.6s\d+\+/, 'the kept shaft first, marked +');
+  assert.match(r.candidates, /-wide/);
+  const none = pillarsFromObjects({ masks: [masks[1]], crop });
+  assert.strictEqual(none.buffer, null); assert.match(none.reasons, /wide:1/);
+  const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  assert.match(server, /rejected: picked \? picked\.reasons \|\| '' : ''/);
+  assert.doesNotMatch(server, /rejected: picked \? picked\.rejected/);
+  const { scrubDetailForTest } = (() => { try { return require('../observability'); } catch (_) { return {}; } })();
+  void scrubDetailForTest;
+});
+
+test('every way a pick fails to become a hold is logged (0055)', () => {
+  const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  assert.match(server, /pillar pick not ready in time or kept nothing/);
+  assert.match(server, /no window mask for this render/);
+  assert.match(server, /window mask was not used, so the pillar hold did not run/);
+});

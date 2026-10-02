@@ -154,7 +154,14 @@ function pillarsFromObjects({ masks, crop, cropMime = 'image/png' } = {}) {
     const rejected = {};
     const shafts = [];
     for (const o of objs) { const r = why(o); if (r) rejected[r] = (rejected[r] || 0) + 1; else shafts.push(o); }
-    if (!shafts.length) return { buffer: null, kept: 0, attached: 0, rejected };
+    /* For the log (0055), flat strings because observability keeps no nested
+       objects: the reasons, and the measurements of the tallest few objects —
+       width and height as % of the crop, solidity, aspect, smoothness, and
+       the rule that dropped it — so a "kept 0" says which threshold to move. */
+    const reasons = Object.entries(rejected).map(([k, v]) => `${k}:${v}`).join(' ');
+    const candidates = objs.slice().sort((a, b) => b.bh - a.bh).slice(0, 6).map(o =>
+      `w${Math.round(o.bw * 100 / W)}h${Math.round(o.bh * 100 / H)}f${(o.n / (o.bw * o.bh)).toFixed(2)}a${(o.bh / o.bw).toFixed(1)}s${Math.round(o.std)}${why(o) ? '-' + why(o) : '+'}`).join(' ');
+    if (!shafts.length) return { buffer: null, kept: 0, attached: 0, rejected, reasons, candidates };
     const kept = new Set(shafts);
     let attached = 0;
     for (const o of objs) {
@@ -170,7 +177,7 @@ function pillarsFromObjects({ masks, crop, cropMime = 'image/png' } = {}) {
     for (const o of kept) for (const k of o.on) union[k] = 1;
     const out = new PNG({ width: W, height: H });
     for (let k = 0; k < W * H; k++) { const v = union[k] ? 255 : 0; out.data[k * 4] = out.data[k * 4 + 1] = out.data[k * 4 + 2] = v; out.data[k * 4 + 3] = 255; }
-    return { buffer: PNG.sync.write(out), mime: 'image/png', kept: shafts.length, attached, rejected };
+    return { buffer: PNG.sync.write(out), mime: 'image/png', kept: shafts.length, attached, rejected, reasons, candidates };
   } catch (_) { return null; }
 }
 
