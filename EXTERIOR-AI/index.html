@@ -9925,7 +9925,10 @@ async function handleUpload(file) {
     const res = await fetch('/api/detect', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image: base64, mimeType: state.uploadedMimeType })
+      /* experiments, so a driveway trial page starts the keep mask at upload
+         and the render does not have to wait for it from cold (0056). */
+      body: JSON.stringify({ image: base64, mimeType: state.uploadedMimeType,
+        experiments: /[?&]exp=driveway\b/.test(location.search) ? ['driveway'] : undefined })
     });
     const data = await res.json();
     // A quota refusal isn't a problem with their photo, and it doesn't end the

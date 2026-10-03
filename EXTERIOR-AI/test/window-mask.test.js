@@ -292,9 +292,10 @@ test('a photo answered from either cache still gets its mask started', () => {
      with no mask (the render's own start lost GRACE_MS to a cold start) and
      both bays came back green. The cache paths must start it too. */
   const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'server.js'), 'utf8');
-  assert.match(src, /if \(seen\) \{ prepareWindowMask\(seen, seen\.elevation \|\| elevation\); return answer\(seen, seenId\); \}/,
+  /* 0056: the driveway keep mask is started beside it, on the same paths. */
+  assert.match(src, /if \(seen\) \{ prepareWindowMask\(seen, seen\.elevation \|\| elevation\);( prepareKeepMask\(seen, seen\.elevation \|\| elevation\);)? return answer\(seen, seenId\); \}/,
     'the in-process cache answers without starting the mask');
-  assert.match(src, /prepareWindowMask\(detectionRecords\.get\(id\), elevation\);\s*return answer\(detectionRecords\.get\(id\), id\);/,
+  assert.match(src, /prepareWindowMask\(detectionRecords\.get\(id\), elevation\);\s*(prepareKeepMask\(detectionRecords\.get\(id\), elevation\);\s*)?return answer\(detectionRecords\.get\(id\), id\);/,
     'the stored cache answers without starting the mask');
   assert.match(src, /prepareWindowMask\(detectionRecords\.get\(detectionId\), elevation\);/,
     'a fresh reading no longer starts the mask');

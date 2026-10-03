@@ -2473,6 +2473,33 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
     }).then((m) => { record.windowMask = m; return m; }).catch(() => null);
   };
 
+  /* The driveway keep mask — walls, fences, railings, bins, car — started
+     here too, at upload, for a stronger reason than the window mask (0056).
+     Losing the window-mask race costs a little accuracy; losing this one let
+     a render show somebody's garden wall knocked down, because the hold was
+     skipped quietly when the mask was late. The render now waits for it and
+     declines rather than skip it, so starting it early is what keeps that
+     wait short.
+
+     Only when the driveway trial is on for this request (DRIVEWAYS=on, or
+     test with experiments: ['driveway']), so nobody else pays for a
+     segmentation no render will use. Depends only on the photograph, so
+     every surface and colour tried on it shares one. A mask that failed is
+     forgotten, so the render asks again rather than inheriting the failure. */
+  const prepareKeepMask = (record, elev) => {
+    if (!record || elev !== 'front' || !process.env.REPLICATE_API_TOKEN) return;
+    if (!driveways.enabled({ body: req.body })) return;
+    if (record.keepMask || record.keepPromise) return;
+    record.keepPromise = fetchWindowMask({
+      image: img.buffer, mime: img.mime,
+      replicateKey: process.env.REPLICATE_API_TOKEN,
+      deadlineAt: Date.now() + MASK_WARM_MS,
+      prompt: driveways.KEEP_PROMPT, dilate: DRIVEWAY_KEEP_DILATE,
+      onNote: (why) => obs.record('detect', 'driveway keep mask not prepared', { reason: why }),
+    }).then((m) => { if (m) record.keepMask = m; else record.keepPromise = null; return m; })
+      .catch(() => { record.keepPromise = null; return null; });
+  };
+
   const answer = (record, id) => (
     (record.elevation === 'rear')
       ? res.json({
@@ -2515,7 +2542,7 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
 
   const seenId = detectionByImage.get(fingerprint);
   const seen = seenId ? detectionRecords.get(seenId) : null;
-  if (seen) { prepareWindowMask(seen, seen.elevation || elevation); return answer(seen, seenId); }
+  if (seen) { prepareWindowMask(seen, seen.elevation || elevation); prepareKeepMask(seen, seen.elevation || elevation); return answer(seen, seenId); }
 
   /* Not in this process — ask the store. A failure here is a cache miss and
      nothing more: the photograph still gets read, it just costs a call. */
@@ -2562,6 +2589,7 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
       ? { width: stored.aspectRatio, height: 1 } : null, elevation);
     detectionByImage.set(fingerprint, id);
     prepareWindowMask(detectionRecords.get(id), elevation);
+    prepareKeepMask(detectionRecords.get(id), elevation);
     return answer(detectionRecords.get(id), id);
   }
   if (stored) {
@@ -2761,6 +2789,7 @@ For houseType, judge it from what the photograph shows: a gap on both sides is d
      it can reach this response, and a photograph nobody renders simply throws
      it away. */
   prepareWindowMask(detectionRecords.get(detectionId), elevation);
+  prepareKeepMask(detectionRecords.get(detectionId), elevation);
 
   /* Kept so a restart does not change the answer. Awaited rather than fired
      and forgotten: if this write fails the homeowner should still get their
@@ -3094,6 +3123,11 @@ async function ourRenderUrl(renderId) {
    A distinct type so the route can answer 502 with its own words rather than
    pattern-matching on a message. */
 class RenderNotKept extends Error {}
+/* A driveway render whose walls, fences, railings and bins could not be held
+   to the photograph (0056). Declined rather than shown: a picture that has
+   quietly knocked down somebody's garden wall is worse than no picture. */
+class DrivewayNotHeld extends Error {}
+const DRIVEWAY_NOT_HELD_MESSAGE = 'We couldn’t be sure your wall, fence, railings and bins would stay exactly as they are, so we haven’t shown this driveway picture. Please try again — your estimate hasn’t changed.';
 
 /* Two attempts, not one. The provider's CDN drops the occasional connection
    and a second try a moment later costs a homeowner half a second, where
@@ -3134,6 +3168,9 @@ async function detectionsForRestore({ detectionId, fingerprint }, waitMs = RESTO
 
 async function keepRender(replicateUrl, restore = null) {
   let barsMissing;
+  /* Set when a driveway job's keep mask was applied, and returned, so a test
+     run can see the hold happened rather than infer it from the picture. */
+  let drivewayHeld;
   let bytes = null;
   let mime = 'image/jpeg';
   let lastFetchError = null;
@@ -3181,6 +3218,10 @@ async function keepRender(replicateUrl, restore = null) {
     const common = { renderMime: mime, original: restore.original, originalMime: restore.originalMime, detections };
     if (!detections) {
       obs.record('render', 'kept door not restored', { reason: 'no detection record for this photograph' });
+      if (restore.requireKeep) {
+        obs.record('render', 'driveway render declined: walls, bins and railings not held', { reason: 'no detection record for this photograph' });
+        throw new DrivewayNotHeld('no detection record');
+      }
     } else {
       if (restore.door) {
         const held = restoreDoor({ render: bytes, ...common });
@@ -3195,8 +3236,15 @@ async function keepRender(replicateUrl, restore = null) {
           ours: glazing.frontWindowBoxes(detections, detectionAspectRatio), fromYPct: door ? door.y : 40 });
         if (kept.restored) {
           bytes = kept.buffer;
+          drivewayHeld = { share: Number(kept.share.toFixed(4)), ofGround: Number(kept.ofGround.toFixed(3)) };
           obs.record('render', 'held walls, bins and railings to the photograph', { share: kept.share.toFixed(4), ofGround: kept.ofGround.toFixed(3) });
-        } else obs.record('render', 'walls, bins and railings not held', { reason: kept.reason });
+        } else {
+          /* Every refusal declines, the near-empty mask included: an empty mask
+             is what a missed wall looks like too, and in the trial a needless
+             retry is cheaper than a demolished wall shown as real (0056). */
+          obs.record('render', 'driveway render declined: walls, bins and railings not held', { reason: kept.reason });
+          throw new DrivewayNotHeld(kept.reason);
+        }
       }
       /* After the door, so a restored door is already the photograph and
          reads as unchanged. When the door is being replaced it is one of the
@@ -3283,7 +3331,8 @@ async function keepRender(replicateUrl, restore = null) {
     console.error('Fetched the render but could not store it:', err.message);
     throw new RenderNotKept('store failed');
   }
-  return { url: `/r/${id}`, renderId: id, ...(barsMissing !== undefined ? { barsMissing } : {}) };
+  return { url: `/r/${id}`, renderId: id, ...(barsMissing !== undefined ? { barsMissing } : {}),
+    ...(drivewayHeld ? { drivewayHeld } : {}) };
 }
 
 /* The render succeeded upstream; whether we can hand it over depends on
@@ -3312,6 +3361,9 @@ async function respondWithRender(res, url, extra = {}, restore = null) {
   } catch (err) {
     if (err instanceof RenderNotKept) {
       return res.status(502).json({ error: "We made your image but couldn't save it — please try again." });
+    }
+    if (err instanceof DrivewayNotHeld) {
+      return res.status(503).json({ error: DRIVEWAY_NOT_HELD_MESSAGE, reason: 'driveway_not_held', plain: true });
     }
     throw err;
   }
@@ -3968,13 +4020,18 @@ app.post('/api/render', renderLimiter, async (req, res) => {
     /* What a driveway job must not touch — the garden wall, fence, railings,
        bins, car — segmented beside the render and put back afterwards
        (restoreInsideMask). Wording alone did not hold them (0054). */
-    const keepPromise = driveway
-      ? fetchWindowMask({
+    /* The one started at upload when there is one (0056), a fresh one when
+       there is not or it failed. */
+    const keepRecord = detectionId ? detectionRecords.get(String(detectionId)) : null;
+    const freshKeep = () => fetchWindowMask({
           image: img.buffer, mime: img.mime, replicateKey, deadlineAt,
           prompt: driveways.KEEP_PROMPT, dilate: DRIVEWAY_KEEP_DILATE,
           onNote: (why) => obs.record('render', 'driveway keep mask not used', { reason: why }),
-        }).catch(() => null)
-      : Promise.resolve(null);
+        }).catch(() => null);
+    const keepPromise = !driveway ? Promise.resolve(null)
+      : keepRecord?.keepMask ? Promise.resolve(keepRecord.keepMask)
+      : keepRecord?.keepPromise ? keepRecord.keepPromise.then(m => m || freshKeep())
+      : freshKeep();
 
     const first = await runFluxOrRetry({ prompt, inputImage, deadlineAt, replicateKey }, res, req);
     if (!first.ok) return res.status(first.status).json({ error: first.error });
@@ -4045,12 +4102,23 @@ app.post('/api/render', renderLimiter, async (req, res) => {
       ? { ...doorRestore, mask: mask.buffer, maskMime: mask.mime,
           ...(pillars ? { pillarMasks: pillars } : {}) }
       : doorRestore;
-    const keep = await maskWithinGrace(keepPromise);
-    if (driveway && !keep) obs.record('render', 'driveway keep mask not ready in time', { graceMs: GRACE_MS });
+    /* Waited for, not raced (0056). GRACE_MS is right for the window mask,
+       where losing costs a little accuracy. This mask is what stops a render
+       showing a garden wall demolished, and with a six-second grace whether it
+       held depended on how warm Replicate was, not on whether the hold was
+       right. So: the rest of the render's own deadline, and no picture at all
+       if it still has not come. */
+    const keepWaitMs = Math.max(0, deadlineAt - Date.now());
+    const keep = driveway ? await maskWithinGrace(keepPromise, keepWaitMs) : null;
+    if (driveway && !keep) {
+      obs.record('render', 'driveway render declined: keep mask did not arrive', { waitedMs: keepWaitMs });
+      return res.status(503).json({ error: DRIVEWAY_NOT_HELD_MESSAGE, reason: 'driveway_not_held', plain: true });
+    }
+    if (keepRecord && keep && !keepRecord.keepMask) keepRecord.keepMask = keep;
     if (keep) {
       restorePlan = { ...(restorePlan || { original: img.buffer, originalMime: img.mime,
         detectionId: detectionId ? String(detectionId) : null, fingerprint: imageFingerprint(img.buffer) }),
-        keepMask: keep.buffer, keepMaskMime: keep.mime };
+        keepMask: keep.buffer, keepMaskMime: keep.mime, requireKeep: true };
     }
 
     return respondWithRender(res, url, {
