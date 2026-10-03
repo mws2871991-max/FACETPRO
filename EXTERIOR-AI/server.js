@@ -3722,6 +3722,15 @@ app.post('/api/render', renderLimiter, async (req, res) => {
           windowStyleName, doorStyleName, doorStyleId, windowDoorColourName,
           windowDoorColourId, windowBarsId, detectionId, drivewayId, drivewayStyleId, drivewayPatternId, drivewayExisting } = req.body || {};
   if (!image) return res.status(400).json({ error: 'image required' });
+  /* A reading that has gone (0060). Without it the render has no window
+     boxes, no prepared mask and no hold, and comes back with every white
+     detail painted (render bb688926, 3 Oct, a page left open five hours).
+     Refused before anything is paid for; the page reads the photo again and
+     asks once more. */
+  if (detectionId && !detectionRecords.has(String(detectionId))) {
+    obs.record('render', 'render asked for an expired photo reading', {});
+    return res.status(409).json({ error: 'Your photo needs reading again — one moment.', reason: 'detection_expired' });
+  }
   if (typeof image !== 'string' || image.length < 10) return res.status(400).json({ error: 'Invalid image data.' });
   // Size is checked on the decoded bytes below, not on the base64 string —
   // that is a third larger, so this rejected photographs that were under the

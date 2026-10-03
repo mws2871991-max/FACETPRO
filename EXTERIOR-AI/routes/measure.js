@@ -94,7 +94,13 @@ module.exports = function measureRoutes({
         /* Their correction to what the photograph saw at the front. */
         frontCountOverride: frontCount,
       });
-      res.json({ ...result, ratesSourced: GLAZING_RATES_SOURCED, pricing: pricingVersion() });
+      /* The photograph's reading has gone (0060): records live in memory for
+         DETECTION_TTL_MS and do not survive a restart. Priced anyway, from the
+         house type, but said, so the page can read the photo again rather
+         than show a typical house's count as if it had been counted. */
+      const detectionMissing = !!detectionId && !record;
+      res.json({ ...result, ratesSourced: GLAZING_RATES_SOURCED, pricing: pricingVersion(),
+        ...(detectionMissing ? { detectionMissing: true } : {}) });
     } catch (err) {
       console.error('Glazing estimate failed:', err.message);
       res.status(500).json({ error: 'We couldn’t work out a window estimate for that photo.' });

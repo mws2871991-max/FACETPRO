@@ -5729,6 +5729,9 @@ const pricedIncludes = (priced) => [
 function photoChangedPriceLine(spread, n, doorOnly) {
   const was = state.typicalGlazingSeen;
   if (!was || !spread || !state.uploadedImg || !state.detectionId || doorOnly) return null;
+  /* Never "priced from your photo" when it was not (0060): a typical house's
+     count read as ours was the claim on screen after the reading expired. */
+  if (state.glazing?.countSource === 'house_type_prior' || state.glazing?.detectionMissing) return null;
   /* Front only: the typical figure was a whole house, so comparing the two
      would read as a saving that is not one. Say what this covers instead. */
   if (frontOnlyPrice(state.glazing)) {
@@ -6499,7 +6502,29 @@ function renderDetailsOnly() {
    Silent on failure by design: a missing window figure is a smaller problem
    than an error message next to somebody's house. */
 let glazingRequest = 0;
-async function refreshGlazing({ label } = {}) {
+/* Read the photograph again when the server has forgotten it (0060).
+   Records are kept in memory for two hours and lost on a restart; the page
+   still holds the photo, so it asks again rather than let a typical house
+   stand in for the one in the picture. The server answers from its cache
+   when it can, and starts the window mask again either way. */
+let reviving = null;
+async function reviveDetection() {
+  if (!state.uploadedBase64) return false;
+  if (!reviving) reviving = (async () => {
+    try {
+      const res = await fetch('/api/detect', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: state.uploadedBase64, mimeType: state.uploadedMimeType,
+          experiments: /[?&]exp=driveway\b/.test(location.search) ? ['driveway'] : undefined }) });
+      const data = await res.json();
+      if (!res.ok || !data.detectionId) return false;
+      state.detectionId = data.detectionId;
+      return true;
+    } catch (_) { return false; } finally { setTimeout(() => { reviving = null; }, 0); }
+  })();
+  return reviving;
+}
+
+async function refreshGlazing({ label, revived = false } = {}) {
   /* What the last glazing choice did to the range, measured across this call.
 
      Same reasoning as the swatch delta: the browser is never sent the rates,
@@ -6558,6 +6583,9 @@ async function refreshGlazing({ label } = {}) {
     });
     const data = await res.json();
     if (ticket !== glazingRequest) return;        // a later choice already won
+    if (res.ok && data.detectionMissing && !revived && await reviveDetection()) {
+      return refreshGlazing({ label, revived: true });
+    }
     state.glazing = res.ok ? data : null;
     if (state.glazing?.price) {
       reachedStage('estimate_viewed');
@@ -7953,11 +7981,12 @@ function stopRenderTimer() {
   renderStartedAt = null;
 }
 
-async function generateRealRender({ settled = false } = {}) {
+async function generateRealRender({ settled = false, revived = false } = {}) {
   if (!state.uploadedBase64) return;
   if (settledTimer) { clearTimeout(settledTimer); settledTimer = null; }   // asked for now; no second one behind it
   let landed = false;
   let stale = false;
+  let retryRevived = false;
   const askedFor = choiceKey();
   state.rendering = true;
   stopRenderTimer();              // a second run must not leave the first ticking
@@ -8026,6 +8055,11 @@ async function generateRealRender({ settled = false } = {}) {
       })
     });
     const data = await res.json();
+    /* The server had forgotten the photo (0060): read it again, then ask once more. */
+    if (res.status === 409 && data.reason === 'detection_expired' && !revived && await reviveDetection()) {
+      retryRevived = true;
+      return;
+    }
     if (res.status === 429) {
       // The colour preview is unaffected — don't strand them on an error.
       state.renderUnavailable = data.reason === 'daily_limit';
@@ -8078,6 +8112,7 @@ async function generateRealRender({ settled = false } = {}) {
     state.rendering = false;
     stopRenderTimer();
     render();
+    if (retryRevived) { generateRealRender({ settled, revived: true }); return; }
     if (stale) scheduleSettledRender();
     /* A picture made because they stopped choosing is brought to them: on a
        phone the controls they were using are a screen below it (0058). */
