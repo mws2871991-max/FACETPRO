@@ -5075,6 +5075,10 @@ function buildVisualizer() {
       ...dw.materials.map(m => chip(state.driveway.materialId === m.id, m.name, () => pickDriveway('materialId', m.id), m.hex)),
       chip(!state.driveway.materialId, 'Leave as it is', () => pickDriveway('materialId', null)),
     ]) : null,
+    /* Priced, not drawn (0057): said before they render, not discovered after. */
+    dwMat && dwMat.drawn === false
+      ? h('p', { className: 'mt-3 text-base leading-7 text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2' }, dwMat.notDrawn)
+      : null,
     dwMat && dwMat.styles && dwMat.styles.length ? h('div', { className: 'mt-3' }, [
       h('p', { className: 'text-base text-zinc-600' }, 'Colour'),
       h('div', { className: 'mt-2 flex flex-wrap gap-2' }, dwMat.styles.map(st => chip(state.driveway.styleId === st.id, st.name, () => pickDriveway('styleId', st.id), st.hex, st.swatch))),
@@ -5473,6 +5477,11 @@ function buildVisualizer() {
               (state.renderUrl && !state.rendering && state.barsMissing && state.prefs.windowBarsId === 'georgian')
                 ? h('p', { className: 'mt-2 text-base leading-6 text-zinc-700 text-center' },
                   'Georgian bars aren’t shown on this picture — we couldn’t pick out your new frames against the old ones. They are included in your estimate.')
+                : null,
+              /* The driveway they priced is not in the picture (0057), said on the picture. */
+              (state.renderUrl && !state.rendering && state.drivewayNotDrawn)
+                ? h('p', { className: 'mt-2 text-base leading-6 text-zinc-700 text-center' },
+                  'Your new driveway isn’t drawn on this picture — it shows your driveway as it is now. The driveway estimate is still for the surface you chose.')
                 : null,
               /* Named, when the server measured it: we tried twice and the
                  picture still does not show the new roof or walls clearly. */
@@ -8017,6 +8026,7 @@ async function generateRealRender() {
        estimate still prices the roof they chose. */
     state.roofSkipped = !!data.roofSkipped;
     state.barsMissing = !!data.barsMissing;
+    state.drivewayNotDrawn = !!data.drivewayNotDrawn;
     /* The server checks the roof and walls changed and retries once; this is
        what is still missing after that. */
     state.missedChanges = Array.isArray(data.missedChanges) ? data.missedChanges.filter(t => t === 'roof' || t === 'cladding' || t === 'windows') : [];
@@ -10128,7 +10138,11 @@ let autoRenderDone = false;
    hand-rolled copy. The two it replaces each got it wrong in their own way. */
 function hasDrawableChange() {
   if ([state.cladding, state.trim, state.roof].some(sw => sw && !isNone(sw))) return true;
-  if (state.driveway?.existing === 'yes' && state.driveway?.materialId) return true;
+  /* A surface that is priced but not drawn (0057) is not a change the picture can show. */
+  if (state.driveway?.existing === 'yes' && state.driveway?.materialId) {
+    const m = (state.catalogue?.driveways?.materials || []).find(x => x.id === state.driveway.materialId);
+    if (!m || m.drawn !== false) return true;
+  }
   const g = glazingChoice();
   if (!g.windowDoorColourName) return false;
   const drawableDoor = !!g.doorStyleName && !isRearOpening(g.doorStyleId);

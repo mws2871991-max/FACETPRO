@@ -38,6 +38,7 @@ function publicSection() {
     note: d.note,
     materials: d.materials.map(m => ({
       id: m.id, name: m.name, hex: m.hex, materialLabel: m.materialLabel,
+      ...(m.drawn === false ? { drawn: false, notDrawn: m.notDrawn } : {}),
       styles: (m.styles || []).map(st => ({ id: st.id, name: st.name, hex: st.hex, swatch: st.swatch })),
       patterns: (m.patterns || []).map(pt => ({ id: pt.id, name: pt.name, note: pt.note, swatch: `/assets/swatches/driveway/pattern-${pt.id}.png` })),
     })),
@@ -60,6 +61,12 @@ const hasExisting = (v) => String(v || '') === 'yes';
 const KEEP_PROMPT = 'garden wall, boundary wall, fence, gate, railing, handrail, wheelie bin, car';
 
 function material(id) { const d = D(); return d ? d.materials.find(m => m.id === String(id)) || null : null; }
+/* Whether the render may draw this surface (0057). Resin bound came out as
+   loose gravel on every render, on the illustration and on real photos, with
+   two rounds of wording; showing gravel beside a resin price shows the wrong
+   product. Such a surface is priced and not drawn until something other than
+   the prompt changes. */
+function drawable(id) { const m = material(id); return !!m && m.drawn !== false; }
 function size(id) { const d = D(); return d ? d.sizes.find(s => s.id === String(id)) || null : null; }
 
 /* Low and high, kept as a range throughout: the size band and the rate are
@@ -116,4 +123,4 @@ function styleName(materialId, styleId) {
   return st ? st.name : null;
 }
 
-module.exports = { mode, enabled, publicSection, estimate, material, size, promptWords, styleName, DEFAULT_WORDS, hasExisting, KEEP_PROMPT };
+module.exports = { mode, enabled, publicSection, estimate, material, drawable, size, promptWords, styleName, DEFAULT_WORDS, hasExisting, KEEP_PROMPT };

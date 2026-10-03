@@ -66,7 +66,8 @@ test('page: driveway row only from the catalogue, sends the surface with the ren
   const h = read('index.html');
   assert.match(h, /const dw = state\.catalogue\?\.driveways \|\| null;/);
   assert.match(h, /drivewayId: \(state\.driveway\?\.existing === 'yes' && state\.driveway\?\.materialId\) \|\| undefined/);
-  assert.match(h, /if \(state\.driveway\?\.existing === 'yes' && state\.driveway\?\.materialId\) return true;/);
+  // 0057: a drawable surface still counts as a change; one priced but not drawn does not.
+  assert.match(h, /if \(state\.driveway\?\.existing === 'yes' && state\.driveway\?\.materialId\) \{[\s\S]{0,200}if \(!m \|\| m\.drawn !== false\) return true;/);
 });
 
 test('every surface has styles with a drawn swatch; block paving has herringbone patterns', () => {

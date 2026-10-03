@@ -3764,7 +3764,12 @@ app.post('/api/render', renderLimiter, async (req, res) => {
      a walled front garden, the render demolished the wall. */
   const drivewayMaterial = (drivewayId && driveways.hasExisting(drivewayExisting) && driveways.enabled({ body: req.body }))
     ? driveways.material(drivewayId) : null;
-  const driveway = drivewayMaterial ? { id: drivewayMaterial.id, name: drivewayMaterial.name, words: driveways.promptWords(drivewayMaterial.id, drivewayStyleId, drivewayPatternId) } : null;
+  /* Priced but not drawn (0057): a surface the render cannot show truthfully
+     is left out of the picture altogether — no driveway sentence, no keep
+     mask — and the page is told, so it can say the picture shows the
+     driveway as it is now. */
+  const drivewayNotDrawn = !!drivewayMaterial && !driveways.drawable(drivewayMaterial.id);
+  const driveway = (drivewayMaterial && !drivewayNotDrawn) ? { id: drivewayMaterial.id, name: drivewayMaterial.name, words: driveways.promptWords(drivewayMaterial.id, drivewayStyleId, drivewayPatternId) } : null;
 
   /* Windows and doors change only when the homeowner has actually chosen
      something for them.
@@ -4124,6 +4129,7 @@ app.post('/api/render', renderLimiter, async (req, res) => {
     return respondWithRender(res, url, {
       roofSkipped: roofUnsupported || undefined,
       ...(missedChanges.length ? { missedChanges } : {}),
+      ...(drivewayNotDrawn ? { drivewayNotDrawn: true } : {}),
     }, restorePlan);
   } catch (err) {
     console.error('Render error:', err);

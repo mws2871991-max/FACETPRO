@@ -792,6 +792,8 @@
       {
         "id": "resin-bound",
         "name": "Resin Bound",
+        "drawn": false,
+        "notDrawn": "We can price resin bound, but we can’t yet show it accurately on a photo — our pictures keep turning it into loose gravel, which is a different product. Your picture will show your driveway as it is now. The estimate below is for resin bound.",
         "hex": "#B8A07A",
         "materialLabel": "Resin-bound gravel, smooth and porous",
         "perM2": [
