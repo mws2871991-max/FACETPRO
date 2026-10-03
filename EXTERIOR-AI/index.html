@@ -3323,6 +3323,7 @@ async function chooserPref(key, id, label) {
   if (state.prefs[key] === id) return;
   state.prefs[key] = id;
   state.renderUrl = null; state.renderId = null;
+  scheduleSettledRender();
   reachedStage('design_changed');
   render();
   await refreshGlazing({ label });
@@ -3354,6 +3355,7 @@ async function chooserHouseType(id) {
   state.houseType = id;
   state.houseTypeChosen = true;
   state.renderUrl = null; state.renderId = null;
+  scheduleSettledRender();
   render();
   await refreshPrice();
   await refreshGlazing({});
@@ -3365,6 +3367,7 @@ async function chooserSwatch(sw) {
   if (!key || state[key]?.id === sw.id) return;
   state[key] = sw;
   state.renderUrl = null; state.renderId = null;
+  scheduleSettledRender();
   reachedStage('design_changed');
   render();
   await refreshPrice();
@@ -4569,7 +4572,7 @@ function buildUploadDetect() {
                first one got rather than an empty frame and a button. It is one
                more render against the daily cap, spent on somebody who has
                demonstrably not given up. */
-            onClick: () => { state.uploadedImg = null; state.uploadedBase64 = null; state.detections = []; state.stage = 'landing'; state.detectionStatus = 'idle'; state.renderUrl = null; state.renderId = null; state.windowCount = null; state.backCount = null; state.backFromPhoto = false; state.backPhotoCount = null; state.sideCount = null; state.frontWindowCount = null; state.frontWindowBoxes = []; state.glazing = null; state.hasCustomised = false; state.revealed = false; state.lastPriceDelta = null; autoRenderDone = false; U('Photo removed — add another whenever you like'); render(); }
+            onClick: () => { state.uploadedImg = null; state.uploadedBase64 = null; state.detections = []; state.stage = 'landing'; state.detectionStatus = 'idle'; state.renderUrl = null; state.renderId = null; state.windowCount = null; state.backCount = null; state.backFromPhoto = false; state.backPhotoCount = null; state.sideCount = null; state.frontWindowCount = null; state.frontWindowBoxes = []; state.glazing = null; state.hasCustomised = false; state.revealed = false; state.lastPriceDelta = null; autoRenderDone = false; settledRenders = 0; if (settledTimer) { clearTimeout(settledTimer); settledTimer = null; } U('Photo removed — add another whenever you like'); render(); }
           /* Screen 3: "allow replace photo without restarting the journey".
 
            The behaviour was already right — this clears the photograph, the
@@ -4974,6 +4977,7 @@ function buildVisualizer() {
             if (group === 'Roof') state.roof = sw;
             state.hasCustomised = true;   // they have found the controls; stop offering to show them
             state.renderUrl = null; state.renderId = null; state.renderAspect = null; // choice changed — the old render no longer matches
+            scheduleSettledRender();
             /* Once per visit, not once per tap. The question this answers is
                "what share of visitors actually design something", and a
                counter that fires on every swatch would answer "how many taps
@@ -5053,6 +5057,7 @@ function buildVisualizer() {
     }
     state.hasCustomised = true;
     state.renderUrl = null; state.renderId = null; state.renderAspect = null;
+    scheduleSettledRender();
     fetchDrivewayQuote();
   };
   const chip = (active, label, onClick, hex, img) => h('button', {
@@ -5125,6 +5130,8 @@ function buildVisualizer() {
   const gardenDoorOnly = nothingToDraw && isRearOpening(state.prefs.doorStyleId);
   const renderButtonLabel = state.rendering
     ? 'Creating your picture…'
+    : (settledTimer && !state.renderUrl && !nothingToDraw)
+      ? 'Updating your picture — or tap to start now'
     : state.renderUrl
       ? 'Try this look again'
       : gardenDoorOnly
@@ -5369,6 +5376,17 @@ function buildVisualizer() {
                opposite corners with no clipping, and they read correctly at
                every position. Same here. */
             ? h('div', { className: 'absolute left-3 top-3 text-base px-2 py-1 rounded-full bg-emerald-600 text-white whitespace-nowrap' }, 'After')
+            : null,
+          /* The price on the picture (0058): "her property should appear with
+             the changes selected and the price". On a phone the estimate panel
+             is a screen away from the photo, so the moment of seeing the house
+             was never the moment of seeing the cost. Read from the panel, so
+             the two cannot disagree; the conditions travel with the number. */
+          (state.renderUrl && state.revealed && showing === 'after' && !state.rendering && pictureTotal())
+            ? h('div', { id: 'picture-price', className: 'absolute right-3 top-3 z-10 rounded-xl bg-zinc-900/85 text-white px-3 py-1.5 text-right' }, [
+                h('div', { className: 'measured text-[17px] sm:text-[20px] leading-tight' }, pictureTotal()),
+                h('div', { className: 'text-[12px] sm:text-[13px] text-white/80' }, 'Planning estimate · inc. VAT'),
+              ])
             : null,
           slider,
 
@@ -6947,10 +6965,13 @@ function buildDetailOptions() {
          Cleared rather than regenerated, exactly as the swatches do. A render
          costs money and a minute, and a homeowner trying four window styles
          should not spend four of them — the colour preview stays live and the
-         button offers the picture when they have settled. */
+         button offers the picture when they have settled.
+         0058: and now makes it itself once they have — see
+         scheduleSettledRender. */
       state.hasCustomised = true;
       state.renderUrl = null;
       state.renderId = null; state.renderAspect = null;
+      scheduleSettledRender();
       refreshGlazing({ label: label || 'That change' });
       renderVisualizerOnly();
     }
@@ -7932,9 +7953,12 @@ function stopRenderTimer() {
   renderStartedAt = null;
 }
 
-async function generateRealRender() {
+async function generateRealRender({ settled = false } = {}) {
   if (!state.uploadedBase64) return;
+  if (settledTimer) { clearTimeout(settledTimer); settledTimer = null; }   // asked for now; no second one behind it
   let landed = false;
+  let stale = false;
+  const askedFor = choiceKey();
   state.rendering = true;
   stopRenderTimer();              // a second run must not leave the first ticking
   renderStartedAt = Date.now();
@@ -8030,6 +8054,12 @@ async function generateRealRender() {
     /* The server checks the roof and walls changed and retries once; this is
        what is still missing after that. */
     state.missedChanges = Array.isArray(data.missedChanges) ? data.missedChanges.filter(t => t === 'roof' || t === 'cladding' || t === 'windows') : [];
+    if (askedFor !== choiceKey()) {
+      /* They changed something while this was being drawn (0058). */
+      stale = true;
+      U('You changed your choices while we were drawing — updating the picture');
+      return;
+    }
     state.renderUrl = safeRenderUrl(data.url);
     state.renderId = data.renderId || null;
     landed = true;
@@ -8048,6 +8078,15 @@ async function generateRealRender() {
     state.rendering = false;
     stopRenderTimer();
     render();
+    if (stale) scheduleSettledRender();
+    /* A picture made because they stopped choosing is brought to them: on a
+       phone the controls they were using are a screen below it (0058). */
+    if (landed && settled) requestAnimationFrame(() => {
+      const v = document.getElementById('visualizer-section');
+      if (!v) return;
+      const r = v.getBoundingClientRect();
+      if (r.bottom < 80 || r.top > window.innerHeight - 120) v.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
     /* The two things the homeowner came for arrive at different moments: the
        picture lands here, and the price has been sitting in the panel beside
        it, unchanged, for the last minute. One beat on the total ties them
@@ -9875,6 +9914,7 @@ async function handleUpload(file) {
   state.stage = 'detecting';
   state.detectionStatus = 'detecting';
   state.renderUrl = null;
+  settledRenders = 0; if (settledTimer) { clearTimeout(settledTimer); settledTimer = null; }
   /* A count corrected for the last photograph does not apply to this one, and
      a stale range next to a new house is worse than no range at all. */
   state.windowCount = null;
@@ -10114,6 +10154,54 @@ async function autoMeasure() {
      trade — somebody who came through a windows-only landing page — and a
      render instructed to change nothing returns the photograph back. */
 let autoRenderDone = false;
+
+/* The picture follows the choices (0058).
+
+   Changing a window style, door or finish cleared the picture so it could
+   never show something they had not chosen — and then waited for a button.
+   A homeowner on a phone (3 Oct) picked sliding sash windows and a composite
+   door, watched the price move, and never saw her house with them: the
+   button was a scroll away and nothing said a picture was coming. "No wow
+   moment at the time of getting the price."
+
+   So once the choices settle — SETTLE_MS with no further tap — the picture
+   is made again on its own. Capped per photograph, because each one is a
+   paid render and someone flicking through every colour should not spend
+   twenty; past the cap the button is still there. var, not let: render()
+   reads these and can run before this line has been evaluated. */
+var SETTLE_MS = 3000;
+var MAX_SETTLED_RENDERS = 4;
+var settledTimer = null;
+var settledRenders = 0;
+
+/* What the picture was asked to show. A render that lands after the choices
+   moved on is of a house nobody is looking at, and is not shown. */
+function choiceKey() {
+  return JSON.stringify([state.cladding?.id, state.trim?.id, state.roof?.id, glazingChoice(),
+    state.driveway?.existing, state.driveway?.materialId, state.driveway?.styleId, state.driveway?.patternId]);
+}
+
+function scheduleSettledRender() {
+  if (settledTimer) { clearTimeout(settledTimer); settledTimer = null; }
+  if (!state.uploadedBase64 || state.renderUnavailable || state.detectUnavailable) return;
+  if (settledRenders >= MAX_SETTLED_RENDERS) return;
+  settledTimer = setTimeout(() => {
+    settledTimer = null;
+    if (state.rendering) { scheduleSettledRender(); return; }   // the one in flight is checked when it lands
+    if (state.renderUrl || !hasDrawableChange() || state.renderUnavailable) { renderVisualizerOnly(); return; }
+    settledRenders += 1;
+    autoRenderDone = true;
+    generateRealRender({ settled: true });
+  }, SETTLE_MS);
+}
+
+/* The headline the estimate panel is showing, read from the page so the
+   picture and the panel can never disagree. Null until there is one. */
+function pictureTotal() {
+  const el = document.getElementById('estimate-total');
+  const total = el ? el.textContent.trim() : '';
+  return /£/.test(total) ? total : null;
+}
 
 /* Called from handleUpload the moment the bytes exist, before detection has
    answered. Every guard maybeAutoRender applies still applies except the one
