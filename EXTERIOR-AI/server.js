@@ -3249,6 +3249,15 @@ async function keepRender(replicateUrl, restore = null) {
       /* After the door, so a restored door is already the photograph and
          reads as unchanged. When the door is being replaced it is one of the
          things asked for, and is kept like the windows. */
+      /* Our windows — and our new front door, when they chose one (0059).
+         Since 0045 the mask is only believed inside these boxes, and the door
+         was never one of them, so a chosen composite door was put back to the
+         old door from the photograph every time: priced, never drawn (render
+         fbf6b4… on 2 Oct, and a customer's sash-and-door test on 3 Oct). The
+         door box is filled from the render when the mask has no door in it,
+         which the upload-time mask never does. */
+      const newDoor = !restore.door ? doorBox(detections) : null;
+      const oursHere = [...glazing.frontWindowBoxes(detections, detectionAspectRatio), ...(newDoor ? [newDoor] : [])];
       if (restore.surroundings) {
         /* The mask first, the patches only if it could not be had.
 
@@ -3273,7 +3282,7 @@ async function keepRender(replicateUrl, restore = null) {
               notOurs: glazing.neighbourWindowBoxes(detections, detectionAspectRatio),
               /* And ours, so a window the mask missed is held by its box
                  rather than put back to the photograph (IMG_2068's bay). */
-              ours: glazing.frontWindowBoxes(detections, detectionAspectRatio),
+              ours: oursHere,
             })
           : { restored: false, reason: 'no mask' };
         if (masked.restored) {
