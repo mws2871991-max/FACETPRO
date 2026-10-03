@@ -109,7 +109,30 @@ function cropToBox(buffer, mime, box, marginPct = 0) {
    or render, not glass or net curtains. Measured on IMG_2068's bay: the
    pillars' brightness varies by 14–26 (standard deviation), the curtains
    and glass 31–40. Returns one crop-sized PNG mask, or null. */
-const PILLAR_PICK = { minH: 0.35, minW: 0.035, maxW: 0.2, minFill: 0.55, minAspect: 2.5, maxStd: 34, maxArea: 0.25 };
+/* minH 0.35 → 0.25 (3 October), from the IMG_1830 run on 0055. Every object
+   in both bays was rejected `short` — 10 of 10 and 12 of 12, on all six
+   renders — so no other rule was ever reached. The two best candidates are
+   plainly the pillars and clear everything else comfortably:
+
+     w3h30  f0.94 a9.8 s11    the shaft: 3% wide, 30% tall, 94% solid
+     w12h31 f0.72 a2.1 s19    the shaft with its capital
+
+   Both die on height alone. Nothing about these pillars differs from
+   IMG_2068's; the CROP does. IMG_2068 has one bay and its crop is close to
+   the bay itself, so a shaft spans most of it. IMG_1830's two bays are
+   stacked, so each crop takes in roof edge, sill and brickwork, and the same
+   column fills a third of it. minH is measured against the crop, so it reads
+   the framing as much as the pillar — which is why a figure tuned on one
+   house fell flat on the next.
+
+   0.25 and not lower: it admits both candidates above, while bay 2's tallest
+   (h16) would need 0.15 — and at 0.15 height contributes almost nothing, so
+   aspect and smoothness would carry the whole decision. Those are the rules
+   keeping sills and transoms out. One step, then measure.
+
+   The sturdier fix is to measure height against the bay box rather than the
+   crop, so the threshold stops moving with the framing. */
+const PILLAR_PICK = { minH: 0.25, minW: 0.035, maxW: 0.2, minFill: 0.55, minAspect: 2.5, maxStd: 34, maxArea: 0.25 };
 /* Pass two: the carved capital and the base are their own objects, squat and
    textured, so the shape test above throws them away (0049 on IMG_2068: 16
    objects, 1 kept, capitals green). Any object sitting on a kept shaft —
