@@ -123,7 +123,11 @@ const WINDOW_STYLE_WORDS = {
 };
 
 const FRAME_COLOUR_WORDS = {
-  anthracite: 'very dark blue-grey, almost black, matte',       // #2B2D42
+  /* Anthracite is RAL 7016, a deep charcoal grey. The swatch was #2B2D42,
+     which is navy: the frame-colour correction then pulled every anthracite
+     frame towards blue, and in warm light they came out plainly navy
+     (renders 6131e374, ccab0d20, 4 Oct). */
+  anthracite: 'deep anthracite grey (RAL 7016), a dark charcoal grey with only a faint cool tint, never navy or blue, matte', // #383E42
   'agate-grey': 'mid cool grey, matte',                         // #8A8D8F
   white: 'clean bright white',                                  // #FFFFFF
   /* Was 'muted mid sage green': a door-only render on 24 September came out

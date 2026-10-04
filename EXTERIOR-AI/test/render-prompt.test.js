@@ -377,7 +377,8 @@ test('frame colours reach the model as descriptions, not swatch names', () => {
     windowStyle: 'Casement', doorStyle: 'Composite Door',
     glazingColour: 'Anthracite', glazingColourId: 'anthracite',
   });
-  assert.match(p, /very dark blue-grey, almost black, matte/i);
+  // 0061: anthracite is RAL 7016 grey, not the navy the old swatch described.
+  assert.match(p, /deep anthracite grey \(RAL 7016\)/i);
   assert.match(p, /Every window frame and the door frame must visibly take this colour/i);
 });
 
