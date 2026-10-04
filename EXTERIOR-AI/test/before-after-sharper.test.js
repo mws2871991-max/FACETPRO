@@ -19,8 +19,9 @@ test('once there is a photo, the sketch is never shown in its place', () => {
   assert.match(v, /Pictures are busy right now — your estimate still works/);
 });
 
-test('the reveal wipes the new picture across the photo', () => {
-  assert.match(h, /state\.revealed = true;\s*revealWipe\(\);/);
+test('the reveal wipes the new picture across the photo (the fallback since 0077)', () => {
+  assert.match(h, /state\.revealed = true;\s*revealFacets\(\);/);
+  assert.match(h, /\.catch\(\(\) => revealWipe\(\)\)/);
   const f = h.slice(h.indexOf('function revealWipe()'), h.indexOf('function buildVisualizer()'));
   assert.match(f, /state\.afterPct = 0;/);
   assert.match(f, /prefers-reduced-motion/);
