@@ -269,7 +269,7 @@ test('the protections that were already there survive the rewrite', () => {
   assert.match(p, /perspective, shadow direction, ambient lighting colour temperature/i);
   assert.match(p, /Shadows and reflections must remain consistent/i);
   assert.match(p, /indistinguishable from a real photograph/i);
-  assert.match(p, /garden, path, driveway, fencing, sky/i);
+  assert.match(p, /garden, path, driveway, fencing, gates, railings, sky/i);
 });
 
 test('all three trades each get their own sentence', () => {

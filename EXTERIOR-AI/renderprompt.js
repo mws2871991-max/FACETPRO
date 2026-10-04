@@ -284,7 +284,12 @@ function buildRenderPrompt(sel = {}) {
   if (trim) {
     changes.push(
       `Repaint the fascias, soffits, bargeboards and guttering in ${describe(trim, {})}. ` +
-      `Change their colour only — their shape, size and position stay exactly as they are.`);
+      `Change their colour only — their shape, size and position stay exactly as they are. ` +
+      /* 4 Oct, render 08fd5c7d: Ink Trim for the fascias also painted the
+         garden gate and the white door surround dark grey. "Trim" reads as
+         any painted woodwork; the roofline is what was asked for and priced. */
+      `This is the roofline only, at the eaves and gables, plus the gutters and downpipes: do not paint the door ` +
+      `surround, porch, window surrounds, sills, gates, fences or railings.`);
   }
   if (changingGlazing) {
     /* A door on its own is its own sentence. This used to fall through to the
@@ -386,7 +391,7 @@ function buildRenderPrompt(sel = {}) {
   holds.push(driveway
     ? 'the garden, lawn and planting, the public pavement and road, fencing, boundary walls, gates, railings, handrails, bins, ' +
       'any car, the house number, door number, letterbox and any sign, sky and everything beyond the house'
-    : 'the garden, path, driveway, fencing, sky and everything beyond the house');
+    : 'the garden, path, driveway, fencing, gates, railings, sky and everything beyond the house');
 
   /* "Change only the roof" is a stronger sentence than any list of holds, and
      it is available exactly when one trade was chosen — which is the whole
