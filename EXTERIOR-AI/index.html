@@ -518,7 +518,7 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
            picture, price. The AI services and the seven-day fingerprint are
            still said in full in the FAQ below ("What happens to my photo?")
            and in the privacy notice this links to. -->
-      <p class="pb-2 leading-7 text-zinc-600">We use it only to make your picture. Once your picture has been made, the photo is deleted &mdash; never published, sold, or used to train AI. <a href="/privacy#your-photograph" class="underline underline-offset-2">Full details</a></p>
+      <p class="pb-2 leading-7 text-zinc-600">We use it only to make your picture. Once your picture has been made, the photo is deleted &mdash; never published, sold, or used by us to train AI. <a href="/privacy#your-photograph" class="underline underline-offset-2">Full details</a></p>
     </details>
     <!-- 0081 (outside review, 4 Oct): who it is for, before they wonder. The
          house types are the ones the picker offers; flats are not one of them. -->
@@ -2375,6 +2375,7 @@ const state = {
      image — so "have they got a house on screen" is not the same question as
      "have they uploaded". See gateUntilSubject(). */
   resumedDesign: false,
+  makeover: false,   // 0083: the one-tap full makeover has been applied
   renderId: null,     // our id for it — the lead sends this, never a URL
   rendering: false,
   sendingLead: false,
@@ -4629,7 +4630,7 @@ function buildUploadDetect() {
           h('p', { className: 'pb-2 leading-7' }, [
             /* Short at the button (1 October); the AI services and the
                seven-day fingerprint are in the privacy notice it links to. */
-            'We use it only to make your picture. Once your picture has been made, the photo is deleted — never published, sold, or used to train AI. ',
+            'We use it only to make your picture. Once your picture has been made, the photo is deleted — never published, sold, or used by us to train AI. ',
             h('a', { href: '/privacy#your-photograph', className: 'underline underline-offset-2' }, 'Full details'),
           ]),
         ]),
@@ -4660,7 +4661,7 @@ function buildUploadDetect() {
                first one got rather than an empty frame and a button. It is one
                more render against the daily cap, spent on somebody who has
                demonstrably not given up. */
-            onClick: () => { state.uploadedImg = null; state.uploadedBase64 = null; state.detections = []; state.stage = 'landing'; state.detectionStatus = 'idle'; state.renderUrl = null; state.renderId = null; state.windowCount = null; state.backCount = null; state.backFromPhoto = false; state.backPhotoCount = null; state.sideCount = null; state.frontWindowCount = null; state.frontWindowBoxes = []; state.glazing = null; state.hasCustomised = false; state.revealed = false; state.lastPriceDelta = null; autoRenderDone = false; settledRenders = 0; if (settledTimer) { clearTimeout(settledTimer); settledTimer = null; } U('Photo removed — add another whenever you like'); render(); }
+            onClick: () => { state.uploadedImg = null; state.uploadedBase64 = null; state.detections = []; state.stage = 'landing'; state.detectionStatus = 'idle'; state.renderUrl = null; state.renderId = null; state.windowCount = null; state.backCount = null; state.backFromPhoto = false; state.backPhotoCount = null; state.sideCount = null; state.frontWindowCount = null; state.frontWindowBoxes = []; state.glazing = null; state.hasCustomised = false; state.revealed = false; state.makeover = false; state.lastPriceDelta = null; autoRenderDone = false; settledRenders = 0; if (settledTimer) { clearTimeout(settledTimer); settledTimer = null; } U('Photo removed — add another whenever you like'); render(); }
           /* Screen 3: "allow replace photo without restarting the journey".
 
            The behaviour was already right — this clears the photograph, the
@@ -5552,8 +5553,8 @@ function buildVisualizer() {
           (state.renderUrl && !state.revealed)
             ? h('div', { className: 'absolute inset-0 z-20 grid place-items-center bg-zinc-900/85 backdrop-blur-sm text-center px-6' }, [
                 h('div', {}, [
-                  h('p', { className: 'serif text-[22px] md:text-[26px] text-white leading-tight' }, 'We found your home.'),
-                  h('p', { className: 'mt-1.5 text-lg text-white/85' }, 'Now see what it could look like.'),
+                  h('p', { className: 'serif text-[22px] md:text-[26px] text-white leading-tight' }, state.makeover ? 'Your full makeover is ready.' : 'We found your home.'),
+                  h('p', { className: 'mt-1.5 text-lg text-white/85' }, state.makeover ? 'Windows, front door and roofline, together.' : 'Now see what it could look like.'),
                   h('button', {
                     type: 'button',
                     className: 'cta mt-5 px-6 rounded-full text-lg font-semibold min-h-[48px]',
@@ -5570,6 +5571,7 @@ function buildVisualizer() {
             : null,
         ]),
         askAtRender,
+        makeoverRow(),
         makeItYours,
         lightingControls,
         h('div', { className: 'p-4 grid gap-4' }, groupsRow),
@@ -9792,7 +9794,12 @@ function ensureStatusPill() {
 
        Only a problem when the bar is there, and it always is once anything is
        priced, which is from the first page load. */
-        className: 'fixed bottom-[82px] left-3 z-[100] max-w-[calc(100vw-24px)] rounded-full bg-zinc-900 text-white text-base px-4 py-2 shadow-[0_10px_30px_rgba(0,0,0,0.25)] border border-white/10 flex items-center gap-2 transition-opacity duration-500' }, [
+        /* 0083: born hidden. It used to appear on every page load saying
+           "Getting your colours and prices ready…" — background work nobody
+           is waiting for — and on a phone it sat over the illustration
+           caption under the homepage before/after. U() shows it when there
+           is something to say. */
+        className: 'fixed bottom-[82px] left-3 z-[100] max-w-[calc(100vw-24px)] rounded-full bg-zinc-900 text-white text-base px-4 py-2 shadow-[0_10px_30px_rgba(0,0,0,0.25)] border border-white/10 flex items-center gap-2 transition-opacity duration-500 opacity-0 pointer-events-none' }, [
       h('span', { className: 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse' }),
       h('span', { id: 'status-text', className: 'truncate' }, state.status),
     ])
@@ -10091,6 +10098,7 @@ async function handleRearUpload(file) {
 }
 
 async function handleUpload(file) {
+  state.makeover = false;   // 0083: a new house starts from its own first look
   state.uploadError = null;
   reachedStage('upload_started');
   /* The homeowner's clock starts here, not when the server receives anything.
@@ -10680,6 +10688,115 @@ async function chooseContrastFrame() {
   return true;
 }
 /* ── END WAIT (0078) ── */
+
+/* ── THE FULL MAKEOVER, ONE TAP (0083) ──
+
+   The biggest transformation the product can show — new windows, a new
+   front door and the roofline, together, like Ad v6 — and almost nobody
+   will build it themselves from three separate rows of controls. So one
+   button builds it from what they already have: their frame colour kept,
+   a composite door in the same colour, and a roofline that goes with it
+   (Ink Trim with dark frames, Coastal Fog with light). Priced like any
+   other choice: both figures on the bar and on the picture (0076), and it
+   reveals with the facets again, because it is a second "wow". */
+var DARK_FRAMES = ['anthracite', 'black', 'agate-grey', 'chartwell-green'];
+async function applyFullMakeover() {
+  if (state.rendering) return;
+  if (!state.prefs.windowStyleId || state.prefs.windowStyleId === 'none') state.prefs.windowStyleId = 'casement';
+  if (!state.prefs.windowDoorColourId) state.prefs.windowDoorColourId = 'anthracite';
+  state.prefs.doorStyleId = 'composite';
+  const trim = findSwatch(DARK_FRAMES.includes(state.prefs.windowDoorColourId) ? 'ink-trim' : 'coastal-fog');
+  if (trim) state.trim = trim;
+  state.makeover = true;
+  state.hasCustomised = true;
+  state.renderUrl = null; state.renderId = null; state.renderAspect = null;
+  state.revealed = false;
+  reachedStage('design_changed');
+  U('Full makeover — windows, front door and roofline');
+  render();
+  await Promise.all([refreshPrice(), refreshGlazing({ label: 'Full makeover' })]);
+  render();
+  generateRealRender();
+}
+
+/* ── "SHOW SOMEONE" (0083) ──
+
+   Windows are a household decision, and the next thing anybody does with a
+   picture of their house changed is show it to whoever they live with. One
+   image: before and after side by side, the price lines from the picture,
+   and the labels that travel with them ("AI visualisation", "Planning
+   estimate · inc. VAT"), so a screenshot passed on cannot be mistaken for a
+   quote or a photograph of finished work. The phone's own share sheet where
+   there is one (WhatsApp, Messages); a download where there is not. Made in
+   the browser from images already on the page; nothing is uploaded. */
+function loadImg(src) {
+  return new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = src; });
+}
+async function makeShareCard() {
+  const [a, b] = await Promise.all([loadImg(state.uploadedImg), loadImg(state.renderUrl)]);
+  const W = 1200, pad = 40, gap = 16, cw = (W - pad * 2 - gap) / 2;
+  const ch = Math.round(cw * b.naturalHeight / b.naturalWidth);
+  const lines = pictureLines();
+  const H = 150 + ch + 70 + lines.length * 52 + 150;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  g.fillStyle = '#FAF8F5'; g.fillRect(0, 0, W, H);
+  g.fillStyle = '#0D1B2A'; g.font = '600 46px Georgia, serif';
+  g.fillText('My house, before and after', pad, 92);
+  const cover = (img, x) => {
+    const s = Math.max(cw / img.naturalWidth, ch / img.naturalHeight);
+    const w = cw / s, hh = ch / s;
+    g.drawImage(img, (img.naturalWidth - w) / 2, (img.naturalHeight - hh) / 2, w, hh, x, 130, cw, ch);
+  };
+  cover(a, pad); cover(b, pad + cw + gap);
+  const tag = (txt, x, bg, fg) => { g.font = '600 26px system-ui, sans-serif'; const tw = g.measureText(txt).width;
+    g.fillStyle = bg; g.beginPath(); g.roundRect ? g.roundRect(x + 14, 144, tw + 28, 40, 20) : g.rect(x + 14, 144, tw + 28, 40); g.fill();
+    g.fillStyle = fg; g.fillText(txt, x + 28, 173); };
+  tag('Before', pad, '#FFFFFF', '#0D1B2A'); tag('After', pad + cw + gap, '#047857', '#FFFFFF');
+  let y = 130 + ch + 64;
+  g.fillStyle = '#0D1B2A'; g.font = '600 40px ui-monospace, Menlo, monospace';
+  for (const l of lines) { g.fillText(l, pad, y); y += 52; }
+  g.fillStyle = '#52525B'; g.font = '26px system-ui, sans-serif';
+  g.fillText('Planning estimate · inc. VAT · not a quotation · After: AI visualisation', pad, y + 6);
+  g.fillStyle = '#A87B36'; g.font = '600 34px system-ui, sans-serif';
+  g.fillText('See yours free at facetpro.co.uk', pad, y + 70);
+  return new Promise(ok => c.toBlob(ok, 'image/png'));
+}
+async function shareMyHouse() {
+  try {
+    const blob = await makeShareCard();
+    if (!blob) throw new Error('no image');
+    const file = new File([blob], 'my-house-facet-pro.png', { type: 'image/png' });
+    const text = 'My house, before and after — what do you think? Planning estimate from facetpro.co.uk';
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], text });
+    } else {
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      U('Picture saved — send it to whoever you like');
+    }
+  } catch (e) {
+    if (e && e.name === 'AbortError') return;   // they closed the share sheet
+    U('Couldn’t make the picture just now');
+  }
+}
+
+function makeoverRow() {
+  if (!state.renderUrl || !state.revealed || state.rendering) return null;
+  return h('div', { id: 'makeover-row', className: 'mx-4 mb-4 flex flex-wrap gap-3' }, [
+    state.makeover ? null : h('button', {
+      type: 'button',
+      className: 'cta px-5 rounded-full text-lg font-semibold min-h-[48px]',
+      onClick: applyFullMakeover,
+    }, 'See the full makeover →'),
+    h('button', {
+      type: 'button',
+      className: 'px-5 rounded-full text-lg font-semibold min-h-[48px] border-2 border-zinc-900 text-zinc-900 bg-white',
+      onClick: shareMyHouse,
+    }, 'Show someone'),
+  ]);
+}
 
 /* The headline the estimate panel is showing, read from the page so the
    picture and the panel can never disagree. Null until there is one. */
