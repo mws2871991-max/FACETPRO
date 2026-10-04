@@ -725,6 +725,29 @@ function beyondOurDoor(b, door, bays, sides) {
   return false;
 }
 
+/* A cellar light is not a window anybody is quoting for (4 Oct).
+
+   The Manningtree house, live: "Cellar Window", 7 x 4.5 at the foot of the
+   wall, confidence 0.6, priced as a sixth window on a five-window house. A
+   grille or a pane at pavement level is not replaced with the front windows
+   and over-prices the default the homeowner sees first.
+
+   Narrow both ways, because a dropped real window is the quiet mistake: by
+   the model's word (cellar, basement, light well, coal hole) AND small next to
+   the house's own windows; or with no such word, low (its top below the lower
+   quarter of the door) AND very small. A basement flat's full-size windows
+   are left alone either way. */
+const CELLAR_LABEL = /\b(cellar|basement|light ?well|coal ?hole)\b/i;
+const CELLAR_MAX_OF_TYPICAL = 0.4;
+const LOW_MAX_OF_TYPICAL = 0.25;
+function isCellarLight(b, label, typicalArea, door) {
+  if (!(typicalArea > 0)) return false;
+  const area = b.w * b.h;
+  if (CELLAR_LABEL.test(label)) return area < CELLAR_MAX_OF_TYPICAL * typicalArea;
+  if (!door) return false;
+  return b.y > door.y + door.h * 0.75 && area < LOW_MAX_OF_TYPICAL * typicalArea;
+}
+
 function windowCandidates(detections, aspectRatio = null) {
   const subject = subjectBox(detections);
   const roofLine = roofLineY(detections);
@@ -754,6 +777,9 @@ function windowCandidates(detections, aspectRatio = null) {
      first door in the list may be next door's (see aboveAnotherFrontDoor). */
   const layoutDoor = doorBoxes.length > 1 ? ourDoor : doorB;
   const bayBoxes = confident.filter(d => BAY_LABEL.test(String(d?.label || ''))).map(d => box(d)).filter(Boolean);
+  /* The house's own typical window, for isCellarLight: the median area. */
+  const areas = confident.map(d => box(d)).filter(Boolean).map(b => b.w * b.h).sort((a, b) => a - b);
+  const typicalArea = areas.length ? areas[Math.floor(areas.length / 2)] : 0;
 
   let sidelights = 0;
   const units = new Map();          // pane group name -> merged candidate
@@ -774,6 +800,7 @@ function windowCandidates(detections, aspectRatio = null) {
     if (beyondOurDoor(b, layoutDoor, bayBoxes, sides)) { neighbours++; notOurs.push(b); continue; }
     if (isSidelight(d)) { sidelights++; continue; }
     if (isFanlight(b, String(d?.label || ''), doorB)) { sidelights++; continue; }
+    if (isCellarLight(b, String(d?.label || ''), typicalArea, doorB)) continue;
     const label = String(d?.label || '');
     const c = { b, confidence: Number(d?.confidence) || 0, panes: 1, labelBay: BAY_LABEL.test(label) };
     const pane = label.match(PANE_LABEL);

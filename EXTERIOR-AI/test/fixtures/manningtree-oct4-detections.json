@@ -1,0 +1,120 @@
+{
+ "source": "live /api/detect, unsplash Hw67HuisCtU (Manningtree), 4 Oct",
+ "detections": [
+  {
+   "type": "roof",
+   "label": "Main Roof",
+   "x_pct": 12.6,
+   "y_pct": 13.2,
+   "w_pct": 74.5,
+   "h_pct": 21.6,
+   "confidence": 0.95
+  },
+  {
+   "type": "cladding",
+   "label": "Red Brick Facade",
+   "x_pct": 12.4,
+   "y_pct": 33.5,
+   "w_pct": 75,
+   "h_pct": 55.5,
+   "confidence": 0.94
+  },
+  {
+   "type": "window",
+   "label": "First Floor Left Window",
+   "x_pct": 23.2,
+   "y_pct": 36.9,
+   "w_pct": 8.4,
+   "h_pct": 18,
+   "confidence": 0.95
+  },
+  {
+   "type": "window",
+   "label": "First Floor Centre Window",
+   "x_pct": 46.1,
+   "y_pct": 36.9,
+   "w_pct": 8.3,
+   "h_pct": 17.6,
+   "confidence": 0.95
+  },
+  {
+   "type": "window",
+   "label": "First Floor Right Window",
+   "x_pct": 68.5,
+   "y_pct": 36.8,
+   "w_pct": 8.6,
+   "h_pct": 17.6,
+   "confidence": 0.95
+  },
+  {
+   "type": "window",
+   "label": "Ground Floor Left Window",
+   "x_pct": 22.6,
+   "y_pct": 60.8,
+   "w_pct": 9,
+   "h_pct": 19.8,
+   "confidence": 0.95
+  },
+  {
+   "type": "window",
+   "label": "Ground Floor Right Window",
+   "x_pct": 69.2,
+   "y_pct": 60.3,
+   "w_pct": 9.3,
+   "h_pct": 19.8,
+   "confidence": 0.95
+  },
+  {
+   "type": "window",
+   "label": "Fanlight Above Door",
+   "x_pct": 45.8,
+   "y_pct": 59.7,
+   "w_pct": 8.6,
+   "h_pct": 3.2,
+   "confidence": 0.75
+  },
+  {
+   "type": "window",
+   "label": "Cellar Window",
+   "x_pct": 23.4,
+   "y_pct": 89.3,
+   "w_pct": 7,
+   "h_pct": 4.5,
+   "confidence": 0.6
+  },
+  {
+   "type": "window",
+   "label": "Neighbour Upper Window (right)",
+   "x_pct": 95.3,
+   "y_pct": 33.3,
+   "w_pct": 3,
+   "h_pct": 5,
+   "confidence": 0.4
+  },
+  {
+   "type": "window",
+   "label": "Neighbour Lower Window (right)",
+   "x_pct": 95,
+   "y_pct": 57.5,
+   "w_pct": 3.3,
+   "h_pct": 7.5,
+   "confidence": 0.4
+  },
+  {
+   "type": "door-front",
+   "label": "Front Door",
+   "x_pct": 47.3,
+   "y_pct": 63.4,
+   "w_pct": 6.6,
+   "h_pct": 22.4,
+   "confidence": 0.92
+  },
+  {
+   "type": "analysis",
+   "sides": {
+    "left": "gap",
+    "right": "gap"
+   }
+  }
+ ]
+}
