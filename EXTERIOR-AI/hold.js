@@ -974,6 +974,18 @@ function restoreInsideMask(opts) {
    — then the render is left exactly as it was. Bounded by the bay's box when
    one is given, so a pillar next door or a porch column elsewhere on the
    street is not this job's business either way. */
+/* "Too small to be anything" is measured against the BAY, not the frame
+   (4 October) — the same correction 0068 made to the shape rules, and for the
+   same reason. 0.2% of the whole photograph is nothing on IMG_2068, where one
+   bay fills much of the picture, and unreachable on a terrace like number 14,
+   where two small bays sit in a street scene: the shaft the pick finally kept
+   there covers 0.09% of the frame and was refused for it. The pillar has not
+   got smaller, the house has.
+
+   Against the bay the floor means what it says — a mask under 1% of the bay
+   cannot be its columns — and it reads the same on any house. Without a bay
+   box the frame is used as before. */
+const PILLAR_MIN_OF_BAY = 0.01;
 const PILLAR_MIN_SHARE = 0.002;
 const PILLAR_MAX_OF_BAY = 0.45;
 /* A column of the bay is a shaft when the mask covers this much of its height.
@@ -1018,7 +1030,13 @@ function restorePillars(opts) {
     }
     const share = on.length / (W * H);
     const bayArea = (bx1 - bx0 + 1) * (by1 - by0 + 1);
-    if (share < PILLAR_MIN_SHARE) return untouched(`pillar mask covers only ${(share * 100).toFixed(2)}% of the frame`);
+    /* Against the bay when there is one, the frame only as a fallback. */
+    if (bay) {
+      const ofBayNow = on.length / bayArea;
+      if (ofBayNow < PILLAR_MIN_OF_BAY) return untouched(`pillar mask covers only ${(ofBayNow * 100).toFixed(2)}% of the bay`);
+    } else if (share < PILLAR_MIN_SHARE) {
+      return untouched(`pillar mask covers only ${(share * 100).toFixed(2)}% of the frame`);
+    }
     if (bay && on.length / bayArea > PILLAR_MAX_OF_BAY) return untouched(`pillar mask covers ${(on.length / bayArea * 100).toFixed(0)}% of the bay — that is the window, not its pillars`);
     if (bay) {
       const height = by1 - by0 + 1, perX = new Map();
