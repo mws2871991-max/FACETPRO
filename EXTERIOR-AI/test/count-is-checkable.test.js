@@ -104,11 +104,15 @@ test('a customer waiting for a render is shown their own house', () => {
      nothing has changed yet. */
   const at = page.indexOf('} else if (state.rendering && state.uploadedImg) {');
   assert.ok(at > 0, 'the waiting state has gone back to the schematic');
-  const block = page.slice(at, at + 2200);   // the label sits at ~1580; 1600 cut it mid-match
-  assert.match(block, /src: state\.uploadedImg/, 'it should show the photograph they gave us');
-  assert.match(block, /Making your picture…/, 'and say plainly that it is still being made');
-  assert.match(block, /animate-pulse motion-reduce:animate-none/,
-    'a pulse says "in progress", and must stop for anyone who asks for less motion');
+  /* 0078: still their photograph, now with what was found on it and a line
+     saying what is happening; the pulse gave way to the scan, which stops for
+     anyone who asks for less motion. */
+  const block = page.slice(at, at + 2200);
+  assert.match(block, /buildScanLayer\(\)/, 'the waiting pane should be the scan over their photo');
+  const scan = page.slice(page.indexOf('function buildScanLayer()'), page.indexOf('THE FIRST PICTURE, CHOSEN TO SHOW'));
+  assert.match(scan, /src: state\.uploadedImg/, 'it should show the photograph they gave us');
+  assert.match(scan, /id: 'scan-step', role: 'status'/, 'and say plainly what is happening');
+  assert.match(page, /@media \(prefers-reduced-motion: reduce\) \{ \.fp-scanline \{ display: none; \}/);
 
   /* The schematic still exists for the case it was written for. */
   assert.match(page, /colour preview`\)/, 'the colour preview schematic was removed rather than narrowed');
@@ -118,7 +122,9 @@ test('the classes that fix reach the stylesheet', () => {
   /* A Tailwind class renders unstyled until build:css runs, the suite stays
      green either way, and only a browser notices. */
   const css = fs.readFileSync(path.join(__dirname, '..', 'assets', 'app.css'), 'utf8');
-  for (const cls of ['animate-pulse', 'opacity-70']) {
+  /* 0078: the waiting pane's styles are plain CSS in the page now, not
+     Tailwind classes; the ones it still uses must be in the build. */
+  for (const cls of ['object-cover', 'whitespace-nowrap']) {
     assert.ok(css.includes(cls), `${cls} is used in index.html but is not in the built stylesheet`);
   }
 });

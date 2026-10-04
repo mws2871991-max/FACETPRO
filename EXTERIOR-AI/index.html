@@ -202,6 +202,18 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
      drop the pill on every phone. */
   @media (max-width: 479px) { .bar-typical { display: none; } }
 
+  /* 0078: the wait, made part of the show. A scan line over their photo and
+     the parts of their house it really found, lighting up one by one. */
+  @keyframes fp-scan { from { top: -4%; } to { top: 104%; } }
+  .fp-scanline { position: absolute; left: 0; right: 0; height: 3px; background: #B98A3E;
+    box-shadow: 0 0 18px 6px rgba(185,138,62,.55); animation: fp-scan 2.6s cubic-bezier(.45,0,.55,1) infinite; }
+  @keyframes fp-found { from { opacity: 0; transform: scale(1.08); } to { opacity: 1; transform: none; } }
+  .fp-found { position: absolute; border: 2px solid #B98A3E; border-radius: 6px; background: rgba(185,138,62,.12);
+    opacity: 0; animation: fp-found .5s ease-out forwards; }
+  .fp-found-label { position: absolute; left: -2px; top: -26px; white-space: nowrap; background: #B98A3E; color: #0D1B2A;
+    font-weight: 600; font-size: 13px; line-height: 1.5; padding: 1px 8px; border-radius: 999px; }
+  @media (prefers-reduced-motion: reduce) { .fp-scanline { display: none; } .fp-found { animation: none; opacity: 1; } }
+
   @media (max-width: 640px) {
     .media-cap { max-height: 56vh; }
     .media-cap img { height: 100%; object-fit: cover; }
@@ -4916,15 +4928,9 @@ function buildVisualizer() {
  * nothing has changed yet — and the status line underneath already says what
  * is happening and how long it takes. Slightly faded and gently pulsing so it
  * is plainly a picture in progress rather than the finished answer. */
+    /* 0078: and while it is being made, show what we found on it. */
     afterPane = h('div', { id: 'after-pane', className: 'absolute inset-0', style: { clipPath: `inset(0 ${100 - state.afterPct}% 0 0)` } }, [
-      h('img', {
-        src: state.uploadedImg,
-        alt: 'Your home, while the new picture is being made',
-        className: 'w-full h-full object-cover opacity-70 animate-pulse motion-reduce:animate-none',
-      }),
-      h('div', {
-        className: 'absolute left-3 bottom-3 text-base px-2 py-1 rounded-full bg-zinc-900 text-white whitespace-nowrap',
-      }, 'Making your picture…'),
+      buildScanLayer(),
     ]);
   } else if (state.uploadedImg) {
     /* Their photo, never the sketch, once there is a photo (0064).
@@ -10497,6 +10503,157 @@ function landReveal(cv, fx) {
 }
 /* ── END REVEAL (0077) ── */
 
+/* ── THE WAIT, MADE PART OF THE SHOW (0078) ──
+
+   Twenty to forty seconds while the picture is made, and the pane showed
+   their photo faded and pulsing under "Making your picture…". It was honest
+   and it was dead time, at the exact point the person is most invested.
+
+   Now the photo at full strength, a gold scan line passing over it, and the
+   parts of THEIR house that detection really found lighting up one at a time
+   — their windows, their front door, their roofline — with a line underneath
+   saying what is happening. Nothing here is invented: no boxes until
+   detection has answered, and the steps name only what was found. It is the
+   proof that this is their house, not a template, arriving before the
+   picture does.
+
+   The photo and the boxes share one box sized like object-cover (container
+   units), so a box drawn at a window's percentages sits on that window
+   whatever shape the pane is. */
+function photoAspect() {
+  const src = state.uploadedImg;
+  if (!src) return null;
+  if (photoAspect.src === src) return photoAspect.ar;
+  photoAspect.src = src; photoAspect.ar = null;
+  const im = new Image();
+  im.onload = () => { if (photoAspect.src === src && im.naturalWidth && im.naturalHeight) { photoAspect.ar = im.naturalWidth / im.naturalHeight; if (state.rendering) renderVisualizerOnly(); } };
+  im.src = src;
+  return null;
+}
+
+function scanFound() {
+  const boxes = (state.frontWindowBoxes || []).filter(b => b && [b.x, b.y, b.w, b.h].every(Number.isFinite));
+  const det = (type) => (state.detections || []).find(d => d && d.type === type && Number.isFinite(d.x_pct) && Number.isFinite(d.w_pct));
+  const door = det('door-front');
+  const fascia = det('fascia');
+  const found = [];
+  boxes.forEach((b, i) => found.push({ x: b.x, y: b.y, w: b.w, h: b.h, label: i === 0 ? `${boxes.length} window${boxes.length === 1 ? '' : 's'}` : null }));
+  if (door) found.push({ x: door.x_pct, y: door.y_pct, w: door.w_pct, h: door.h_pct, label: 'Front door' });
+  if (fascia) found.push({ x: fascia.x_pct, y: fascia.y_pct, w: fascia.w_pct, h: Math.max(1.5, fascia.h_pct), label: 'Roofline' });
+  return { found, windows: boxes.length, door: !!door, roofline: !!fascia };
+}
+
+function scanStepText() {
+  const s = scanFound();
+  const steps = [
+    s.windows ? `Found ${s.windows} window${s.windows === 1 ? '' : 's'}` : 'Reading your house',
+    s.door ? 'Found your front door' : null,
+    s.roofline ? 'Found the roofline' : null,
+    s.door ? 'Sizing your house against your front door' : 'Sizing your house',
+    'Drawing your new design',
+    'Matching the light in your photo',
+    'Nearly there — finishing the details',
+  ].filter(Boolean);
+  const secs = renderStartedAt ? (Date.now() - renderStartedAt) / 1000 : 0;
+  return steps[Math.min(steps.length - 1, Math.floor(secs / 3.5))];
+}
+
+var scanTimer = null;
+function ensureScanSteps() {
+  if (scanTimer) return;
+  scanTimer = setInterval(() => {
+    const el = document.getElementById('scan-step');
+    if (!el || !state.rendering) { clearInterval(scanTimer); scanTimer = null; return; }
+    const txt = scanStepText();
+    if (el.textContent !== txt) el.textContent = txt;
+  }, 700);
+}
+
+function buildScanLayer() {
+  const ar = photoAspect();
+  const { found } = scanFound();
+  setTimeout(ensureScanSteps, 0);
+  const frame = h('div', {
+    style: ar
+      ? { position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', aspectRatio: String(ar),
+          width: `max(100cqw, calc(100cqh * ${ar.toFixed(4)}))` }
+      : { position: 'absolute', inset: '0' },
+  }, [
+    h('img', { src: state.uploadedImg, alt: 'Your home, while the new picture is being made', className: 'w-full h-full object-cover', style: { filter: 'brightness(.88)' } }),
+    ...(ar ? found.map((f, i) => h('div', {
+      className: 'fp-found',
+      style: { left: `${f.x}%`, top: `${f.y}%`, width: `${f.w}%`, height: `${f.h}%`, animationDelay: `${0.35 + i * 0.22}s` },
+    }, f.label ? [h('span', { className: 'fp-found-label' }, f.label)] : [])) : []),
+  ]);
+  return h('div', { className: 'absolute inset-0 overflow-hidden', style: { containerType: 'size' } }, [
+    frame,
+    h('div', { className: 'fp-scanline', 'aria-hidden': 'true' }),
+    h('div', {
+      id: 'scan-step', role: 'status',
+      className: 'absolute left-3 bottom-3 text-base px-3 py-1 rounded-full bg-zinc-900/90 text-white whitespace-nowrap',
+    }, scanStepText()),
+  ]);
+}
+
+/* ── THE FIRST PICTURE, CHOSEN TO SHOW (0078) ──
+
+   The windows journey starts every house on anthracite frames. On a house
+   that already has dark frames the first picture looks like the photo, and
+   there is nothing to wow at. Cream on white did the same on 4 Oct.
+
+   So before the first automatic picture only, look at the frames in their
+   photo — a band round the inside edge of each window box found — and if
+   they are already dark, start on white instead. Only when nobody has
+   touched a control (hasCustomised), only the journey's own default, only
+   with windows found; otherwise nothing changes. They can pick any colour a
+   second later, and the price follows whatever is on screen. */
+var CONTRAST_DARK_LUMA = 90;   // median 0–255 luma of the frame band; below this, frames read as dark
+function frameLuma(src, boxes) {
+  return new Promise((resolve) => {
+    const im = new Image();
+    im.onload = () => {
+      try {
+        const sc = Math.min(1, 640 / im.naturalWidth);
+        const W = Math.max(1, Math.round(im.naturalWidth * sc)), H = Math.max(1, Math.round(im.naturalHeight * sc));
+        const c = document.createElement('canvas'); c.width = W; c.height = H;
+        const g = c.getContext('2d'); g.drawImage(im, 0, 0, W, H);
+        const px = g.getImageData(0, 0, W, H).data;
+        const ys = [];
+        for (const b of boxes) {
+          const x0 = Math.round(b.x / 100 * W), y0 = Math.round(b.y / 100 * H);
+          const x1 = Math.round((b.x + b.w) / 100 * W), y1 = Math.round((b.y + b.h) / 100 * H);
+          const bw = Math.max(1, Math.round((x1 - x0) * 0.1)), bh = Math.max(1, Math.round((y1 - y0) * 0.1));
+          for (let y = Math.max(0, y0); y < Math.min(H, y1); y++) for (let x = Math.max(0, x0); x < Math.min(W, x1); x++) {
+            const inBand = x < x0 + bw || x >= x1 - bw || y < y0 + bh || y >= y1 - bh;
+            if (!inBand) continue;
+            const k = (y * W + x) * 4;
+            ys.push(0.2126 * px[k] + 0.7152 * px[k + 1] + 0.0722 * px[k + 2]);
+          }
+        }
+        if (ys.length < 50) { resolve(null); return; }
+        ys.sort((a, b) => a - b);
+        resolve(ys[Math.floor(ys.length / 2)]);
+      } catch (_) { resolve(null); }
+    };
+    im.onerror = () => resolve(null);
+    im.src = src;
+    setTimeout(() => resolve(null), 1500);
+  });
+}
+
+async function chooseContrastFrame() {
+  if (state.hasCustomised || state.journey !== 'windows') return false;
+  if (state.prefs.windowDoorColourId !== 'anthracite') return false;
+  const boxes = (state.frontWindowBoxes || []).filter(b => b && [b.x, b.y, b.w, b.h].every(Number.isFinite));
+  if (!boxes.length || !state.uploadedImg) return false;
+  const luma = await frameLuma(state.uploadedImg, boxes);
+  if (luma == null || luma >= CONTRAST_DARK_LUMA) return false;
+  if (state.hasCustomised || state.prefs.windowDoorColourId !== 'anthracite') return false;   // they moved first
+  state.prefs.windowDoorColourId = 'white';
+  return true;
+}
+/* ── END WAIT (0078) ── */
+
 /* The headline the estimate panel is showing, read from the page so the
    picture and the panel can never disagree. Null until there is one. */
 function pictureTotal() {
@@ -10593,7 +10750,7 @@ function startAutoRender() {
   applyHouseTypePreset();
   if (!hasDrawableChange()) return;
   autoRenderDone = true;
-  generateRealRender();
+  autoRenderStart(false);
 }
 
 function maybeAutoRender() {
@@ -10694,6 +10851,8 @@ function applyHouseTypePreset() {
 /* Split out so maybeAutoRender itself stays synchronous and readable — its job
    is the decision, this is the consequence. */
 async function autoRenderStart(presetApplied) {
+  /* 0078: a first picture that visibly changes something. */
+  if (await chooseContrastFrame()) presetApplied = true;
   /* The preset moved the finishes, so the estimate beside the picture has to
      move with them. Without this the panel would show the price of the
      swatches the page happened to load with, next to a render of different
