@@ -1,0 +1,190 @@
+{
+ "source": "IMG_1830 (Mike's house, number 14), live /api/detect 4 Oct, build 303c7e12",
+ "why": "Two front doors in shot (ours and No.12B), our window directly above our door, fanlight, neighbour dormer cut off at the edge. Count 4 = dormer, first-floor centre, two bays; first-floor left is No.12's.",
+ "aspectRatio": 0.75,
+ "expected": {
+  "frontWindowCount": 4,
+  "frontBayCount": 2
+ },
+ "detections": [
+  {
+   "type": "window",
+   "label": "Loft Dormer Window",
+   "x_pct": 51.5,
+   "y_pct": 0,
+   "w_pct": 14.2,
+   "h_pct": 11.3,
+   "confidence": 0.92
+  },
+  {
+   "type": "window",
+   "label": "Neighbour Dormer Window (left, cut off)",
+   "x_pct": 0,
+   "y_pct": 1.8,
+   "w_pct": 5,
+   "h_pct": 9.5,
+   "confidence": 0.6
+  },
+  {
+   "type": "window",
+   "label": "First Floor Window (left)",
+   "x_pct": 11.5,
+   "y_pct": 22.3,
+   "w_pct": 11.3,
+   "h_pct": 15.8,
+   "confidence": 0.93
+  },
+  {
+   "type": "window",
+   "label": "First Floor Window (centre)",
+   "x_pct": 30.2,
+   "y_pct": 22.6,
+   "w_pct": 9.8,
+   "h_pct": 15,
+   "confidence": 0.92
+  },
+  {
+   "type": "window",
+   "label": "First Floor Bay - Left Pane",
+   "x_pct": 50.8,
+   "y_pct": 19.2,
+   "w_pct": 5,
+   "h_pct": 15.6,
+   "confidence": 0.85
+  },
+  {
+   "type": "window",
+   "label": "First Floor Bay - Centre Pane",
+   "x_pct": 58.2,
+   "y_pct": 18,
+   "w_pct": 17,
+   "h_pct": 17.3,
+   "confidence": 0.94
+  },
+  {
+   "type": "window",
+   "label": "First Floor Bay - Right Pane",
+   "x_pct": 77,
+   "y_pct": 19.2,
+   "w_pct": 4.8,
+   "h_pct": 15.4,
+   "confidence": 0.85
+  },
+  {
+   "type": "window",
+   "label": "Ground Floor Bay - Left Pane",
+   "x_pct": 51.2,
+   "y_pct": 49.8,
+   "w_pct": 5.2,
+   "h_pct": 19.2,
+   "confidence": 0.85
+  },
+  {
+   "type": "window",
+   "label": "Ground Floor Bay - Centre Pane",
+   "x_pct": 58.2,
+   "y_pct": 49.2,
+   "w_pct": 17.5,
+   "h_pct": 20.5,
+   "confidence": 0.94
+  },
+  {
+   "type": "window",
+   "label": "Ground Floor Bay - Right Pane",
+   "x_pct": 77.4,
+   "y_pct": 49.8,
+   "w_pct": 4.8,
+   "h_pct": 19,
+   "confidence": 0.85
+  },
+  {
+   "type": "window",
+   "label": "Fanlight over Front Door",
+   "x_pct": 30.4,
+   "y_pct": 50.6,
+   "w_pct": 8.4,
+   "h_pct": 5.2,
+   "confidence": 0.55
+  },
+  {
+   "type": "door-front",
+   "label": "Front Door No.14",
+   "x_pct": 30.4,
+   "y_pct": 56.1,
+   "w_pct": 8.8,
+   "h_pct": 14.9,
+   "confidence": 0.94
+  },
+  {
+   "type": "door-front",
+   "label": "Neighbour Front Door No.12B",
+   "x_pct": 13.3,
+   "y_pct": 54.4,
+   "w_pct": 8.2,
+   "h_pct": 19,
+   "confidence": 0.6
+  },
+  {
+   "type": "roof",
+   "label": "Main Roof",
+   "x_pct": 14,
+   "y_pct": 6,
+   "w_pct": 38,
+   "h_pct": 7.5,
+   "confidence": 0.7
+  },
+  {
+   "type": "cladding",
+   "label": "Yellow Stock Brick Facade",
+   "x_pct": 4,
+   "y_pct": 10.5,
+   "w_pct": 90,
+   "h_pct": 64,
+   "confidence": 0.92
+  },
+  {
+   "type": "fascia",
+   "label": "Fascia Board at Eaves",
+   "x_pct": 5,
+   "y_pct": 11.3,
+   "w_pct": 82,
+   "h_pct": 2.6,
+   "confidence": 0.72
+  },
+  {
+   "type": "soffit",
+   "label": "Eaves Soffit",
+   "x_pct": 5,
+   "y_pct": 13.3,
+   "w_pct": 82,
+   "h_pct": 2,
+   "confidence": 0.6
+  },
+  {
+   "type": "guttering",
+   "label": "Eaves Gutter",
+   "x_pct": 5,
+   "y_pct": 11,
+   "w_pct": 82,
+   "h_pct": 2.2,
+   "confidence": 0.7
+  },
+  {
+   "type": "guttering",
+   "label": "Downpipe (right)",
+   "x_pct": 85.8,
+   "y_pct": 14,
+   "w_pct": 3.5,
+   "h_pct": 57,
+   "confidence": 0.8
+  },
+  {
+   "type": "analysis",
+   "sides": {
+    "left": "shared",
+    "right": "shared"
+   },
+   "houseType": "mid-terrace"
+  }
+ ]
+}
