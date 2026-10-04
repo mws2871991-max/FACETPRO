@@ -343,6 +343,35 @@ app.use((req, res, next) => {
   serveStatic(req, res, next);
 });
 
+/* ── INSTALLABLE WEB APP (0074) ──
+   The service worker has to be served from the root to control the whole
+   site, and .js is refused by isPublicPath — rightly, the repository is full
+   of server code. So it gets its own route, naming one file, rather than a
+   hole in the rule. no-cache, so a new worker is picked up on the next visit
+   after a deploy. */
+const SW_SOURCE = path.join(__dirname, 'pwa', 'sw.js');
+app.get('/sw.js', (req, res) => {
+  res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.sendFile(SW_SOURCE);
+});
+/* What the worker shows when a page is opened with no connection. No script,
+   no external anything; it has to work from the cache alone. */
+const OFFLINE_HTML = `<!doctype html><html lang="en-GB"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#FBF8F3">
+<title>You're offline — Facet Pro</title>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#FBF8F3;color:#0D1B2A;
+font:18px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;text-align:center;padding:24px}
+h1{font-size:26px;margin:0 0 8px}p{margin:0 0 20px;color:#444}a{display:inline-block;padding:12px 22px;border-radius:999px;
+background:#0D1B2A;color:#fff;text-decoration:none;font-weight:600}</style></head>
+<body><main><h1>You're offline</h1><p>Facet Pro needs a connection to read your photo and price your house.</p>
+<a href="/design">Try again</a></main></body></html>`;
+app.get('/offline', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache');
+  res.type('html').send(OFFLINE_HTML);
+});
+
 /* ── RATE LIMITERS ── */
 /* Ten a minute is the right number for a homeowner and the wrong number for a
    test that sends one photograph fifteen times on purpose. Overridable so the

@@ -66,6 +66,12 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
 <link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+<!-- 0074: installable. Add to a home screen and it opens full screen, like an app. -->
+<link rel="manifest" href="/assets/manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Facet Pro">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 
 <link rel="stylesheet" href="/assets/fonts.css">
 <link rel="stylesheet" href="/assets/app.css">
@@ -5532,6 +5538,7 @@ function buildVisualizer() {
                       revealWipe();
                       reachedStage('reveal_viewed');
                       renderVisualizerOnly();
+                      if (window.fpOfferInstall) window.fpOfferInstall();
                     },
                   }, 'Reveal my design →'),
                 ]),
@@ -10980,6 +10987,74 @@ document.getElementById('hero-upload')?.addEventListener('click', () => {
     await loadLeads(state.installerToken);
     renderInstallerOnly();
   }
+})();
+</script>
+<script>
+/* 0074: an app without an app store.
+
+   Registers the service worker (pwa/sw.js: an offline page and nothing else)
+   and, once somebody has seen their own house changed, offers to keep it on
+   their home screen — the moment the site has earned it, not on arrival.
+
+   Chrome and Android hand us an install prompt to show on a button; iPhone
+   Safari does not, so it gets the two taps written out. Offered once per
+   visit (sessionStorage: a flag, nothing about the person), never when it is
+   already installed, never in a browser that cannot install it. */
+(function () {
+  var deferred = null;
+  function standalone() {
+    try { return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; } catch (e) { return false; }
+  }
+  function iosSafari() {
+    var u = navigator.userAgent || '';
+    return /iPhone|iPad|iPod/.test(u) && /Safari/.test(u) && !/CriOS|FxiOS|EdgiOS|GSA/.test(u);
+  }
+  function offered() { try { return sessionStorage.getItem('fp_install_offered') === '1'; } catch (e) { return false; } }
+  function markOffered() { try { sessionStorage.setItem('fp_install_offered', '1'); } catch (e) {} }
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js').catch(function () {}); });
+  }
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferred = e; });
+  window.addEventListener('appinstalled', function () { deferred = null; var b = document.getElementById('fp-install'); if (b) b.remove(); });
+
+  function el(tag, style, text) { var n = document.createElement(tag); if (style) n.style.cssText = style; if (text) n.textContent = text; return n; }
+
+  function show() {
+    if (document.getElementById('fp-install') || standalone()) return;
+    var box = el('div', 'position:fixed;top:12px;left:12px;right:12px;margin:0 auto;max-width:520px;z-index:60;' +
+      'background:#18181b;color:#fff;border-radius:16px;padding:14px 44px 14px 16px;box-shadow:0 10px 30px rgba(0,0,0,.25);' +
+      'font-size:16px;line-height:1.4');
+    box.id = 'fp-install'; box.setAttribute('role', 'dialog'); box.setAttribute('aria-label', 'Add Facet Pro to your home screen');
+    box.appendChild(el('div', 'font-weight:600', 'Keep your house on your home screen'));
+    if (deferred) {
+      box.appendChild(el('div', 'color:rgba(255,255,255,.8);margin-top:2px', 'Opens like an app. No app store, no account.'));
+      var go = el('button', 'margin-top:10px;min-height:44px;padding:0 18px;border-radius:999px;border:0;background:#fff;color:#18181b;font-weight:600;font-size:16px', 'Add to home screen');
+      go.type = 'button';
+      go.addEventListener('click', function () {
+        var p = deferred; deferred = null; box.remove();
+        if (p) { p.prompt(); }
+      });
+      box.appendChild(go);
+    } else {
+      box.appendChild(el('div', 'color:rgba(255,255,255,.85);margin-top:2px',
+        'Tap the Share button, then \u201cAdd to Home Screen\u201d. Opens like an app \u2014 no app store.'));
+    }
+    var x = el('button', 'position:absolute;top:6px;right:6px;width:40px;height:40px;border:0;background:transparent;color:#fff;font-size:24px;line-height:1', '\u00d7');
+    x.type = 'button'; x.setAttribute('aria-label', 'Not now');
+    x.addEventListener('click', function () { box.remove(); });
+    box.appendChild(x);
+    document.body.appendChild(box);
+  }
+
+  /* Called by the page once the before-and-after has been revealed. After
+     the reveal wipe (REVEAL_MS), so it does not land on top of it. */
+  window.fpOfferInstall = function () {
+    if (standalone() || offered()) return;
+    if (!deferred && !iosSafari()) return;
+    markOffered();
+    setTimeout(show, 3000);
+  };
 })();
 </script>
 </body>

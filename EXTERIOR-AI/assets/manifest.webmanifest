@@ -1,0 +1,19 @@
+{
+  "name": "Facet Pro — see your house, see the price",
+  "short_name": "Facet Pro",
+  "description": "One photo of your house: new windows, doors, roofline and walls on your actual home, with a planning estimate.",
+  "id": "/design",
+  "start_url": "/design?source=homescreen",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FBF8F3",
+  "theme_color": "#FBF8F3",
+  "lang": "en-GB",
+  "categories": ["lifestyle", "utilities"],
+  "icons": [
+    { "src": "/assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
