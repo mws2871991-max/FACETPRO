@@ -702,8 +702,22 @@ function neighboursRoofWindow(b, roofLine) {
    by BEYOND_DOOR_GAP. A double-fronted house has bays both sides and is
    left alone. */
 const BEYOND_DOOR_GAP = 2;
+/* 0067: but never a window over our own doorway. Number 14, 4 Oct: a live run
+   put the door box a little to one side of the window above it, the window
+   came out "wholly beyond the door", and the house priced 3 windows, not 4.
+   An under-count is the quiet mistake — nobody challenges a missing window
+   until the survey. A window whose bottom is no lower than the top quarter
+   of the door, and which overlaps the door or comes within half a door's
+   width of it, is above our doorway and ours. Number 12's sash, a full door
+   width away, is still next door's. */
+function overOurDoor(b, door) {
+  if (b.y + b.h > door.y + door.h * 0.25) return false;
+  const gap = Math.max(door.x - (b.x + b.w), b.x - (door.x + door.w));
+  return gap < door.w / 2;
+}
 function beyondOurDoor(b, door, bays, sides) {
   if (!door || !bays.length || !sides) return false;
+  if (overOurDoor(b, door)) return false;
   const dc = door.x + door.w / 2;
   const right = bays.every(k => k.x + k.w / 2 > dc), left = bays.every(k => k.x + k.w / 2 < dc);
   if (right && sides.left === 'shared') return b.x + b.w < door.x - BEYOND_DOOR_GAP;
