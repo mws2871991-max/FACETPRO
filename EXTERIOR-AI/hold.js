@@ -1118,6 +1118,26 @@ const CORRECT_MAX_SHARE = 0.60;    // more of the mask than this is not a frame,
  * number, which is the most honest thing to say about it. */
 const CORRECT_AB_TOLERANCE = 24;
 const CORRECT_SKIP_DE = 12;        // already this close to the swatch: leave it alone
+/* Neutral frames (4 Oct). Cream, render 53dc068c: the glass came out blown
+ * white and blotchy. Two things go wrong when both the swatch and the colour
+ * the model used are near-neutral (cream, white, greys):
+ *
+ * 1. The vote can be won by the glass. White frames asked to be cream move
+ *    less than CHANGE_T, so most of the "changed" pixels are the redrawn
+ *    glass, and the glass's colour is taken for the frame's. Its lightness is
+ *    then far from the swatch's — that is how to tell. A frame painted the
+ *    wrong neutral is a few steps of L off; glass is tens. Refuse, and leave
+ *    the render as the model made it.
+ * 2. Blind to L, a neutral frame matches neutral glass and curtains in a/b,
+ *    and they are lifted with it. So for a neutral frame a pixel must also be
+ *    about as light as the frame to count as frame.
+ *
+ * The purple patches on 1a36f6b6 / 478ec46b may be (2) on a dark, barely
+ * blue frame; unconfirmed without those renders. Saturated frames
+ * (Chartwell, lime) take neither path. */
+const CORRECT_NEUTRAL_CHROMA = 30;
+const CORRECT_NEUTRAL_L_BAND = 15;
+const CORRECT_NEUTRAL_MAX_DL = 25;
 
 const srgbToLinear = (v) => { const c = v / 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
 const linearToSrgb = (c) => {
@@ -1220,6 +1240,11 @@ function correctFrameColour(opts) {
     const dl = rgbToLab(...dominant), tl = rgbToLab(...target);
     const dE = Math.sqrt((dl[0] - tl[0]) ** 2 + (dl[1] - tl[1]) ** 2 + (dl[2] - tl[2]) ** 2);
     if (dE < CORRECT_SKIP_DE) return untouched(`already within ΔE ${dE.toFixed(1)} of the swatch`);
+    const neutralFrame = Math.hypot(dl[1], dl[2]) < CORRECT_NEUTRAL_CHROMA;
+    const neutralSwatch = Math.hypot(tl[1], tl[2]) < CORRECT_NEUTRAL_CHROMA;
+    if (neutralFrame && neutralSwatch && Math.abs(dl[0] - tl[0]) > CORRECT_NEUTRAL_MAX_DL) {
+      return untouched(`most-changed colour rgb(${dominant.join(',')}) is ${Math.abs(dl[0] - tl[0]).toFixed(0)} lighter/darker than a neutral swatch — that is the glass, not the frame`);
+    }
 
     /* Which pixels are frame, and how light the model made them on average.
  *
@@ -1242,6 +1267,7 @@ function correctFrameColour(opts) {
       const [L, a2, b2] = rgbToLab(out.data[k * 4], out.data[k * 4 + 1], out.data[k * 4 + 2]);
       const da = a2 - dl[1], db2 = b2 - dl[2];
       if (da * da + db2 * db2 > tol2) continue;   // a different colour: glass, or something the model left alone
+      if (neutralFrame && Math.abs(L - dl[0]) > CORRECT_NEUTRAL_L_BAND) continue;   // neutral like the frame, but not as light: glass
       frame.push(k, L);
       sumL += L;
     }

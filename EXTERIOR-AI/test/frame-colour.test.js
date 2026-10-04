@@ -175,3 +175,39 @@ test('every swatch the page offers has a hex to correct towards', () => {
     }
   }
 });
+
+/* 0072: cream frames blew out the glass (render 53dc068c). Two faults: the
+   vote for "the frame's colour" was won by the glass (frames shade across
+   several bins, a pane of sky sits in one), and a near-neutral frame matched
+   neutral glass in a/b, so the glass was lifted to cream. A real window here:
+   the mask is the whole window, the frame a band round the glass. */
+const inWin = (x, y) => x >= 10 && x < 50 && y >= 10 && y < 50;
+const inGlass = (x, y) => x >= 16 && x < 44 && y >= 16 && y < 44;
+const WIN_MASK = png(W, H, (x, y) => (inWin(x, y) ? [255, 255, 255] : [0, 0, 0]));
+const WIN_ORIG = png(W, H, (x, y) => (inGlass(x, y) ? [90, 95, 100] : inWin(x, y) ? [240, 240, 238] : [150, 110, 90]));
+const window_ = (frame, glass) => png(W, H, (x, y) => (inGlass(x, y) ? glass(x, y) : inWin(x, y) ? frame(x, y) : [150, 110, 90]));
+
+test('cream: when the glass wins the vote, the render is left alone rather than the glass lifted to cream', () => {
+  /* White frames asked to be cream barely change (under CHANGE_T); the
+     redrawn glass is most of what changed, so it wins the vote. */
+  const CREAM = '#F5F0E6';
+  const render = window_((x, y) => [232 + (y % 5) * 2, 230 + (y % 5) * 2, 222 + (y % 5) * 2],   // frames: barely changed
+    (x, y) => (y < 30 ? [100 + (y % 3) * 2, 105, 112] : [150, 156, 164]));                      // glass redrawn
+  const r = correctFrameColour({ render, renderMime: 'image/png', original: WIN_ORIG, originalMime: 'image/png',
+    mask: WIN_MASK, maskMime: 'image/png', hex: CREAM });
+  assert.strictEqual(r.corrected, false);
+  assert.match(r.reason, /that is the glass/);
+  assert.strictEqual(r.buffer, render, 'handed back untouched');
+});
+
+test('a neutral frame that was repainted is corrected, and the glass is not swept in with it', () => {
+  const GREY = '#8A8D8F';
+  const render = window_((x, y) => [180 + (y % 2) * 3, 182 + (y % 2) * 3, 184 + (y % 2) * 3],   // frames came back too light
+    (x, y) => [90 + (y % 9) * 5, 92 + (x % 7) * 5, 96 + (y % 9) * 5]);                         // glass, darker, varied, also redrawn
+  const r = correctFrameColour({ render, renderMime: 'image/png', original: png(W, H, () => [20, 20, 20]), originalMime: 'image/png',
+    mask: WIN_MASK, maskMime: 'image/png', hex: GREY });
+  assert.strictEqual(r.corrected, true, r.reason || '');
+  const out = read(r.buffer);
+  assert.ok(dE(at(out, 12, 30), GREY) < 10, `the frame is agate grey (ΔE ${dE(at(out, 12, 30), GREY).toFixed(1)})`);
+  assert.deepStrictEqual(at(out, 30, 30), at(read(render), 30, 30), 'the glass untouched');
+});
