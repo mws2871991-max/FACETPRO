@@ -39,7 +39,7 @@ test('a picture of choices they have since changed is not shown', () => {
 
 test('the price is on the picture, read from the panel, with its conditions', () => {
   assert.match(h, /id: 'picture-price'/);
-  assert.match(h, /\(state\.renderUrl && state\.revealed && showing === 'after' && !state\.rendering && pictureTotal\(\)\)/);
+  assert.match(h, /\(state\.renderUrl && state\.revealed && showing === 'after' && !state\.rendering && pictureLines\(\)\.length\)/);
   assert.match(h, /'Planning estimate · inc\. VAT'/);
   const p = h.slice(h.indexOf('function pictureTotal()'), h.indexOf('function pictureTotal()') + 300);
   assert.match(p, /getElementById\('estimate-total'\)/);

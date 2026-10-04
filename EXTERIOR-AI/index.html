@@ -5497,9 +5497,10 @@ function buildVisualizer() {
              is a screen away from the photo, so the moment of seeing the house
              was never the moment of seeing the cost. Read from the panel, so
              the two cannot disagree; the conditions travel with the number. */
-          (state.renderUrl && state.revealed && showing === 'after' && !state.rendering && pictureTotal())
+          (state.renderUrl && state.revealed && showing === 'after' && !state.rendering && pictureLines().length)
             ? h('div', { id: 'picture-price', className: 'absolute right-3 top-3 z-10 rounded-xl bg-zinc-900/85 text-white px-3 py-1.5 text-right' }, [
-                h('div', { className: 'measured text-[17px] sm:text-[20px] leading-tight' }, pictureTotal()),
+                h('div', { className: 'picture-price-lines' }, pictureLines().map(l =>
+                  h('div', { className: `measured ${pictureLines().length > 1 ? 'text-[15px] sm:text-[18px]' : 'text-[17px] sm:text-[20px]'} leading-tight` }, l))),
                 h('div', { className: 'text-[12px] sm:text-[13px] text-white/80' }, 'Planning estimate · inc. VAT'),
               ])
             : null,
@@ -6875,6 +6876,10 @@ function buildTotalBar() {
   const hasDoor = state.prefs.doorStyleId && state.prefs.doorStyleId !== 'none';
   const hasWindows = glaz?.price?.windowsIncluded !== false;
   const glazLabel = hasWindows && hasDoor ? 'windows & doors' : hasWindows ? 'windows' : 'doors';
+  /* For the price on the picture (0076): both figures, labelled, when there
+     are two. Kept rather than recomputed, so the chip and this bar cannot
+     disagree. */
+  lastBarFigures = [cladding ? `${cladding} ${cladLabel}` : null, glazing ? `${glazing} ${glazLabel}` : null].filter(Boolean);
 
   /* ── COLLAPSED TO ONE LINE, TAP TO EXPAND ──
      UX Sprint handoff P0-C's second half and its mobile table: "sticky
@@ -10375,14 +10380,30 @@ function pictureTotal() {
    changes, it is copied from the panel again; no copy, no chip. Watching the
    page rather than calling this from each of the dozen render*Only functions,
    because the next one added would forget. */
+/* 0076: the picture can show two trades at once — cream windows AND an Ink
+   Trim roofline, live on 4 Oct — and the panel beside it then shows only the
+   roofline (£4,500 – £6,500) while the windows are another £7,076–£12,866.
+   One figure on that picture understated it by more than half. The bar
+   already shows both, labelled, and deliberately not summed (one is a single
+   figure, the other a range); the chip now says what the bar says. One
+   trade: the panel's figure, as before. */
+var lastBarFigures;   // no initialiser: buildTotalBar may run before this line does
+function pictureLines() {
+  if (lastBarFigures && lastBarFigures.length > 1) return lastBarFigures.slice();
+  const one = pictureTotal();
+  return one ? [one] : [];
+}
 function syncPicturePrice() {
   const chip = document.getElementById('picture-price');
   if (!chip) return;
-  const total = pictureTotal();
-  const num = chip.querySelector('.measured');
-  if (!total) { if (chip.style.display !== 'none') chip.style.display = 'none'; return; }
+  const lines = pictureLines();
+  const box = chip.querySelector('.picture-price-lines');
+  if (!lines.length) { if (chip.style.display !== 'none') chip.style.display = 'none'; return; }
   if (chip.style.display === 'none') chip.style.display = '';
-  if (num && num.textContent !== total) num.textContent = total;
+  if (!box) return;
+  const now = [...box.children].map(n => n.textContent).join('\n');
+  if (now === lines.join('\n')) return;
+  box.replaceChildren(...lines.map(l => h('div', { className: 'measured text-[15px] sm:text-[18px] leading-tight' }, l)));
 }
 var picturePriceSyncQueued = false;
 if (typeof MutationObserver !== 'undefined' && typeof document !== 'undefined') {
