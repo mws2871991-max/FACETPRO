@@ -15,7 +15,8 @@
     "installer-password": "node scripts/installer-password.js",
     "lint": "eslint .",
     "check-pair": "node scripts/check-gallery-pair.js",
-    "check-legal": "node scripts/check-legal-placeholders.js"
+    "check-legal": "node scripts/check-legal-placeholders.js",
+    "solar-check": "node scripts/solar-check.js"
   },
   "license": "ISC",
   "dependencies": {

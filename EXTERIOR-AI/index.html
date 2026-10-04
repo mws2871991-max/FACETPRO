@@ -2375,6 +2375,7 @@ const state = {
      image — so "have they got a house on screen" is not the same question as
      "have they uploaded". See gateUntilSubject(). */
   resumedDesign: false,
+  sidePhotos: [], sideBusy: false, sideError: null,   // 0084: side windows counted from photos
   makeover: false,   // 0083: the one-tap full makeover has been applied
   renderId: null,     // our id for it — the lead sends this, never a URL
   rendering: false,
@@ -7374,10 +7375,13 @@ function buildDetailOptions() {
           return wrap([
             h('p', { className: 'text-lg font-semibold' }, 'Any windows on the sides of the house?'),
             h('p', { className: 'text-base leading-7' }, 'They aren’t in either photo, so they aren’t priced yet.'),
+            sidePhotoInput(),
             h('div', { className: 'mt-2 flex gap-2 flex-wrap' }, [
+              sidePhotoButton('Add a photo of a side'),
               h('button', { type: 'button', className: 'px-5 rounded-full border border-zinc-300 bg-white text-zinc-900 text-lg min-h-[48px]', onClick: () => { state.sideCount = 0; render(); } }, 'No'),
               h('button', { type: 'button', className: 'px-5 rounded-full border border-zinc-300 bg-white text-zinc-900 text-lg min-h-[48px]', onClick: () => setSides(1) }, 'Yes'),
             ]),
+            sidePhotoError(),
           ], true);
         }
         if (sides === 0) {
@@ -7391,10 +7395,17 @@ function buildDetailOptions() {
         return wrap([
           h('p', { className: 'text-lg font-semibold text-zinc-900' }, 'Sides of the house'),
           h('div', { className: 'mt-1 flex items-center justify-between gap-3 flex-wrap' }, [
-            h('p', { className: 'text-base text-zinc-700' }, `${sides} window${sides === 1 ? '' : 's'}, as you told us`),
-            stepper(sides, setSides, 'window on the sides'),
+            h('p', { className: 'text-base text-zinc-700' }, (state.sidePhotos || []).length
+              ? `${sides} window${sides === 1 ? '' : 's'}, from your photo${state.sidePhotos.length === 1 ? '' : 's'} of the side${state.sidePhotos.length === 1 ? '' : 's'}`
+              : `${sides} window${sides === 1 ? '' : 's'}, as you told us`),
+            stepper(sides, (n) => { state.sidePhotos = []; setSides(n); }, 'window on the sides'),
           ]),
           h('p', { className: 'text-base text-zinc-600' }, 'Sizes: typical, not measured'),
+          sidePhotoInput(),
+          (state.sidePhotos || []).length < 2
+            ? h('div', { className: 'mt-1' }, [sidePhotoButton((state.sidePhotos || []).length ? 'Add the other side' : 'Add a photo of a side')])
+            : null,
+          sidePhotoError(),
         ]);
       };
       return h('div', { id: 'window-count', className: 'mt-3 pt-3 border-t border-zinc-200 grid gap-3 scroll-mt-24' }, [
@@ -10085,6 +10096,7 @@ async function handleRearUpload(file) {
     state.backFromPhoto = true;
     state.backPhotoCount = state.backCount;
     state.sideCount = null;
+    state.sidePhotos = [];
     state.rearDoorCount = Number(data.rearDoorCount) || 0;
     reachedStage('count_corrected');
     U(n === 1 ? 'We found 1 window at the back' : `We found ${n} windows at the back`);
@@ -10093,6 +10105,64 @@ async function handleRearUpload(file) {
     state.rearError = err.message || 'We couldn’t read that photo.';
   } finally {
     state.rearBusy = false;
+    render();
+  }
+}
+
+/* ── THE SIDES, FROM PHOTOGRAPHS (0084) ──
+
+   The back already reads from a photo; the sides were a Yes/No and a typed
+   number. Now each side can be a photo too: counted the way the back is (a
+   gable end has no door to measure against, so sizes stay typical), up to
+   two, added to what the back already holds. Typing a number afterwards
+   replaces the photo counts — the homeowner always has the last word.
+   The photo is read and let go of, exactly like the front and the back. */
+function sidePhotoInput() {
+  return h('input', {
+    type: 'file', accept: 'image/*', className: 'hidden', id: 'side-photo-input',
+    'aria-label': 'Add a photo of a side of your house',
+    onChange: (e) => { const f = e.target.files?.[0]; if (f) handleSideUpload(f); e.target.value = ''; },
+  });
+}
+function sidePhotoButton(label) {
+  return h('button', {
+    type: 'button', disabled: state.sideBusy,
+    className: 'cta px-5 rounded-full text-lg font-semibold min-h-[48px]',
+    onClick: () => document.getElementById('side-photo-input')?.click(),
+  }, state.sideBusy ? 'Reading your photo…' : label);
+}
+function sidePhotoError() {
+  return state.sideError
+    ? h('p', { className: 'mt-1 text-base leading-7 text-amber-800' }, state.sideError + ' You can tell us the number instead.')
+    : null;
+}
+async function handleSideUpload(file) {
+  state.sideBusy = true;
+  state.sideError = null;
+  render();
+  try {
+    const { base64, mimeType } = await fileToBase64(file);
+    const res = await fetch('/api/detect', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64, mimeType, elevation: 'side' }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'We couldn\u2019t read that photo.');
+    const n = Number(data.sideWindowCount);
+    if (!Number.isFinite(n)) throw new Error('We couldn\u2019t find the side of the house in that photo.');
+    const before = Number.isFinite(state.sideCount) ? state.sideCount : 0;
+    const backAlone = Math.max(0, (Number(state.backCount) || 0) - before);
+    state.sidePhotos = [...(state.sidePhotos || []), Math.max(0, Math.min(30, n))].slice(0, 2);
+    state.sideCount = state.sidePhotos.reduce((s, x) => s + x, 0);
+    state.backCount = Math.min(30, backAlone + state.sideCount);
+    state.backTouched = true;
+    reachedStage('count_corrected');
+    U(n === 1 ? 'We found 1 window on that side' : `We found ${n} windows on that side`);
+    await refreshGlazing();
+  } catch (err) {
+    state.sideError = err.message || 'We couldn\u2019t read that photo.';
+  } finally {
+    state.sideBusy = false;
     render();
   }
 }
@@ -10131,6 +10201,8 @@ async function handleUpload(file) {
   state.backFromPhoto = false;
   state.backPhotoCount = null;
   state.sideCount = null;
+  state.sidePhotos = [];
+  state.sideError = null;
   state.backTouched = false;
   state.glazing = null;
   U('Looking at your home…');

@@ -47,7 +47,8 @@ test('an unknown elevation reads as the front', () => {
   /* It must not refuse and must not guess: anything unrecognised gets the
      reading the whole product already does. */
   const line = source.match(/const elevation = [^\n]*/)[0];
-  assert.match(line, /'rear'\s*\?\s*'rear'\s*:\s*'front'/,
+  /* 0084 added 'side'; anything else still falls to the front. */
+  assert.match(line, /'rear'\s*\?\s*'rear'\s*:\s*elevRaw === 'side'\s*\?\s*'side'\s*:\s*'front'/,
     'an unrecognised elevation does not fall back to the front');
 });
 
@@ -63,7 +64,7 @@ test('the same photograph is cached separately per elevation', () => {
 });
 
 test('the rear reply omits every front-only finding', () => {
-  const at = source.indexOf("if (elevation === 'rear')");
+  const at = source.indexOf("if (elevation === 'rear' || elevation === 'side')");
   assert.ok(at > 0, 'the rear has no reply of its own');
   const reply = source.slice(at, source.indexOf('  }', at));
 
@@ -166,7 +167,7 @@ test('a rear reading can be cached at all', () => {
      every single time. */
   const at = source.indexOf('const cacheComplete =');
   const block = source.slice(at, at + 200);
-  assert.match(block, /elevation === 'rear' \|\| 'houseType' in cachedAnalysis/,
+  assert.match(block, /elevation !== 'front' \|\| 'houseType' in cachedAnalysis/,
     'the rear is still judged incomplete for lacking a front-only field');
 });
 

@@ -1502,6 +1502,16 @@ Do not count a greenhouse, a shed, a detached garage, or a neighbouring property
 
 Finally add: {"type":"analysis","summary":"2-3 sentence overview of the back of the property","storeys":1,"hasConservatory":false,"hasExtension":false}`;
 
+/* 0084: the side of the house — a gable end, often a path or a drive beside
+   it. Same rules as the back: a count the homeowner can check, nothing
+   measured, nothing of next door's. */
+const SIDE_PROMPT = REAR_PROMPT
+  .replace('this photograph of the BACK of a UK home', 'this photograph of the SIDE (gable end) of a UK home')
+  .replace('"door-rear": a pedestrian back door', '"door-rear": a pedestrian side door')
+  .replace('Do not count a greenhouse, a shed, a detached garage, or a neighbouring property.',
+    'Do not count a greenhouse, a shed, a detached garage, a neighbouring property, or any window on the front or back of the house seen at an angle — only windows in the side wall facing the camera.')
+  .replace('overview of the back of the property', 'overview of the side of the property');
+
 
 function imageFingerprint(buffer, elevation = 'front') {
   /* The elevation is part of the key.
@@ -2401,7 +2411,10 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
      Anything that is not 'rear' is the front, deliberately. An unrecognised
      value should read the photograph the way the whole product already does,
      not refuse and not guess. */
-  const elevation = String(req.body?.elevation || '').toLowerCase() === 'rear' ? 'rear' : 'front';
+  /* 0084: and 'side' — a gable end, read the way the back is: counted, not
+     measured, and never allowed to overwrite the front's house type. */
+  const elevRaw = String(req.body?.elevation || '').toLowerCase();
+  const elevation = elevRaw === 'rear' ? 'rear' : elevRaw === 'side' ? 'side' : 'front';
   if (!image || !mimeType) return res.status(400).json({ error: 'Missing image or mimeType.' });
   const img = readImage(image, mimeType);
   if (!img.ok) return res.status(img.status).json({ error: img.error, ...(img.reason ? { reason: img.reason } : {}) });
@@ -2530,9 +2543,10 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
   };
 
   const answer = (record, id) => (
-    (record.elevation === 'rear')
+    (record.elevation === 'rear' || record.elevation === 'side')
       ? res.json({
-        elevation: 'rear',
+        elevation: record.elevation,
+        sideWindowCount: record.elevation === 'side' ? glazing.frontWindowCount(record.detections) : undefined,
         detections: forDisplay(record.detections),
         detectionId: id,
         rearWindowCount: glazing.frontWindowCount(record.detections),
@@ -2611,7 +2625,7 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
      awaited putDetectionCache write was dead weight, and the log said the
      cache "predates the house-type field" every single time. */
   const cacheComplete = !!cachedAnalysis
-    && (elevation === 'rear' || 'houseType' in cachedAnalysis);
+    && (elevation !== 'front' || 'houseType' in cachedAnalysis);
 
   if (stored && cacheComplete) {
     const id = saveDetectionRecord(stored.detections, stored.aspectRatio !== null
@@ -2695,7 +2709,7 @@ app.post('/api/detect', detectLimiter, async (req, res) => {
           role: 'user',
           content: [
             { type: 'image', source: { type: 'base64', media_type: img.mime, data: img.payload } },
-            { type: 'text', text: elevation === 'rear' ? REAR_PROMPT : `Detect every exterior architectural element on this UK home. Return ONLY a JSON array, no markdown. Detect ALL of these element types if visible:
+            { type: 'text', text: elevation === 'rear' ? REAR_PROMPT : elevation === 'side' ? SIDE_PROMPT : `Detect every exterior architectural element on this UK home. Return ONLY a JSON array, no markdown. Detect ALL of these element types if visible:
 
 - "window": any window
 - "door-front": the main front door, and only a pedestrian front door — never a
@@ -2849,9 +2863,10 @@ For houseType, judge it from what the photograph shows: a gap on both sides is d
 
      doorCount is reported because a back door or a patio door is a priced
      item in its own right, and the homeowner should be told what we saw. */
-  if (elevation === 'rear') {
+  if (elevation === 'rear' || elevation === 'side') {
     return res.json({
-      elevation: 'rear',
+      elevation,
+      sideWindowCount: elevation === 'side' ? glazing.frontWindowCount(detections) : undefined,
       detections: forDisplay(detections), detectionId,
       rearWindowCount: glazing.frontWindowCount(detections),
       rearDoorCount: detections.filter(d => d.type === 'door-rear' || d.type === 'door-patio').length,
