@@ -131,8 +131,26 @@ function cropToBox(buffer, mime, box, marginPct = 0) {
    keeping sills and transoms out. One step, then measure.
 
    The sturdier fix is to measure height against the bay box rather than the
-   crop, so the threshold stops moving with the framing. */
-const PILLAR_PICK = { minH: 0.25, minW: 0.035, maxW: 0.2, minFill: 0.55, minAspect: 2.5, maxStd: 34, maxArea: 0.25 };
+   crop, so the threshold stops moving with the framing.
+
+   minW 0.035 → 0.025 (4 October), measured bay-relative. With 0068 in, the
+   IMG_1830 candidates read against the bay instead of the crop:
+
+     w14h39 f0.72 a2.1 s19   the shaft with its capital   → squat (2.1 < 2.5)
+     w3h38  f0.94 a9.8 s11   the bare shaft               → thin  (3% < 3.5%)
+
+   The second is a column and nothing else: 38% of the bay tall, 94% solid,
+   nearly ten times taller than wide, and the smoothest object in the crop at
+   11 against the glass and net curtains' 31–40. It fails one rule, by half a
+   percentage point, and the rule is simply set above the width of a real
+   pillar — a mullion between bay panes is about 3% of the bay across.
+
+   Only this one moves. minAspect stays at 2.5: it is what keeps sills,
+   transoms and the odd wide capital out, and the capital above this shaft
+   should be picked up by PILLAR_ATTACH, which exists for exactly that. If a
+   later house needs the aspect rule relaxed too, that wants its own evidence
+   rather than being swept in here. */
+const PILLAR_PICK = { minH: 0.25, minW: 0.025, maxW: 0.2, minFill: 0.55, minAspect: 2.5, maxStd: 34, maxArea: 0.25 };
 /* Pass two: the carved capital and the base are their own objects, squat and
    textured, so the shape test above throws them away (0049 on IMG_2068: 16
    objects, 1 kept, capitals green). Any object sitting on a kept shaft —
