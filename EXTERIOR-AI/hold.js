@@ -139,11 +139,35 @@ const PILLAR_PICK = { minH: 0.25, minW: 0.035, maxW: 0.2, minFill: 0.55, minAspe
    centred over it, touching it top or bottom, not much wider, not tall — is
    kept with it. */
 const PILLAR_ATTACH = { maxWidthX: 2.5, maxH: 0.35, gap: 0.04, maxStd: 60 };
-function pillarsFromObjects({ masks, crop, cropMime = 'image/png' } = {}) {
+/* Measured against the BAY, not the crop (4 October).
+ *
+ * minH, minW and maxArea were all fractions of the crop, and the crop is not
+ * a stable thing to measure against: cropToBox takes the bay box plus three
+ * percentage points of the FRAME on each side, so how much of the crop the
+ * bay fills depends on how big the bay is in the photograph.
+ *
+ *   IMG_2068   one bay, 47% of the frame wide — the bay is ~89% of its crop
+ *   IMG_1830   two stacked bays, 20% tall each — the bay is ~77% of its crop
+ *
+ * So the same column measures ~15% smaller on the second house for no reason
+ * but framing, and that is the whole story of this feature: 0.35 was tuned on
+ * IMG_2068, every object on IMG_1830 came back `short`, 0.25 admitted two of
+ * them, and the next two rules then rejected those two by fractions of a
+ * percent. Three of the seven rules were reading the crop.
+ *
+ * Given the bay's size inside the crop, they read the bay instead and one set
+ * of numbers can mean the same thing on every house. Without it (no bay
+ * passed) the crop is used exactly as before. Aspect, fill and smoothness are
+ * ratios and were never affected. */
+function pillarsFromObjects({ masks, crop, cropMime = 'image/png', bayBox = null, cropBox = null } = {}) {
   try {
     const src = decode(crop, cropMime);
     if (!src || !Array.isArray(masks) || !masks.length) return null;
     const W = src.width, H = src.height;
+    /* The bay's own size in pixels of this crop, when the caller knows it. */
+    const frac = (a, b) => (Number.isFinite(Number(a)) && Number(b) > 0 ? Math.min(1, Number(a) / Number(b)) : 1);
+    const refW = W * (bayBox && cropBox ? frac(bayBox.w, cropBox.w) : 1);
+    const refH = H * (bayBox && cropBox ? frac(bayBox.h, cropBox.h) : 1);
     const objs = [];
     for (const mk of masks) {
       const m = mk && decode(mk.buffer, mk.mime || '');
@@ -165,12 +189,12 @@ function pillarsFromObjects({ masks, crop, cropMime = 'image/png' } = {}) {
     /* Why each object was or was not a shaft, for the log: the next live test
        should say which rule failed rather than leave it to be guessed. */
     const why = (o) => {
-      if (o.bh < PILLAR_PICK.minH * H) return 'short';
-      if (o.bw < PILLAR_PICK.minW * W) return 'thin';
-      if (o.bw > PILLAR_PICK.maxW * W) return 'wide';
+      if (o.bh < PILLAR_PICK.minH * refH) return 'short';
+      if (o.bw < PILLAR_PICK.minW * refW) return 'thin';
+      if (o.bw > PILLAR_PICK.maxW * refW) return 'wide';
       if (o.n / (o.bw * o.bh) < PILLAR_PICK.minFill) return 'hollow';
       if (o.bh / o.bw < PILLAR_PICK.minAspect) return 'squat';
-      if (o.n > PILLAR_PICK.maxArea * W * H) return 'big';
+      if (o.n > PILLAR_PICK.maxArea * refW * refH) return 'big';
       if (o.std > PILLAR_PICK.maxStd) return 'textured';
       return null;
     };
@@ -183,7 +207,7 @@ function pillarsFromObjects({ masks, crop, cropMime = 'image/png' } = {}) {
        the rule that dropped it — so a "kept 0" says which threshold to move. */
     const reasons = Object.entries(rejected).map(([k, v]) => `${k}:${v}`).join(' ');
     const candidates = objs.slice().sort((a, b) => b.bh - a.bh).slice(0, 6).map(o =>
-      `w${Math.round(o.bw * 100 / W)}h${Math.round(o.bh * 100 / H)}f${(o.n / (o.bw * o.bh)).toFixed(2)}a${(o.bh / o.bw).toFixed(1)}s${Math.round(o.std)}${why(o) ? '-' + why(o) : '+'}`).join(' ');
+      `w${Math.round(o.bw * 100 / refW)}h${Math.round(o.bh * 100 / refH)}f${(o.n / (o.bw * o.bh)).toFixed(2)}a${(o.bh / o.bw).toFixed(1)}s${Math.round(o.std)}${why(o) ? '-' + why(o) : '+'}`).join(' ');
     if (!shafts.length) return { buffer: null, kept: 0, attached: 0, rejected, reasons, candidates };
     const kept = new Set(shafts);
     let attached = 0;
@@ -191,8 +215,8 @@ function pillarsFromObjects({ masks, crop, cropMime = 'image/png' } = {}) {
       if (kept.has(o)) continue;
       const cx = (o.minX + o.maxX) / 2;
       const on = shafts.find(sh => cx >= sh.minX && cx <= sh.maxX
-        && o.bw <= PILLAR_ATTACH.maxWidthX * sh.bw && o.bh <= PILLAR_ATTACH.maxH * H && o.std <= PILLAR_ATTACH.maxStd
-        && (Math.abs(o.maxY - sh.minY) <= PILLAR_ATTACH.gap * H || Math.abs(o.minY - sh.maxY) <= PILLAR_ATTACH.gap * H
+        && o.bw <= PILLAR_ATTACH.maxWidthX * sh.bw && o.bh <= PILLAR_ATTACH.maxH * refH && o.std <= PILLAR_ATTACH.maxStd
+        && (Math.abs(o.maxY - sh.minY) <= PILLAR_ATTACH.gap * refH || Math.abs(o.minY - sh.maxY) <= PILLAR_ATTACH.gap * refH
             || (o.minY < sh.minY && o.maxY > sh.minY) || (o.minY < sh.maxY && o.maxY > sh.maxY)));
       if (on) { kept.add(o); attached++; }
     }

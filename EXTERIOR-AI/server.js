@@ -4031,7 +4031,11 @@ app.post('/api/render', renderLimiter, async (req, res) => {
           onNote: (why) => obs.record('render', 'pillar mask not used', { bay: n + 1, reason: why }),
         }).then(masks => {
           if (!masks) return null;
-          const picked = pillarsFromObjects({ masks, crop: bayCrop.buffer, cropMime: bayCrop.mime });
+          /* Both boxes, so the shape rules measure the bay and not the crop
+             (which is the bay plus 3 points of the frame, so how much of it
+             the bay fills varies with the house). */
+          const picked = pillarsFromObjects({ masks, crop: bayCrop.buffer, cropMime: bayCrop.mime,
+            bayBox, cropBox: bayCrop.box });
           /* Flat values only: observability drops nested objects, which is how
              0050's rejection reasons never reached the log (0055). */
           obs.record('render', 'pillars picked from objects', { bay: n + 1, of: bayBoxes.length, objects: masks.length, kept: picked ? picked.kept : 0,
