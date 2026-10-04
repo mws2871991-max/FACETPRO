@@ -684,6 +684,33 @@ function neighboursRoofWindow(b, roofLine) {
   return atEdge && (b.y + b.h) <= roofLine;
 }
 
+/* Beyond our own door, on a terrace, is next door (0063).
+
+   Number 14 again, 4 October: the model saw only number 14's door this time,
+   labelled number 12's first-floor sash plainly "First Floor Window (left)",
+   and it was counted — five windows on a four-window house. With number 12's
+   door unseen, aboveAnotherFrontDoor has nothing to stand on.
+
+   The layout says it anyway. A terraced house with a bay has its front in one
+   order: bay, then door (or the mirror). Everything of its own is the bay
+   side of the door or over the door; a window wholly beyond the door, on the
+   far side from the bay, against a party wall, is the house next door's.
+
+   Narrow, because dropping one of their own windows is the worse mistake:
+   a terrace by the model's own reading (that side shared), our door seen,
+   every bay on one side of it, and the window clear of the door's far edge
+   by BEYOND_DOOR_GAP. A double-fronted house has bays both sides and is
+   left alone. */
+const BEYOND_DOOR_GAP = 2;
+function beyondOurDoor(b, door, bays, sides) {
+  if (!door || !bays.length || !sides) return false;
+  const dc = door.x + door.w / 2;
+  const right = bays.every(k => k.x + k.w / 2 > dc), left = bays.every(k => k.x + k.w / 2 < dc);
+  if (right && sides.left === 'shared') return b.x + b.w < door.x - BEYOND_DOOR_GAP;
+  if (left && sides.right === 'shared') return b.x > door.x + door.w + BEYOND_DOOR_GAP;
+  return false;
+}
+
 function windowCandidates(detections, aspectRatio = null) {
   const subject = subjectBox(detections);
   const roofLine = roofLineY(detections);
@@ -706,6 +733,13 @@ function windowCandidates(detections, aspectRatio = null) {
 
   const confident = detectionList(detections)
     .filter(d => d?.type === 'window' && (Number(d?.confidence) || 0) >= MIN_CONFIDENCE);
+  /* For beyondOurDoor: which sides are party walls, and where the bays are. */
+  const analysis = detectionList(detections).find(d => d?.type === 'analysis');
+  const sides = analysis && analysis.sides && typeof analysis.sides === 'object' ? analysis.sides : null;
+  /* With two doors in shot and no way to tell which is ours, stand down — the
+     first door in the list may be next door's (see aboveAnotherFrontDoor). */
+  const layoutDoor = doorBoxes.length > 1 ? ourDoor : doorB;
+  const bayBoxes = confident.filter(d => BAY_LABEL.test(String(d?.label || ''))).map(d => box(d)).filter(Boolean);
 
   let sidelights = 0;
   const units = new Map();          // pane group name -> merged candidate
@@ -723,6 +757,7 @@ function windowCandidates(detections, aspectRatio = null) {
     /* And the same finding from the layout, for the runs where the model does
        not say it in words. */
     if (aboveAnotherFrontDoor(b, ourDoor, doorBoxes)) { neighbours++; notOurs.push(b); continue; }
+    if (beyondOurDoor(b, layoutDoor, bayBoxes, sides)) { neighbours++; notOurs.push(b); continue; }
     if (isSidelight(d)) { sidelights++; continue; }
     if (isFanlight(b, String(d?.label || ''), doorB)) { sidelights++; continue; }
     const label = String(d?.label || '');

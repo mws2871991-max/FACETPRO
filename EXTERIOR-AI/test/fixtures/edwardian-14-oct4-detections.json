@@ -1,0 +1,159 @@
+{
+ "note": "Live /api/detect for number 14, 4 Oct 2026. Number 12's door was not detected and its first-floor sash came back as 'First Floor Window (left)'.",
+ "detections": [
+  {
+   "type": "roof",
+   "label": "Main Roof",
+   "x_pct": 21,
+   "y_pct": 4,
+   "w_pct": 68,
+   "h_pct": 13,
+   "confidence": 0.72
+  },
+  {
+   "type": "window",
+   "label": "Dormer Window",
+   "x_pct": 51.5,
+   "y_pct": 0,
+   "w_pct": 14.5,
+   "h_pct": 10.5,
+   "confidence": 0.92
+  },
+  {
+   "type": "window",
+   "label": "Neighbour Dormer Window (left)",
+   "x_pct": 0,
+   "y_pct": 1.5,
+   "w_pct": 4.5,
+   "h_pct": 6.5,
+   "confidence": 0.6
+  },
+  {
+   "type": "window",
+   "label": "First Floor Window (left)",
+   "x_pct": 12.2,
+   "y_pct": 22,
+   "w_pct": 10,
+   "h_pct": 15.5,
+   "confidence": 0.9
+  },
+  {
+   "type": "window",
+   "label": "First Floor Window (right of pair)",
+   "x_pct": 30.2,
+   "y_pct": 22,
+   "w_pct": 9.8,
+   "h_pct": 16,
+   "confidence": 0.9
+  },
+  {
+   "type": "window",
+   "label": "Bay Window First Floor - Left Pane",
+   "x_pct": 51.2,
+   "y_pct": 18.5,
+   "w_pct": 4.5,
+   "h_pct": 16,
+   "confidence": 0.82
+  },
+  {
+   "type": "window",
+   "label": "Bay Window First Floor - Centre",
+   "x_pct": 58,
+   "y_pct": 17.5,
+   "w_pct": 17,
+   "h_pct": 17,
+   "confidence": 0.92
+  },
+  {
+   "type": "window",
+   "label": "Bay Window First Floor - Right Pane",
+   "x_pct": 79.5,
+   "y_pct": 18.5,
+   "w_pct": 4.5,
+   "h_pct": 16,
+   "confidence": 0.8
+  },
+  {
+   "type": "window",
+   "label": "Bay Window Ground Floor - Left Pane",
+   "x_pct": 51,
+   "y_pct": 49.5,
+   "w_pct": 4.5,
+   "h_pct": 19,
+   "confidence": 0.8
+  },
+  {
+   "type": "window",
+   "label": "Bay Window Ground Floor - Centre",
+   "x_pct": 58.2,
+   "y_pct": 49,
+   "w_pct": 17.5,
+   "h_pct": 20,
+   "confidence": 0.93
+  },
+  {
+   "type": "window",
+   "label": "Bay Window Ground Floor - Right Pane",
+   "x_pct": 80,
+   "y_pct": 49.5,
+   "w_pct": 4.5,
+   "h_pct": 19,
+   "confidence": 0.8
+  },
+  {
+   "type": "window",
+   "label": "Neighbour Ground/First Window (far left, cut off)",
+   "x_pct": 0,
+   "y_pct": 22.5,
+   "w_pct": 2.8,
+   "h_pct": 15,
+   "confidence": 0.45
+  },
+  {
+   "type": "window",
+   "label": "Fanlight above Front Door",
+   "x_pct": 30.5,
+   "y_pct": 50.5,
+   "w_pct": 8.5,
+   "h_pct": 4.5,
+   "confidence": 0.6
+  },
+  {
+   "type": "door-front",
+   "label": "Front Door No.14",
+   "x_pct": 30.4,
+   "y_pct": 55.5,
+   "w_pct": 8.8,
+   "h_pct": 17.5,
+   "confidence": 0.93
+  },
+  {
+   "type": "cladding",
+   "label": "Yellow Stock Brick Facade",
+   "x_pct": 4.5,
+   "y_pct": 11,
+   "w_pct": 85,
+   "h_pct": 63,
+   "confidence": 0.9
+  },
+  {
+   "type": "fascia",
+   "label": "Fascia Board",
+   "x_pct": 5,
+   "y_pct": 11.5,
+   "w_pct": 83,
+   "h_pct": 2.2,
+   "confidence": 0.6
+  },
+  {
+   "type": "analysis",
+   "era": "victorian",
+   "houseType": "mid-terrace",
+   "sides": {
+    "left": "shared",
+    "right": "shared"
+   },
+   "wallMaterial": "yellow-brick"
+  }
+ ]
+}
