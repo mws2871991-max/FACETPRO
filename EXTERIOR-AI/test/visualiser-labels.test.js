@@ -54,7 +54,7 @@ test('the page names the control that is on the screen', () => {
     require('node:path').join(__dirname, '..', 'index.html'), 'utf8');
   assert.ok(!/Drag the slider to compare/.test(page),
     'Step 2 still tells people to drag a slider that was removed');
-  assert.match(page, /Tap Before and After to compare/,
+  assert.match(page, /tap Before and After — to compare/,
     'Step 2 should name the two buttons it actually has');
 
   /* And those buttons must still be what it names. If they are ever replaced

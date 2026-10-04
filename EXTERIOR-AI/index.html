@@ -4806,12 +4806,50 @@ function lightingLayers() {
   return layers;
 }
 
+/* The reveal, shown rather than switched (0064).
+
+   "Reveal my design" swapped the photo for the picture in one frame, so the
+   change happened somewhere the eye was not. Starting on their photo and
+   wiping the new picture across it over a second and a half lets them watch
+   their own house change — the moment the advert promises. Straight on the
+   element, then one render at the end to settle the buttons. */
+/* Press and hold to see before (0064). Tapping two buttons compares two
+   pictures; holding the picture itself compares the house, which is the
+   comparison people make with their own eyes. Straight on the element, not
+   through render(), so nothing is rebuilt mid-press. */
+var restoreAfter = () => { const p = document.getElementById('after-pane'); if (p) p.style.clipPath = `inset(0 ${100 - state.afterPct}% 0 0)`; };
+var HOLD_TO_COMPARE = {
+  onPointerdown: (e) => {
+    if (!state.renderUrl || !state.revealed || e.target.closest('button')) return;
+    const p = document.getElementById('after-pane'); if (p) { p.style.transition = 'clip-path .18s'; p.style.clipPath = 'inset(0 100% 0 0)'; }
+  },
+  onPointerup: restoreAfter, onPointerleave: restoreAfter, onPointercancel: restoreAfter,
+};
+var REVEAL_MS = 1500;
+function revealWipe() {
+  state.afterPct = 0;
+  renderVisualizerOnly();
+  const reduce = (() => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return false; } })();
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const p = document.getElementById('after-pane');
+    state.afterPct = 100;
+    if (!p || reduce) { renderVisualizerOnly(); return; }
+    p.style.transition = `clip-path ${REVEAL_MS}ms cubic-bezier(.65,0,.35,1)`;
+    p.style.clipPath = 'inset(0 0% 0 0)';
+    setTimeout(() => renderVisualizerOnly(), REVEAL_MS + 60);
+  }));
+}
+
 function buildVisualizer() {
   const price = state.price || { cladding: 0, roof: 0, trim: 0, labour: 0, total: 0 };
 
   const beforePane = h('div', { className: 'absolute inset-0 bg-[#E8DED0] grid place-items-center' }, [
     state.uploadedImg
-      ? h('img', { src: state.uploadedImg, alt: 'Your home as it looks today', className: 'w-full h-full object-cover opacity-60 grayscale-[0.2]' })
+      /* Full strength (0064). It was faded to 60% and greyed, so every
+         comparison set a washed-out "before" against a crisp "after" — a
+         difference we made, not the work. The fair comparison is the photo
+         as they took it. */
+      ? h('img', { src: state.uploadedImg, alt: 'Your home as it looks today', className: 'w-full h-full object-cover' })
       : h('span', { className: 'text-base text-zinc-600' }, 'Add a photo to see your home here'),
   ]);
 
@@ -4829,7 +4867,7 @@ function buildVisualizer() {
     /* The filter lives on the <img>, not on anything the server ever sees.
        state.uploadedBase64 is untouched and is what /api/detect, /api/measure
        and /api/render receive. */
-    afterPane = h('div', { className: 'absolute inset-0', style: { clipPath: `inset(0 ${100 - state.afterPct}% 0 0)` } }, [
+    afterPane = h('div', { id: 'after-pane', className: 'absolute inset-0', style: { clipPath: `inset(0 ${100 - state.afterPct}% 0 0)` } }, [
       h('img', {
         src: state.renderUrl,
         onLoad: noteRenderAspect,
@@ -4861,7 +4899,7 @@ function buildVisualizer() {
  * nothing has changed yet — and the status line underneath already says what
  * is happening and how long it takes. Slightly faded and gently pulsing so it
  * is plainly a picture in progress rather than the finished answer. */
-    afterPane = h('div', { className: 'absolute inset-0', style: { clipPath: `inset(0 ${100 - state.afterPct}% 0 0)` } }, [
+    afterPane = h('div', { id: 'after-pane', className: 'absolute inset-0', style: { clipPath: `inset(0 ${100 - state.afterPct}% 0 0)` } }, [
       h('img', {
         src: state.uploadedImg,
         alt: 'Your home, while the new picture is being made',
@@ -4871,8 +4909,24 @@ function buildVisualizer() {
         className: 'absolute left-3 bottom-3 text-base px-2 py-1 rounded-full bg-zinc-900 text-white whitespace-nowrap',
       }, 'Making your picture…'),
     ]);
+  } else if (state.uploadedImg) {
+    /* Their photo, never the sketch, once there is a photo (0064).
+
+       Between pictures — a choice changed, the daily allowance spent, a render
+       that failed — this fell through to the grey schematic, so a homeowner
+       who had just seen their own house was shown two white squares and a
+       black rectangle labelled "Leave as it is colour preview". Their photo
+       and one honest line about the picture is the truthful state. */
+    const why = state.renderUnavailable
+      ? 'Pictures are busy right now — your estimate still works'
+      : (typeof settledTimer !== 'undefined' && settledTimer) ? 'Updating your picture…'
+      : 'Your photo — the new picture appears here';
+    afterPane = h('div', { id: 'after-pane', className: 'absolute inset-0', style: { clipPath: `inset(0 ${100 - state.afterPct}% 0 0)` } }, [
+      h('img', { src: state.uploadedImg, alt: 'Your home as it looks today', className: 'w-full h-full object-cover' }),
+      h('div', { className: 'absolute left-3 bottom-16 text-base px-2 py-1 rounded-full bg-zinc-900/90 text-white' }, why),
+    ]);
   } else {
-    afterPane = h('div', { className: 'absolute inset-0', style: { clipPath: `inset(0 ${100 - state.afterPct}% 0 0)` } }, [
+    afterPane = h('div', { id: 'after-pane', className: 'absolute inset-0', style: { clipPath: `inset(0 ${100 - state.afterPct}% 0 0)` } }, [
       /* The colour, not the photograph.
 
          These filled the schematic's wall and roof with the swatch's image at
@@ -5309,7 +5363,7 @@ function buildVisualizer() {
        for a control that is not on the screen is worse than no instruction:
        the reader assumes the page is broken, or that they have missed
        something. */
-    h('p', { className: 'mt-2 text-lg text-zinc-600 max-w-[62ch]' }, 'Tap Before and After to compare your home now with how it could look. Every colour and material moves the estimate, so there are no surprises later.'),
+    h('p', { className: 'mt-2 text-lg text-zinc-600 max-w-[62ch]' }, 'Press and hold the picture — or tap Before and After — to compare your home now with how it could look. Every colour and material moves the estimate, so there are no surprises later.'),
     /* 1 September handoff §7: "aim for approximately 65–70% visual, 30–35%
        controls". This was 1.2fr / 0.8fr — exactly 60/40, and the estimate
        panel beside it is now a headline figure with the itemisation folded
@@ -5365,8 +5419,9 @@ function buildVisualizer() {
            class ratio before any render exists, which is when the box holds
            the schematic and a fixed shape is right. */
         h('div', {
-          className: 'media-cap relative aspect-[4/3] sm:aspect-[16/10] bg-zinc-100 overflow-hidden',
+          className: 'media-cap relative aspect-[4/3] sm:aspect-[16/10] bg-zinc-100 overflow-hidden select-none touch-pan-y',
           style: state.renderAspect ? { aspectRatio: state.renderAspect } : {},
+          ...HOLD_TO_COMPARE,
         }, [
           h('div', {
             className: 'absolute inset-0',
@@ -5463,6 +5518,7 @@ function buildVisualizer() {
                     className: 'cta mt-5 px-6 rounded-full text-lg font-semibold min-h-[48px]',
                     onClick: () => {
                       state.revealed = true;
+                      revealWipe();
                       reachedStage('reveal_viewed');
                       renderVisualizerOnly();
                     },
