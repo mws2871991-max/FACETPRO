@@ -3553,6 +3553,50 @@ function buildChooser() {
   ]);
 }
 
+/* Asked while the photo is read (0062).
+
+   The question above was only ever on the landing stage, and below the
+   uploader: somebody who went straight to "Upload my house" was never asked
+   what they wanted, and the first picture and price were our guess. Waiting
+   for the answer before reading the photo would add the whole reading time to
+   every visit, so it is asked during the reading instead — the detection runs
+   regardless, and only the first picture waits, for the answer or for
+   TRIAGE_WAIT_MS, whichever comes first. var: read by render(). */
+var TRIAGE_WAIT_MS = 20000;
+var triageTimer = null;
+var triageTimedOut = false;
+function awaitingTriage() {
+  return !!state.uploadedImg && !state.journey && !state.triageAnswered && !state.resumedDesign
+    && !state.conservatoryIntent && !triageTimedOut;
+}
+/* After the answer or the wait, the first picture goes — from wherever the
+   reading has got to. */
+function releaseFirstPicture() {
+  if (triageTimer) { clearTimeout(triageTimer); triageTimer = null; }
+  if (state.detectionStatus === 'success') maybeAutoRender(); else startAutoRender();
+}
+async function answerTriage(id) {
+  state.triageOpen = false;   // answered; state it from here rather than ask again
+  state.triageAnswered = true;
+  await applyJourney(id);
+  if (state.uploadedImg) {
+    releaseFirstPicture();
+    if (state.detectionStatus === 'success') document.getElementById('visualizer-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+function triageInPanel() {
+  if (!awaitingTriage()) return null;
+  return h('div', { id: 'triage-in-panel', className: 'rounded-xl bg-white text-zinc-900 p-4' }, [
+    h('p', { className: 'serif text-[19px] leading-tight' }, 'While we read your house — what would you like to change?'),
+    h('p', { className: 'mt-1 text-base text-zinc-600' }, 'So your first picture and price are for the work you want. You can add the rest afterwards.'),
+    h('div', { className: 'mt-3 flex flex-wrap gap-2' }, TRIAGE.filter(t => !t.href).map(t => h('button', {
+      type: 'button',
+      className: 'px-3.5 py-2 rounded-full border border-zinc-200 bg-white text-base min-h-[44px] hover:border-zinc-900 transition text-left',
+      onClick: () => answerTriage(t.id),
+    }, t.id === null ? 'Not sure — show me ideas' : t.label))),
+  ]);
+}
+
 function buildTriage() {
   if (state.stage !== 'landing') return h('div', {});
 
@@ -3658,9 +3702,7 @@ function buildTriage() {
               setTimeout(() => document.querySelector(t.href)?.scrollIntoView({ behavior: 'smooth' }), 40);
               return;
             }
-            state.triageOpen = false;   // answered; state it from here rather than ask again
-            state.triageAnswered = true;
-            await applyJourney(t.id);
+            await answerTriage(t.id);
             document.getElementById('your-photo')?.scrollIntoView({ behavior: 'smooth' });
           },
         }, t.hint
@@ -4610,6 +4652,7 @@ function buildUploadDetect() {
           h('div', { className: 'text-base text-white/80 font-semibold' }, 'What we found'),
           h('div', { className: `text-base px-2 py-1 rounded-full font-medium ${detectionBadge.className}` }, detectionBadge.text),
         ]),
+        triageInPanel(),
         analysisPanel(),
         /* Proof you looked, in one line rather than twenty.
 
@@ -9944,6 +9987,12 @@ async function handleUpload(file) {
      have. See reportJourneyTiming. */
   journeyStartedAt = Date.now();
   startAnalysisNarration();
+  /* Nobody is held up by a question they ignore (0062). */
+  triageTimedOut = false;
+  if (triageTimer) clearTimeout(triageTimer);
+  triageTimer = (!state.journey && !state.triageAnswered && !state.resumedDesign && !state.conservatoryIntent)
+    ? setTimeout(() => { triageTimer = null; if (!awaitingTriage()) return; triageTimedOut = true; render(); releaseFirstPicture(); }, TRIAGE_WAIT_MS)
+    : null;
   const url = URL.createObjectURL(file);
   state.uploadedImg = url;
   state.stage = 'detecting';
@@ -10128,7 +10177,9 @@ async function handleUpload(file) {
   await autoMeasure();
   await Promise.all([refreshPrice(), refreshGlazing()]);
   render();
-  document.getElementById('visualizer-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  /* Not while the question is still open: moving the page would take it off
+     screen (0062). Their answer scrolls them on instead. */
+  if (!awaitingTriage()) document.getElementById('visualizer-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   maybeAutoRender();
 }
 
@@ -10274,6 +10325,7 @@ function hasDrawableChange() {
 
 function startAutoRender() {
   if (autoRenderDone || state.rendering || state.renderUrl) return;
+  if (awaitingTriage()) return;   // the first picture waits for their answer (0062)
   if (!state.uploadedBase64) return;
   if (state.renderUnavailable || state.detectUnavailable) return;
   applyHouseTypePreset();
@@ -10284,6 +10336,7 @@ function startAutoRender() {
 
 function maybeAutoRender() {
   if (autoRenderDone || state.rendering || state.renderUrl) return;
+  if (awaitingTriage()) return;   // the first picture waits for their answer (0062)
   if (!state.uploadedBase64) return;
   if (state.renderUnavailable || state.detectUnavailable) return;
   if (!state.detections.filter(d => d.type !== 'analysis').length) return;
