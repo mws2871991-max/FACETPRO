@@ -128,8 +128,19 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
      normal text. Ink is 6.09:1, close to the 6.70:1 the blue gave with white,
      so the contrast does not regress. The hover darkens to #A87C34, still
      5.03:1. */
-  .cta{background-color:var(--brand-gold) !important;color:#111111 !important;border-color:var(--brand-gold) !important}
-  .cta:hover{background-color:var(--brand-gold-hover) !important;border-color:var(--brand-gold-hover) !important}
+  /* 0080: the button has to stand out from the page, not only its text from
+     the button. #B98A3E against the cream page is 2.93:1, under the 3:1 WCAG
+     2.2 asks of a control's edge (1.4.11) — on a phone in daylight the main
+     "Upload my house" button read as a beige patch beside the before/after
+     and its caption. The button gold is now #A87B36: 3.57:1 against the
+     cream, 3.73:1 on the white cards, ink on it 4.99:1 (AA for normal text,
+     since 18px semibold is not "large"). Hover #A27634, ink 4.6:1. A soft
+     shadow lifts it off photographs. The lighter brand gold stays for
+     accents, where nothing has to be pressed. */
+  :root{--brand-gold-cta:#A87B36;--brand-gold-cta-hover:#A27634}
+  .cta{background-color:var(--brand-gold-cta) !important;color:#111111 !important;border-color:var(--brand-gold-cta) !important;box-shadow:0 1px 2px rgba(13,27,42,.18),0 4px 14px rgba(13,27,42,.14)}
+  .cta:hover{background-color:var(--brand-gold-cta-hover) !important;border-color:var(--brand-gold-cta-hover) !important}
+  .cta:focus-visible{outline:3px solid #0D1B2A;outline-offset:3px}
   .measured{font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-0.01em}
   /* The estimate has been sitting in the panel the whole time the render was
      being made, so when the picture finally lands there is nothing to say
