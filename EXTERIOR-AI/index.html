@@ -10356,6 +10356,36 @@ function pictureTotal() {
   return /£/.test(total) ? total : null;
 }
 
+/* The price on the picture went stale (4 Oct): change the window count with
+   the stepper and the panel moved, the chip on the picture did not.
+
+   Two causes. render() builds the visualiser BEFORE the estimate panel (see
+   MOUNTS), so pictureTotal() read the old panel, one change behind. And the
+   stepper and the glazing reply re-render the panel only — the visualiser,
+   and the chip in it, is never rebuilt at all.
+
+   So the chip is not trusted to be right when built. Whenever the page
+   changes, it is copied from the panel again; no copy, no chip. Watching the
+   page rather than calling this from each of the dozen render*Only functions,
+   because the next one added would forget. */
+function syncPicturePrice() {
+  const chip = document.getElementById('picture-price');
+  if (!chip) return;
+  const total = pictureTotal();
+  const num = chip.querySelector('.measured');
+  if (!total) { if (chip.style.display !== 'none') chip.style.display = 'none'; return; }
+  if (chip.style.display === 'none') chip.style.display = '';
+  if (num && num.textContent !== total) num.textContent = total;
+}
+var picturePriceSyncQueued = false;
+if (typeof MutationObserver !== 'undefined' && typeof document !== 'undefined') {
+  new MutationObserver(() => {
+    if (picturePriceSyncQueued) return;
+    picturePriceSyncQueued = true;
+    requestAnimationFrame(() => { picturePriceSyncQueued = false; syncPicturePrice(); });
+  }).observe(document.documentElement, { childList: true, subtree: true, characterData: true });
+}
+
 /* Called from handleUpload the moment the bytes exist, before detection has
    answered. Every guard maybeAutoRender applies still applies except the one
    it cannot know yet — whether anything was found in the photograph. */
