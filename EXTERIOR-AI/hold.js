@@ -999,9 +999,9 @@ function restorePillars(opts) {
       if (m.data[(my * m.width + mx) * 4] >= MASK_ON) on.push(y * W + x);
     }
     const share = on.length / (W * H);
-    const ofBay = on.length / ((bx1 - bx0 + 1) * (by1 - by0 + 1));
+    const bayArea = (bx1 - bx0 + 1) * (by1 - by0 + 1);
     if (share < PILLAR_MIN_SHARE) return untouched(`pillar mask covers only ${(share * 100).toFixed(2)}% of the frame`);
-    if (bay && ofBay > PILLAR_MAX_OF_BAY) return untouched(`pillar mask covers ${(ofBay * 100).toFixed(0)}% of the bay — that is the window, not its pillars`);
+    if (bay && on.length / bayArea > PILLAR_MAX_OF_BAY) return untouched(`pillar mask covers ${(on.length / bayArea * 100).toFixed(0)}% of the bay — that is the window, not its pillars`);
     if (bay) {
       const height = by1 - by0 + 1, perX = new Map();
       for (const k of on) { const x = k % W; perX.set(x, (perX.get(x) || 0) + 1); }
@@ -1011,6 +1011,12 @@ function restorePillars(opts) {
         for (let y = by0; y <= by1; y++) { const k = y * W + x; if (!have.has(k)) { have.add(k); on.push(k); } }
       }
     }
+    /* Measured on what will actually be held (4 October, dev): the guard above
+       read the mask before the shafts were run the full height of the bay, so
+       a mask of many short columns could pass at 20% and then hold half the
+       bay — frames and all — to the photograph. Checked again after. */
+    const ofBay = on.length / bayArea;
+    if (bay && ofBay > PILLAR_MAX_OF_BAY) return untouched(`pillars held full height would cover ${(ofBay * 100).toFixed(0)}% of the bay — that is the window, not its pillars`);
     const px = [0, 0, 0];
     for (const k of on) {
       const x = k % W, y = (k - x) / W;

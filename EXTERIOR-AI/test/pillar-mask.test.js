@@ -212,3 +212,14 @@ test('every way a pick fails to become a hold is logged (0055)', () => {
   assert.match(server, /no window mask for this render/);
   assert.match(server, /window mask was not used, so the pillar hold did not run/);
 });
+
+test('the of-the-bay guard measures what will be held, after the shafts are run full height', () => {
+  /* Dev, 4 October: ofBay was read before the extension. Thirty short columns
+     are ~20% of the bay as found, ~46% once each is held top to bottom. */
+  const stripes = png((x, y) => (x >= 20 && x < 80 && x % 2 === 0 && y >= 50 && y < 70 ? [255, 255, 255] : [0, 0, 0]));
+  const r = restorePillars({ ...base, mask: stripes });
+  assert.strictEqual(r.restored, false, 'refused: it would have held half the bay');
+  assert.match(r.reason, /full height.*of the bay/);
+  const ok = restorePillars(base);
+  assert.ok(ok.restored && ok.ofBay < 0.45, 'real pillars still held, and ofBay reports the held area');
+});
