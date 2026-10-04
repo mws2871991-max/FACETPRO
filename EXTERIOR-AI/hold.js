@@ -982,10 +982,19 @@ function restoreInsideMask(opts) {
    there covers 0.09% of the frame and was refused for it. The pillar has not
    got smaller, the house has.
 
-   Against the bay the floor means what it says — a mask under 1% of the bay
-   cannot be its columns — and it reads the same on any house. Without a bay
-   box the frame is used as before. */
-const PILLAR_MIN_OF_BAY = 0.01;
+   Against the bay the floor means what it says and reads the same on any
+   house. Without a bay box the frame is used as before.
+
+   0.01 → 0.005 (4 October, measured). 1% was picked by reasoning — "under a
+   hundredth of a bay cannot be its columns" — and the very next run refused
+   the right object at 0.82%: on number 14 the pick keeps one shaft of the
+   four, and one mullion of a bay genuinely is under a hundredth of it. That
+   is the second number here set from the armchair rather than from the
+   photograph, so this one comes off the measurement: 0.82% is a real single
+   shaft, 0.5% sits below it with room and still refuses a stray few hundred
+   pixels. It wants revisiting once PILLAR_ATTACH keeps the capitals too and
+   a hold is several columns rather than one. */
+const PILLAR_MIN_OF_BAY = 0.005;
 const PILLAR_MIN_SHARE = 0.002;
 const PILLAR_MAX_OF_BAY = 0.45;
 /* A column of the bay is a shaft when the mask covers this much of its height.
