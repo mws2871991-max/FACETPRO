@@ -53,3 +53,20 @@ test('a window a full door width away is still next door\'s', () => {
   assert.strictEqual(g.frontWindowCount(F), 4);
   assert.ok(g.neighbourWindowBoxes(F).some(b => Math.abs(b.x - 12.2) < 0.01));
 });
+
+/* 0079: the dev's number 14 still read 3 after 0067 — on that run the
+   window over our own door carried a neighbour's word in its label, and the
+   label rule (disowned) took it before the layout rule was asked. */
+test('a window over our own door is ours even when its label says neighbour', () => {
+  for (const label of ['Neighbour window (right of pair)', 'Adjacent house window', 'Next-door first floor window']) {
+    const v = F.map(d => d.label === 'First Floor Window (right of pair)' ? { ...d, label } : d);
+    assert.strictEqual(g.frontWindowCount(v), 4, label);
+    assert.ok(g.frontWindowBoxes(v).some(b => Math.abs(b.x - 30.2) < 0.01), `${label}: kept`);
+  }
+});
+
+test('a neighbour-labelled window that is NOT over our door is still next door\'s', () => {
+  const v = F.map(d => d.label === 'First Floor Window (left)' ? { ...d, label: 'Neighbour window' } : d);
+  assert.ok(g.neighbourWindowBoxes(v).some(b => Math.abs(b.x - 12.2) < 0.01));
+  assert.strictEqual(g.frontWindowCount(v), 4);
+});

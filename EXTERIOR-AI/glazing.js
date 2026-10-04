@@ -793,7 +793,16 @@ function windowCandidates(detections, aspectRatio = null) {
     if (!subject && neighboursRoofWindow(b, roofLine)) { neighbours++; notOurs.push(b); continue; }
     /* The model's own word on whose house it is, which a subject box cannot
        know and geometry cannot see. */
-    if (disowned(b, String(d?.label || ''))) { neighbours++; notOurs.push(b); continue; }
+    /* 0079: ...unless it is over our own doorway. Number 14 still read 3 for
+       the dev after 0067: on that run the window above our door came back
+       with a neighbour's word in its label, and disowned() took it before
+       beyondOurDoor (where 0067's exemption lives) was ever asked. A window
+       directly over the door we have identified as ours is ours, whatever
+       the label says — the same rule, applied to the words as well as the
+       layout. Only with a door we trust (layoutDoor: null when two doors are
+       in shot and we cannot tell which is ours). */
+    const overOurs = !!layoutDoor && overOurDoor(b, layoutDoor);
+    if (!overOurs && disowned(b, String(d?.label || ''))) { neighbours++; notOurs.push(b); continue; }
     /* And the same finding from the layout, for the runs where the model does
        not say it in words. */
     if (aboveAnotherFrontDoor(b, ourDoor, doorBoxes)) { neighbours++; notOurs.push(b); continue; }
