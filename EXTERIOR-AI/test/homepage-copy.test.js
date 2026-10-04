@@ -11,8 +11,9 @@ const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
 const LINES = [
   ['the h1', '>See your house. See the price.</h1>'],
-  ['the sub-head', 'You&rsquo;ve been meaning to do the front for years. One photo, and you&rsquo;ll see it finished &mdash; and what it costs.'],
-  ['the primary button', '>Upload my house</button>'],
+  ['the sub-head', 'Upload one photo of your home. See new windows, doors, roofline, walls and more on your actual house &mdash; with a planning estimate.'],
+  ['the four steps', '>Your price &mdash; then you decide</span>'],
+  ['the primary button', '>Upload my house &rarr;</button>'],
   ['the promise in the closing band', 'No measuring. No sales call. No pressure.'],
   ['the photo line at the button', 'We use it only to make your picture.'],
 ];
