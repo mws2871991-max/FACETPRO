@@ -520,6 +520,9 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
            and in the privacy notice this links to. -->
       <p class="pb-2 leading-7 text-zinc-600">We use it only to make your picture. Once your picture has been made, the photo is deleted &mdash; never published, sold, or used to train AI. <a href="/privacy#your-photograph" class="underline underline-offset-2">Full details</a></p>
     </details>
+    <!-- 0081 (outside review, 4 Oct): who it is for, before they wonder. The
+         house types are the ones the picker offers; flats are not one of them. -->
+    <p class="mt-2 text-base text-zinc-700">Works best on houses and bungalows &mdash; detached, semi or terraced &mdash; photographed from the front.</p>
     </div>
     <!-- What the product does, at a glance, above the choice.
 
@@ -4530,6 +4533,9 @@ function buildUploadDetect() {
              anything before giving them something. */
           h('p', { className: 'mt-2 text-lg text-zinc-600' },
             'A straight-on photo from across the road usually gives the best result — we size your house against your front door, so the whole front needs to be in shot.'),
+          /* 0081: who it is for, said before they upload rather than after it fails. */
+          h('p', { className: 'mt-2 text-base text-zinc-600' },
+            'Works best on houses and bungalows — detached, semi or terraced. Flats and blocks aren\u2019t supported yet.'),
           h('p', { className: 'mt-2 text-base text-zinc-600 font-semibold' },
             'No measurements · No email · No phone number'),
           helpLine(),
@@ -8616,7 +8622,13 @@ function buildInstallerConsent() {
   } else if (!q.list.length) {
     inner = note(`We don\u2019t have an installer covering ${q.outward} yet, so we can\u2019t ask for quotes there. Your design will still save.`, 'amber');
   } else {
-    inner = consentBox('installerQuotes', [CONSENT_WORDING.installerQuotes.replace('{installers}', joinNames(q.list.map(i => i.name)))]);
+    /* 0081: the reassurance at the moment of asking, in one line, before the
+       long consent wording. Same facts as privacy.html §"Who we share it with". */
+    inner = h('div', {}, [
+      h('p', { className: 'text-base leading-7 text-zinc-800 font-semibold', id: 'quotes-reassurance' },
+        `Only ${q.list.length === 1 ? 'the installer' : `the ${q.list.length} installers`} named below get your details, and only if you tick the box. We never sell your details to anyone else or add you to a marketing list.`),
+      consentBox('installerQuotes', [CONSENT_WORDING.installerQuotes.replace('{installers}', joinNames(q.list.map(i => i.name)))]),
+    ]);
   }
   if (ready && state.quote?.intent === 'quotes') {
     inner = h('div', { className: `rounded-xl border-2 p-3 ${state.consent.installerQuotes ? 'border-emerald-600 bg-emerald-50' : 'border-amber-500 bg-amber-50'}` }, [
@@ -9446,6 +9458,10 @@ function buildSaveFraming() {
           : (state.consent.installerQuotes
               ? `Get my free ${journeyNoun(state.journey) ? journeyNoun(state.journey) + ' ' : ''}quotes →`
               : 'Save my design →')),
+      /* 0081: the privacy promises from the upload, repeated where the
+         details are handed over. Only what privacy.html already says. */
+      h('p', { className: 'mt-3 text-base leading-7 text-zinc-700 font-semibold', id: 'submit-privacy' },
+        'Your original photo isn\u2019t stored \u00b7 Your details go only where you tick \u00b7 No marketing emails'),
       h('p', { className: 'mt-3 text-base leading-7 text-zinc-600' }, [
         'You can withdraw your consent at any time — see the ',
         h('a', { href: '/privacy', target: '_blank', rel: 'noopener', className: 'underline hover:text-zinc-700' }, 'Privacy Notice'),
