@@ -3608,9 +3608,28 @@ function buildChooser() {
 var TRIAGE_WAIT_MS = 20000;
 var triageTimer = null;
 var triageTimedOut = false;
+/* Still un-asked, and still worth asking. Since 5 October this no longer holds
+   the first picture back (see startAutoRender) — it only decides whether the
+   question is on screen. */
 function awaitingTriage() {
   return !!state.uploadedImg && !state.journey && !state.triageAnswered && !state.resumedDesign
     && !state.conservatoryIntent && !triageTimedOut;
+}
+/* Show their house changed FIRST, then ask what they came for (Mike, 5 Oct:
+   "upload photo … then see what new windows doors will look like … then what
+   are you looking for").
+
+   0062 put the question in the analysis panel and made the first picture wait
+   for the answer or twenty seconds, so the one thing the person came to see
+   was held behind a form. It is the right question in the wrong place: asked
+   before the reveal it is a toll, asked after it is a conversation with
+   somebody who has just seen their own house with new windows on it.
+
+   So the question waits for the picture, not the other way round. Nobody who
+   has answered, arrived on a journey link or resumed a design is asked at all,
+   exactly as before. */
+function triageAfterReveal() {
+  return awaitingTriage() && !!state.renderUrl && !!state.revealed;
 }
 /* After the answer or the wait, the first picture goes — from wherever the
    reading has got to. */
@@ -3628,10 +3647,13 @@ async function answerTriage(id) {
   }
 }
 function triageInPanel() {
-  if (!awaitingTriage()) return null;
+  /* After the picture now, not during the reading (5 Oct). The wording follows
+     it: they have just seen the house, so this asks what to price rather than
+     explaining why we are asking. */
+  if (!triageAfterReveal()) return null;
   return h('div', { id: 'triage-in-panel', className: 'rounded-xl bg-white text-zinc-900 p-4' }, [
-    h('p', { className: 'serif text-[19px] leading-tight' }, 'While we read your house — what would you like to change?'),
-    h('p', { className: 'mt-1 text-base text-zinc-600' }, 'So your first picture and price are for the work you want. You can add the rest afterwards.'),
+    h('p', { className: 'serif text-[19px] leading-tight' }, 'That’s your house. What would you like us to price?'),
+    h('p', { className: 'mt-1 text-base text-zinc-600' }, 'Pick what you came for and we’ll size the estimate to it. You can add the rest afterwards.'),
     h('div', { className: 'mt-3 flex flex-wrap gap-2' }, TRIAGE.filter(t => !t.href).map(t => h('button', {
       type: 'button',
       className: 'px-3.5 py-2 rounded-full border border-zinc-200 bg-white text-base min-h-[44px] hover:border-zinc-900 transition text-left',
@@ -10951,7 +10973,6 @@ function hasDrawableChange() {
 
 function startAutoRender() {
   if (autoRenderDone || state.rendering || state.renderUrl) return;
-  if (awaitingTriage()) return;   // the first picture waits for their answer (0062)
   if (!state.uploadedBase64) return;
   if (state.renderUnavailable || state.detectUnavailable) return;
   applyHouseTypePreset();
@@ -10962,7 +10983,6 @@ function startAutoRender() {
 
 function maybeAutoRender() {
   if (autoRenderDone || state.rendering || state.renderUrl) return;
-  if (awaitingTriage()) return;   // the first picture waits for their answer (0062)
   if (!state.uploadedBase64) return;
   if (state.renderUnavailable || state.detectUnavailable) return;
   if (!state.detections.filter(d => d.type !== 'analysis').length) return;
