@@ -97,6 +97,54 @@ above supports and no more.
 
 Answer the two columns below and the stronger claim can come back.
 
+## What the trail could settle — 5 October 2026
+
+The file said above that the provenance "cannot be recovered from the images"
+and "has to come from whoever put them there". Half of that turned out to be
+wrong: the images are stripped, but the history around them is not. Traced on
+5 October, and recorded here so nobody spends the hour again.
+
+**Where they came from.** `7a27b6f` (1 August, "Add a gallery of real completed
+work") took them from the Viewframe salvage kit, which is still at
+`~/Downloads/viewframe` and has its **own git history**:
+
+| Commit | Date | Says |
+|---|---|---|
+| `2de0414` | 22 Jun 2026 | "Add before/after gallery with 3 interactive sliders and 2 showcase photos" |
+| `a3f1499` | 30 Jun 2026 | "Add **real** before/after gallery card 1: white to black sash & bay windows" |
+| `5b3529b` | 2 Jul 2026 | "Fix upside-down/rotated gallery photo" — stripped a stale EXIF orientation tag "without touching pixels" |
+
+So the missing metadata is explained: it was removed to fix a sideways render,
+not to hide anything. And the Viewframe commits call them real, but record no
+source, no job and no permission — the three columns below.
+
+**One original survived un-stripped**, in `~/Downloads/Photos & Videos/`:
+
+    gallery-1-before.jpg   Apple iPhone 16, 2026:06:27 14:18:17, 5712x4284, Display P3, no GPS
+
+That is a photograph, taken on a phone, on a Saturday afternoon in June. It
+settles "real job?" for that pair outright.
+
+**It is the pair that is already gone.** `gallery-1-before` is the Victorian
+terrace — the same house as the deleted `terrace-before.jpg`, compared frame by
+frame on 5 October: rendered front, white sash above, grey bay below. It was
+removed in `91d095b` because the plaque read "118, Dysons R…". So the one pair
+whose provenance is now beyond doubt is the one taken off the page, and taking
+it off was right anyway: the address was legible.
+
+**For the three still on the page, the trail is cold.** No EXIF on
+`gallery-2/3/4` in `viewframe/public`, no notes in the salvage handoff, nothing
+in either history naming a customer or a date. They cannot be substantiated
+from this machine. The answers exist only in somebody's memory.
+
+What this does and does not change:
+
+- **"Photographs, not renders" is in better shape**, not worse. The pixel check
+  below already supported it; a sibling from the same batch now carries camera
+  metadata, which is as close to proof as a stripped file allows.
+- **"Real work" and permission are untouched.** Nothing found says whose houses
+  these are or that anyone agreed. Six UNKNOWNs, below, unchanged.
+
 ## Fill this in
 
 | File | Real job? | Address or job ref | Date | Work carried out | Photographer | Homeowner permission held |
