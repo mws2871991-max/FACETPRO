@@ -489,7 +489,7 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
          below, and on /how-we-price — for the visitor who is already
          interested. The id stays choose-heading: it is the page's one h1 and
          the route-heading map and tests point at it. -->
-    <h1 id="choose-heading" class="serif mt-2 text-[34px] sm:text-[44px] leading-[1.05] tracking-tight">See your house. See the price.</h1>
+    <h1 id="choose-heading" class="serif mt-2 text-[34px] sm:text-[44px] leading-[1.05] tracking-tight">See your house.<br>See what it could cost.</h1>
     <!-- The sub-head carries the feeling; the h1 carries the promise.
          It was a feature list with five nouns in it, and the three
          reassurances under the button were the second and third things
@@ -506,8 +506,11 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
     <!-- 0066 (4 Oct, outside review): say exactly what the product does, in
          the order it happens, and get them into it. The "meaning to" line was
          a feeling; this is the offer. -->
-    <p class="mt-3 text-lg leading-7 text-zinc-700 max-w-[46ch]">Upload one photo of your home. See new windows and a new front door on your actual house &mdash; with a planning estimate.</p>
-    <button type="button" class="mt-5 cta w-full sm:w-auto px-7 py-4 rounded-full text-lg font-semibold transition min-h-[52px]" onclick="goToUpload()">Upload my house &rarr;</button>
+    <!-- 0086 (5 Oct, Michael Stephenson's launch review): sell the outcome, not
+         the mechanism. Nobody wants to upload a photograph; they want to see
+         their house and the likely price. -->
+    <p class="mt-3 text-lg leading-7 text-zinc-700 max-w-[52ch]">Upload one photo. Try new windows, doors and exterior improvements on your actual home &mdash; then see an itemised planning estimate before you speak to an installer.</p>
+    <button type="button" class="mt-5 cta w-full sm:w-auto px-7 py-4 rounded-full text-lg font-semibold transition min-h-[52px]" onclick="goToUpload()">See my house &amp; price &rarr;</button>
     <!-- 0065: the three reassurances that decide the click, at the click. -->
     <p class="mt-3 text-base text-zinc-700">Free to try &middot; No account &middot; No sales call</p>
     <!-- The privacy answer at the moment of deciding (Mike, 29 September).
@@ -516,37 +519,44 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
          opens in place rather than sending anyone away from the button.
          Says what legal/privacy.html says — test/photo-privacy.test.js. -->
     <details class="photo-privacy mt-1 text-base text-zinc-700 max-w-[60ch]">
-      <summary class="cursor-pointer py-2.5 leading-6">Your original photo isn&rsquo;t stored. <span class="underline underline-offset-2">See how your photo is used</span></summary>
+      <summary class="cursor-pointer py-2.5 leading-6">Your original photo isn&rsquo;t kept. <span class="underline underline-offset-2">See how your photo is used</span></summary>
       <!-- Two sentences, not five (1 October, Mike): the first screen is house,
            picture, price. The AI services and the seven-day fingerprint are
            still said in full in the FAQ below ("What happens to my photo?")
            and in the privacy notice this links to. -->
-      <p class="pb-2 leading-7 text-zinc-600">We use it only to make your picture. Once your picture has been made, the photo is deleted &mdash; never published, sold, or used by us to train AI. <a href="/privacy#your-photograph" class="underline underline-offset-2">Full details</a></p>
+      <p class="pb-2 leading-7 text-zinc-600">We use it only to make your picture. Once your picture has been made, the photo is deleted &mdash; never published, sold, or used by us to train AI. For seven days we keep a fingerprint of it (not an image) and its measurements, so your estimate stays consistent while you use Facet Pro. <a href="/privacy#your-photograph" class="underline underline-offset-2">Full details</a></p>
     </details>
     </div>
-    <!-- What the product does, at a glance, above the choice.
-
-         29 September, late: Mike's facetpro_before_after_slider.png — number
-         22 before (tired white windows and door) and after (anthracite
-         aluminium windows, red composite door). Both halves are AI-generated
-         illustrations, not a customer's house and not a Facet Pro render, so
-         the caption and the alt text say "Illustration". The "after" also has
-         a new driveway and plants, which Facet Pro does not change or price,
-         so the caption says that too — the rule is not to show a result the
-         tool cannot give. Labels and slider handle cropped out. See
-         assets/work/PROVENANCE.md and test/homepage-pair.test.js. -->
-    <figure class="mt-4 lg:mt-0 max-w-[640px]">
+    <!-- 0086: the product "magic" right under the promise — your house, the new
+         look, the estimated cost, see yours. Replaces the house-22
+         illustration (which had a driveway the tool does not do).
+         Real Facet Pro output: the before is an Unsplash photograph of a UK
+         house; the after and the price are what facetpro.co.uk produced for
+         it (uPVC casement windows, anthracite), the same pair the launch
+         videos use. Price checked on the live site in this session
+         (5 Oct 2026); if window prices change, re-run it and update the
+         figure here and in the installer example below. See
+         assets/work/PROVENANCE.md and test/homepage-demo.test.js. -->
+    <figure id="demo" class="mt-5 lg:mt-0 max-w-[640px]">
       <div class="grid grid-cols-2 gap-2 sm:gap-3">
         <div class="relative rounded-xl overflow-hidden border border-zinc-200 bg-white">
-          <img src="/assets/work/home-22-before-sm.jpg" srcset="/assets/work/home-22-before-400.jpg 400w, /assets/work/home-22-before-sm.jpg 600w, /assets/work/home-22-before.jpg 1200w" fetchpriority="high" sizes="(min-width: 1024px) 280px, (min-width: 640px) 320px, 34vw" alt="Illustration: a brick house with old white windows and a worn white front door" width="600" height="450" loading="eager" decoding="async" class="w-full aspect-[4/3] object-cover bg-zinc-100">
-          <span class="absolute bottom-2 left-2 text-base px-2 py-0.5 rounded-full bg-white text-zinc-900 font-semibold border border-zinc-200">Before</span>
+          <img src="/assets/work/demo-windows-before-600.jpg" srcset="/assets/work/demo-windows-before-400.jpg 400w, /assets/work/demo-windows-before-600.jpg 600w, /assets/work/demo-windows-before-1200.jpg 1200w" sizes="(min-width: 1024px) 280px, 46vw" fetchpriority="high" alt="Photograph: a red-brick house with white sash-style windows" width="600" height="400" loading="eager" decoding="async" class="w-full aspect-[3/2] object-cover bg-zinc-100">
+          <span class="absolute top-2 left-2 text-base px-2 py-0.5 rounded-full bg-white text-zinc-900 font-semibold border border-zinc-200">Your house</span>
         </div>
         <div class="relative rounded-xl overflow-hidden border border-zinc-200 bg-white">
-          <img src="/assets/work/home-22-after-sm.jpg" srcset="/assets/work/home-22-after-400.jpg 400w, /assets/work/home-22-after-sm.jpg 600w, /assets/work/home-22-after.jpg 1200w" fetchpriority="high" sizes="(min-width: 1024px) 280px, (min-width: 640px) 320px, 34vw" alt="Illustration: the same house with anthracite aluminium windows and a red composite front door" width="600" height="450" loading="eager" decoding="async" class="w-full aspect-[4/3] object-cover bg-zinc-100">
-          <span class="absolute bottom-2 left-2 text-base px-2 py-0.5 rounded-full bg-emerald-700 text-white font-semibold">After</span>
+          <img src="/assets/work/demo-windows-after-600.jpg" srcset="/assets/work/demo-windows-after-400.jpg 400w, /assets/work/demo-windows-after-600.jpg 600w, /assets/work/demo-windows-after-1200.jpg 1200w" sizes="(min-width: 1024px) 280px, 46vw" fetchpriority="high" alt="AI visualisation: the same house with anthracite uPVC casement windows" width="600" height="400" loading="eager" decoding="async" class="w-full aspect-[3/2] object-cover bg-zinc-100">
+          <span class="absolute top-2 left-2 text-base px-2 py-0.5 rounded-full bg-emerald-700 text-white font-semibold">New look</span>
         </div>
       </div>
-      <figcaption class="mt-2 text-base leading-6 text-zinc-500">Illustration: new windows and door. The driveway and plants are part of the illustration, not the estimate.</figcaption>
+      <div class="mt-2 rounded-xl bg-zinc-900 text-[#FBF8F3] px-4 py-3 sm:flex sm:items-center sm:justify-between sm:gap-4">
+        <div>
+          <p class="text-base text-white/75">Estimated cost &middot; uPVC casement windows, anthracite</p>
+          <p class="serif text-[26px] sm:text-[30px] leading-tight tracking-tight">&pound;7,076 &ndash; &pound;12,866</p>
+          <p class="text-base text-white/75">Planning estimate &middot; inc. VAT &middot; not a quotation</p>
+        </div>
+        <button type="button" class="mt-3 sm:mt-0 cta w-full sm:w-auto px-5 py-3 rounded-full text-lg font-semibold transition min-h-[48px] whitespace-nowrap" onclick="goToUpload()">See yours &rarr;</button>
+      </div>
+      <figcaption class="mt-2 text-base leading-6 text-zinc-500">Real Facet Pro output. The picture on the right is an AI visualisation. House photo: Unsplash.</figcaption>
     </figure>
     </div>
     <h2 class="mt-8 text-lg font-semibold text-zinc-900">Or start with your windows or front door</h2>
@@ -612,17 +622,35 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
          picture for a year in any browser that has seen it. Four were
          overwritten on 28 September and returning visitors kept the old ones;
          they now have new names. -->
-    <!-- The promise, in one line, under the choice rather than above it. -->
-    <!-- 0066: the whole product in four words, 0085: under the choice, so the first screen is the button. -->
-    <ol class="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3" aria-label="How it works">
-      <li class="rounded-xl bg-white border border-zinc-200 px-4 py-3"><span class="block text-base text-zinc-500 font-semibold">1</span><span class="block text-lg font-semibold text-zinc-900">Your photo</span></li>
-      <li class="rounded-xl bg-white border border-zinc-200 px-4 py-3"><span class="block text-base text-zinc-500 font-semibold">2</span><span class="block text-lg font-semibold text-zinc-900">Your house, transformed</span></li>
-      <li class="rounded-xl bg-white border border-zinc-200 px-4 py-3"><span class="block text-base text-zinc-500 font-semibold">3</span><span class="block text-lg font-semibold text-zinc-900">Your choices</span></li>
-      <li class="rounded-xl bg-white border border-zinc-200 px-4 py-3"><span class="block text-base text-zinc-500 font-semibold">4</span><span class="block text-lg font-semibold text-zinc-900">Your price &mdash; then you decide</span></li>
-    </ol>
     <!-- 0085: who it is for and how we price, under the choice instead of
          between the button and the picture. Same words (test/reassurance-where-it-counts). -->
     <p class="mt-4 text-base leading-7 text-zinc-600">Works best on houses and bungalows &mdash; detached, semi or terraced &mdash; photographed from the front. &middot; <a href="/how-we-price" class="underline underline-offset-2">How we price</a></p>
+  </section>
+
+  <!-- 0086 PROBLEM (Stephenson review, item 4): the two-neighbours line is the
+       strongest positioning on the site and was folded away on /how-we-price.
+       It makes Facet Pro the answer to a consumer problem, not an AI toy. -->
+  <section data-page="home" id="problem" class="rounded-2xl bg-zinc-900 text-[#FBF8F3] p-6 md:p-10" aria-labelledby="problem-heading">
+    <p class="text-base font-semibold text-[#E8C478]">The pricing problem</p>
+    <h2 id="problem-heading" class="mt-2 serif text-[30px] md:text-[44px] leading-[1.02] tracking-[-0.02em]">Two neighbours. Same street.<br>Same windows. Thousands apart.</h2>
+    <p class="mt-4 text-lg leading-7 text-white/80 max-w-[60ch]">The traditional sales process can decide the price as much as the product does: who visits, how long they sit there, and how hard you push.</p>
+    <p class="mt-3 text-lg leading-7 font-semibold max-w-[60ch]">Facet Pro gives you a starting point before the salesperson arrives.</p>
+  </section>
+
+  <!-- 0086 SOLUTION: was "How it works" (four steps, further down). Same id, so
+       the footer link still lands here. -->
+  <section data-page="home" id="how-it-works" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24" aria-labelledby="how-heading">
+    <p class="text-base font-semibold text-zinc-600">How it works</p>
+    <h2 id="how-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">Research your project before you become a lead.</h2>
+    <ol class="mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-4"><span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-base font-medium" aria-hidden="true">1</span><h3 class="mt-3 text-lg font-medium">Visualise</h3><p class="mt-1 text-lg leading-6 text-zinc-600">One photo of the front. See it with new windows and doors.</p></li>
+      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-4"><span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-base font-medium" aria-hidden="true">2</span><h3 class="mt-3 text-lg font-medium">Choose</h3><p class="mt-1 text-lg leading-6 text-zinc-600">Try styles and colours on your own brick.</p></li>
+      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-4"><span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-base font-medium" aria-hidden="true">3</span><h3 class="mt-3 text-lg font-medium">Price</h3><p class="mt-1 text-lg leading-6 text-zinc-600">An itemised estimate that moves with every choice.</p></li>
+      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-4"><span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-base font-medium" aria-hidden="true">4</span><h3 class="mt-3 text-lg font-medium">Decide</h3><p class="mt-1 text-lg leading-6 text-zinc-600">Save it, show someone, sleep on it.</p></li>
+      <li class="col-span-2 sm:col-span-1 rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-4"><span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-base font-medium" aria-hidden="true">5</span><h3 class="mt-3 text-lg font-medium">Quote</h3><p class="mt-1 text-lg leading-6 text-zinc-600">Speak to someone last &mdash; if you want to.</p></li>
+    </ol>
+    <p class="mt-6 serif text-[22px] md:text-[28px] leading-tight tracking-tight">Five home improvements. Start with one photo of the front.</p>
+    <p class="mt-2 text-lg leading-6 text-zinc-600 max-w-[68ch]">Windows, doors, walls, roofline and roof &mdash; priced together. The back and sides come next: add a second photo or tell us.</p>
   </section>
 
   <!-- /how-we-price (24 September). The homepage now opens with the product
@@ -803,10 +831,7 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
       <span class="text-base px-2.5 py-1 rounded-full bg-[#FFF7ED] border border-zinc-200 font-semibold">Photographs, not renders</span>
     </div>
     <p class="mt-2 text-lg leading-6 text-zinc-600 max-w-[64ch]">
-      Three UK homes, photographed from the same spot before and after. Nothing
-      retouched — drag across any picture to see how it started. These are window
-      and door jobs; we price the walls, roofline and roof on the same photo, and
-      those before-and-afters go up here as they finish.
+      Three UK homes, photographed from the same spot before and after. Drag across any picture to see how it started.
     </p>
 
     <div id="work-carousel" class="mt-6 overflow-hidden">
@@ -977,58 +1002,7 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
        homes, how it works. It had drifted below the beta notice, so the four
        steps that explain the whole product sat after a disclaimer about the
        estimate. Hidden on /design, where somebody is already doing it. -->
-  <section data-page="home" id="how-it-works" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24" aria-labelledby="how-heading">
-    <h2 id="how-heading" class="serif text-[26px] md:text-[32px] tracking-tight">How it works</h2>
-    <p class="mt-2 text-lg text-zinc-600 max-w-[62ch]">Four steps, start to finish, without anybody coming to your house.</p>
-    <!-- Four, not three. The customer-journey brief asks for "Your photo,
-         Your home, Your design, Your estimate", and reading what the house
-         is IS a step the customer watches happen — the analysis panel
-         narrates it for fifteen seconds and then shows what it found. Folding
-         it into "upload" described the software's structure rather than the
-         customer's experience, and left the one part that feels like magic
-         unmentioned on the page that has to sell it. -->
-    <!-- Two across on a phone (24 September): stacked, four steps were a
-         screen and a half of a homepage that now opens with the choice. -->
-    <ol class="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
-        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-base font-medium" aria-hidden="true">1</span>
-        <h3 class="mt-4 text-lg font-medium">Upload your home</h3>
-        <p class="mt-2 text-lg leading-6 text-zinc-600">Start with one picture of the front of your house, taken from the pavement. We price what the photo shows, then ask about the back and sides — tell us, or add a second photo. No measuring, no visit.</p>
-      </li>
-      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
-        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-base font-medium" aria-hidden="true">2</span>
-        <h3 class="mt-4 text-lg font-medium">We read your home</h3>
-        <p class="mt-2 text-lg leading-6 text-zinc-600">We find your windows, your front door, the roof and the roofline, and show you what we found so you can tell us if we have it wrong.</p>
-      </li>
-      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
-        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-base font-medium" aria-hidden="true">3</span>
-        <h3 class="mt-4 text-lg font-medium">Try different looks</h3>
-        <p class="mt-2 text-lg leading-6 text-zinc-600">Windows, doors, walls, roof and roofline &mdash; try them on your own house and watch the price move with every choice.</p>
-      </li>
-      <li class="rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5">
-        <span class="w-7 h-7 rounded-full bg-zinc-900 text-white grid place-items-center text-base font-medium" aria-hidden="true">4</span>
-        <h3 class="mt-4 text-lg font-medium">See the likely cost</h3>
-        <p class="mt-2 text-lg leading-6 text-zinc-600">An itemised planning estimate, before you decide whether you want to speak to an installer at all.</p>
-      </li>
-    </ol>
-    <!-- Kept from the long paragraph this replaces, because five appointments
-         is the reader's actual problem and the trades are what they came to
-         price. The rest of it — what never adds up to one figure, the
-         conservatory caveat — is said again where it applies. -->
-    <!-- The claim first, the detail under it. This was one sentence carrying
-         a five-item list, a count, and the whole booking-and-chasing argument
-         at once — commercially the best line on the page and too dense to land
-         at a glance. Same content, read in two beats. -->
-    <p class="mt-6 serif text-[22px] md:text-[28px] leading-tight tracking-tight">Five home improvements. Start with one photo of the front.</p>
-    <!-- The booking-and-chasing clause came out on the 22 September review:
-         "the customer doesn't need to be told repeatedly how frustrating
-         traditional quoting is". They are told once in the hero and again in
-         "Why two neighbours pay thousands apart"; a third time, in the middle
-         of the section explaining how the product works, is arguing where it
-         should be describing. "roofline" rather than "fascias and soffits"
-         because that is the word the rest of the site uses for that trade. -->
-    <p class="mt-2 text-lg leading-6 text-zinc-600 max-w-[68ch]">Windows, doors, walls, roofline and roof &mdash; priced together. The back and sides come next: add a second photo or tell us.</p>
-  </section>
+  <!-- 0086: "How it works" moved up, under the two-neighbours problem. -->
 
   <!-- The invitation, where the explanation ends.
 
@@ -1282,13 +1256,74 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
        it is not a quotation, or why it arrives as a range. Both are said here,
        in two sentences, and everything that explains them further is one tap
        below. -->
-  <section data-page="home" class="rounded-2xl bg-[#FDFCF9] border border-zinc-200 px-6 md:px-8 py-5">
-    <p class="text-lg leading-7 text-zinc-800 max-w-[62ch]">
-      <strong class="font-medium">Every figure here is a planning estimate, not a quotation.</strong>
-      It arrives as a range because a photograph cannot see hidden defects, access or exact
-      measurements &mdash; an installer confirms those on survey, and that is when a price
-      becomes a quote.
-    </p>
+  <!-- 0086 PRICE (Stephenson item 6): the simple answer first, the method one
+       tap away. Don't hide uncertainty; don't make uncertainty the product. -->
+  <section data-page="home" id="price-basis" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24" aria-labelledby="price-basis-heading">
+    <p class="text-base font-semibold text-zinc-600">Where does the number come from?</p>
+    <h2 id="price-basis-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">It&rsquo;s a planning estimate, not a survey.</h2>
+    <p class="mt-3 text-lg leading-7 text-zinc-700 max-w-[62ch]">We use the visible features of your house to estimate quantities, and give you a range rather than pretending a photograph can tell us everything.</p>
+    <ul class="mt-4 space-y-2 text-lg leading-6 text-zinc-700 max-w-[66ch]">
+      <li><strong class="font-medium">Windows and doors:</strong> what these jobs actually sell for, from 24 years of selling them, checked against current UK prices.</li>
+      <li><strong class="font-medium">Walls, roof and roofline:</strong> UK material and labour rates, with scaffolding, waste and VAT.</li>
+      <li><strong class="font-medium">Every figure:</strong> a range, inc. VAT, confirmed on survey.</li>
+    </ul>
+    <details class="mt-4 max-w-[66ch]">
+      <summary class="cursor-pointer py-2 text-lg font-medium underline underline-offset-2">How accurate is the estimate? &rarr;</summary>
+      <div class="pt-2 space-y-3 text-lg leading-7 text-zinc-600">
+        <p><strong class="font-medium text-zinc-800">Scale from the door.</strong> A standard UK front door is very close to 1.98&nbsp;m, so it gives us the scale of everything around it. No tape measure, no visit.</p>
+        <p><strong class="font-medium text-zinc-800">Only what it can see.</strong> A photo of the front measures the front. The back and sides come from a second photo or a number you give us; anything still unseen, like the roof, is labelled an estimate for your house type.</p>
+        <p><strong class="font-medium text-zinc-800">Stated uncertainty.</strong> Every estimate carries a range and says which method produced it. A number without its error bars is a guess.</p>
+        <p>What can still change the final price: the condition of the property, access, hidden work, exact measurements and your final specification. <a href="/how-we-price" class="underline underline-offset-2">The full method</a></p>
+      </div>
+    </details>
+  </section>
+
+  <!-- 0086 INSTALLERS (Stephenson item 5): make the lead tangible. The example
+       is the demo house above, with the figures the site gave it. -->
+  <section data-page="home" id="for-installers" class="rounded-2xl bg-[#FDFCF9] border border-zinc-200 p-6 md:p-8 scroll-mt-24" aria-labelledby="installer-example-heading">
+    <div class="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:gap-10 lg:items-center">
+      <div>
+        <p class="text-base font-semibold text-zinc-600">For installers</p>
+        <h2 id="installer-example-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">Your installer gets the job you&rsquo;ve already designed.</h2>
+        <p class="mt-3 serif text-[22px] md:text-[26px] leading-tight tracking-tight">Your customer has already seen the job.</p>
+        <p class="mt-3 text-lg leading-7 text-zinc-600 max-w-[52ch]">Not a cold lead. Homeowners: only if you ask for quotes, and at most three installers, ever.</p>
+        <a href="/installers" class="mt-4 inline-block text-lg font-medium underline underline-offset-2">For installers &rarr;</a>
+      </div>
+      <div class="mt-6 lg:mt-0 rounded-2xl bg-white border border-zinc-200 p-5 shadow-sm">
+        <p class="text-base font-semibold text-zinc-600">Example Facet Pro enquiry &middot; the house above</p>
+        <dl class="mt-3 divide-y divide-zinc-100 text-lg">
+          <div class="flex justify-between gap-4 py-1.5"><dt class="text-zinc-600">Windows</dt><dd class="font-medium">5</dd></div>
+          <div class="flex justify-between gap-4 py-1.5"><dt class="text-zinc-600">Style</dt><dd class="font-medium">Casement, uPVC</dd></div>
+          <div class="flex justify-between gap-4 py-1.5"><dt class="text-zinc-600">Colour</dt><dd class="font-medium">Anthracite</dd></div>
+          <div class="flex justify-between gap-4 py-1.5"><dt class="text-zinc-600">Front door</dt><dd class="font-medium">Kept as it is</dd></div>
+          <div class="flex justify-between gap-4 py-1.5"><dt class="text-zinc-600">Estimated project</dt><dd class="font-medium text-right">&pound;7,076 &ndash; &pound;12,866<span class="block text-base font-normal text-zinc-500">Planning estimate &middot; inc. VAT &middot; not a quotation</span></dd></div>
+          <div class="flex justify-between gap-4 py-1.5"><dt class="text-zinc-600">Visualisation</dt><dd class="font-medium text-emerald-700">&#10003;</dd></div>
+          <div class="flex justify-between gap-4 py-1.5"><dt class="text-zinc-600">Homeowner has chosen</dt><dd class="font-medium text-emerald-700">&#10003;</dd></div>
+          <div class="flex justify-between gap-4 py-1.5"><dt class="text-zinc-600">Quote requested</dt><dd class="font-medium text-emerald-700">&#10003;</dd></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- 0086 TRUST: accuracy, privacy and beta, said once and plainly. The privacy
+       card uses the retention wording from Stephenson item 8 and matches
+       legal/privacy.html (7-day fingerprint). -->
+  <section data-page="home" id="trust" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24" aria-labelledby="trust-heading">
+    <h2 id="trust-heading" class="serif text-[26px] md:text-[32px] tracking-tight">What we know. What we don&rsquo;t.</h2>
+    <div class="mt-5 grid md:grid-cols-3 gap-3">
+      <div class="rounded-xl border border-zinc-200 bg-[#FDFCF9] p-5">
+        <h3 class="text-lg font-semibold">Accuracy</h3>
+        <p class="mt-2 text-lg leading-6 text-zinc-600">Every price is a range and says how it was worked out. We&rsquo;ll publish how it compares with real quotes once there are enough to mean something.</p>
+      </div>
+      <div class="rounded-xl border border-zinc-200 bg-[#FDFCF9] p-5">
+        <h3 class="text-lg font-semibold">Your photo</h3>
+        <p class="mt-2 text-lg leading-6 text-zinc-600">Your original photograph isn&rsquo;t kept. We temporarily keep a non-image fingerprint and its measurements, so your estimate stays consistent while you use Facet Pro. <a href="/privacy#your-photograph" class="underline underline-offset-2">Privacy notice</a></p>
+      </div>
+      <div class="rounded-xl border border-zinc-200 bg-[#FDFCF9] p-5">
+        <h3 class="text-lg font-semibold">In beta</h3>
+        <p class="mt-2 text-lg leading-6 text-zinc-600">If something looks wrong on your house, tell us. That is how the estimates get sharper.</p>
+      </div>
+    </div>
   </section>
 
   <section data-page="home" id="faq" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="faq-heading">
@@ -1805,12 +1840,9 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
          brief's; the close is still not a repeat of the hero, which was the
          point of the version it replaces. -->
     <h2 id="close-heading" class="serif text-[26px] md:text-[36px] leading-[1.08] tracking-[-0.02em] max-w-[24ch] mx-auto">
-      See your house. See the likely cost. Then decide what to do next.
+      See your house. See the likely cost.
     </h2>
-    <p class="mt-5 text-lg leading-7 text-white/75 max-w-[54ch] mx-auto">
-      Upload a photo and explore your home improvement project before speaking to anyone.
-    </p>
-    <button type="button" class="mt-7 cta px-7 py-4 rounded-full text-lg font-semibold transition min-h-[52px]" onclick="goToUpload()">Upload a photo</button>
+    <button type="button" class="mt-7 cta px-7 py-4 rounded-full text-lg font-semibold transition min-h-[52px]" onclick="goToUpload()">Try it free &rarr;</button>
     <p class="mt-4 text-lg text-white/80">No measurements &nbsp;&bull;&nbsp; No obligation &nbsp;&bull;&nbsp; No sales call unless you ask</p>
   </section>
 
@@ -4646,7 +4678,7 @@ function buildUploadDetect() {
            read it. */
         h('details', { className: 'photo-privacy mt-3 text-base text-zinc-600' }, [
           h('summary', { className: 'cursor-pointer py-2.5 leading-6' }, [
-            'Your original photo isn’t stored. ',
+            'Your original photo isn’t kept. ',
             h('span', { className: 'underline underline-offset-2' }, 'See how your photo is used'),
           ]),
           h('p', { className: 'pb-2 leading-7' }, [

@@ -212,3 +212,10 @@ sentence is doing real persuasive work — which is exactly why it has to be
 true.
 
 The server prints a warning at startup while this file still says UNKNOWN.
+
+## demo-windows-before / demo-windows-after (400, 600, 1200) — homepage demo, 0086, 5 Oct 2026
+
+- Before: a photograph of a UK red-brick house from Unsplash (free licence, commercial use allowed; credited on the page as "House photo: Unsplash"). Not a customer's house and not a Facet Pro job.
+- After: real facetpro.co.uk output for that photograph: uPVC casement windows, anthracite. Labelled "AI visualisation" on the page.
+- Price shown with it: £7,076 – £12,866, the site's planning estimate for that photo and choice, checked on the live site on 5 Oct 2026. Re-check when window prices change.
+- Same pair as the launch videos (UNS config).

@@ -10,10 +10,12 @@ const path = require('path');
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
 const LINES = [
-  ['the h1', '>See your house. See the price.</h1>'],
-  ['the sub-head', 'Upload one photo of your home. See new windows and a new front door on your actual house &mdash; with a planning estimate.'],
-  ['the four steps', '>Your price &mdash; then you decide</span>'],
-  ['the primary button', '>Upload my house &rarr;</button>'],
+  ['the h1', '>See your house.<br>See what it could cost.</h1>'],
+  ['the sub-head', 'Upload one photo. Try new windows, doors and exterior improvements on your actual home &mdash; then see an itemised planning estimate before you speak to an installer.'],
+  ['the five steps', '>Speak to someone last &mdash; if you want to.</p>'],
+  ['the primary button', '>See my house &amp; price &rarr;</button>'],
+  ['the two neighbours, near the top', 'Two neighbours. Same street.<br>Same windows. Thousands apart.'],
+  ['the simple answer first', 'It&rsquo;s a planning estimate, not a survey.'],
   ['the promise in the closing band', 'No measuring. No sales call. No pressure.'],
   ['the photo line at the button', 'We use it only to make your picture.'],
 ];
