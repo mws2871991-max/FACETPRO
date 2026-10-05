@@ -6045,10 +6045,34 @@ function photoNotUsed() {
        written with a curly one, so the strip silently failed and the message
        came out with two endings glued together. Cutting at ", so " needs to
        know far less about the other file's prose. */
+    /* Said plainly, and without the percentages (Mike's phone walk, 5 Oct).
+     *
+     * It read: "The walls fill 80.0% of the photo, outside the 24–32% expected
+     * for a semi-detached — the photo is probably framed too close or too
+     * far., so this uses a typical figure instead."
+     *
+     * Two faults. The ".," is the splitter above: it cuts the note at its own
+     * ", so " clause, and the coverage note has no such clause, so the whole
+     * sentence survives with its full stop and a second ending is glued on.
+     * And the rest is our working read aloud — three percentages and a band,
+     * none of which a homeowner can act on.
+     *
+     * The numbers say which way the framing went, so the advice can too:
+     * above the band is too close, below it is too far. measure.js keeps the
+     * technical note for the working list; this is the sentence beside the
+     * estimate. */
+    const framed = note && note.match(/fill\s+([\d.]+)%[\s\S]*?the\s+(\d+)–(\d+)%\s+expected for a ([^—]+?)\s*—/);
+    const plainWhy = () => {
+      if (!framed) return 'We read your photo but the wall area it gave us looked wrong for this kind of house, so this uses a typical figure instead.';
+      const [, fill, , hi, houseLabel] = framed;
+      const tooClose = Number(fill) > Number(hi);
+      const house = houseLabel.trim();
+      return tooClose
+        ? `Your photo is quite close up, so we’ve used a typical size for a ${house} house. For a closer estimate, try one from across the road — or type your own wall area.`
+        : `Your photo is taken from quite far back, so we’ve used a typical size for a ${house} house. For a closer estimate, try one with the house filling more of the frame — or type your own wall area.`;
+    };
     return {
-      why: note
-        ? `${note.split(/,\s+so\s+/)[0]}, so this uses a typical figure instead.`
-        : 'We read your photo but the wall area it gave us looked wrong for this kind of house, so this uses a typical figure instead.',
+      why: plainWhy(),
       /* The band that refused it is the house type's, and the house type is
          usually a default nobody chose. A detached house measured at 181 m²
          was told to retake a photo that was fine. */
@@ -6095,8 +6119,11 @@ function photoNotUsedNotice(spacing) {
      a render path at all. */
   reachedStage('photo_unmeasured');
 
+  /* 44px, not 28 (Mike's phone walk, 5 Oct). inline-flex with a minimum
+     height rather than padding, so the text keeps its place in the sentence
+     and only the touchable box grows. */
   const link = (label, onClick) => h('button', {
-    type: 'button', className: 'underline underline-offset-2 hover:text-amber-100', onClick,
+    type: 'button', className: 'underline underline-offset-2 hover:text-amber-100 inline-flex items-center min-h-[44px]', onClick,
   }, label);
 
   const openRefine = () => {
@@ -7027,7 +7054,9 @@ function buildTotalBar() {
          saying there is more tells you what to do about it. */
       nothingChosenYet
         ? h('span', { className: 'text-lg text-zinc-600 min-w-0 truncate' },
-          'Tell us what you’d like to change and we’ll price it')
+          /* Short enough for 375px: it was truncating to "Tell us what
+             you'd like to ch…" under the upload box (5 Oct). */
+          'Tell us what to price')
         : h('span', { className: 'flex items-baseline gap-2 min-w-0 overflow-hidden' }, [
         typicalTag,
         cladding ? h('span', { className: 'whitespace-nowrap' }, [

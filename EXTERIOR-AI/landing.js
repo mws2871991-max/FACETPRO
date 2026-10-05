@@ -411,7 +411,7 @@ const COST_PAGES = [
     build: (c) => ({
       answer: (() => {
         const d = doorPrices(c).find(x => /composite/i.test(x.name));
-        return `${money(d.low)} to ${money(d.high)} fitted for a composite front door, which is what most people are choosing.`;
+        return `${money(d.low)} to ${money(d.high)} fitted for a composite front door, supplied and fitted with the old door taken away, inc VAT.`;
       })(),
       sections: [
         { heading: 'By door type', table: {
@@ -445,7 +445,7 @@ const COST_PAGES = [
           } },
           { heading: 'Why scaffolding is the line that surprises people', paras: [
             `Roofline work is all at height, so access is not an optional extra — it is ${money(typical.scaffolding)} of the figure above before anybody touches a fascia board. A quote that omits it is not cheaper, it is incomplete.`,
-            'It is also the reason to do fascias, soffits and guttering together, and to think about whether the roof is due at the same time. Paying twice for the same scaffold is the most common avoidable cost in exterior work.',
+            'It is also the reason to do fascias, soffits and guttering together, and to think about whether the roof is due at the same time. Paying twice for the same scaffold is the an avoidable cost in exterior work.',
           ] },
         ],
       };
@@ -1493,7 +1493,7 @@ const EXTRAS = {
       faqs: [
         { q: 'How much does a new front door cost fitted?', a: `About ${money(upvc.low)} to ${money(upvc.high)} for uPVC and ${money(comp.low)} to ${money(comp.high)} for composite, inc VAT, with the old door taken away.` },
         { q: 'How long does it take to fit a front door?', a: 'Usually half a day to a day for a standard door and frame.' },
-        { q: 'Should I replace the windows at the same time?', a: 'It is the most common combined job. Doing both together means one visit and a door and windows that match.' },
+        { q: 'Should I replace the windows at the same time?', a: 'Doing both together means one visit, one set of scaffolding where it is needed, and a door and windows that match.' },
       ],
     };
   },
