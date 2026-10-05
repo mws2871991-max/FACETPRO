@@ -28,7 +28,7 @@ const { isTestTraffic } = require('./testtraffic');
 const { buildRenderPrompt } = require('./renderprompt');
 const { restoreDoor, restoreSurroundings, restoreOutsideMask, restoreInsideMask, doorBox, restorePillars, cropToBox, pillarsFromObjects, correctFrameColour, drawGeorgianBars, changedShare } = require('./hold');
 const driveways = require('./driveways');
-const { fetchWindowMask, fetchObjectMasks, maskWithinGrace, GRACE_MS } = require('./windowmask');
+const { fetchWindowMask, fetchObjectMasks, maskWithinGrace } = require('./windowmask');
 /* How long a mask started at upload may take. Generous, because nothing is
    waiting on it — a cold start at 83s still lands well before most people have
    picked a colour, and the render only ever waits GRACE_MS for whatever state
@@ -4147,8 +4147,32 @@ app.post('/api/render', renderLimiter, async (req, res) => {
       }
     }
 
-    /* Waits a few seconds for it, never the whole cold start. See GRACE_MS. */
-    const mask = await maskWithinGrace(maskPromise);
+    /* Waited for, not raced (4 October). It was a six-second grace, and on
+       4 October the live log said "window mask not ready in time" 7 times
+       against 6 holds — the mask that decides what the render is allowed to
+       touch was missing more often than it arrived.
+
+       An unheld render is not a slightly worse picture, it is the whole class
+       of fault this week was spent patching one at a time: the stone heads
+       above the windows repainted, Ink Trim on the garden gate and the door
+       surround, the driveway bleeding onto the public road, moss cleaned off
+       the brickwork, a house number changed. Those are what a render looks
+       like with nothing holding it to the photograph, and no wording has ever
+       held it — see framing in this file, the neighbours' roofs, the pillars.
+
+       The mask is started when the photograph is read, so by the time anyone
+       has chosen a colour it is long done and this waits for nothing. It only
+       bites on the automatic first render, which fires seconds after upload
+       against a segmentation cold start of 80-90s — exactly the case the six
+       seconds could never win.
+
+       Bounded by the render deadline, and the fallback is unchanged: if it
+       really does not come, the render still goes out and still says so. The
+       driveway keep mask took the same step in 0056 and declines instead,
+       because demolishing a garden wall is worse than a slow picture; here a
+       held-back brick is not worth refusing a render over. */
+    const maskWaitMs = Math.max(0, deadlineAt - Date.now());
+    const mask = await maskWithinGrace(maskPromise, maskWaitMs);
     /* Say so when it was wanted and did not arrive.
  *
  * The grace expiring is not a failure of fetchWindowMask, so it produces no
@@ -4158,16 +4182,18 @@ app.post('/api/render', renderLimiter, async (req, res) => {
  * render record about a door, and no word at all about the mask. A silent
  * skip on the step that decides what the customer sees is worth a line. */
     if (maskWanted && !mask) {
-      obs.record('render', 'window mask not ready in time', { graceMs: GRACE_MS });
+      obs.record('render', 'window mask not ready in time', { waitedMs: maskWaitMs });
     }
     /* Kept on the record so the next colour on this photograph is instant, and
        so a mask that arrived after the grace is not thrown away — the person
        who tries anthracite next gets the one this render gave up waiting for. */
     if (maskRecord && mask && !maskRecord.windowMask) maskRecord.windowMask = mask;
-    const pillars = await maskWithinGrace(pillarPromise);
+    /* The same wait, from what the window mask left of the budget. */
+    const pillarWaitMs = Math.max(0, deadlineAt - Date.now());
+    const pillars = await maskWithinGrace(pillarPromise, pillarWaitMs);
     /* The three silent ways a pick never became a hold (0055): not back in
        time, or back but with no window mask to ride on. Each says so now. */
-    if (bayBoxes.length && !pillars) obs.record('render', 'bay pillars not held', { reason: 'pillar pick not ready in time or kept nothing', graceMs: GRACE_MS });
+    if (bayBoxes.length && !pillars) obs.record('render', 'bay pillars not held', { reason: 'pillar pick not ready in time or kept nothing', waitedMs: pillarWaitMs });
     if (pillars && !(doorRestore && mask)) obs.record('render', 'bay pillars not held', { reason: 'no window mask for this render', bays: pillars.length });
     let restorePlan = (doorRestore && mask)
       ? { ...doorRestore, mask: mask.buffer, maskMime: mask.mime,

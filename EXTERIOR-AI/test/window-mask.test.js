@@ -195,10 +195,40 @@ test('the mask is asked for beside the render, not after it', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
   const startedAt = src.indexOf('const maskPromise');
   const fluxAt = src.indexOf('const first = await runFlux'); // runFlux or runFluxOrRetry
-  const awaitedAt = src.indexOf('const mask = await maskWithinGrace(maskPromise)');
+  // No closing bracket: the await carries a wait argument since 4 October.
+  const awaitedAt = src.indexOf('const mask = await maskWithinGrace(maskPromise');
   assert.ok(startedAt > 0 && fluxAt > 0 && awaitedAt > 0, 'the concurrent mask fetch has gone');
   assert.ok(startedAt < fluxAt, 'the mask must be started before the render is awaited');
   assert.ok(awaitedAt > fluxAt, 'the mask must be awaited after the render, not before');
+});
+
+test('the window mask is waited for, not raced against six seconds', () => {
+  /* 4 October: the live log said "window mask not ready in time" 7 times
+     against 6 holds. The mask that decides what the render may touch was
+     missing more often than it arrived, and an unheld render is the whole
+     class of fault — repainted stone heads, trim on the garden gate, a
+     changed house number — that no wording has ever prevented.
+
+     It is started when the photograph is read, so for anyone who has chosen
+     a colour this waits for nothing; it bites only on the automatic first
+     render, which fires seconds after upload against an 80-90s segmentation
+     cold start. Bounded by the render deadline, as the driveway keep mask is
+     since 0056. */
+  const src = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  assert.doesNotMatch(src, /maskWithinGrace\(maskPromise\)/, 'the six-second race is back');
+  assert.match(src, /maskWithinGrace\(maskPromise, maskWaitMs\)/);
+  assert.match(src, /const maskWaitMs = Math\.max\(0, deadlineAt - Date\.now\(\)\)/);
+  /* And the pillar pick, which rides on it and lost the same race. */
+  assert.doesNotMatch(src, /maskWithinGrace\(pillarPromise\)/, 'the pillar pick is racing again');
+  assert.match(src, /maskWithinGrace\(pillarPromise, pillarWaitMs\)/);
+});
+
+test('a render with no mask still goes out, and still says so', () => {
+  /* Unlike the driveway keep mask, which declines: a held-back brick is not
+     worth refusing a picture over, but it must never be silent. */
+  const src = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  assert.match(src, /window mask not ready in time/);
+  assert.match(src, /waitedMs: maskWaitMs/);
 });
 
 test('the mask is only asked for when windows are the only thing changing', () => {
