@@ -479,7 +479,10 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
          half. Stacked on a phone, picture before the choice. -->
     <div class="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,560px)] lg:gap-8 lg:items-center">
     <div>
-    <p class="text-base text-zinc-600 font-semibold">Home exterior planning &middot; UK</p>
+    <!-- 0085 (5 Oct, outside review): one lead use case. Windows and doors are
+         what most people arrive for and the clearest first idea of the tool;
+         roofline, walls and roofs are offered underneath, not in the promise. -->
+    <p class="text-base text-zinc-600 font-semibold">New windows &amp; doors &middot; UK</p>
     <!-- The first screen is the magic and nothing else (Mike, 28 September):
          your house, what it could look like, what it might cost. The pricing
          argument, the method and the caveats are all still on the site —
@@ -503,7 +506,7 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
     <!-- 0066 (4 Oct, outside review): say exactly what the product does, in
          the order it happens, and get them into it. The "meaning to" line was
          a feeling; this is the offer. -->
-    <p class="mt-3 text-lg leading-7 text-zinc-700 max-w-[46ch]">Upload one photo of your home. See new windows, doors, roofline, walls and more on your actual house &mdash; with a planning estimate.</p>
+    <p class="mt-3 text-lg leading-7 text-zinc-700 max-w-[46ch]">Upload one photo of your home. See new windows and a new front door on your actual house &mdash; with a planning estimate.</p>
     <button type="button" class="mt-5 cta w-full sm:w-auto px-7 py-4 rounded-full text-lg font-semibold transition min-h-[52px]" onclick="goToUpload()">Upload my house &rarr;</button>
     <!-- 0065: the three reassurances that decide the click, at the click. -->
     <p class="mt-3 text-base text-zinc-700">Free to try &middot; No account &middot; No sales call</p>
@@ -520,9 +523,6 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
            and in the privacy notice this links to. -->
       <p class="pb-2 leading-7 text-zinc-600">We use it only to make your picture. Once your picture has been made, the photo is deleted &mdash; never published, sold, or used by us to train AI. <a href="/privacy#your-photograph" class="underline underline-offset-2">Full details</a></p>
     </details>
-    <!-- 0081 (outside review, 4 Oct): who it is for, before they wonder. The
-         house types are the ones the picker offers; flats are not one of them. -->
-    <p class="mt-2 text-base text-zinc-700">Works best on houses and bungalows &mdash; detached, semi or terraced &mdash; photographed from the front.</p>
     </div>
     <!-- What the product does, at a glance, above the choice.
 
@@ -546,24 +546,10 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
           <span class="absolute bottom-2 left-2 text-base px-2 py-0.5 rounded-full bg-emerald-700 text-white font-semibold">After</span>
         </div>
       </div>
-      <figcaption class="mt-2 text-base leading-7 text-zinc-600">Illustration: the same house with anthracite aluminium windows and a red composite door. The new driveway and plants are part of the illustration, not the estimate.</figcaption>
-      <!-- The second half of the promise, straight after the picture. It goes
-           to the same place as Upload my house, because the price is priced
-           from their photograph. -->
-      <div class="mt-3 flex items-center gap-3 flex-wrap">
-        <p class="text-lg font-semibold text-zinc-900">Want to know what it would cost?</p>
-        <button type="button" class="px-5 rounded-full border border-zinc-900 bg-white text-zinc-900 text-lg font-semibold min-h-[48px]" onclick="goToUpload()">See my price</button>
-      </div>
+      <figcaption class="mt-2 text-base leading-6 text-zinc-500">Illustration: new windows and door. The driveway and plants are part of the illustration, not the estimate.</figcaption>
     </figure>
     </div>
-    <!-- 0066: the whole product in four words, straight after the button. -->
-    <ol class="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3" aria-label="How it works">
-      <li class="rounded-xl bg-white border border-zinc-200 px-4 py-3"><span class="block text-base text-zinc-500 font-semibold">1</span><span class="block text-lg font-semibold text-zinc-900">Your photo</span></li>
-      <li class="rounded-xl bg-white border border-zinc-200 px-4 py-3"><span class="block text-base text-zinc-500 font-semibold">2</span><span class="block text-lg font-semibold text-zinc-900">Your house, transformed</span></li>
-      <li class="rounded-xl bg-white border border-zinc-200 px-4 py-3"><span class="block text-base text-zinc-500 font-semibold">3</span><span class="block text-lg font-semibold text-zinc-900">Your choices</span></li>
-      <li class="rounded-xl bg-white border border-zinc-200 px-4 py-3"><span class="block text-base text-zinc-500 font-semibold">4</span><span class="block text-lg font-semibold text-zinc-900">Your price &mdash; then you decide</span></li>
-    </ol>
-    <h2 class="mt-8 text-lg font-semibold text-zinc-900">Or start with what you&rsquo;d like to change</h2>
+    <h2 class="mt-8 text-lg font-semibold text-zinc-900">Or start with your windows or front door</h2>
     <!-- First-visit speed (29 September): the homepage fetched about 1 MB of
          pictures before the cards appeared, blank white boxes for a moment on
          a phone signal. Each card now offers 320/480/640px versions and the
@@ -573,47 +559,50 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
          pair asks to load first; every picture sits on a light grey tile, so
          a slow load looks like a tile, not a hole; and the /how-we-price pair,
          hidden on the homepage, no longer loads here at all (lazy). -->
-    <div class="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+    <div class="mt-3 grid grid-cols-2 gap-3 sm:gap-4">
       <a href="/design?journey=windows" class="group rounded-2xl overflow-hidden border border-zinc-200 bg-white hover:border-zinc-900 transition">
-        <img src="/assets/products/windows.jpg" srcset="/assets/products/windows-320.jpg 320w, /assets/products/windows-480.jpg 480w, /assets/products/windows.jpg 640w" sizes="(min-width: 1024px) 180px, (min-width: 640px) 31vw, 32vw" alt="Anthracite bay windows on a brick house" width="640" height="480" class="w-full aspect-[4/3] object-cover bg-zinc-100" loading="eager" decoding="async">
+        <img src="/assets/products/windows.jpg" srcset="/assets/products/windows-320.jpg 320w, /assets/products/windows-480.jpg 480w, /assets/products/windows.jpg 640w" sizes="(min-width: 1024px) 540px, 46vw" alt="Anthracite bay windows on a brick house" width="640" height="480" class="w-full aspect-[4/3] lg:aspect-[16/9] object-cover bg-zinc-100" loading="eager" decoding="async">
         <span class="block p-3 sm:p-4">
-          <span class="block text-lg font-medium">Windows</span>
+          <span class="block text-xl font-semibold">Windows</span>
           <span class="block mt-0.5 text-base leading-7 text-zinc-600">New windows, any style</span>
         </span>
       </a>
       <a href="/design?journey=doors" class="group rounded-2xl overflow-hidden border border-zinc-200 bg-white hover:border-zinc-900 transition">
-        <img src="/assets/products/doors-black-canopy.jpg" srcset="/assets/products/doors-black-canopy-320.jpg 320w, /assets/products/doors-black-canopy-480.jpg 480w, /assets/products/doors-black-canopy.jpg 640w" sizes="(min-width: 1024px) 180px, (min-width: 640px) 31vw, 32vw" alt="Illustration: a black composite front door with glazed side panels and a flat canopy on a red-brick house" width="640" height="480" class="w-full aspect-[4/3] object-cover bg-zinc-100" loading="eager" decoding="async">
+        <img src="/assets/products/doors-black-canopy.jpg" srcset="/assets/products/doors-black-canopy-320.jpg 320w, /assets/products/doors-black-canopy-480.jpg 480w, /assets/products/doors-black-canopy.jpg 640w" sizes="(min-width: 1024px) 540px, 46vw" alt="Illustration: a black composite front door with glazed side panels and a flat canopy on a red-brick house" width="640" height="480" class="w-full aspect-[4/3] lg:aspect-[16/9] object-cover bg-zinc-100" loading="eager" decoding="async">
         <span class="block p-3 sm:p-4">
-          <span class="block text-lg font-medium">Doors</span>
+          <span class="block text-xl font-semibold">Doors</span>
           <span class="block mt-0.5 text-base leading-7 text-zinc-600">Front, back, patio and bifold</span>
         </span>
       </a>
+    </div>
+    <h3 class="mt-6 text-base font-semibold text-zinc-700">The rest of the outside</h3>
+    <div class="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-3">
       <a href="/design?journey=roofline" class="group rounded-2xl overflow-hidden border border-zinc-200 bg-white hover:border-zinc-900 transition">
-        <img src="/assets/products/roofline-grey.jpg" srcset="/assets/products/roofline-grey-320.jpg 320w, /assets/products/roofline-grey-480.jpg 480w, /assets/products/roofline-grey.jpg 640w" sizes="(min-width: 1024px) 180px, (min-width: 640px) 31vw, 32vw" alt="Illustration: grey fascia and soffit with black guttering and a downpipe on a brick house" width="640" height="480" class="w-full aspect-[4/3] object-cover bg-zinc-100" loading="eager" decoding="async">
-        <span class="block p-3 sm:p-4">
-          <span class="block text-lg font-medium">Roof edge &amp; gutters</span>
-          <span class="block mt-0.5 text-base leading-7 text-zinc-600">Fascias, soffits and guttering</span>
+        <img src="/assets/products/roofline-grey.jpg" srcset="/assets/products/roofline-grey-320.jpg 320w, /assets/products/roofline-grey-480.jpg 480w, /assets/products/roofline-grey.jpg 640w" sizes="(min-width: 1024px) 260px, (min-width: 640px) 23vw, 46vw" alt="Illustration: grey fascia and soffit with black guttering and a downpipe on a brick house" width="640" height="480" class="w-full aspect-[4/3] object-cover bg-zinc-100" loading="lazy" decoding="async">
+        <span class="block p-3">
+          <span class="block text-base font-semibold">Roof edge &amp; gutters</span>
+          <span class="block mt-0.5 text-base leading-6 text-zinc-600">Fascias, soffits and guttering</span>
         </span>
       </a>
       <a href="/design?journey=roof" class="group rounded-2xl overflow-hidden border border-zinc-200 bg-white hover:border-zinc-900 transition">
-        <img src="/assets/products/roofs-slate-aerial.jpg" srcset="/assets/products/roofs-slate-aerial-320.jpg 320w, /assets/products/roofs-slate-aerial-480.jpg 480w, /assets/products/roofs-slate-aerial.jpg 640w" sizes="(min-width: 1024px) 180px, (min-width: 640px) 31vw, 32vw" alt="Illustration: a slate roof on a red-brick semi-detached house, seen from above" width="640" height="480" class="w-full aspect-[4/3] object-cover bg-zinc-100" loading="eager" decoding="async">
-        <span class="block p-3 sm:p-4">
-          <span class="block text-lg font-medium">Roofs</span>
-          <span class="block mt-0.5 text-base leading-7 text-zinc-600">Slate, tile and clay</span>
+        <img src="/assets/products/roofs-slate-aerial.jpg" srcset="/assets/products/roofs-slate-aerial-320.jpg 320w, /assets/products/roofs-slate-aerial-480.jpg 480w, /assets/products/roofs-slate-aerial.jpg 640w" sizes="(min-width: 1024px) 260px, (min-width: 640px) 23vw, 46vw" alt="Illustration: a slate roof on a red-brick semi-detached house, seen from above" width="640" height="480" class="w-full aspect-[4/3] object-cover bg-zinc-100" loading="lazy" decoding="async">
+        <span class="block p-3">
+          <span class="block text-base font-semibold">Roofs</span>
+          <span class="block mt-0.5 text-base leading-6 text-zinc-600">Slate, tile and clay</span>
         </span>
       </a>
       <a href="/design?journey=cladding" class="group rounded-2xl overflow-hidden border border-zinc-200 bg-white hover:border-zinc-900 transition">
-        <img src="/assets/products/walls-grey-clad.jpg" srcset="/assets/products/walls-grey-clad-320.jpg 320w, /assets/products/walls-grey-clad-480.jpg 480w, /assets/products/walls-grey-clad.jpg 640w" sizes="(min-width: 1024px) 180px, (min-width: 640px) 31vw, 32vw" alt="Illustration: a detached house clad in dark grey weatherboard, with grey windows" width="640" height="480" class="w-full aspect-[4/3] object-cover bg-zinc-100" loading="eager" decoding="async">
-        <span class="block p-3 sm:p-4">
-          <span class="block text-lg font-medium">Walls</span>
-          <span class="block mt-0.5 text-base leading-7 text-zinc-600">A new finish: render or cladding</span>
+        <img src="/assets/products/walls-grey-clad.jpg" srcset="/assets/products/walls-grey-clad-320.jpg 320w, /assets/products/walls-grey-clad-480.jpg 480w, /assets/products/walls-grey-clad.jpg 640w" sizes="(min-width: 1024px) 260px, (min-width: 640px) 23vw, 46vw" alt="Illustration: a detached house clad in dark grey weatherboard, with grey windows" width="640" height="480" class="w-full aspect-[4/3] object-cover bg-zinc-100" loading="lazy" decoding="async">
+        <span class="block p-3">
+          <span class="block text-base font-semibold">Walls</span>
+          <span class="block mt-0.5 text-base leading-6 text-zinc-600">A new finish: render or cladding</span>
         </span>
       </a>
       <a href="/cost/conservatory-cost-uk" class="group rounded-2xl overflow-hidden border border-zinc-200 bg-white hover:border-zinc-900 transition">
-        <img src="/assets/products/conservatory-brick-base.jpg" srcset="/assets/products/conservatory-brick-base-320.jpg 320w, /assets/products/conservatory-brick-base-480.jpg 480w, /assets/products/conservatory-brick-base.jpg 640w" sizes="(min-width: 1024px) 180px, (min-width: 640px) 31vw, 32vw" alt="Illustration: a white conservatory with a brick dwarf wall on a red-brick house" width="640" height="480" class="w-full aspect-[4/3] object-cover bg-zinc-100" loading="eager" decoding="async">
-        <span class="block p-3 sm:p-4">
-          <span class="block text-lg font-medium">Conservatories</span>
-          <span class="block mt-0.5 text-base leading-7 text-zinc-600">Guide prices by style</span>
+        <img src="/assets/products/conservatory-brick-base.jpg" srcset="/assets/products/conservatory-brick-base-320.jpg 320w, /assets/products/conservatory-brick-base-480.jpg 480w, /assets/products/conservatory-brick-base.jpg 640w" sizes="(min-width: 1024px) 260px, (min-width: 640px) 23vw, 46vw" alt="Illustration: a white conservatory with a brick dwarf wall on a red-brick house" width="640" height="480" class="w-full aspect-[4/3] object-cover bg-zinc-100" loading="lazy" decoding="async">
+        <span class="block p-3">
+          <span class="block text-base font-semibold">Conservatories</span>
+          <span class="block mt-0.5 text-base leading-6 text-zinc-600">Guide prices by style</span>
         </span>
       </a>
     </div>
@@ -624,7 +613,16 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
          overwritten on 28 September and returning visitors kept the old ones;
          they now have new names. -->
     <!-- The promise, in one line, under the choice rather than above it. -->
-    <p class="mt-4 text-base leading-7 text-zinc-600">See the price before anyone visits &middot; <a href="/how-we-price" class="underline underline-offset-2">How we price</a></p>
+    <!-- 0066: the whole product in four words, 0085: under the choice, so the first screen is the button. -->
+    <ol class="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3" aria-label="How it works">
+      <li class="rounded-xl bg-white border border-zinc-200 px-4 py-3"><span class="block text-base text-zinc-500 font-semibold">1</span><span class="block text-lg font-semibold text-zinc-900">Your photo</span></li>
+      <li class="rounded-xl bg-white border border-zinc-200 px-4 py-3"><span class="block text-base text-zinc-500 font-semibold">2</span><span class="block text-lg font-semibold text-zinc-900">Your house, transformed</span></li>
+      <li class="rounded-xl bg-white border border-zinc-200 px-4 py-3"><span class="block text-base text-zinc-500 font-semibold">3</span><span class="block text-lg font-semibold text-zinc-900">Your choices</span></li>
+      <li class="rounded-xl bg-white border border-zinc-200 px-4 py-3"><span class="block text-base text-zinc-500 font-semibold">4</span><span class="block text-lg font-semibold text-zinc-900">Your price &mdash; then you decide</span></li>
+    </ol>
+    <!-- 0085: who it is for and how we price, under the choice instead of
+         between the button and the picture. Same words (test/reassurance-where-it-counts). -->
+    <p class="mt-4 text-base leading-7 text-zinc-600">Works best on houses and bungalows &mdash; detached, semi or terraced &mdash; photographed from the front. &middot; <a href="/how-we-price" class="underline underline-offset-2">How we price</a></p>
   </section>
 
   <!-- /how-we-price (24 September). The homepage now opens with the product
@@ -3548,7 +3546,7 @@ function buildChooser() {
          Next on its own is always a valid move. */
       h('p', { className: 'mt-4 text-base text-zinc-700' }, `Question ${step + 1} of ${blocks.length}`),
       h('div', { className: 'mt-3' }, blocks[step]),
-      h('p', { className: 'mt-4 text-base leading-7 text-zinc-700' }, 'Not sure? We’ve picked the most popular — you can change it later.'),
+      h('p', { className: 'mt-4 text-base leading-7 text-zinc-700' }, 'Not sure? Leave it as it is — you can change it later.'),
       h('div', { className: 'mt-5 flex flex-col-reverse sm:flex-row sm:items-center gap-3' }, [
         step > 0 ? h('button', {
           type: 'button',
@@ -4517,27 +4515,12 @@ function buildUploadDetect() {
     state.detectionStatus === 'detecting'
       ? null
       : h('div', { className: 'mt-2 max-w-[62ch]' }, [
+          /* 0085 (5 Oct, outside review): one line and the three things we
+             will not ask for. The framing advice and who it works for are
+             still here, folded under the examples, which already show the
+             difference in a picture. */
           h('p', { className: 'text-lg text-zinc-600' },
-            'We’ll find your windows, doors, roof and walls automatically, so you don’t have to mark anything up or measure a thing.'),
-          /* The one sentence that prevents the failure the rest of this page
-             spends its time reporting.
-
-             Both of the site's own marketing photographs fell back to a
-             typical figure, and the measurement is scaled off the front door,
-             so framing is most of what decides whether a photo works. The
-             advice existed only in the notice shown after it had already gone
-             wrong. Saying it before the upload is the cheapest fix available
-             to this product.
-
-             And the three things we are not going to ask for, at the moment
-             somebody is deciding whether to hand over a photograph of their
-             home — the handoff's §6, and the point of its §11: never ask for
-             anything before giving them something. */
-          h('p', { className: 'mt-2 text-lg text-zinc-600' },
-            'A straight-on photo from across the road usually gives the best result — we size your house against your front door, so the whole front needs to be in shot.'),
-          /* 0081: who it is for, said before they upload rather than after it fails. */
-          h('p', { className: 'mt-2 text-base text-zinc-600' },
-            'Works best on houses and bungalows — detached, semi or terraced. Flats and blocks aren\u2019t supported yet.'),
+            'One photo of the front. We find the windows, doors, roof and walls for you.'),
           h('p', { className: 'mt-2 text-base text-zinc-600 font-semibold' },
             'No measurements · No email · No phone number'),
           helpLine(),
@@ -4608,6 +4591,14 @@ function buildUploadDetect() {
             h('p', { className: 'mt-1.5 text-base text-amber-700 font-semibold' }, '✕ Not this'),
             h('p', { className: 'mt-0.5 text-base leading-6 text-zinc-600' }, 'Too close, no door — we size your house against it.'),
           ]),
+        ]),
+        state.uploadedImg ? null : h('details', { className: 'mt-2 text-base text-zinc-600' }, [
+          h('summary', { className: 'cursor-pointer py-2.5 leading-6 underline underline-offset-2' }, 'Tips for a good photo'),
+          h('p', { className: 'pb-1 leading-7' },
+            'A straight-on photo from across the road usually gives the best result — we size your house against your front door, so the whole front needs to be in shot.'),
+          /* 0081: who it is for, before they upload rather than after it fails. */
+          h('p', { className: 'pb-2 leading-7' },
+            'Works best on houses and bungalows — detached, semi or terraced. Flats and blocks aren\u2019t supported yet.'),
         ]),
         /* The answer to the question being asked at this exact moment.
 

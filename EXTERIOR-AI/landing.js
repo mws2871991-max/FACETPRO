@@ -1683,8 +1683,12 @@ function renderAreaPage(slug, { catalogue, siteUrl, siteMode, recipients = [] })
     ? `<p>We currently work with ${covering.length} installer${covering.length === 1 ? '' : 's'} covering ${escapeHtml(where)}. If you ask for quotes, your design goes to up to three of them &mdash; and only if you ask.</p>`
     : `<p>We are still signing up installers who cover ${escapeHtml(where)}, so we cannot promise you quotes here yet. The visualiser and the estimate work exactly the same &mdash; use them to find out what your house could look like and what it should cost, and we will tell you if that changes.</p>`;
 
+  /* 0085 (5 Oct, outside review): every page a search lands on funnels into
+     the uploader. The area pages had one button, after 340 words; the guides
+     have had one above the answer since sprint 1. Same block, same words. */
   const body = `<div class="answer"><strong>The short answer</strong><span>${escapeHtml(
     `${money(semi.low)} to ${money(semi.high)} for a typical eight-window semi in ${where}, fitted and inc VAT.`)}</span></div>
+${journeyHero(siteUrl, slug)}
 <section><h2>Window costs in ${escapeHtml(where)}</h2>
 ${table({
     head: ['House', 'Windows', 'Estimated cost fitted, inc VAT'],
@@ -1735,7 +1739,15 @@ function renderCostIndex({ catalogue, siteUrl, siteMode }) {
   }).join('\n');
   const areas = `<section id="areas"><h2>By area</h2><ul>${AREA_PAGES.map(a =>
     `<li><a href="/${a.slug}">Windows in ${escapeHtml(a.town)}</a></li>`).join('')}</ul></section>`;
+  /* 0085: the index was the one page with nothing but links. */
   const body = `<div class="answer"><strong>What this is</strong><span>Planning estimates for the outside of a UK house — windows, doors, walls, roofline and roof — each worked out from the same figures as the Facet Pro estimate, fitted and inc VAT.</span></div>
+<div class="journey-hero">
+  <h2>Skip the averages: price your own house</h2>
+  <p>Upload one photo of the front. See new windows and doors on your actual house, with a planning estimate for it.</p>
+  <p><a class="cta" href="${escapeHtml(ctaHref(siteUrl, null, 'hero'))}">Upload a photo</a></p>
+  <p class="muted">Free &middot; No measurements &middot; No sales call unless you ask</p>
+  <p class="muted">Your original photo isn&rsquo;t stored. <a href="/privacy#your-photograph">See how your photo is used &rarr;</a></p>
+</div>
 ${groups}
 ${areas}`;
   return page({
