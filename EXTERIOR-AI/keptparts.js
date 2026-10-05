@@ -54,8 +54,13 @@ function plan({ trim = false, roof = false, cladding = false, windows = false, d
   if (roof) { ROOF_KEEPS.forEach(p => keep.add(p)); ROOF_CHANGES.forEach(p => change.add(p)); }
   /* Kept roofline on a roof job is left to the prompt: holding the fascia
      back would put a seam along the eaves of the new roof. */
-  if (!windows) keep.add('window frame');
-  if (!door) keep.add('front door');
+  /* What this job is replacing comes off the keep list, not just out of the
+     boxes: a box that misses the edge of a bay or a door would otherwise let
+     the old frame be pasted over the new one. */
+  if (windows) keep.delete('bay window');
+  else keep.add('window frame');
+  if (door) { keep.delete('door frame'); keep.delete('porch'); }
+  else keep.add('front door');
   return { keep: [...keep].join(', '), change: [...change].join(', ') };
 }
 

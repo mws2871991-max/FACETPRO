@@ -3307,6 +3307,9 @@ async function keepRender(replicateUrl, restore = null) {
         obs.record('render', 'kept parts not held', { reason: 'windows or door are changing and there is no detection record to keep clear of them' });
       } else {
         const door = changing.door && detections ? doorBox(detections) : null;
+        if (changing.door && !door) {
+          obs.record('render', 'kept parts not held', { reason: 'the door is being replaced and was not found with confidence, so there is no box to keep clear of' });
+        } else {
         const ours = [
           ...(changing.windows && detections ? glazing.frontWindowBoxes(detections, detectionAspectRatio) : []),
           ...(door ? [door] : []),
@@ -3319,6 +3322,7 @@ async function keepRender(replicateUrl, restore = null) {
           obs.record('render', 'held kept parts to the photograph', { share: held.share.toFixed(4), ceded: (held.ceded || 0).toFixed(3) });
         } else {
           obs.record('render', 'kept parts not held', { reason: held.reason, ceded: (held.ceded || 0).toFixed(3) });
+        }
         }
       }
     }
@@ -4187,10 +4191,21 @@ app.post('/api/render', renderLimiter, async (req, res) => {
       trim: !!trim, roof: !!(roof && !roofUnsupported), cladding: !!cladding,
       windows: !!(glazingColour && windowStyle), door: !!doorStyle,
     }) : null;
-    const keptMask = (prompt, which) => fetchWindowMask({
+    /* Kept on the detection record by prompt: the masks depend only on the
+       photograph and the job, so a second colour on the same house costs
+       nothing. A failed one is forgotten so the next render asks again. */
+    const keptCache = keepRecord ? (keepRecord.keptMasks = keepRecord.keptMasks || new Map()) : null;
+    const keptMask = (prompt, which) => {
+      const hit = keptCache && keptCache.get(prompt);
+      if (hit) return hit;
+      const p = fetchWindowMask({
           image: img.buffer, mime: img.mime, replicateKey, deadlineAt, prompt,
           onNote: (why) => obs.record('render', 'kept parts not held', { mask: which, reason: why }),
-        }).catch(() => null);
+        }).catch(() => null)
+        .then(m => { if (!m && keptCache) keptCache.delete(prompt); return m; });
+      if (keptCache) keptCache.set(prompt, p);
+      return p;
+    };
     const keptPromise = keptPlan
       ? Promise.all([keptMask(keptPlan.keep, 'keep'), keptMask(keptPlan.change, 'change')])
           .then(([k, c]) => (k && c) ? { keep: k, change: c } : null)

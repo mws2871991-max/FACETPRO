@@ -97,7 +97,19 @@ test('the plan for a roof keeps the gable wall and tile-hanging', () => {
 
 test('windows and door being replaced are not kept', () => {
   const p = keptparts.plan({ trim: true, windows: true, door: true });
-  assert.doesNotMatch(p.keep, /window frame|front door/);
+  assert.doesNotMatch(p.keep, /window frame|front door|door frame|porch/);
+  assert.doesNotMatch(keptparts.plan({ roof: true, windows: true }).keep, /bay window/,
+    'a box missing the edge of a bay must not let the old frame back');
+  assert.match(keptparts.plan({ roof: true }).keep, /bay window/);
+});
+
+test('a door being replaced that detection did not find stands the hold down', () => {
+  assert.match(s, /if \(changing\.door && !door\) \{\s*obs\.record\('render', 'kept parts not held'/);
+});
+
+test('the masks are kept per photograph, and a failed one is forgotten', () => {
+  assert.match(s, /keepRecord\.keptMasks = keepRecord\.keptMasks \|\| new Map\(\)/);
+  assert.match(s, /if \(!m && keptCache\) keptCache\.delete\(prompt\)/);
 });
 
 test('switch: off by default, test needs the experiment, on is on', () => {
