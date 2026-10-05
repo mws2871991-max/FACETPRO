@@ -100,6 +100,7 @@ way to get this deployment wrong.
 | `INSTALLER_RATE_LIMIT` | no | Installer sign-in attempts per 15 minutes per IP. Default 20. Exists for the test suite; leave it unset in production. |
 | `DAILY_RENDER_LIMIT` | no | Default 200 (was 50 until launch). The only thing bounding render spend. |
 | `PILLAR_MASK` | no | `off` (default), `test` or `on`. Holds the pillars between bay windows to the photograph so they are not painted with the frames. `test` applies it only to renders from a page opened with `?exp=pillar`. One extra segmentation call per bay render. |
+| `KEPT_PARTS` | no | `off` (default), `test` or `on`. On roof and roofline renders, puts the gate, door surround, gable timbers, gable wall and tile-hanging back from the photograph (handoff 5 Oct §4). `test` applies it only to renders from a page opened with `?exp=kept`. Two extra segmentation calls per roof or roofline render. |
 | `DRIVEWAYS` | no | `off` (default), `test` or `on`. The driveway trial: a row on the design page (surface + told size), a planning estimate from `catalogue.json` → `driveways`, and a driveway sentence in the render. `test` shows it only on pages opened with `?exp=driveway`. Driveway estimates are never sent to installers or stored on a lead. |
 - `BACKUPS_CONFIRMED` — the date you last tested restoring the database, e.g.
   `2026-10-01`. Nothing reads the value; the startup check only looks for it,

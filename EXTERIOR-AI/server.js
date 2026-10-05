@@ -26,7 +26,8 @@ const consentText = require('./consent');
 const { isTestTraffic } = require('./testtraffic');
 
 const { buildRenderPrompt } = require('./renderprompt');
-const { restoreDoor, restoreSurroundings, restoreOutsideMask, restoreInsideMask, doorBox, restorePillars, cropToBox, pillarsFromObjects, correctFrameColour, drawGeorgianBars, changedShare } = require('./hold');
+const keptparts = require('./keptparts');
+const { restoreDoor, restoreSurroundings, restoreOutsideMask, restoreInsideMask, restoreKeptParts, doorBox, restorePillars, cropToBox, pillarsFromObjects, correctFrameColour, drawGeorgianBars, changedShare } = require('./hold');
 const driveways = require('./driveways');
 const { fetchWindowMask, fetchObjectMasks, maskWithinGrace } = require('./windowmask');
 /* How long a mask started at upload may take. Generous, because nothing is
@@ -3295,8 +3296,34 @@ async function keepRender(replicateUrl, restore = null) {
     const detections = found ? found.detections : null;
     const detectionAspectRatio = found ? found.aspectRatio : null;
     const common = { renderMime: mime, original: restore.original, originalMime: restore.originalMime, detections };
+    /* The roof or roofline job's gate, door surround, timbers and walls (§4).
+       First, so every later hold works on a picture that already has them
+       back. What this job is replacing is never put back: the windows and the
+       door, when chosen, are found from the detection record, and without one
+       there is no way to keep clear of them, so it stands down. */
+    if (restore.keptKeep) {
+      const changing = restore.keptOurs || {};
+      if ((changing.windows || changing.door) && !detections) {
+        obs.record('render', 'kept parts not held', { reason: 'windows or door are changing and there is no detection record to keep clear of them' });
+      } else {
+        const door = changing.door && detections ? doorBox(detections) : null;
+        const ours = [
+          ...(changing.windows && detections ? glazing.frontWindowBoxes(detections, detectionAspectRatio) : []),
+          ...(door ? [door] : []),
+        ];
+        const held = restoreKeptParts({ render: bytes, renderMime: mime, original: restore.original, originalMime: restore.originalMime,
+          keepMask: restore.keptKeep, keepMaskMime: restore.keptKeepMime,
+          changeMask: restore.keptChange, changeMaskMime: restore.keptChangeMime, ours });
+        if (held.restored) {
+          bytes = held.buffer;
+          obs.record('render', 'held kept parts to the photograph', { share: held.share.toFixed(4), ceded: (held.ceded || 0).toFixed(3) });
+        } else {
+          obs.record('render', 'kept parts not held', { reason: held.reason, ceded: (held.ceded || 0).toFixed(3) });
+        }
+      }
+    }
     if (!detections) {
-      obs.record('render', 'kept door not restored', { reason: 'no detection record for this photograph' });
+      if (restore.door || !restore.keptKeep) obs.record('render', 'kept door not restored', { reason: 'no detection record for this photograph' });
       if (restore.requireKeep) {
         obs.record('render', 'driveway render declined: walls, bins and railings not held', { reason: 'no detection record for this photograph' });
         throw new DrivewayNotHeld('no detection record');
@@ -4152,6 +4179,23 @@ app.post('/api/render', renderLimiter, async (req, res) => {
           prompt: driveways.KEEP_PROMPT, dilate: DRIVEWAY_KEEP_DILATE,
           onNote: (why) => obs.record('render', 'driveway keep mask not used', { reason: why }),
         }).catch(() => null);
+    /* What a roof or roofline job must leave alone (§4, keptparts.js): one
+       segmentation of what stays and one of what is changing, beside the
+       render like the others. Not on a driveway job, which has its own keep
+       mask and declines without it. */
+    const keptPlan = (!driveway && keptparts.enabled(req.body)) ? keptparts.plan({
+      trim: !!trim, roof: !!(roof && !roofUnsupported), cladding: !!cladding,
+      windows: !!(glazingColour && windowStyle), door: !!doorStyle,
+    }) : null;
+    const keptMask = (prompt, which) => fetchWindowMask({
+          image: img.buffer, mime: img.mime, replicateKey, deadlineAt, prompt,
+          onNote: (why) => obs.record('render', 'kept parts not held', { mask: which, reason: why }),
+        }).catch(() => null);
+    const keptPromise = keptPlan
+      ? Promise.all([keptMask(keptPlan.keep, 'keep'), keptMask(keptPlan.change, 'change')])
+          .then(([k, c]) => (k && c) ? { keep: k, change: c } : null)
+      : Promise.resolve(null);
+
     const keepPromise = !driveway ? Promise.resolve(null)
       : keepRecord?.keepMask ? Promise.resolve(keepRecord.keepMask)
       : keepRecord?.keepPromise ? keepRecord.keepPromise.then(m => m || freshKeep())
@@ -4269,6 +4313,22 @@ app.post('/api/render', renderLimiter, async (req, res) => {
       restorePlan = { ...(restorePlan || { original: img.buffer, originalMime: img.mime,
         detectionId: detectionId ? String(detectionId) : null, fingerprint: imageFingerprint(img.buffer) }),
         keepMask: keep.buffer, keepMaskMime: keep.mime, requireKeep: true };
+    }
+
+    /* Same wait as the window mask, from whatever is left. A miss renders
+       unheld, as today, and says so. */
+    if (keptPlan) {
+      const keptWaitMs = Math.min(MASK_MAX_WAIT_MS, Math.max(0, deadlineAt - Date.now()));
+      const kept = await maskWithinGrace(keptPromise, keptWaitMs);
+      if (!kept) {
+        obs.record('render', 'kept parts not held', { reason: 'masks not ready in time', waitedMs: keptWaitMs });
+      } else {
+        restorePlan = { ...(restorePlan || { original: img.buffer, originalMime: img.mime,
+          detectionId: detectionId ? String(detectionId) : null, fingerprint: imageFingerprint(img.buffer) }),
+          keptKeep: kept.keep.buffer, keptKeepMime: kept.keep.mime,
+          keptChange: kept.change.buffer, keptChangeMime: kept.change.mime,
+          keptOurs: { windows: !!(glazingColour && windowStyle), door: !!doorStyle } };
+      }
     }
 
     return respondWithRender(res, url, {

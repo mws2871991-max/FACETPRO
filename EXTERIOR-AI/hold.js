@@ -966,6 +966,75 @@ function restoreInsideMask(opts) {
   }
 }
 
+/* Put back what a roof or roofline job must not touch (handoff 5 Oct, §4):
+   the gate, the door surround and the gable's timbers under Ink Trim; the
+   gable wall and the tile-hanging under a new roof. See keptparts.js.
+
+   Two masks, because one cannot be trusted alone. `keep` is what should stay
+   (gate, door frame, wall, tile-hanging); `change` is what was asked for
+   (roof, fascia, bargeboards). A pixel goes back to the photograph only when
+   keep claims it AND change does not, so where the two segmentations argue —
+   a bargeboard that is also a "timber beam", a tile-hung wall that is also
+   "roof" — the render wins and the job they chose is drawn. The error this
+   can make is the one we have today; it cannot undo the thing they paid for.
+
+   Never inside `ours` either: windows or a door being replaced on the same
+   job. Refuses a keep mask that has taken most of the picture, which is a
+   segmentation that has stopped telling things apart. */
+const KEPT_MIN_SHARE = 0.001;
+const KEPT_MAX_SHARE = 0.7;
+function restoreKeptParts(opts) {
+  const { render, renderMime, original, originalMime, keepMask, keepMaskMime, changeMask, changeMaskMime, ours = [] } = opts || {};
+  const untouched = (reason) => ({ buffer: render, restored: false, reason, share: 0 });
+  try {
+    if (!/png/i.test(renderMime || '')) return untouched('render is not a PNG');
+    if (!keepMask || !keepMask.length) return untouched('no keep mask');
+    if (!changeMask || !changeMask.length) return untouched('no change mask, so nothing says where the new work is');
+    const src = decode(original, originalMime || '');
+    if (!src) return untouched('photograph type not handled');
+    const k = decode(keepMask, keepMaskMime || '');
+    const c = decode(changeMask, changeMaskMime || '');
+    if (!k || !c) return untouched('mask type not handled');
+    const out = PNG.sync.read(render);
+    const W = out.width, H = out.height;
+    for (const [name, m] of [['keep', k], ['change', c]]) {
+      if (Math.abs(m.width / m.height - W / H) > 0.02) return untouched(`${name} mask is ${m.width}x${m.height}, render is ${W}x${H}`);
+    }
+    const boxes = (Array.isArray(ours) ? ours : [])
+      .filter(b => b && ['x', 'y', 'w', 'h'].every(q => Number.isFinite(Number(b[q]))))
+      .map(b => ({ x0: Number(b.x) * W / 100, x1: (Number(b.x) + Number(b.w)) * W / 100, y0: Number(b.y) * H / 100, y1: (Number(b.y) + Number(b.h)) * H / 100 }));
+    const inOurs = (x, y) => boxes.some(b => x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1);
+    const at = (m, x, y) => {
+      const mx = Math.min(m.width - 1, Math.max(0, Math.round((x + 0.5) * m.width / W - 0.5)));
+      const my = Math.min(m.height - 1, Math.max(0, Math.round((y + 0.5) * m.height / H - 0.5)));
+      return m.data[(my * m.width + mx) * 4] >= MASK_ON;
+    };
+    const on = [];
+    let claimed = 0, conceded = 0;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (!at(k, x, y)) continue;
+      claimed++;
+      if (at(c, x, y)) { conceded++; continue; }
+      if (!inOurs(x, y)) on.push(y * W + x);
+    }
+    const share = on.length / (W * H);
+    /* How much of what keep claimed went to the new work: for the log, so a
+       hold that did nothing says whether the masks disagreed or keep was empty. */
+    const ceded = claimed ? conceded / claimed : 0;
+    if (claimed / (W * H) > KEPT_MAX_SHARE) return untouched(`keep mask covers ${(claimed * 100 / (W * H)).toFixed(0)}% of the frame — it has stopped telling things apart`);
+    if (share < KEPT_MIN_SHARE) return { ...untouched(`only ${(share * 100).toFixed(2)}% of the frame left to hold`), ceded };
+    const px = [0, 0, 0];
+    for (const q of on) {
+      const x = q % W, y = (q - x) / W;
+      sample(src, (x + 0.5) * (src.width / W) - 0.5, (y + 0.5) * (src.height / H) - 0.5, px);
+      out.data[q * 4] = px[0]; out.data[q * 4 + 1] = px[1]; out.data[q * 4 + 2] = px[2];
+    }
+    return { buffer: PNG.sync.write(out), restored: true, reason: null, share, ceded };
+  } catch (err) {
+    return untouched(err?.message || 'kept-parts hold failed');
+  }
+}
+
 /* Put the pillars back (2 October). See fetchPillarMask in windowmask.js.
 
    Inside the pillar mask the photograph; everywhere else the render as it
@@ -1300,6 +1369,6 @@ function correctFrameColour(opts) {
   }
 }
 
-module.exports = { restoreInsideMask, KEEP_MAX_OF_GROUND, MASK_BOX_MARGIN_PCT, cropToBox, pillarsFromObjects, PILLAR_PICK, PILLAR_ATTACH, PILLAR_SHAFT_MIN,
+module.exports = { restoreInsideMask, KEEP_MAX_OF_GROUND, restoreKeptParts, KEPT_MAX_SHARE, MASK_BOX_MARGIN_PCT, cropToBox, pillarsFromObjects, PILLAR_PICK, PILLAR_ATTACH, PILLAR_SHAFT_MIN,
   restorePillars, PILLAR_MAX_OF_BAY, restoreDoor, restoreSurroundings, restoreOutsideMask, correctFrameColour,
                    drawGeorgianBars, doorBox, changedShare, MASK_ON, rgbToLab, labToRgb, hexToRgb };
