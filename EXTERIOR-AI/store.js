@@ -263,6 +263,18 @@ const SCHEMA = [
     id SERIAL PRIMARY KEY, ts TIMESTAMPTZ NOT NULL, kind TEXT NOT NULL,
     message TEXT, detail JSONB
   )`,
+  /* The day's detections and renders, for the same reason as ops_events and
+     found the same way (5 October). usage.json lived in DATA_DIR, and the only
+     Railway volume is attached to Postgres, not to the app — so every deploy
+     wiped the counter and readUsageFile() started from zero. On a day with
+     fifteen deploys the 50/150 daily caps were not daily caps at all but
+     per-container ones, and the real ceiling was fifteen times the bill they
+     exist to bound. One row per UTC day, so the cap means what it says
+     whatever the app does. */
+  `CREATE TABLE IF NOT EXISTS daily_usage (
+    day DATE PRIMARY KEY, detect INTEGER NOT NULL DEFAULT 0, render INTEGER NOT NULL DEFAULT 0
+  )`,
+
   `CREATE TABLE IF NOT EXISTS detection_cache (
     image_hash TEXT PRIMARY KEY, ts TIMESTAMPTZ NOT NULL, aspect_ratio DOUBLE PRECISION, detections JSONB NOT NULL
   )`,
@@ -885,6 +897,40 @@ async function appendOpsEvent(ev) {
   } catch (_) { return false; }
 }
 
+/* The day's spend, read once at startup and after each charge.
+
+   Returns null when there is no database, so the caller keeps the file it has
+   always used — a local run without DATABASE_URL behaves exactly as before. */
+async function readDailyUsage(day) {
+  if (!pool) return null;
+  try {
+    const r = await pool.query(
+      `SELECT detect, render FROM ${SCHEMA_NAME}.daily_usage WHERE day = $1`, [day]);
+    const row = r.rows[0];
+    return row ? { day, detect: row.detect | 0, render: row.render | 0 } : { day, detect: 0, render: 0 };
+  } catch (_) { return null; }
+}
+
+/* One charge, counted where every container can see it.
+
+   The increment is done by the database rather than read-modify-written here:
+   two containers, or two requests inside one, would otherwise both read 49 and
+   both write 50. Returns the new total so the caller can refuse on it, or null
+   if the database would not answer — and a caller that cannot count must let
+   the request through rather than refuse every homeowner on a bad afternoon. */
+async function chargeDailyUsage(day, kind) {
+  if (!pool) return null;
+  const col = kind === 'detect' ? 'detect' : 'render';
+  try {
+    const r = await pool.query(
+      `INSERT INTO ${SCHEMA_NAME}.daily_usage (day, ${col}) VALUES ($1, 1)
+       ON CONFLICT (day) DO UPDATE SET ${col} = ${SCHEMA_NAME}.daily_usage.${col} + 1
+       RETURNING detect, render`, [day]);
+    const row = r.rows[0];
+    return row ? { day, detect: row.detect | 0, render: row.render | 0 } : null;
+  } catch (_) { return null; }
+}
+
 async function readFunnel(days = 30) {
   const since = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
   if (pool) {
@@ -1146,6 +1192,7 @@ async function end() {
 module.exports = {
   readOpsEvents, appendOpsEvent, pruneOpsEvents,
   ensureSchema, append, readAll, replaceAll, mutate, end, getResume, DATA_DIR, putRender, getRender, deleteRenders, staleRenderIds, hasDb: !!pool,
+  readDailyUsage, chargeDailyUsage,
   getDetectionCache, putDetectionCache, pruneDetectionCache, pruneOlderThan, ping,
   countStage, readFunnel, readFunnelDays, recordMeasurement, readMeasurements,
   // Exported for tests: scraping these out of the source with a regex broke

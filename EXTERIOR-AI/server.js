@@ -585,6 +585,40 @@ const perIpKey = (req) => crypto.createHash('sha256')
   .digest('hex').slice(0, 16);
 let perIpUsage = new Map();
 
+/* The day's count, where a deploy cannot reach it (5 October).
+
+   usage.json lives in DATA_DIR, and the only Railway volume is attached to
+   Postgres rather than to the app — so every `railway up` wiped it and
+   readUsageFile() began again at zero. Found by reading detect 0 / render 0
+   on a day with seven renders behind it. On a day with fifteen deploys the
+   50/150 caps were not daily caps but per-container ones, and the ceiling
+   they are supposed to put on the Replicate bill was fifteen times what it
+   says. Ops events were moved into Postgres for the same reason in 0032.
+
+   Deliberately not awaited: consumeDailyQuota answers synchronously at four
+   call sites, and a request should not wait on a counter. The database is
+   seeded into `usage` at boot, so the number is right from the first request
+   of a new container; each charge then reconciles the authoritative total
+   back, and Math.max means a slow or failing database degrades to the
+   in-memory count rather than to no counting at all. */
+function reconcileUsage(kind) {
+  if (!store.hasDb) return;
+  store.chargeDailyUsage(usage.day, kind).then((row) => {
+    if (!row || row.day !== usage.day) return;
+    usage.detect = Math.max(usage.detect, row.detect);
+    usage.render = Math.max(usage.render, row.render);
+  }).catch(() => {});
+}
+
+async function seedUsageFromStore() {
+  if (!store.hasDb) return;
+  const row = await store.readDailyUsage(utcDay()).catch(() => null);
+  if (!row || row.day !== usage.day) return;
+  usage.detect = Math.max(usage.detect, row.detect);
+  usage.render = Math.max(usage.render, row.render);
+  console.log(`Daily usage carried over from storage: ${usage.detect} detections, ${usage.render} pictures today.`);
+}
+
 function persistUsage() {
   try {
     fs.mkdirSync(path.dirname(USAGE_FILE), { recursive: true });
@@ -657,6 +691,7 @@ function consumeDailyQuota(kind, res, req) {
   usage[kind] += 1;
   if (mine) { mine[kind] += 1; perIpUsage.set(key, mine); }
   persistUsage();
+  reconcileUsage(kind);        // the count a deploy cannot reset
   res.setHeader('X-Daily-Remaining', String(limit - usage[kind]));
   return true;
 }
@@ -5614,6 +5649,7 @@ async function start() {
   checkProductionConfig();
   if (store.hasDb) {
     await store.ensureSchema();
+    await seedUsageFromStore();
     console.log('Storage: Postgres (encrypted at rest by the provider), schema ensured.');
   } else {
     console.warn('Storage: JSONL files under data/. Set DATABASE_URL for encrypted, backed-up storage.');
