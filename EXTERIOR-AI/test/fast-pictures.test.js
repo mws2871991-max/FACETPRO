@@ -32,7 +32,7 @@ test('every card and the before/after offer smaller versions that exist', () => 
 });
 
 test('the before/after asks to load first', () => {
-  const pair = [...home.matchAll(/<img [^>]*demo-windows-[^>]*>/g)].map(m => m[0]);
+  const pair = [...home.matchAll(/<img [^>]*demo-baywindow-[^>]*>/g)].map(m => m[0]);
   assert.strictEqual(pair.length, 2);
   for (const img of pair) assert.match(img, /fetchpriority="high"/);
 });

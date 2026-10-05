@@ -288,3 +288,26 @@ The server prints a warning at startup while this file still says UNKNOWN.
 - After: real facetpro.co.uk output for that photograph: uPVC casement windows, anthracite. Labelled "AI visualisation" on the page.
 - Price shown with it: £7,076 – £12,866, the site's planning estimate for that photo and choice, checked on the live site on 5 Oct 2026. Re-check when window prices change.
 - Same pair as the launch videos (UNS config).
+
+## demo-baywindow-before / demo-baywindow-after (400, 600, 1200) — homepage demo, 0091, 5 Oct 2026
+
+Replaces the `demo-windows-*` pair under the hero (handoff "homepage demo swap
+(grey bay)" v2). The old pair is kept: the "Like this" photo tip on /design
+still uses `demo-windows-before-600.jpg`, credited there as Unsplash.
+
+- Before: **an AI-generated illustration**, not a customer's house and not a
+  photograph. Captioned "House: AI-generated illustration"; alt text starts
+  "Illustration:"; its pill says "Before", not "Your house".
+- After: real facetpro.co.uk output for that image — live site,
+  `/design?journey=windows`, build 5e1e863852c1, 5 Oct 2026. Detached, uPVC,
+  casement, plain glass, anthracite, front door kept. Labelled "AI
+  visualisation". (Render id held in the handoff, not here: this repository
+  is public and a render id is a capability URL.)
+- Price shown with it: £5,643 – £10,259 for 3 front windows including the
+  bay, the site's planning estimate on that run, as reported in the handoff.
+  Not reproducible offline: it rests on that run's detection of the uploaded
+  file. Re-check when window prices change.
+- Plain glass on purpose: v1 used a house with Georgian bars, priced as plain
+  glass, and re-running it with bars rendered the upstairs as a broken grid.
+- Never under "Real homes" or "Photographs, not renders". Interim: to be
+  replaced by a real bay-fronted house used with written permission.

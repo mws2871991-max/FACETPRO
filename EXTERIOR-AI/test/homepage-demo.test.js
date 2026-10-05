@@ -5,9 +5,10 @@ require('./helpers/data-dir');
    cost, see yours. It replaced an illustration (house 22) that had a driveway
    the tool does not do. These are the rules that pair has to keep:
    - real Facet Pro output, and the after is labelled an AI visualisation;
+   - since 0091 the before is an AI-generated illustration and says so, and
+     its pill says "Before", never "Your house": it is nobody's house;
    - the price carries "Planning estimate · inc. VAT · not a quotation" in the
      same frame (ASA);
-   - the photo is credited;
    - the problem, the solution and the installer example sit in the order the
      review set. */
 const { test } = require('node:test');
@@ -27,13 +28,17 @@ test('the demo is real output, labelled, and its pictures exist', () => {
     assert.ok(fs.existsSync(path.join(root, src)), `${src} is missing`);
   }
   assert.match(imgs[1], /alt="AI visualisation:/);
-  assert.match(demo, /Real Facet Pro output\. The picture on the right is an AI visualisation\. House photo: Unsplash\./);
+  assert.match(imgs[0], /alt="Illustration:/);
+  assert.match(demo, /House: AI-generated illustration\. The picture on the right and the price are real Facet Pro output \(AI visualisation\)\./);
+  assert.match(demo, />Before<\/span>/);
+  assert.doesNotMatch(demo, />Your house</, 'the illustration is nobody\'s house');
+  assert.match(demo, /demo-baywindow-before-600\.jpg/);
 });
 
 test('every price on the homepage demo and installer example has the full line beside it', () => {
   const example = html.slice(html.indexOf('id="for-installers"'), html.indexOf('id="trust"'));
   for (const block of [demo, example]) {
-    assert.match(block, /&pound;7,076 &ndash; &pound;12,866/);
+    assert.match(block, /&pound;5,643 &ndash; &pound;10,259/);
     assert.match(block, /Planning estimate &middot; inc\. VAT &middot; not a quotation/);
   }
 });
