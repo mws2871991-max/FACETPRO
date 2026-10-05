@@ -8242,11 +8242,13 @@ async function generateRealRender({ settled = false, revived = false } = {}) {
            describes a slate roof. Null is fine — the server treats a missing
            or expired record as "no extra information" and renders as before. */
         detectionId: state.detectionId,
-        /* Trial features, only when the address asks (?exp=pillar). The
-           server ignores this unless PILLAR_MASK=test or on. */
+        /* Trial features, only when the address asks (?exp=pillar,
+           ?exp=kept). The server ignores each unless its switch
+           (PILLAR_MASK, KEPT_PARTS) is test or on. */
         experiments: (() => { const e = [];
           if (/[?&]exp=pillar\b/.test(location.search)) e.push('pillar-mask');
           if (/[?&]exp=driveway\b/.test(location.search)) e.push('driveway');
+          if (/[?&]exp=kept\b/.test(location.search)) e.push('kept-parts');
           return e.length ? e : undefined; })(),
         /* A driveway surface, when the trial shows the row (DRIVEWAYS). */
         drivewayId: (state.driveway?.existing === 'yes' && state.driveway?.materialId) || undefined,
