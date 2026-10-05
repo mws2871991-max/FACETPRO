@@ -751,8 +751,42 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
        no. The files stay in the tree (the measurement and detection tests
        use them as fixtures); nothing on the site shows them. Permission
        recorded in writing, row by row, is the way back — git has the markup.
-       The proof that remains is the demo above: a credited Unsplash photo
-       and what Facet Pro actually made of it. -->
+       What stands in its place, below, claims nothing about whose house it
+       is: a credited Unsplash photograph and what Facet Pro made of it. -->
+
+  <!-- 0092: one house, honestly labelled, in place of the gallery. The
+       before is an Unsplash photograph (free licence, commercial use; see
+       assets/work/PROVENANCE.md) — not a customer's house, not a job of ours,
+       no readable number. The after and the price are real facetpro.co.uk
+       output for it, 5 Oct 2026: casement, uPVC, anthracite, Georgian bars
+       (the house has them, so the price includes them and matches the
+       picture), front door kept. Never call this "Real homes". -->
+  <section data-page="home" id="try-it" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24" aria-labelledby="try-heading">
+    <p class="text-base text-zinc-600 font-semibold">Try it on houses like yours</p>
+    <h2 id="try-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">A period house, new windows, the door kept.</h2>
+    <p class="mt-2 text-lg leading-6 text-zinc-600 max-w-[64ch]">The same photograph, before and after. Only the window frames were asked to change &mdash; the gables, the brick and the front door are as they were.</p>
+    <figure class="mt-6">
+      <div class="grid sm:grid-cols-2 gap-2 sm:gap-3">
+        <div class="relative rounded-xl overflow-hidden border border-zinc-200 bg-white">
+          <img src="/assets/work/try-tudor-before-600.jpg" srcset="/assets/work/try-tudor-before-400.jpg 400w, /assets/work/try-tudor-before-600.jpg 600w, /assets/work/try-tudor-before-1200.jpg 1200w" sizes="(min-width: 640px) 46vw, 92vw" alt="Photograph: a red-brick house with black and white gables and white windows with glazing bars" width="600" height="450" loading="lazy" decoding="async" class="w-full aspect-[4/3] object-cover bg-zinc-100">
+          <span class="absolute top-2 left-2 text-base px-2 py-0.5 rounded-full bg-white text-zinc-900 font-semibold border border-zinc-200">Before</span>
+        </div>
+        <div class="relative rounded-xl overflow-hidden border border-zinc-200 bg-white">
+          <img src="/assets/work/try-tudor-after-600.jpg" srcset="/assets/work/try-tudor-after-400.jpg 400w, /assets/work/try-tudor-after-600.jpg 600w, /assets/work/try-tudor-after-1200.jpg 1200w" sizes="(min-width: 640px) 46vw, 92vw" alt="AI visualisation: the same house with anthracite uPVC casement windows, glazing bars kept, white front door unchanged" width="600" height="450" loading="lazy" decoding="async" class="w-full aspect-[4/3] object-cover bg-zinc-100">
+          <span class="absolute top-2 left-2 text-base px-2 py-0.5 rounded-full bg-emerald-700 text-white font-semibold">New look</span>
+        </div>
+      </div>
+      <div class="mt-2 rounded-xl bg-zinc-900 text-[#FBF8F3] px-4 py-3 sm:flex sm:items-center sm:justify-between sm:gap-4">
+        <div>
+          <p class="text-base text-white/75">Estimated cost &middot; 5 front windows &middot; uPVC casement with Georgian bars, anthracite</p>
+          <p class="serif text-[26px] sm:text-[30px] leading-tight tracking-tight">&pound;10,333 &ndash; &pound;18,787</p>
+          <p class="text-base text-white/75">Planning estimate &middot; inc. VAT &middot; not a quotation</p>
+        </div>
+        <button type="button" class="mt-2 sm:mt-0 text-lg font-medium text-[#E8C478] underline underline-offset-4 min-h-[44px] whitespace-nowrap" onclick="goToUpload()">Try it on your house &rarr;</button>
+      </div>
+      <figcaption class="mt-2 text-base leading-6 text-zinc-500">Not a customer&rsquo;s house. House photo: Unsplash. The picture on the right and the price are real Facet Pro output (AI visualisation).</figcaption>
+    </figure>
+  </section>
 
   <!-- Why anybody would use this, said once.
 

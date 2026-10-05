@@ -311,3 +311,27 @@ still uses `demo-windows-before-600.jpg`, credited there as Unsplash.
   glass, and re-running it with bars rendered the upstairs as a broken grid.
 - Never under "Real homes" or "Photographs, not renders". Interim: to be
   replaced by a real bay-fronted house used with written permission.
+
+## try-tudor-before / try-tudor-after (400, 600, 1200) — "Try it on houses like yours", 0092, 5 Oct 2026
+
+In place of the gallery taken down the same day.
+
+- Before: an Unsplash photograph, https://unsplash.com/photos/rwT63HwI7F8 (free
+  Unsplash licence, commercial use allowed). Not a customer's house and not a
+  job of ours; credited on the page as "House photo: Unsplash" and captioned
+  "Not a customer's house". Checked for addressability: no number; a small
+  house-name plaque beside the door is illegible even magnified 3×. Cropped
+  centrally to 4:3 from 1600×1178.
+- After: real facetpro.co.uk output for that photograph, run on the live site
+  5 Oct 2026 (build 09f279fc6771): detached, uPVC casement, anthracite,
+  Georgian bars, front door kept. The door, gable timbers and brickwork came
+  back unchanged. Labelled "AI visualisation". Render id not recorded here.
+- Price shown with it: £10,333 – £18,787 for 5 front windows, the published
+  (market) range /api/glazing returned for that reading with bars. Priced
+  with bars because the house has them and the render kept them — priced as
+  plain glass it was £9,334 – £16,971, which the picture would not match.
+  Re-check when window prices change.
+
+Considered and not used, same day: two meta.ai-generated houses (commercial
+terms unclear, dropped at Mike's request); Unsplash houses with readable
+numbers ("46"; "43B, 42, 41, 40"), close crops, and rows of several houses.
