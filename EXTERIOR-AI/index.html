@@ -5469,7 +5469,7 @@ function buildVisualizer() {
             ? h('div', { id: 'picture-price', className: 'absolute right-3 top-3 z-10 rounded-xl bg-zinc-900/85 text-white px-3 py-1.5 text-right' }, [
                 h('div', { className: 'picture-price-lines' }, pictureLines().map(l =>
                   h('div', { className: `measured ${pictureLines().length > 1 ? 'text-[15px] sm:text-[18px]' : 'text-[17px] sm:text-[20px]'} leading-tight` }, l))),
-                h('div', { className: 'text-[12px] sm:text-[13px] text-white/80' }, 'Planning estimate · inc. VAT'),
+                h('div', { className: 'text-[12px] sm:text-[13px] text-white/80' }, 'Planning estimate · inc. VAT · not a quotation'),
               ])
             : null,
           slider,
@@ -6448,8 +6448,26 @@ function buildPricePanel(price, priceRow) {
       : null,
     h('p', { className: 'mt-2 text-base leading-7 text-white/85' },
       'Including materials, labour, scaffolding, waste and VAT.'),
+    /* 0088 (5 Oct, review): say WHY the final price can move, beside the range,
+       not only that it can — local labour and material prices, the installer,
+       and what a survey finds. Then two ways to keep it before asking anyone
+       for anything: share the picture, or save the design. Both already exist
+       (shareMyHouse, the code under "Keep what you've designed"); here they sit
+       next to the number people want to show. */
     h('p', { className: 'mt-2 text-base leading-7 text-white/80' },
-      'Planning estimate. Realistic range. Final price confirmed after a survey.'),
+      'Planning estimate, not a quotation. Prices vary by area and installer, and with the condition of your house — your installer confirms the final price after a survey.'),
+    h('div', { id: 'estimate-keep', className: 'mt-4 flex flex-wrap gap-2' }, [
+      (state.renderUrl && state.revealed && !state.rendering) ? h('button', {
+        type: 'button',
+        className: 'px-4 rounded-full text-base font-semibold min-h-[44px] bg-white text-zinc-900',
+        onClick: shareMyHouse,
+      }, 'Share this design') : null,
+      h('button', {
+        type: 'button',
+        className: 'px-4 rounded-full text-base font-semibold min-h-[44px] border border-white/40 text-white',
+        onClick: () => document.getElementById('save-design')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+      }, 'Save it for later'),
+    ]),
 
     /* Said where it can be seen, with the one thing that fixes it.
 
