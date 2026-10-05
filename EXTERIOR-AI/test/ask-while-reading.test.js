@@ -35,7 +35,7 @@ test('the reveal is what releases the question', () => {
 
 test('nobody who has already said is asked again', () => {
   const f = h.slice(h.indexOf('function awaitingTriage()'), h.indexOf('function releaseFirstPicture()'));
-  for (const k of ['!state.journey', '!state.triageAnswered', '!state.resumedDesign', '!state.conservatoryIntent', '!triageTimedOut', '!!state.uploadedImg']) assert.ok(f.includes(k), k);
+  for (const k of ['!state.journey', '!state.triageAnswered', '!state.resumedDesign', '!state.conservatoryIntent', '!!state.uploadedImg']) assert.ok(f.includes(k), k);
 });
 
 test('neither automatic first picture waits for the answer', () => {
@@ -47,13 +47,26 @@ test('neither automatic first picture waits for the answer', () => {
   }
 });
 
-test('an answer or the wait releases the first picture', () => {
-  assert.match(h, /var TRIAGE_WAIT_MS = 20000;/);
+test('nothing times the question out before the picture arrives', () => {
+  /* The bug this shipped on 5 October. The twenty-second timer set
+     triageTimedOut, awaitingTriage() read it, and triageAfterReveal() depends
+     on awaitingTriage() — so with a render taking 25-30s the timer always
+     fired first and the question could never appear. Reported from both the
+     desktop and the phone walk the same day. A question that waits for the
+     picture cannot also expire before it. */
+  /* Code only. index.html ships its comments to the browser, and the note
+     explaining this removal necessarily names the thing it removed — the same
+     trap the legal-placeholder guard fell into twice. */
+  const code = h.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  assert.doesNotMatch(code, /triageTimedOut/, 'the timeout that suppressed the question is back');
+  assert.doesNotMatch(code, /TRIAGE_WAIT_MS/, 'a timer on a question that follows the picture can only kill it');
+});
+
+test('an answer still applies the journey and renders it', () => {
   const a = h.slice(h.indexOf('async function answerTriage('), h.indexOf('function triageInPanel()'));
   assert.match(a, /state\.triageAnswered = true;/);
   assert.match(a, /await applyJourney\(id\);/);
   assert.match(a, /releaseFirstPicture\(\)/);
-  assert.match(h, /triageTimedOut = true; render\(\); releaseFirstPicture\(\);/);
   const r = h.slice(h.indexOf('function releaseFirstPicture()'), h.indexOf('async function answerTriage('));
   assert.match(r, /maybeAutoRender\(\); else startAutoRender\(\);/);
 });

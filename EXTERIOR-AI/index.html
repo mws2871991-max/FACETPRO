@@ -3596,24 +3596,32 @@ function buildChooser() {
   ]);
 }
 
-/* Asked while the photo is read (0062).
+/* Asked after the picture (0062, reordered 5 October).
 
    The question above was only ever on the landing stage, and below the
    uploader: somebody who went straight to "Upload my house" was never asked
-   what they wanted, and the first picture and price were our guess. Waiting
-   for the answer before reading the photo would add the whole reading time to
-   every visit, so it is asked during the reading instead — the detection runs
-   regardless, and only the first picture waits, for the answer or for
-   TRIAGE_WAIT_MS, whichever comes first. var: read by render(). */
-var TRIAGE_WAIT_MS = 20000;
+   what they wanted, and the first picture and price were our guess. 0062 moved
+   it into the reading and made the first picture wait for it; 5 October moved
+   it again, to the reveal, and stopped the picture waiting for anything.
+
+   Nothing is timed now. The timer belonged to the version that held a picture
+   back. var: read by render(). */
 var triageTimer = null;
-var triageTimedOut = false;
 /* Still un-asked, and still worth asking. Since 5 October this no longer holds
    the first picture back (see startAutoRender) — it only decides whether the
-   question is on screen. */
+   question is on screen.
+ *
+ * The twenty-second timeout went with it, and had to: it set triageTimedOut,
+ * which suppressed the question for the rest of the visit. While the timer
+ * released a held picture that was the whole point. Once the picture stopped
+ * waiting, the only thing the timer could still do was kill the question —
+ * and a render takes twenty-five to thirty seconds, so it always fired first.
+ * The question never appeared at the reveal on either desktop or a phone
+ * (Mike's walk, 5 Oct, items 7 and 8), and this is why. A question that waits
+ * for the picture cannot also expire before it. */
 function awaitingTriage() {
   return !!state.uploadedImg && !state.journey && !state.triageAnswered && !state.resumedDesign
-    && !state.conservatoryIntent && !triageTimedOut;
+    && !state.conservatoryIntent;
 }
 /* Show their house changed FIRST, then ask what they came for (Mike, 5 Oct:
    "upload photo … then see what new windows doors will look like … then what
@@ -10190,12 +10198,9 @@ async function handleUpload(file) {
      have. See reportJourneyTiming. */
   journeyStartedAt = Date.now();
   startAnalysisNarration();
-  /* Nobody is held up by a question they ignore (0062). */
-  triageTimedOut = false;
-  if (triageTimer) clearTimeout(triageTimer);
-  triageTimer = (!state.journey && !state.triageAnswered && !state.resumedDesign && !state.conservatoryIntent)
-    ? setTimeout(() => { triageTimer = null; if (!awaitingTriage()) return; triageTimedOut = true; render(); releaseFirstPicture(); }, TRIAGE_WAIT_MS)
-    : null;
+  /* No timer any more: nothing is held up by a question that now follows the
+     picture rather than standing in front of it. */
+  if (triageTimer) { clearTimeout(triageTimer); triageTimer = null; }
   const url = URL.createObjectURL(file);
   state.uploadedImg = url;
   state.stage = 'detecting';
