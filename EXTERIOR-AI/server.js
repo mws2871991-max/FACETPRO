@@ -4015,6 +4015,24 @@ app.post('/api/render', renderLimiter, async (req, res) => {
      left to store the image afterwards, so the two can no longer disagree. */
   const renderStartedAt = Date.now();
   const RENDER_DEADLINE_MS = 100_000;
+  /* How long a render will wait for the window mask (5 October, measured).
+     The six-second grace lost it more often than it won — 7 misses to 6 holds
+     on 4 October — but waiting the whole remaining budget was the wrong
+     correction, and the first live test said so: 90.6s waited, no mask, and a
+     homeowner kept for 101 seconds to be given the unheld render they would
+     have had in thirty.
+
+     Segmentation is not marginally slow, it is bimodal: warm it comes back in
+     seconds, cold it takes 80-90s and more (82.8 and 88.9 measured on 2 Oct,
+     90.6 not enough on 5 Oct). A long wait therefore buys almost nothing — the
+     cold ones lose whatever we do — while charging every one of them the full
+     budget. Twenty seconds takes the mask that is nearly ready and gives up on
+     the one that never was.
+
+     The cold case wants a different answer, not a longer wait: hold the
+     automatic first render until the mask is ready, or render again once it
+     lands. Neither belongs in a timeout. */
+  const MASK_MAX_WAIT_MS = 20_000;
 
   try {
     const deadlineAt = renderStartedAt + RENDER_DEADLINE_MS;
@@ -4171,7 +4189,7 @@ app.post('/api/render', renderLimiter, async (req, res) => {
        driveway keep mask took the same step in 0056 and declines instead,
        because demolishing a garden wall is worse than a slow picture; here a
        held-back brick is not worth refusing a render over. */
-    const maskWaitMs = Math.max(0, deadlineAt - Date.now());
+    const maskWaitMs = Math.min(MASK_MAX_WAIT_MS, Math.max(0, deadlineAt - Date.now()));
     const mask = await maskWithinGrace(maskPromise, maskWaitMs);
     /* Say so when it was wanted and did not arrive.
  *
@@ -4189,7 +4207,7 @@ app.post('/api/render', renderLimiter, async (req, res) => {
        who tries anthracite next gets the one this render gave up waiting for. */
     if (maskRecord && mask && !maskRecord.windowMask) maskRecord.windowMask = mask;
     /* The same wait, from what the window mask left of the budget. */
-    const pillarWaitMs = Math.max(0, deadlineAt - Date.now());
+    const pillarWaitMs = Math.min(MASK_MAX_WAIT_MS, Math.max(0, deadlineAt - Date.now()));
     const pillars = await maskWithinGrace(pillarPromise, pillarWaitMs);
     /* The three silent ways a pick never became a hold (0055): not back in
        time, or back but with no window mask to ride on. Each says so now. */

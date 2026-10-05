@@ -217,10 +217,16 @@ test('the window mask is waited for, not raced against six seconds', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
   assert.doesNotMatch(src, /maskWithinGrace\(maskPromise\)/, 'the six-second race is back');
   assert.match(src, /maskWithinGrace\(maskPromise, maskWaitMs\)/);
-  assert.match(src, /const maskWaitMs = Math\.max\(0, deadlineAt - Date\.now\(\)\)/);
+  /* Bounded (5 Oct): the whole remaining budget was the wrong correction —
+     90.6s waited, no mask, and a homeowner kept 101s for the unheld render
+     they would have had in thirty. Segmentation is bimodal, so a long wait
+     buys almost nothing and charges every cold start the full budget. */
+  assert.match(src, /const maskWaitMs = Math\.min\(MASK_MAX_WAIT_MS, Math\.max\(0, deadlineAt - Date\.now\(\)\)\)/);
+  assert.match(src, /const MASK_MAX_WAIT_MS = 20_000/);
   /* And the pillar pick, which rides on it and lost the same race. */
   assert.doesNotMatch(src, /maskWithinGrace\(pillarPromise\)/, 'the pillar pick is racing again');
   assert.match(src, /maskWithinGrace\(pillarPromise, pillarWaitMs\)/);
+  assert.match(src, /const pillarWaitMs = Math\.min\(MASK_MAX_WAIT_MS/);
 });
 
 test('a render with no mask still goes out, and still says so', () => {
