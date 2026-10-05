@@ -36,18 +36,33 @@ test('the page does not claim whose job it was while the table says UNKNOWN', ()
   }
 });
 
-test('"photographs, not renders" is the claim the checker supports', () => {
-  /* Kept deliberately. check-gallery-pair.js scored the quietest sixth of all
-     three pairs at 2.6, 7.8 and 1.8 on 29 September — a photograph re-finished
-     scores under 8, generated imagery over 13, because generating redraws
-     every pixel. That claim is evidenced; the one about whose job it was is
-     not, and the difference is the point. */
-  assert.match(page, /Photographs, not renders/, 'the evidenced claim was removed along with the unevidenced one');
-  assert.match(prov, /quietest sixth/i, 'the evidence for it is no longer recorded');
-  assert.match(prov, /\*\*2\.6\*\*|2\.6/, 'the measured scores have gone from the file');
+/* 5 October: the gallery came down. Softening the wording reduced what we
+   claimed about those houses; it did nothing about whether their owners had
+   said yes, and permission is UNKNOWN on every row. So while any row says
+   UNKNOWN, no file in it is shown anywhere — the gallery, the photo tips, or
+   anything added later. The files stay in the tree as test fixtures. */
+const withoutPermission = ['hero', 'tilehung', 'newbuild'];
+const scripts = ['landing.js'].map(f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8'));
+
+test('no house without recorded permission is shown on the site', () => {
+  if (!unproven) return;
+  for (const name of withoutPermission) {
+    const shown = new RegExp(`/assets/work/${name}-(before|after)`);
+    assert.doesNotMatch(page, shown, `${name} is on the page while PROVENANCE.md says UNKNOWN`);
+    for (const js of scripts) assert.doesNotMatch(js, shown, `${name} is in landing.js while PROVENANCE.md says UNKNOWN`);
+  }
 });
 
-test('the caption says only what the table can back', () => {
-  assert.match(page, /Every picture here is a photograph of a real house, before and after/,
-    'the gallery caption has changed — check it against PROVENANCE.md before shipping it');
+test('with the gallery gone, nothing still claims it', () => {
+  assert.doesNotMatch(page, /id="our-work"/);
+  assert.doesNotMatch(page, /href="\/#our-work"/, 'a footer link to a section that is not there');
+  assert.doesNotMatch(page, /Photographs, not renders/, 'a claim about pictures the page no longer shows');
+  assert.match(prov, /## Taken down — 5 October 2026/, 'the reason is recorded where the question is asked');
+});
+
+test('the photo tips use the credited Unsplash photograph, not anyone\'s house', () => {
+  assert.match(page, /src: '\/assets\/work\/demo-windows-before-600\.jpg'/);
+  assert.match(page, /src: '\/assets\/work\/demo-close-crop-sm\.jpg'/);
+  assert.match(page, /'House photo: Unsplash'\)/);
+  assert.ok(fs.existsSync(path.join(__dirname, '..', 'assets', 'work', 'demo-close-crop-sm.jpg')));
 });

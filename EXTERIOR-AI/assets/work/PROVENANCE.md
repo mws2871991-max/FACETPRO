@@ -15,6 +15,27 @@ The files carry no EXIF and no origin markers — they have been stripped — so
 the provenance cannot be recovered from the images. It has to come from whoever
 put them there.
 
+## Taken down — 5 October 2026
+
+At Mike's request the "Real homes" gallery is off the site: the hero,
+tilehung and newbuild pairs, and the two of them (`hero-before-sm`,
+`newbuild-before-sm`) that were the "Like this / Not this" photo tips on the
+upload step. The reason is the permission column below — UNKNOWN on every
+row, on identifiable houses, on a public marketing page. Softening the
+wording that morning reduced what we claimed; it did nothing about whose
+houses they are.
+
+The files stay in the tree because the detection and measurement tests use
+them as fixtures, and because the repository is public they are still in its
+history either way. Nothing on facetpro.co.uk links to them. A pair comes
+back when its row has a written OK from the homeowner, recorded here.
+
+The photo tips now use the Unsplash demo photograph (see the 0086 section at
+the end): `demo-windows-before-600.jpg` as "Like this", and
+`demo-close-crop-sm.jpg` — a crop of the 1200px version, (740,300)–(1060,540),
+resized to 600×450 — as "Not this". Credited under them as "House photo:
+Unsplash".
+
 ## The homepage pair: `home-22-before*.jpg` / `home-22-after*.jpg` (29 September 2026, late)
 
 Replaces the single feature house (below) on the homepage's first screen, at Mike's request.

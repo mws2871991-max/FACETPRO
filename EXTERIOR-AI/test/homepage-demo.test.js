@@ -38,8 +38,9 @@ test('every price on the homepage demo and installer example has the full line b
   }
 });
 
-test('the homepage runs hero, demo, problem, solution, proof, price, installers, trust, close', () => {
-  const order = ['id="choose-heading"', '<figure id="demo"', 'id="problem"', 'id="how-it-works"', 'id="our-work"',
+/* The proof section ("Real homes") came down 5 October; see gallery-claims. */
+test('the homepage runs hero, demo, problem, solution, price, installers, trust, close', () => {
+  const order = ['id="choose-heading"', '<figure id="demo"', 'id="problem"', 'id="how-it-works"',
     'id="price-basis"', 'id="for-installers"', 'id="trust"', 'id="close-heading"'].map(k => html.indexOf(k));
   for (const at of order) assert.ok(at > 0);
   assert.deepStrictEqual([...order].sort((a, b) => a - b), order);
