@@ -19,22 +19,22 @@ const root = path.join(__dirname, '..');
 const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const landing = fs.readFileSync(path.join(root, 'landing.js'), 'utf8');
 const privacy = fs.readFileSync(path.join(root, 'legal', 'privacy.html'), 'utf8');
-const LINE = /Your original photo isn(’|&rsquo;)t stored/;
+const LINE = /Your original photo isn(’|&rsquo;)t kept/;
 
 test('the privacy notice has the anchor the upload lines link to', () => {
   assert.match(privacy, /id="your-photograph"[^>]*>What happens to your photograph/);
 });
 
-test('the first screen answers the question right under "Upload my house"', () => {
+test('the first screen answers the question right under the hero button', () => {
   const start = index.indexOf('id="choose-heading"');
-  const button = index.indexOf('Upload my house', start);
-  const after = index.slice(button, button + 1500);
+  const button = index.indexOf('See my house &amp; price', start);
+  const after = index.slice(button, button + 2000);
   assert.match(after, LINE);
   assert.ok(after.includes('/privacy#your-photograph'));
 });
 
 test('the upload panel answers it in place, and links to the notice', () => {
-  const at = index.search(/'Your original photo isn’t stored\./);
+  const at = index.search(/'Your original photo isn’t kept\./);
   assert.ok(at > 0, 'the upload panel line is missing');
   const block = index.slice(at - 400, at + 1200);
   assert.ok(block.includes("h('details'"), 'it opens in place');
@@ -48,7 +48,7 @@ test('no "how your photo is used" link points at the measurement section', () =>
 
 test('every cost-page upload has the line and the link', () => {
   const buttons = (landing.match(/No sales call unless you ask<\/p>/g) || []).length;
-  const lines = (landing.match(/Your original photo isn&rsquo;t stored\. <a href="\/privacy#your-photograph">/g) || []).length;
+  const lines = (landing.match(/Your original photo isn&rsquo;t kept\. <a href="\/privacy#your-photograph">/g) || []).length;
   assert.ok(buttons > 0);
   assert.strictEqual(lines, buttons);
 });

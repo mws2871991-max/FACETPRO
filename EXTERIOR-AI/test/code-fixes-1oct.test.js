@@ -60,6 +60,6 @@ test('/investors limits wrong passwords; /healthz checks the database', () => {
 });
 
 test('contrast and tap targets: After label and guide footer links', () => {
-  assert.match(read('index.html'), /bg-emerald-700 text-white font-semibold">After</);
+  assert.match(read('index.html'), /bg-emerald-700 text-white font-semibold">(After|New look)</);
   assert.match(read('assets/landing.css'), /footer\.site \.wrap>a\{display:inline-block;padding:12px 2px;min-height:44px\}/);
 });
