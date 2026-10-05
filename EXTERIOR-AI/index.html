@@ -527,36 +527,39 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
       <p class="pb-2 leading-7 text-zinc-600">We use it only to make your picture. Once your picture has been made, the photo is deleted &mdash; never published, sold, or used by us to train AI. For seven days we keep a fingerprint of it (not an image) and its measurements, so your estimate stays consistent while you use Facet Pro. <a href="/privacy#your-photograph" class="underline underline-offset-2">Full details</a></p>
     </details>
     </div>
-    <!-- 0086: the product "magic" right under the promise — your house, the new
-         look, the estimated cost, see yours. Replaces the house-22
-         illustration (which had a driveway the tool does not do).
-         Real Facet Pro output: the before is an Unsplash photograph of a UK
-         house; the after and the price are what facetpro.co.uk produced for
-         it (uPVC casement windows, anthracite), the same pair the launch
-         videos use. Price checked on the live site in this session
-         (5 Oct 2026); if window prices change, re-run it and update the
-         figure here and in the installer example below. See
+    <!-- 0091 (5 Oct, handoff "homepage demo swap (grey bay)" v2): the bay
+         house. At the size this is shown (about 280px on desktop, 172px on a
+         phone) a white bay going anthracite reads at a glance where the
+         Georgian house did not, and the old pair had a blurred house-number
+         patch and sliding sashes priced as casement.
+         The before is an AI-generated illustration, not anyone's house, and
+         says so; the after and the price are real facetpro.co.uk output for
+         it (detached, uPVC casement, plain glass, anthracite, door kept; 3
+         front windows incl. the bay). Interim: to be replaced by a real
+         bay-fronted house used with written permission. If window prices
+         change, re-run it and update the figure here and in the installer
+         example below. Never under "Real homes". See
          assets/work/PROVENANCE.md and test/homepage-demo.test.js. -->
     <figure id="demo" class="mt-5 lg:mt-0 max-w-[640px]">
       <div class="grid grid-cols-2 gap-2 sm:gap-3">
         <div class="relative rounded-xl overflow-hidden border border-zinc-200 bg-white">
-          <img src="/assets/work/demo-windows-before-600.jpg" srcset="/assets/work/demo-windows-before-400.jpg 400w, /assets/work/demo-windows-before-600.jpg 600w, /assets/work/demo-windows-before-1200.jpg 1200w" sizes="(min-width: 1024px) 280px, 46vw" fetchpriority="high" alt="Photograph: a red-brick house with white sash-style windows" width="600" height="400" loading="eager" decoding="async" class="w-full aspect-[3/2] object-cover bg-zinc-100">
-          <span class="absolute top-2 left-2 text-base px-2 py-0.5 rounded-full bg-white text-zinc-900 font-semibold border border-zinc-200">Your house</span>
+          <img src="/assets/work/demo-baywindow-before-600.jpg" srcset="/assets/work/demo-baywindow-before-400.jpg 400w, /assets/work/demo-baywindow-before-600.jpg 600w, /assets/work/demo-baywindow-before-1200.jpg 1200w" sizes="(min-width: 1024px) 280px, 46vw" fetchpriority="high" alt="Illustration: a red-brick detached house with white uPVC windows and a bay window" width="600" height="400" loading="eager" decoding="async" class="w-full aspect-[3/2] object-cover bg-zinc-100">
+          <span class="absolute top-2 left-2 text-base px-2 py-0.5 rounded-full bg-white text-zinc-900 font-semibold border border-zinc-200">Before</span>
         </div>
         <div class="relative rounded-xl overflow-hidden border border-zinc-200 bg-white">
-          <img src="/assets/work/demo-windows-after-600.jpg" srcset="/assets/work/demo-windows-after-400.jpg 400w, /assets/work/demo-windows-after-600.jpg 600w, /assets/work/demo-windows-after-1200.jpg 1200w" sizes="(min-width: 1024px) 280px, 46vw" fetchpriority="high" alt="AI visualisation: the same house with anthracite uPVC casement windows" width="600" height="400" loading="eager" decoding="async" class="w-full aspect-[3/2] object-cover bg-zinc-100">
+          <img src="/assets/work/demo-baywindow-after-600.jpg" srcset="/assets/work/demo-baywindow-after-400.jpg 400w, /assets/work/demo-baywindow-after-600.jpg 600w, /assets/work/demo-baywindow-after-1200.jpg 1200w" sizes="(min-width: 1024px) 280px, 46vw" fetchpriority="high" alt="AI visualisation: the same house with anthracite uPVC casement windows, including the bay" width="600" height="400" loading="eager" decoding="async" class="w-full aspect-[3/2] object-cover bg-zinc-100">
           <span class="absolute top-2 left-2 text-base px-2 py-0.5 rounded-full bg-emerald-700 text-white font-semibold">New look</span>
         </div>
       </div>
       <div class="mt-2 rounded-xl bg-zinc-900 text-[#FBF8F3] px-4 py-3 sm:flex sm:items-center sm:justify-between sm:gap-4">
         <div>
-          <p class="text-base text-white/75">Estimated cost &middot; uPVC casement windows, anthracite</p>
-          <p class="serif text-[26px] sm:text-[30px] leading-tight tracking-tight">&pound;7,076 &ndash; &pound;12,866</p>
+          <p class="text-base text-white/75">Estimated cost &middot; 3 front windows incl. the bay &middot; uPVC casement, anthracite</p>
+          <p class="serif text-[26px] sm:text-[30px] leading-tight tracking-tight">&pound;5,643 &ndash; &pound;10,259</p>
           <p class="text-base text-white/75">Planning estimate &middot; inc. VAT &middot; not a quotation</p>
         </div>
         <button type="button" class="mt-2 sm:mt-0 text-lg font-medium text-[#E8C478] underline underline-offset-4 min-h-[44px] whitespace-nowrap" onclick="goToUpload()">Try it on your house &rarr;</button>
       </div>
-      <figcaption class="mt-2 text-base leading-6 text-zinc-500">Real Facet Pro output. The picture on the right is an AI visualisation. House photo: Unsplash.</figcaption>
+      <figcaption class="mt-2 text-base leading-6 text-zinc-500">House: AI-generated illustration. The picture on the right and the price are real Facet Pro output (AI visualisation).</figcaption>
     </figure>
     </div>
     <h2 class="mt-8 text-lg font-semibold text-zinc-900">Or start with your windows or front door</h2>
@@ -1094,11 +1097,11 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
       <div class="mt-6 lg:mt-0 rounded-2xl bg-white border border-zinc-200 p-5 shadow-sm">
         <p class="text-base font-semibold text-zinc-600">Example Facet Pro enquiry &middot; the house above</p>
         <dl class="mt-3 divide-y divide-zinc-100 text-lg">
-          <div class="flex justify-between gap-4 py-1.5"><dt class="text-zinc-600">Windows</dt><dd class="font-medium">5</dd></div>
+          <div class="flex justify-between gap-4 py-1.5"><dt class="text-zinc-600">Windows</dt><dd class="font-medium">3, incl. the bay</dd></div>
           <div class="flex justify-between gap-4 py-1.5"><dt class="text-zinc-600">Style</dt><dd class="font-medium">Casement, uPVC</dd></div>
           <div class="flex justify-between gap-4 py-1.5"><dt class="text-zinc-600">Colour</dt><dd class="font-medium">Anthracite</dd></div>
           <div class="flex justify-between gap-4 py-1.5"><dt class="text-zinc-600">Front door</dt><dd class="font-medium">Kept as it is</dd></div>
-          <div class="flex justify-between gap-4 py-1.5"><dt class="text-zinc-600">Estimated project</dt><dd class="font-medium text-right">&pound;7,076 &ndash; &pound;12,866<span class="block text-base font-normal text-zinc-500">Planning estimate &middot; inc. VAT &middot; not a quotation</span></dd></div>
+          <div class="flex justify-between gap-4 py-1.5"><dt class="text-zinc-600">Estimated project</dt><dd class="font-medium text-right">&pound;5,643 &ndash; &pound;10,259<span class="block text-base font-normal text-zinc-500">Planning estimate &middot; inc. VAT &middot; not a quotation</span></dd></div>
           <div class="flex justify-between gap-4 py-1.5"><dt class="text-zinc-600">Visualisation</dt><dd class="font-medium text-emerald-700">&#10003;</dd></div>
           <div class="flex justify-between gap-4 py-1.5"><dt class="text-zinc-600">Homeowner has chosen</dt><dd class="font-medium text-emerald-700">&#10003;</dd></div>
           <div class="flex justify-between gap-4 py-1.5"><dt class="text-zinc-600">Quote requested</dt><dd class="font-medium text-emerald-700">&#10003;</dd></div>
