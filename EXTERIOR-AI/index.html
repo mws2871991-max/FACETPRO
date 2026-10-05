@@ -6732,6 +6732,20 @@ function buildTotalBar() {
   const glaz = state.glazing;
   if (!price && !glaz?.price) return h('div', { id: 'total-bar' });
 
+  /* Not a figure before they have seen the design it is for (Mike's phone
+     walk, 5 Oct). The bar changed to "£14,000 – £22,000" during the scan,
+     while the picture was still being made and the reveal card was still
+     covering it — so the first price a homeowner read was for something they
+     had not been shown. A number arriving before the thing it prices is how a
+     quote feels, and the whole argument of this page is that it is not one.
+
+     Only while a picture is coming and has not been revealed. With no render
+     at all — colours only, or a photo that could not be read — the bar is
+     their estimate as it always was, and still shows. */
+  if (state.uploadedImg && !state.revealed && (state.rendering || state.renderUrl)) {
+    return h('div', { id: 'total-bar' });
+  }
+
   /* What the figure covers, and only that.
 
      This used to read "8 windows · 1 door" off the window count whether or not
@@ -8206,6 +8220,26 @@ async function generateRealRender({ settled = false, revived = false } = {}) {
        the reveal card creates. */
     reachedStage('render_shown');
     U('Your new look is ready — drag the slider to compare');
+    /* And put it where they can see it (Mike's phone walk, 5 Oct).
+     *
+     * On a 375x812 screen the reader is left on the "What we found" list at
+     * about scrollY 1000 while the picture and "Reveal my design" sit at about
+     * y 2690 — seventeen hundred pixels below the fold. The toast above says
+     * the design is ready and nothing on screen shows it, so the one thing
+     * they came for is announced and then hidden.
+     *
+     * Only when it is off screen, and only once the layout has been rebuilt by
+     * the render() in the finally block below — scrolling to where the card
+     * used to be would be worse than not scrolling at all. A reader who has
+     * already scrolled down to the card is left alone. */
+    setTimeout(() => {
+      const card = document.getElementById('visualizer-section');
+      if (!card || !state.renderUrl || state.revealed) return;
+      const top = card.getBoundingClientRect().top;
+      if (top > window.innerHeight * 0.6 || top < 0) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 80);
   } catch (err) {
     // One message at a time: if the photo itself failed, that notice is the one to read.
     if (!state.uploadError) U(err.plain ? err.message : 'We couldn’t create that picture just now. Your design and estimate still work — please try again in a minute.');
