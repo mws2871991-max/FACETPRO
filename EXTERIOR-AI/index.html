@@ -11014,7 +11014,34 @@ function applyHouseTypePreset() {
      somebody who arrived from /exterior-wall-rendering, and has no URL
      parameter to show for it. */
   const askedAboutWalls = state.journey === 'cladding';
-  const groups = askedAboutWalls ? ['cladding', 'trim', 'roof'] : ['trim', 'roof'];
+  let groups = askedAboutWalls ? ['cladding', 'trim', 'roof'] : ['trim', 'roof'];
+
+  /* Nobody who has not chosen gets a roof they did not ask about (Mike's walk,
+     5 October).
+   *
+   * Coming from "Upload my house" with no journey, the first look was a
+   * charcoal roof plus roofline at £22,500 – £30,000, windows untouched. The
+   * homepage leads with windows and doors; the demo under the hero is windows;
+   * the price beside it is £7,076 – £12,866. So the first picture and the
+   * first number contradicted the page that sent them, and the number was
+   * three times too big for the work they came to see.
+   *
+   * The same reasoning as the brickwork above, one trade further. A roof is a
+   * finish in the ordinary sense, but it is also the most expensive thing on
+   * the house, and opening on it prices a stranger for work nobody mentioned.
+   * Windows are what the site is for, what the homepage shows, and what the
+   * estimate beside the demo is.
+   *
+   * JOURNEYS.windows already holds the right opening — casement, anthracite,
+   * no door — so this is that, not a second list to keep in step. The rest of
+   * the outside is offered afterwards, which is step 7 of the journey. */
+  let openedOnWindows = false;
+  if (!state.journey && !state.resumedDesign) {
+    for (const [k, v] of Object.entries(JOURNEYS.windows.prefs)) {
+      if (state.prefs[k] == null) { state.prefs[k] = v; openedOnWindows = true; }
+    }
+    groups = [];
+  }
 
   /* Nor the trade they came for. The journey already picked its opening swatch
      for that one — ROOF_JOURNEY_DEFAULT for a roof, Alabaster for render — and
@@ -11025,7 +11052,9 @@ function applyHouseTypePreset() {
   const ownGroup = JOURNEY_GROUP[state.journey];
 
   const preset = AUTO_DEFAULTS[state.houseType] || AUTO_DEFAULTS.semi;
-  let applied = false;
+  /* The windows opening counts: the estimate beside the picture has to move
+     with it, and autoRenderStart only refreshes the price when something did. */
+  let applied = openedOnWindows;
   for (const group of groups) {
     // Never override a journey exclusion — "leave it as it is" is a choice.
     if (state[group] && state[group].id === 'none') continue;
