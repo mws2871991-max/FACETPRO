@@ -40,11 +40,20 @@ test('a picture of choices they have since changed is not shown', () => {
 test('the price is on the picture, read from the panel, with its conditions', () => {
   assert.match(h, /id: 'picture-price'/);
   assert.match(h, /\(state\.renderUrl && state\.revealed && showing === 'after' && !state\.rendering && pictureLines\(\)\.length\)/);
-  assert.match(h, /'Planning estimate · inc\. VAT'/);
+  assert.match(h, /'Planning estimate · inc\. VAT · not a quotation'/, 'the full ASA line belongs on the same frame as the price');
   const p = h.slice(h.indexOf('function pictureTotal()'), h.indexOf('function pictureTotal()') + 300);
   assert.match(p, /getElementById\('estimate-total'\)/);
 });
 
 test('the page says a picture is coming', () => {
   assert.match(h, /'Updating your picture — or tap to start now'/);
+});
+
+test('0088: beside the range, why it can move, and two ways to keep it', () => {
+  assert.match(h, /Prices vary by area and installer, and with the condition of your house/);
+  const keep = h.slice(h.indexOf("id: 'estimate-keep'"), h.indexOf("id: 'estimate-keep'") + 900);
+  assert.match(keep, /onClick: shareMyHouse/);
+  assert.match(keep, /'Share this design'/);
+  assert.match(keep, /getElementById\('save-design'\)/);
+  assert.match(keep, /min-h-\[44px\]/);
 });
