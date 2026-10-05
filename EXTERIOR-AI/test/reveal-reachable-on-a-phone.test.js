@@ -52,7 +52,11 @@ test('it only scrolls when the card is actually off screen', () => {
 
 test('the price waits for the picture it prices', () => {
   const f = code.slice(code.indexOf('function buildTotalBar()'), code.indexOf('function buildTotalBar()') + 900);
-  assert.match(f, /!state\.revealed/, 'the bar shows a figure before the design is seen');
+  /* everRevealed, not revealed (corrected 5 Oct on review). "Full makeover"
+     clears state.revealed so the reveal runs again, and keying the bar off it
+     made a price that was already on screen blink out mid-flow. The hold is on
+     the FIRST design being seen, once a visit. */
+  assert.match(f, /!state\.everRevealed/, 'the bar shows a figure before any design is seen');
   assert.match(f, /state\.rendering \|\| state\.renderUrl/,
     'the hold must apply while a picture is coming, not only once it has arrived');
 });

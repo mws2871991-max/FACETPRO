@@ -2298,6 +2298,10 @@ const state = {
   // Whether the homeowner has pressed through the "We found your home" card to
   // their own before-and-after. Gates the reveal, not the render.
   revealed: false,
+  /* Has any design been seen yet this visit? The price bar waits for the first
+     one and never blanks again — see buildTotalBar. Cleared only by "Start
+     again", with everything else. */
+  everRevealed: false,
   /* Screen 5 of the customer-journey brief: has the homeowner told us the
      detection looks right? null until asked, true once confirmed, 'flagged'
      if they said something was wrong. Never gates anything — see the panel. */
@@ -4623,7 +4627,7 @@ function buildUploadDetect() {
                first one got rather than an empty frame and a button. It is one
                more render against the daily cap, spent on somebody who has
                demonstrably not given up. */
-            onClick: () => { state.uploadedImg = null; state.uploadedBase64 = null; state.detections = []; state.stage = 'landing'; state.detectionStatus = 'idle'; state.renderUrl = null; state.renderId = null; state.windowCount = null; state.backCount = null; state.backFromPhoto = false; state.backPhotoCount = null; state.sideCount = null; state.frontWindowCount = null; state.frontWindowBoxes = []; state.glazing = null; state.hasCustomised = false; state.revealed = false; state.makeover = false; state.lastPriceDelta = null; autoRenderDone = false; settledRenders = 0; if (settledTimer) { clearTimeout(settledTimer); settledTimer = null; } U('Photo removed — add another whenever you like'); render(); }
+            onClick: () => { state.uploadedImg = null; state.uploadedBase64 = null; state.detections = []; state.stage = 'landing'; state.detectionStatus = 'idle'; state.renderUrl = null; state.renderId = null; state.windowCount = null; state.backCount = null; state.backFromPhoto = false; state.backPhotoCount = null; state.sideCount = null; state.frontWindowCount = null; state.frontWindowBoxes = []; state.glazing = null; state.hasCustomised = false; state.revealed = false; state.makeover = false; state.everRevealed = false; state.lastPriceDelta = null; autoRenderDone = false; settledRenders = 0; if (settledTimer) { clearTimeout(settledTimer); settledTimer = null; } U('Photo removed — add another whenever you like'); render(); }
           /* Screen 3: "allow replace photo without restarting the journey".
 
            The behaviour was already right — this clears the photograph, the
@@ -5526,6 +5530,11 @@ function buildVisualizer() {
                       reachedStage('reveal_viewed');
                       renderVisualizerOnly();
                       if (window.fpOfferInstall) window.fpOfferInstall();
+                      /* Last, so the reveal sequence above stays adjacent for
+                         the tests that pin it. Once a visit: the price bar
+                         waits for the FIRST design, and "Full makeover" clears
+                         state.revealed to run the reveal again. */
+                      state.everRevealed = true;
                     },
                   }, 'Reveal my design →'),
                 ]),
@@ -6805,7 +6814,7 @@ function buildTotalBar() {
      Only while a picture is coming and has not been revealed. With no render
      at all — colours only, or a photo that could not be read — the bar is
      their estimate as it always was, and still shows. */
-  if (state.uploadedImg && !state.revealed && (state.rendering || state.renderUrl)) {
+  if (state.uploadedImg && !state.everRevealed && (state.rendering || state.renderUrl)) {
     return h('div', { id: 'total-bar' });
   }
 
