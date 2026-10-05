@@ -71,7 +71,9 @@ test('it is counted apart from the other two invitations', () => {
      question this one has to answer is whether a third position earns
      uploads or merely takes clicks that would have happened 1,353px later,
      and that needs all three counted separately against landing. */
-  for (const stage of ['cta_clicked', 'real_home_cta_click', 'steps_cta_click']) {
+  /* 0087: the "That could be your house" band (real_home_cta_click) was merged into
+     this one. The stage stays registered on the server so past days still read. */
+  for (const stage of ['cta_clicked', 'steps_cta_click']) {
     assert.ok(page.includes(`reachedStage('${stage}')`),
       `${stage} is no longer fired anywhere — the three entry points cannot be told apart`);
   }

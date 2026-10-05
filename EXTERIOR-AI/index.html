@@ -554,7 +554,7 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
           <p class="serif text-[26px] sm:text-[30px] leading-tight tracking-tight">&pound;7,076 &ndash; &pound;12,866</p>
           <p class="text-base text-white/75">Planning estimate &middot; inc. VAT &middot; not a quotation</p>
         </div>
-        <button type="button" class="mt-3 sm:mt-0 cta w-full sm:w-auto px-5 py-3 rounded-full text-lg font-semibold transition min-h-[48px] whitespace-nowrap" onclick="goToUpload()">See yours &rarr;</button>
+        <button type="button" class="mt-2 sm:mt-0 text-lg font-medium text-[#E8C478] underline underline-offset-4 min-h-[44px] whitespace-nowrap" onclick="goToUpload()">Try it on your house &rarr;</button>
       </div>
       <figcaption class="mt-2 text-base leading-6 text-zinc-500">Real Facet Pro output. The picture on the right is an AI visualisation. House photo: Unsplash.</figcaption>
     </figure>
@@ -682,100 +682,12 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
   <section data-page="pricing" class="rounded-2xl bg-zinc-900 text-[#FBF8F3] overflow-hidden p-6 sm:p-8 md:p-12" aria-labelledby="hero-heading">
     <div class="grid lg:grid-cols-[1.05fr_1fr] gap-8 lg:gap-12 items-center">
       <div>
-        <p class="text-base text-white/80 font-semibold">Home exterior planning &middot; UK</p>
-        <!-- Rewritten from the homepage copy handoff, Section 04 Option A.
-             The old headline described the mechanism; this one leads with what
-             the homeowner gets and demotes the how to the subhead.
-
-             Two departures from that document, both deliberate. Its trust
-             strip reads "Free to try · One photo · Takes about a minute" — the
-             timing claim came off the numbers block on Saturday because
-             nothing measured it, and putting it back in the hero would be the
-             same unsubstantiated number somewhere more prominent. The strip
-             keeps "No sales call unless you ask", which is enforced in code
-             rather than promised in copy. -->
-        <!-- h2 since 24 September: the product choice above is the page's h1. -->
-        <h2 id="hero-heading" class="mt-4 serif text-[34px] sm:text-[42px] md:text-[52px] leading-[0.98] tracking-[-0.03em]">See your house. See the price. Before anyone comes&nbsp;round.</h2>
-        <!-- Brief §1, verbatim. The line it replaces ended "Windows, doors,
-             cladding, roof, fascias. Five trades. One photograph." — accurate,
-             and three sentences of specification before the reader has agreed
-             they want the thing. The trades are still named, in How it works
-             and in the estimate breakdown, where somebody is looking for them. -->
-        <p class="mt-5 text-[16px] md:text-[18px] leading-7 text-white/75 max-w-[46ch]">Start with one photo of the front. See new windows, doors and exterior improvements on your actual home, then get a realistic itemised planning estimate &mdash; before speaking to a salesperson.</p>
-        <!-- "No guesswork" was the third item here, and it contradicted the
-             rest of the page. The methodology section says the photograph
-             measurement is still being calibrated against surveyed properties,
-             and the estimate is presented as a range. A hero promising no
-             guesswork is a claim this system cannot stand behind, on the one
-             part of the page everybody reads. "No pressure" is the thing we
-             can actually promise: nobody is sent round unless they ask. -->
-        <p class="mt-4 serif text-[17px] md:text-[19px] text-white/90">No measuring. No sales call. No pressure.</p>
-
-        <div class="mt-7 flex flex-col sm:flex-row gap-3">
-          <!-- The id stays: the handler bound to it scrolls to the upload
-               block, which now sits directly underneath rather than five
-               screens down.
-
-               Label from the brief §8, which asks for one primary action used
-               everywhere and names the old label — "See what my house could
-               look like" — as one of the five to stop rotating between. The
-               behaviour deliberately does not change to match: the button
-               scrolls, it does not open the file picker. That was decided
-               once already (see the handler at the foot of this file) on the
-               grounds that demanding a photograph of somebody's house on the
-               first tap is the highest-friction opening move available. The
-               upload panel it lands on has its own "Choose a photo". -->
-          <!-- "Upload my house", not "Upload a photo". The content handoff's §3
-               asks for it and it is the better word: a photo is the thing we
-               want, a house is the thing they came about. The two entry points
-               also stop sharing a label, which is what cta_clicked and
-               real_home_cta_click have been trying to tell apart since 19
-               September — a reader could not tell them apart either. -->
-          <button id="hero-upload" type="button" class="cta w-full sm:w-auto px-7 py-4 rounded-full text-lg font-semibold transition min-h-[52px]">Upload my house</button>
-          <a href="/#our-work" class="w-full sm:w-auto px-6 py-4 rounded-full border border-white/20 text-lg font-medium hover:bg-white/10 transition text-center min-h-[52px] grid place-items-center">See real homes</a>
-        </div>
-
-        <!-- Brief §1. "One photo" became "No measurements": the photo is
-             already the headline and the subhead, whereas "do I need to
-             measure my house?" is a live objection — it has its own FAQ
-             entry — and it was answered nowhere near the button. -->
-        <p class="mt-5 text-lg text-white/80">Free to try &nbsp;&bull;&nbsp; No measurements &nbsp;&bull;&nbsp; No sales call unless you ask</p>
-
-        <!-- Beside the button, because that is where the hesitation is: the
-             review's point was that "is my photo kept?" is the question a
-             homeowner asks with their thumb over the upload control, and the
-             answer was five screens away in the FAQ.
-
-             Says only what is true. The suggested wording promised measurements
-             were kept "for 30 days, then deleted" — there is no 30-day period
-             anywhere in this system. The detection cache expires after seven
-             (DETECTION_CACHE_DAYS), and measurement_observations has no expiry
-             at all, deliberately: it holds shape numbers that are unlinkable to
-             anybody by construction, which is why it can be kept. Printing a
-             retention promise we do not implement is the exact failure this
-             line is meant to reassure people about, so it makes the claim
-             privacy.html already makes and links to the detail. -->
-        <p class="mt-2 text-base text-white/80">Your original photo isn&rsquo;t saved &mdash; we keep the image we generate, not your photograph. <a href="/privacy#your-photograph" class="inline-block py-3 underline underline-offset-2 hover:text-white/85">See how your photo is used</a></p>
-
-        <!-- The fairness line stays in the hero as a hook; the full section
-             lives further down the page.
-
-             The handoff opens it with "Two neighbours. Same street. Same
-             windows. £8,000 apart." That figure is invented, and this file's
-             own rule — stated in landing.js — is that no price is ever typed
-             into prose, because the day the rate card changes nobody greps the
-             marketing. The engine's own installer spread puts the gap at about
-             £6,400 on a typical semi and £8,100 on a detached, so the number
-             is not wrong so much as unanchored, and the browser is never sent
-             the rates to compute it with: /api/catalogue strips the cost model
-             deliberately. So it is said without a figure. -->
-        <!-- "the same number" overstated it: the estimate is a range, and the
-             final price is confirmed at survey. The fairness claim does not
-             need the overstatement — what is actually true is that the
-             starting point is identical for everybody, and that is the part
-             haggling normally decides. Kept short because the sentence under
-             it does the explaining. -->
-        <p class="mt-6 pt-6 border-t border-white/10 serif text-[19px] md:text-[21px] leading-snug text-white/90">Your estimate is based on your home and your choices &mdash; not how well you negotiate.</p>
+        <!-- 0087 (5 Oct, Stephenson follow-up): this page is for somebody who already
+             wants the working, so it no longer opens with a second sales hero
+             (headline, sub-head, two buttons, reassurances). The line that
+             earns its place, the negotiation one, is now the heading. One
+             invitation remains on this page: "See it on your home". -->
+        <h2 id="hero-heading" class="serif text-[28px] md:text-[36px] leading-[1.05] tracking-[-0.02em]">Your estimate is based on your home and your choices &mdash; not how well you negotiate.</h2>
         <p class="mt-2 text-lg leading-6 text-white/80 max-w-[52ch]">Two neighbours can buy the same windows and pay thousands apart, because one of them sat in the room longer on a Wednesday evening. Priced from the photograph, the number does not move on how hard you are willing to push.</p>
       </div>
 
@@ -954,30 +866,7 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
     <p class="mt-3 text-lg leading-7 text-zinc-900 font-medium max-w-[58ch]">See it on your own brick first.</p>
   </section>
 
-  <!-- UX/UI Optimisation handoff §2: a second CTA immediately after the first
-       strong visual proof.
-
-       Its argument is that this is one of the highest-intent points on the
-       page — somebody has just watched a real house change and has to scroll
-       past nothing to act on it. That is the whole of the reason, and it is a
-       good one.
-
-       Its suggested label is "See what my house could look like →". Not used:
-       the homepage brief's one-primary-action rule came first and is already
-       shipped in five places, and reintroducing a second wording here is the
-       exact rotation that rule exists to stop. The copy above the button is
-       the handoff's. -->
-  <section data-page="pricing" class="rounded-2xl bg-zinc-900 text-[#FBF8F3] p-6 md:p-8 text-center" aria-labelledby="proof-cta-heading">
-    <h2 id="proof-cta-heading" class="serif text-[24px] md:text-[30px] tracking-tight">That could be your house.</h2>
-    <p class="mt-3 text-lg leading-7 text-white/85 max-w-[46ch] mx-auto">Upload a photo of the front and start exploring what your home could look like.</p>
-    <!-- Counted separately from the hero CTA. Both land in the same upload
-         box, so together they said only "somebody started"; apart they say
-         which invitation earned it, which is what the handoff asks to test. -->
-    <!-- §4 asks this one to read "Try your house", which is also what the
-         counter beside it measures. -->
-    <button type="button" class="mt-6 cta px-7 py-4 rounded-full text-lg font-semibold transition min-h-[52px]" onclick="reachedStage('real_home_cta_click'); goToUpload()">Try your house</button>
-    <p class="mt-4 text-base text-white/80">Free to try &nbsp;&bull;&nbsp; No measurements &nbsp;&bull;&nbsp; No sales call unless you ask</p>
-  </section>
+  <!-- 0087: "That could be your house." merged into "See it on your home." below; one invitation on this page. -->
 
   <!-- Upload first, then the question.
 
@@ -1028,7 +917,8 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
   <section data-page="pricing" class="rounded-2xl bg-zinc-900 text-[#FBF8F3] p-6 md:p-8 text-center" aria-labelledby="steps-cta-heading">
     <h2 id="steps-cta-heading" class="serif text-[24px] md:text-[30px] tracking-tight">See it on your home.</h2>
     <p class="mt-3 text-lg leading-7 text-white/85 max-w-[46ch] mx-auto">Upload a photo of the front and we&rsquo;ll show you what we found.</p>
-    <button type="button" class="mt-6 cta px-7 py-4 rounded-full text-lg font-semibold transition min-h-[52px]" onclick="reachedStage('steps_cta_click'); goToUpload()">Upload my house</button>
+    <button type="button" class="mt-6 cta px-7 py-4 rounded-full text-lg font-semibold transition min-h-[52px]" onclick="reachedStage('steps_cta_click'); goToUpload()">See my house &amp; price &rarr;</button>
+    <p class="mt-4 serif text-[19px] text-white/90">No measuring. No sales call. No pressure.</p>
   </section>
 
   <!-- The tool's own top heading (launch review item 27). An h2 lifted to
