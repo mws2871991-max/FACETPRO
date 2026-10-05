@@ -371,6 +371,37 @@ const COST_PAGES = [
       };
     },
   },
+  /* 0089 (5 Oct, acquisition plan): the "calculator" search, answered with
+     the Facet Pro argument rather than another average. A calculator asks you
+     to count your windows and hands back somebody else's house; this page
+     gives the honest table for reference and then the one thing a calculator
+     cannot do. */
+  {
+    slug: 'window-replacement-calculator',
+    title: 'Window Replacement Cost Calculator UK 2026 | Your House, Not an Average',
+    h1: 'Window Replacement Cost Calculator',
+    intent: 'window replacement calculator',
+    description: 'Why estimate someone else\'s house? Upload a photo of yours for a planning estimate of new windows — or use the table of typical UK prices, fitted and inc VAT.',
+    build: (c) => {
+      const eight = windowJob(c, { count: 8 });
+      return {
+        answer: `Why estimate someone else's house? Upload a photo of yours. For reference, a typical eight-window house is ${money(eight.low)} to ${money(eight.high)} fitted, inc VAT.`,
+        sections: [
+          { heading: 'Typical UK prices by number of windows', table: {
+            head: ['Windows', 'Estimated cost fitted, inc VAT'],
+            rows: [4, 6, 8, 10, 12, 14].map(n => {
+              const j = windowJob(c, { count: n });
+              return [String(n), `${money(j.low)} – ${money(j.high)}`];
+            }),
+          } },
+          { heading: 'What a calculator cannot see', paras: [
+            'A calculator asks how many windows you have and multiplies by an average. It cannot see that two of yours are bays, that three are upstairs, or that the one on the landing is half the size of the rest — and those are what move the price.',
+            'Facet Pro starts from a photo of the front of your house instead. It finds the windows, sizes them against your front door, asks about the back and sides, and prices the style and colour you choose. You see your own house with the new windows on it, and an itemised planning estimate — not a quotation; your installer confirms the price after a survey.',
+          ] },
+        ],
+      };
+    },
+  },
   {
     slug: 'front-door-replacement-cost',
     title: 'Front Door Replacement Cost UK 2026 | Fitted Prices',
@@ -1013,6 +1044,7 @@ const CTA_WORDS = {
   'new-windows-cost-uk': 'See my windows',
   'window-replacement-cost-uk': 'Show me my windows',
   '10-window-replacement-cost': 'Count my windows',
+  'window-replacement-calculator': 'Price my house, not an average',
   '12-window-replacement-cost': 'Count my windows',
   'upvc-window-prices': 'See uPVC on my house',
   'aluminium-window-prices': 'Try aluminium',
