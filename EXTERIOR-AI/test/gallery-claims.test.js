@@ -66,3 +66,20 @@ test('the photo tips use the credited Unsplash photograph, not anyone\'s house',
   assert.match(page, /'House photo: Unsplash'\)/);
   assert.ok(fs.existsSync(path.join(__dirname, '..', 'assets', 'work', 'demo-close-crop-sm.jpg')));
 });
+
+/* 0092: what stands in for the gallery claims nothing about whose house it is. */
+test('the try-it house is labelled as nobody\'s, credited, and priced in the same box', () => {
+  const a = page.indexOf('id="try-it"');
+  assert.ok(a > 0, 'the section has gone');
+  const sec = page.slice(a, page.indexOf('</section>', a));
+  assert.match(sec, /Not a customer&rsquo;s house\. House photo: Unsplash\./);
+  assert.match(sec, /real Facet Pro output \(AI visualisation\)/);
+  assert.match(sec, /alt="AI visualisation:/);
+  assert.match(sec, /&pound;10,333 &ndash; &pound;18,787/);
+  assert.match(sec, /Planning estimate &middot; inc\. VAT &middot; not a quotation/);
+  assert.doesNotMatch(sec, /Real homes|Real work|Photographs, not renders|Your house</);
+  for (const m of sec.matchAll(/\/assets\/work\/[\w-]+\.jpg/g)) {
+    assert.ok(fs.existsSync(path.join(__dirname, '..', m[0])), `${m[0]} is missing`);
+  }
+  assert.match(prov, /rwT63HwI7F8/, 'its source is recorded');
+});
