@@ -1689,11 +1689,13 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
          it could look like until you see it" over the third distinct wording
          of the same button. Headline, copy, button and trust line are the
          brief's; the close is still not a repeat of the hero, which was the
-         point of the version it replaces. -->
+         point of the version it replaces. The button reads as the hero's
+         (developer brief, 6 Oct): one action, one name. The top bar keeps
+         "Upload a photo", short enough for a phone. -->
     <h2 id="close-heading" class="serif text-[26px] md:text-[36px] leading-[1.08] tracking-[-0.02em] max-w-[24ch] mx-auto">
       See your house. See the likely cost.
     </h2>
-    <button type="button" class="mt-7 cta px-7 py-4 rounded-full text-lg font-semibold transition min-h-[52px]" onclick="goToUpload()">Try it free &rarr;</button>
+    <button type="button" class="mt-7 cta px-7 py-4 rounded-full text-lg font-semibold transition min-h-[52px]" onclick="goToUpload()">See my house &amp; price &rarr;</button>
     <p class="mt-4 text-lg text-white/80">No measurements &nbsp;&bull;&nbsp; No obligation &nbsp;&bull;&nbsp; No sales call unless you ask</p>
   </section>
 
@@ -2400,6 +2402,7 @@ async function loadLeads(token) {
        offer the buttons again. Server-side is the source of truth; the card
        updates optimistically after a click and this replaces it on reload. */
     state.decisions = data.decisions || {};
+    state.outcomes = data.outcomes || {};
     state.installerScope = data.scope || null;
     state.installerAuthed = true;
     state.leadsLoaded = true;
@@ -9711,6 +9714,60 @@ function buildInstaller() {
       }
     };
 
+    /* What happened after accepting: the surveyed quote, then won or lost
+       (developer brief, 6 Oct, §6). The estimate on this card is only worth
+       anything if it can be checked against these. */
+    const recordOutcome = async (leadId, outcome) => {
+      const input = document.getElementById(`outcome-amount-${leadId}`);
+      const surveyed = document.getElementById(`outcome-surveyed-${leadId}`)?.checked === true;
+      const amount = input ? Number(String(input.value).replace(/[£,\s]/g, '')) : null;
+      try {
+        const res = await fetch('/api/installer/lead-outcome', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.installerToken}` },
+          body: JSON.stringify({ leadId, outcome, amount, surveyed }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { U(data.error || 'Could not record that.'); return; }
+        const o = { ...((state.outcomes || {})[leadId] || {}) };
+        if (outcome === 'quoted') o.quote = { amount: data.amount, surveyed, at: data.at };
+        else o.result = { outcome, ...(data.amount ? { amount: data.amount } : {}), at: data.at };
+        state.outcomes = { ...(state.outcomes || {}), [leadId]: o };
+        renderInstallerOnly();
+        U(outcome === 'quoted' ? `Quote recorded for ${leadId}` : outcome === 'won' ? `Marked ${leadId} as won` : `Marked ${leadId} as lost`);
+      } catch (_) {
+        U('Could not reach the server.');
+      }
+    };
+
+    const outcomeBlock = (lead) => {
+      const o = (state.outcomes || {})[lead.id] || {};
+      const done = [
+        o.quote ? `Quoted ${fmtMoney(o.quote.amount)}${o.quote.surveyed ? ' after a survey' : ''}` : null,
+        o.result ? (o.result.outcome === 'won' ? `Won at ${fmtMoney(o.result.amount)}` : 'Lost') : null,
+      ].filter(Boolean);
+      return h('div', { className: 'mt-3 rounded-lg bg-white/5 border border-white/10 p-3' }, [
+        h('p', { className: 'text-base text-white/80 font-semibold' }, 'What happened next'),
+        done.length ? h('p', { className: 'mt-1 text-base text-white/85' }, done.join(' · ')) : null,
+        o.result ? null : h('div', { className: 'mt-2 flex flex-wrap items-center gap-2' }, [
+          h('label', { className: 'text-base text-white/80', for: `outcome-amount-${lead.id}` }, 'Price, £ inc VAT'),
+          h('input', {
+            id: `outcome-amount-${lead.id}`, type: 'text', inputMode: 'numeric', autocomplete: 'off',
+            className: 'w-40 rounded-lg px-3 min-h-[44px] text-zinc-900 text-lg',
+            placeholder: o.quote ? String(o.quote.amount) : 'e.g. 9500',
+          }),
+          h('label', { className: 'text-base text-white/80 inline-flex items-center gap-2 min-h-[44px]' }, [
+            h('input', { id: `outcome-surveyed-${lead.id}`, type: 'checkbox' }), 'after a survey',
+          ]),
+          h('button', { type: 'button', className: 'px-4 rounded-full bg-white text-zinc-900 text-base font-semibold min-h-[44px]', onClick: () => recordOutcome(lead.id, 'quoted') }, 'Save quote'),
+          h('button', { type: 'button', className: 'px-4 rounded-full border border-white/25 text-base min-h-[44px]', onClick: () => recordOutcome(lead.id, 'won') }, 'Won at this price'),
+          h('button', { type: 'button', className: 'px-4 rounded-full border border-white/25 text-base min-h-[44px]', onClick: () => recordOutcome(lead.id, 'lost') }, 'Lost'),
+        ]),
+        h('p', { className: 'mt-2 text-base leading-6 text-white/70' },
+          'Used to check our estimates against real prices. Never shown to the homeowner or other installers.'),
+      ]);
+    };
+
     const projectCard = (lead) => {
       const est = estimateOf(lead);
       const reqs = requirementsOf(lead);
@@ -9815,6 +9872,7 @@ function buildInstaller() {
                   lead.phone ? ' · ' : '',
                   lead.phone ? h('a', { href: `tel:${lead.phone}`, className: 'underline' }, lead.phone) : null,
                 ]),
+                state.installerScope === 'installer' ? outcomeBlock(lead) : null,
               ]
             : decision?.action === 'pass'
               ? [h('p', { className: 'text-base text-white/80' }, 'You passed on this project. It stays here for your records.')]

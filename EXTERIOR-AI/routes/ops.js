@@ -478,6 +478,16 @@ module.exports = function opsRoutes({
     });
   });
 
+  /* Facet estimate against installer quotes and contract prices (developer
+     brief, 6 Oct, §6). Internal: behind the operator's password, and no share
+     is computed below accuracy.MIN_FOR_SHARE recorded outcomes. */
+  router.get('/api/accuracy', installerLimiter, requireInstallerPassword, async (req, res) => {
+    const accuracy = require('../accuracy');
+    const outcomes = accuracy.foldOutcomes(await store.readAll('leadResponses'));
+    res.set('Cache-Control', 'no-store');
+    res.json(accuracy.report(await store.readAll('leads'), outcomes));
+  });
+
   router.get('/api/ops', installerLimiter, requireInstallerPassword, async (req, res) => {
     const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 50));
     /* Read through the getter, every time.

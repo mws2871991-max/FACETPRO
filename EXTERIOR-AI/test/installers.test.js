@@ -293,3 +293,55 @@ test('an unknown installer name costs the same as a known one', async () => {
     I.verifyPassword = real;
   }
 });
+
+/* Developer brief, 6 Oct (§6): what the installer quoted, and whether they
+   won it, recorded against the estimate the enquiry carried. */
+test('an installer records a quote and a result, and the accuracy report reads them', async () => {
+  const store = require('../store');
+  await store.replaceAll('leads', [
+    { id: 'LD-OUTCOME', ts: new Date().toISOString(), name: 'O', email: 'o@example.com',
+      glazing: { marketRange: { low: 8000, high: 12000 } }, consent: { terms: true, installerQuotes: true } },
+    { id: 'LD-NOTMINE', ts: new Date().toISOString(), name: 'Z', email: 'z@example.com', consent: { terms: true, installerQuotes: true } },
+  ]);
+  await store.replaceAll('deliveries', [
+    { ts: new Date().toISOString(), leadId: 'LD-OUTCOME', results: [{ id: 'anglian', ok: true }] },
+    { ts: new Date().toISOString(), leadId: 'LD-NOTMINE', results: [{ id: 'zenith', ok: true }] },
+  ]);
+  await store.replaceAll('leadResponses', []);
+  const { token } = await (await login({ id: 'anglian', password: 'anglian-password-1234' })).json();
+  const post = (path, body, auth = `Bearer ${token}`) => fetch(`${BASE}${path}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', authorization: auth }, body: JSON.stringify(body) });
+
+  assert.strictEqual((await post('/api/installer/lead-outcome', { leadId: 'LD-OUTCOME', outcome: 'quoted', amount: 9500 })).status, 409,
+    'a quote was recorded on a project nobody accepted');
+  assert.strictEqual((await post('/api/installer/lead-response', { leadId: 'LD-OUTCOME', action: 'accept' })).status, 200);
+  assert.strictEqual((await post('/api/installer/lead-outcome', { leadId: 'LD-OUTCOME', outcome: 'quoted', amount: 12 })).status, 400, 'a nonsense price was taken');
+  assert.strictEqual((await post('/api/installer/lead-outcome', { leadId: 'LD-NOTMINE', outcome: 'quoted', amount: 9500 })).status, 404, 'a quote on somebody else\'s lead');
+  assert.strictEqual((await post('/api/installer/lead-outcome', { leadId: 'LD-OUTCOME', outcome: 'quoted', amount: 9500, surveyed: true })).status, 200);
+  assert.strictEqual((await post('/api/installer/lead-outcome', { leadId: 'LD-OUTCOME', outcome: 'won', amount: 9200 })).status, 200);
+  assert.strictEqual((await post('/api/installer/lead-outcome', { leadId: 'LD-OUTCOME', outcome: 'quoted', amount: 9500 }, 'Bearer shared-legacy-password')).status, 403,
+    'the shared password recorded a quote against nobody');
+
+  const view = await (await fetch(`${BASE}/api/leads`, { headers: { authorization: `Bearer ${token}` } })).json();
+  assert.strictEqual(view.decisions['LD-OUTCOME'].action, 'accept', 'a quote read as a change of decision');
+  assert.deepStrictEqual({ amount: view.outcomes['LD-OUTCOME'].quote.amount, surveyed: view.outcomes['LD-OUTCOME'].quote.surveyed }, { amount: 9500, surveyed: true });
+  assert.strictEqual(view.outcomes['LD-OUTCOME'].result.outcome, 'won');
+
+  const acc = await (await fetch(`${BASE}/api/accuracy`, { headers: { authorization: 'Bearer shared-legacy-password' } })).json();
+  const row = acc.rows.find(r => r.leadId === 'LD-OUTCOME');
+  assert.deepStrictEqual(row.estimate, { low: 8000, high: 12000 });
+  assert.strictEqual(row.quoteVsEstimate.within, true);
+  assert.strictEqual(row.contractVsEstimate.vsMidPct, -8);
+  assert.strictEqual(acc.quotes.withinShare, null, 'a share was published from a sample of one');
+});
+
+test('the privacy notice says installers tell us what they quoted, and keeps it no longer than the enquiry', () => {
+  const fs = require('fs'), path = require('path');
+  const p = fs.readFileSync(path.join(__dirname, '..', 'legal', 'privacy.html'), 'utf8');
+  assert.match(p, /the price they quoted and whether that was after a survey, and whether you went ahead and at what price<\/td><td>The installers who received your enquiry tell us/);
+  assert.match(p, /Comparing our estimates with the prices installers quote and agree/);
+  assert.match(p, /what the installers told us about quoting for it<\/td><td>24 months/);
+  const routes = fs.readFileSync(path.join(__dirname, '..', 'routes', 'installers.js'), 'utf8');
+  assert.match(routes, /await leadEvent\(`installer\.\$\{outcome\}`, leadId, \{ installerId: req\.installer\.id \}\);/,
+    'the price went into the six-year audit trail');
+});
