@@ -17,7 +17,7 @@ test('the five pages exist, are in the sitemap, and lead with the answer', () =>
   for (const slug of NEW) {
     assert.ok(paths.includes(`/cost/${slug}`), `${slug} is not in the sitemap`);
     const html = landing.renderCostPage(slug, OPTS);
-    assert.match(html, /<strong>The short answer<\/strong><span>£\d/, `${slug} does not lead with a figure`);
+    assert.match(html, /<strong>The short answer<\/strong><span>(About )?£\d/, `${slug} does not lead with a figure`);
   }
 });
 
