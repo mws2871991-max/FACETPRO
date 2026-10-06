@@ -1210,20 +1210,13 @@ const crumbName = (title) => title.split(/ [|—–] /)[0].replace(/\s+20\d\d\b/
 /* The button's words, matched to what was searched (sprint brief §4). The
    heading above the end button is the same on every guide on purpose — it is
    the argument — and the button is the specific promise. */
-const CTA_WORDS = {
-  'new-windows-cost-uk': 'See my windows',
-  'window-replacement-cost-uk': 'Show me my windows',
-  '10-window-replacement-cost': 'Count my windows',
-  'window-replacement-calculator': 'Price my house, not an average',
-  '12-window-replacement-cost': 'Count my windows',
-  'upvc-window-prices': 'See uPVC on my house',
-  'aluminium-window-prices': 'Try aluminium',
-  'front-door-replacement-cost': 'Show me my door',
-  'composite-door-cost': 'Try a composite door',
-  'house-rendering-cost': 'Render my house',
-  'house-exterior-renovation-cost': 'Plan my house',
-};
-const ctaWords = (slug, fallback) => (slug && CTA_WORDS[slug]) || fallback;
+/* One wording on every button that starts the journey (Mike, 6 Oct:
+   "standardise all CTAs"), the same as the homepage hero. Per-page words
+   ("See my windows", "Render my house", …) came from the SEO sprint brief;
+   they were twelve names for one action, and this replaces them. The
+   conservatory guide keeps "Compare the styles": it goes somewhere else. */
+const CTA_LABEL = 'See my house & price →';
+const ctaWords = () => CTA_LABEL;
 
 /* The conservatory page gets its own, because the standard one promises to
    find their windows, doors, roof and walls in a photograph — true, and not
@@ -1259,7 +1252,7 @@ const cta = (siteUrl, slug) => (isConservatory(slug) ? conservatoryCta(siteUrl, 
        The journey CTA above it keeps its own words on purpose: "Show me my
        windows" on a page about window costs is a different and more specific
        promise, not a second name for this one. -->
-  <p><a class="cta" href="${escapeHtml(ctaHref(siteUrl, slug, 'end'))}">${escapeHtml(ctaWords(slug, 'Upload a photo'))}</a></p>
+  <p><a class="cta" href="${escapeHtml(ctaHref(siteUrl, slug, 'end'))}">${escapeHtml(ctaWords())}</a></p>
   <p class="muted">Free to try &middot; No measurements &middot; No sales call unless you ask</p>
   <p class="muted">Your original photo isn&rsquo;t kept. <a href="/privacy#your-photograph">See how your photo is used &rarr;</a></p>
 </div>`);
@@ -1354,7 +1347,7 @@ ${schema ? `<script type="application/ld+json">${JSON.stringify(schema).replace(
 </head><body>
 <header class="site"><div class="wrap">
   <a class="logo" href="${escapeHtml(siteUrl)}/">Facet Pro</a>
-  <a class="cta-top" href="${escapeHtml(ctaHref(siteUrl, slug, 'header'))}">See my house &rarr;</a>
+  <a class="cta-top" href="${escapeHtml(ctaHref(siteUrl, slug, 'header'))}">See my house &amp; price &rarr;</a>
 </div>${productMenu(siteUrl, slug)}</header>
 <main class="wrap">
 ${crumbs ? breadcrumbNav(crumbs) : ''}
@@ -1498,17 +1491,14 @@ const JOURNEY_HERO = {
   cladding: {
     h: 'See what your house would look like rendered',
     p: 'Upload a photo of the front. We will measure the front wall, estimate the rest for your house type and say which is which, show you the finishes on your own house, and price the job.',
-    cta: 'Render my house',
   },
   windows: {
     h: 'See new windows on your own house',
     p: 'Upload a photo of the front. We will find the windows on it, size them against your front door and price them, then ask about the back and sides — add a second photo, or just tell us the number.',
-    cta: 'Show me my windows',
   },
   doors: {
     h: 'See a new front door on your own house',
     p: 'Upload a photo of the front. Try the styles and colours on your own doorway and see what it costs fitted.',
-    cta: 'Show me my door',
   },
   roof: {
     h: 'See a new roof on your own house',
@@ -1518,12 +1508,10 @@ const JOURNEY_HERO = {
        cannot see a rear slope. Claiming a measurement we do not take is the
        one thing that makes the rest of the estimate not worth believing. */
     p: 'Upload a photo of the front. We will show you the coverings on your own roof and estimate the job for your house type (a roof can’t be measured from the ground), scaffolding and waste included.',
-    cta: 'Show me my roof',
   },
   roofline: {
     h: 'See new fascias, soffits and guttering on your house',
     p: 'Upload a photo of the front. We will estimate your roofline for your house type and price the job, scaffolding included.',
-    cta: 'Show me my roofline',
   },
 };
 
@@ -1538,24 +1526,20 @@ const SLUG_HERO = {
   'house-exterior-renovation-cost': {
     h: 'Your house isn\u2019t a typical house.',
     p: 'Upload one photo and see what your house could cost. Facet Pro finds your windows, doors, walls, roofline and roof, lets you try new ones on your own house, and prices the whole outside together.',
-    cta: 'Plan my house',
   },
   /* Same reason as bifolds: patio and French doors are almost always at the
      back, and we draw on a photograph of the front. */
   'patio-doors-cost': {
     h: 'Price your patio door, and see the rest on your own house',
     p: 'Patio doors open onto the garden, so we price them from the same figures and do not draw them onto a photograph of your front. Upload a photo of the front and design your windows, front door, walls, roofline and roof on your actual house.',
-    cta: 'Upload my house',
   },
   'french-doors-cost': {
     h: 'Price your French doors, and see the rest on your own house',
     p: 'French doors usually open onto the garden, so we price them from the same figures and do not draw them onto a photograph of your front. Upload a photo of the front and design your windows, front door, walls, roofline and roof on your actual house.',
-    cta: 'Upload my house',
   },
   'bifold-doors-cost': {
     h: 'Price your bifolds, and see the rest on your own house',
     p: 'Bifolds open onto the garden, so we price them from the same rate card and do not draw them onto a photograph of your front. Upload a photo of the front and design your windows, front door, walls, roofline and roof on your actual house.',
-    cta: 'Upload my house',
   },
 };
 
@@ -1566,7 +1550,7 @@ const journeyHero = (siteUrl, slug) => {
   return `<div class="journey-hero">
   <h2>${escapeHtml(copy.h)}</h2>
   <p>${escapeHtml(copy.p)}</p>
-  <p><a class="cta" href="${escapeHtml(ctaHref(siteUrl, slug, 'hero'))}">${escapeHtml(ctaWords(slug, copy.cta))}</a></p>
+  <p><a class="cta" href="${escapeHtml(ctaHref(siteUrl, slug, 'hero'))}">${escapeHtml(ctaWords())}</a></p>
   <p class="muted">Free &middot; No measurements &middot; No sales call unless you ask</p>
   <p class="muted">Your original photo isn&rsquo;t kept. <a href="/privacy#your-photograph">See how your photo is used &rarr;</a></p>
 </div>`;
@@ -1951,7 +1935,7 @@ function renderCostIndex({ catalogue, siteUrl, siteMode }) {
 <div class="journey-hero">
   <h2>Skip the averages: price your own house</h2>
   <p>Upload one photo of the front. See new windows and doors on your actual house, with a planning estimate for it.</p>
-  <p><a class="cta" href="${escapeHtml(ctaHref(siteUrl, null, 'hero'))}">Upload a photo</a></p>
+  <p><a class="cta" href="${escapeHtml(ctaHref(siteUrl, null, 'hero'))}">${escapeHtml(ctaWords())}</a></p>
   <p class="muted">Free &middot; No measurements &middot; No sales call unless you ask</p>
   <p class="muted">Your original photo isn&rsquo;t kept. <a href="/privacy#your-photograph">See how your photo is used &rarr;</a></p>
 </div>

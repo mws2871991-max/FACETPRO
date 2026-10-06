@@ -16,19 +16,20 @@ const render = (slug) => landing.renderCostPage(slug, OPTS);
 const schemaOf = (html) => JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1]);
 
 const SPRINT = {
-  'new-windows-cost-uk': ['New Windows Cost UK 2026 | Prices & Fitted Estimates', 'How Much Do New Windows Cost in the UK?', 'See my windows'],
-  'window-replacement-cost-uk': ['Window Replacement Cost UK 2026 | How Much to Replace Windows', 'What Does Window Replacement Cost in the UK?', 'Show me my windows'],
-  '10-window-replacement-cost': ['10 Window Replacement Cost UK 2026 | Fitted Prices', 'How Much Does It Cost to Replace 10 Windows?', 'Count my windows'],
-  '12-window-replacement-cost': ['12 Window Replacement Cost UK 2026 | Fitted Prices', 'How Much Does It Cost to Replace 12 Windows?', 'Count my windows'],
-  'upvc-window-prices': ['uPVC Window Prices UK 2026 | Supply & Fitted Costs', 'uPVC Window Prices: How Much Do They Cost Fitted?', 'See uPVC on my house'],
-  'aluminium-window-prices': ['Aluminium Window Prices UK 2026 | Fitted Cost Guide', 'How Much Do Aluminium Windows Cost?', 'Try aluminium'],
-  'front-door-replacement-cost': ['Front Door Replacement Cost UK 2026 | Fitted Prices', 'How Much Does a New Front Door Cost?', 'Show me my door'],
-  'composite-door-cost': ['Composite Door Cost UK 2026 | Fitted Prices & Guide', 'How Much Does a Composite Door Cost?', 'Try a composite door'],
-  'house-rendering-cost': ['House Rendering Cost UK 2026 | Cost Per m² & Per House', 'How Much Does It Cost to Render a House?', 'Render my house'],
-  'house-exterior-renovation-cost': ['House Exterior Renovation Cost UK 2026 | Complete Guide', 'How Much Does It Cost to Renovate the Outside of a House?', 'Plan my house'],
+  'new-windows-cost-uk': ['New Windows Cost UK 2026 | Prices & Fitted Estimates', 'How Much Do New Windows Cost in the UK?', 'See my house & price →'],
+  'window-replacement-cost-uk': ['Window Replacement Cost UK 2026 | How Much to Replace Windows', 'What Does Window Replacement Cost in the UK?', 'See my house & price →'],
+  '10-window-replacement-cost': ['10 Window Replacement Cost UK 2026 | Fitted Prices', 'How Much Does It Cost to Replace 10 Windows?', 'See my house & price →'],
+  '12-window-replacement-cost': ['12 Window Replacement Cost UK 2026 | Fitted Prices', 'How Much Does It Cost to Replace 12 Windows?', 'See my house & price →'],
+  'upvc-window-prices': ['uPVC Window Prices UK 2026 | Supply & Fitted Costs', 'uPVC Window Prices: How Much Do They Cost Fitted?', 'See my house & price →'],
+  'aluminium-window-prices': ['Aluminium Window Prices UK 2026 | Fitted Cost Guide', 'How Much Do Aluminium Windows Cost?', 'See my house & price →'],
+  'front-door-replacement-cost': ['Front Door Replacement Cost UK 2026 | Fitted Prices', 'How Much Does a New Front Door Cost?', 'See my house & price →'],
+  'composite-door-cost': ['Composite Door Cost UK 2026 | Fitted Prices & Guide', 'How Much Does a Composite Door Cost?', 'See my house & price →'],
+  'house-rendering-cost': ['House Rendering Cost UK 2026 | Cost Per m² & Per House', 'How Much Does It Cost to Render a House?', 'See my house & price →'],
+  'house-exterior-renovation-cost': ['House Exterior Renovation Cost UK 2026 | Complete Guide', 'How Much Does It Cost to Renovate the Outside of a House?', 'See my house & price →'],
 };
 const esc = (t) => t.replace(/&/g, '&amp;');
 
+/* Button words: one for every page since 6 Oct (Mike: standardise all CTAs). */
 test('the ten sprint pages have the brief\'s title, h1 and button words', () => {
   for (const [slug, [title, h1, cta]] of Object.entries(SPRINT)) {
     const html = render(slug);
@@ -102,14 +103,16 @@ test('hubs link down, every guide links up, the cornerstone links to every part'
 });
 
 test('CTAs go to the right journey, say which button, and aluminium opens on aluminium', () => {
-  const href = (html, words) => (html.match(new RegExp(`href="([^"]+)">${words}</a>`)) || [])[1] || '';
-  assert.match(href(render('new-windows-cost-uk'), 'See my windows'), /\/design\?journey=windows&amp;from=new-windows-cost-uk&amp;cta=(hero|end)/);
-  assert.match(href(render('composite-door-cost'), 'Try a composite door'), /journey=doors/);
-  assert.match(href(render('house-rendering-cost'), 'Render my house'), /journey=cladding/);
-  assert.match(href(render('aluminium-window-prices'), 'Try aluminium'), /material=aluminium/);
-  const plan = href(render('house-exterior-renovation-cost'), 'Plan my house');
-  assert.match(plan, /\/design\?from=house-exterior-renovation-cost/);
-  assert.doesNotMatch(plan, /journey=/);
+  /* One wording on every button since 6 Oct; the journey and the material
+     still differ per page, and that is what this checks. */
+  const W = 'See my house &amp; price →';
+  const hrefs = (html) => [...html.matchAll(new RegExp(`href="([^"]+)">${W}</a>`, 'g'))].map(m => m[1]);
+  assert.ok(hrefs(render('new-windows-cost-uk')).some(h => /\/design\?journey=windows&amp;from=new-windows-cost-uk&amp;cta=(hero|end)/.test(h)));
+  assert.ok(hrefs(render('composite-door-cost')).some(h => /journey=doors/.test(h)));
+  assert.ok(hrefs(render('house-rendering-cost')).some(h => /journey=cladding/.test(h)));
+  assert.ok(hrefs(render('aluminium-window-prices')).some(h => /material=aluminium/.test(h)));
+  const plan = hrefs(render('house-exterior-renovation-cost')).filter(h => /cta=(hero|end)/.test(h));
+  assert.ok(plan.length && plan.every(h => /\/design\?from=house-exterior-renovation-cost/.test(h) && !/journey=/.test(h)));
 });
 
 test('/cost lists every guide by category', () => {
