@@ -670,7 +670,7 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
     </ol>
     <p class="mt-4 text-lg leading-7 text-zinc-700"><strong class="font-semibold text-zinc-900">Never sent to 20 companies.</strong> At most three installers, and only if you ask.</p>
     <p class="mt-6 serif text-[22px] md:text-[28px] leading-tight tracking-tight">Five home improvements. Start with one photo of the front.</p>
-    <p class="mt-2 text-lg leading-6 text-zinc-600 max-w-[68ch]">Windows, doors, walls, roofline and roof &mdash; priced together. The back and sides come next: add a second photo or tell us.</p>
+    <p class="mt-2 text-lg leading-6 text-zinc-600 max-w-[68ch]">Windows, doors, walls, roofline and roof &mdash; priced together. The back and sides come next: add a second photo or tell us. Conservatories, the sixth in the menu, are priced by style rather than from the photo.</p>
   </section>
 
   <!-- /how-we-price (24 September). The homepage now opens with the product
@@ -3837,8 +3837,19 @@ function buildUploadDetect() {
        Fixed by drawing only real elements, nudging a label down when it would
        land on one already placed, and turning it round when it would overflow
        the edge it is anchored to. */
+    /* Not the neighbour's house (journey review, 6 Oct: "the neighbour's house
+       is labelled"). It is not what we are pricing, and labelling it says we
+       think it is. */
     const elements = state.detections.filter(d =>
-      d.type !== 'analysis' && Number.isFinite(d.w_pct) && Number.isFinite(d.h_pct) && d.w_pct > 0 && d.h_pct > 0);
+      d.type !== 'analysis' && Number.isFinite(d.w_pct) && Number.isFinite(d.h_pct) && d.w_pct > 0 && d.h_pct > 0
+      && !/neighbou?r/i.test(String(d.label || '')));
+    /* Four names, not fifteen (same review: "15 labels pile on top of each
+       other"). The largest door, roof, roofline and wall carry their name; the
+       rest keep a faint box and are listed in full under "Show everything we
+       found". The windows are already numbered above. */
+    const NAMED_TYPES = ['door-front', 'roof', 'fascia', 'cladding'];
+    const named = new Set(NAMED_TYPES.map(t => elements.filter(d => d.type === t)
+      .sort((a, b) => (b.w_pct * b.h_pct) - (a.w_pct * a.h_pct))[0]).filter(Boolean));
 
     const overlay = h('div', { className: 'absolute inset-0 pointer-events-none' });
 
@@ -3894,8 +3905,8 @@ function buildUploadDetect() {
          "takes about a minute" came out of the hero because nothing timed it.
          What the homeowner needs here is the name of the thing we found, and
          the window count below is the control for correcting us. */
-      const text = d.label;
-      const widthPct = Math.min(46, 2 + text.length * 1.15);   // ~9px glyphs on a 640-ish box
+      const text = named.has(d) ? d.label : null;
+      const widthPct = text ? Math.min(46, 2 + text.length * 1.15) : 0;   // ~9px glyphs on a 640-ish box
       /* Anchor right when the label would otherwise leave the picture. */
       const flip = x + widthPct > 97;
       const leftEdge = flip ? Math.max(0, x + w - widthPct) : x;
@@ -3936,7 +3947,7 @@ function buildUploadDetect() {
          lists every element by name and category, in type that is comfortable
          to read. The boxes stay, so the analysis is still visible on the
          photograph itself. */
-      overlay.appendChild(h('span', {
+      if (text) overlay.appendChild(h('span', {
         className: `hidden sm:block absolute text-base px-1.5 py-0.5 rounded whitespace-nowrap ${inside ? 'bg-zinc-900/90' : 'bg-zinc-900'} text-white`,
         style: { left: leftEdge + '%', top: top + '%' },
       }, text));

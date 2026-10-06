@@ -227,3 +227,14 @@ test('Reveal redraws the question and the panels, and brings the picture into vi
 test('the quotes message no longer blames the privacy policy', () => {
   assert.doesNotMatch(html, /finishing our privacy policy first/);
 });
+
+/* Journey review, 6 Oct: "15 labels pile on top of each other and the
+   neighbour's house is labelled". */
+test('the photo names four things at most, and never the neighbour\'s house', () => {
+  const i = html.indexOf('const NAMED_TYPES');
+  const block = html.slice(i - 900, i + 6000);
+  assert.match(block, /!\/neighbou\?r\/i\.test\(String\(d\.label \|\| ''\)\)/);
+  assert.match(html, /const NAMED_TYPES = \['door-front', 'roof', 'fascia', 'cladding'\];/);
+  assert.match(block, /const text = named\.has\(d\) \? d\.label : null;/);
+  assert.match(block, /if \(text\) overlay\.appendChild\(/);
+});

@@ -111,6 +111,9 @@ test('the five-trade line describes rather than argues', () => {
     'the claim itself is gone — that line is the proposition, not the padding');
   assert.ok(!page.includes('booking, waiting in for and chasing'),
     'the booking-and-chasing clause is back in the four-steps section');
+  /* 6 Oct (journey review: "five improvements but six are listed in the menu"): the
+     sixth, conservatories, is said to be priced by style, not from the photo. */
+  assert.match(page, /Conservatories, the sixth in the menu, are priced by style rather than from the photo\./);
   assert.match(page, /Windows, doors, walls, roofline and roof &mdash; priced together\. The back and sides come next: add a second photo or tell us\./,
     'the supporting line has drifted from the agreed wording');
 });
