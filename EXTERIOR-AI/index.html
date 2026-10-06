@@ -32,7 +32,7 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
 <meta name="description" content="See new windows and doors on your own house and what they cost, in about a minute — no home visit, no salesman, no obligation. Walls, roof and roofline price off the same photo when you are ready.">
 <link rel="canonical" href="https://www.facetpro.co.uk/">
 <meta name="robots" content="index, follow, max-image-preview:large">
-<meta name="theme-color" content="#FBF8F3">
+<meta name="theme-color" content="#FFFFFF">
 <meta name="author" content="Facet Pro">
 
 <!-- Open Graph / social sharing -->
@@ -61,10 +61,8 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
 <!-- Pinterest's ownership check for facetpro.co.uk (6 Oct 2026). Public by design; removing it un-claims the site. -->
 <meta name="p:domain_verify" content="f04c9c0b39fbb4b990b9484ccbacb629"/>
 
-<!-- The mark is a letter set in Instrument Serif, the face the site is set in.
-     PNG rather than an inline SVG: an SVG favicon is rendered in a restricted
-     context that will not fetch a webfont, so the old one fell back to Georgia —
-     a typeface used nowhere else here. Rendered at the exact pixel sizes. -->
+<!-- The house mark (6 Oct), drawn as PNG at each exact pixel size from the same
+     outline as the header logo. -->
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
 <link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
@@ -79,13 +77,16 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
 <link rel="stylesheet" href="/assets/app.css">
 <style>
   *{font-family:Geist,sans-serif}
-  .serif{font-family:'Instrument Serif',serif}
+  /* Facet Pro (6 Oct): headings in Geist like the homepage, not Instrument
+     Serif — one typeface across the site. The class name stays so the
+     markup does not have to change. */
+  .serif{font-family:Geist,sans-serif;font-weight:700;letter-spacing:-.03em}
   /* Numbers that came from measuring something. Tabular figures so a column
      of prices lines up and a changing total doesn't shuffle sideways. */
 
   /* ── BRAND PALETTE ──
-     From the brand brief: navy #0D1B2A, blue #1D4ED8, cream #FAF8F5, and gold
-     #B98A3E reserved for Pro. None of the four appeared anywhere in the build
+     From the brand brief: navy #16181A, blue #1D4ED8, cream #FAF8F5, and gold
+     #B5482A reserved for Pro. None of the four appeared anywhere in the build
      — the brief and the site had simply never agreed.
 
      Applied as a layer over the utilities already in the markup rather than by
@@ -97,17 +98,19 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
      colours — a review mistook them for the palette, which is exactly why
      they should stay where a reader can tell them apart. Nor the semantic
      colours: amber still means a caveat, red still means refused. */
+  /* Facet Pro's palette (6 Oct), the homepage's: ink, stone, white, brick.
+     The variable names are the old palette's; the values are the v4 homepage's. */
   :root{
-    --brand-navy:#0D1B2A;
-    --brand-navy-hover:#16293c;
-    --brand-cream:#FAF8F5;
-    --brand-card:#FFFDFA;
-    --brand-gold:#B98A3E;
-    --brand-gold-hover:#A87C34;
+    --brand-navy:#16181A;
+    --brand-navy-hover:#2A2D30;
+    --brand-cream:#F6F4F0;
+    --brand-card:#FFFFFF;
+    --brand-gold:#B5482A;
+    --brand-gold-hover:#8E3720;
   }
   body{background:var(--brand-cream)}
   .bg-\[\#FBF8F3\]{background-color:var(--brand-cream)}
-  .bg-\[\#FBF8F3\]\/80{background-color:rgba(250,248,245,.8)}
+  .bg-\[\#FBF8F3\]\/80{background-color:rgba(255,255,255,.93)}
   .bg-\[\#FDFCF9\]{background-color:var(--brand-card)}
   .bg-zinc-900{background-color:var(--brand-navy)}
   .text-zinc-900{color:var(--brand-navy)}
@@ -126,24 +129,25 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
      usual double-glazing outfit, and inconsistent with the header's own ink
      button besides.
 
-     Ink on the gold, not white: white on #B98A3E is 3.10:1, which fails AA for
+     Ink on the gold, not white: white on #B5482A is 3.10:1, which fails AA for
      normal text. Ink is 6.09:1, close to the 6.70:1 the blue gave with white,
-     so the contrast does not regress. The hover darkens to #A87C34, still
+     so the contrast does not regress. The hover darkens to #8E3720, still
      5.03:1. */
   /* 0080: the button has to stand out from the page, not only its text from
-     the button. #B98A3E against the cream page is 2.93:1, under the 3:1 WCAG
+     the button. #B5482A against the cream page is 2.93:1, under the 3:1 WCAG
      2.2 asks of a control's edge (1.4.11) — on a phone in daylight the main
      "Upload my house" button read as a beige patch beside the before/after
-     and its caption. The button gold is now #A87B36: 3.57:1 against the
+     and its caption. The button gold is now #B5482A: 3.57:1 against the
      cream, 3.73:1 on the white cards, ink on it 4.99:1 (AA for normal text,
-     since 18px semibold is not "large"). Hover #A27634, ink 4.6:1. A soft
+     since 18px semibold is not "large"). Hover #8E3720, ink 4.6:1. A soft
      shadow lifts it off photographs. The lighter brand gold stays for
      accents, where nothing has to be pressed. */
-  :root{--brand-gold-cta:#A87B36;--brand-gold-cta-hover:#A27634}
-  .cta{background-color:var(--brand-gold-cta) !important;color:#111111 !important;border-color:var(--brand-gold-cta) !important;box-shadow:0 1px 2px rgba(13,27,42,.18),0 4px 14px rgba(13,27,42,.14)}
+  :root{--brand-gold-cta:#B5482A;--brand-gold-cta-hover:#8E3720}
+  /* Brick with white text, as on the homepage: 5.4:1, AA for normal text. */
+  .cta{background-color:var(--brand-gold-cta) !important;color:#FFFFFF !important;border-color:var(--brand-gold-cta) !important;border-radius:4px !important;box-shadow:0 1px 2px rgba(13,27,42,.18),0 4px 14px rgba(13,27,42,.14)}
   .cta:hover{background-color:var(--brand-gold-cta-hover) !important;border-color:var(--brand-gold-cta-hover) !important}
-  .cta:focus-visible{outline:3px solid #0D1B2A;outline-offset:3px}
-  .measured{font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-0.01em}
+  .cta:focus-visible{outline:3px solid #16181A;outline-offset:3px}
+  .measured{font-family:Geist,sans-serif;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-0.03em}
   /* The estimate has been sitting in the panel the whole time the render was
      being made, so when the picture finally lands there is nothing to say
      "and this is what it costs". One beat on the total, once, when the render
@@ -167,7 +171,7 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
   @media (prefers-reduced-motion: reduce){
     *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important;scroll-behavior:auto !important}
   }
-  body{background:#FBF8F3}
+  body{background:var(--brand-cream)}
   details > summary{list-style:none;cursor:pointer}
   details > summary::-webkit-details-marker{display:none}
   details[open] .chev{transform:rotate(180deg)}
@@ -218,12 +222,12 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
   /* 0078: the wait, made part of the show. A scan line over their photo and
      the parts of their house it really found, lighting up one by one. */
   @keyframes fp-scan { from { top: -4%; } to { top: 104%; } }
-  .fp-scanline { position: absolute; left: 0; right: 0; height: 3px; background: #B98A3E;
+  .fp-scanline { position: absolute; left: 0; right: 0; height: 3px; background: #B5482A;
     box-shadow: 0 0 18px 6px rgba(185,138,62,.55); animation: fp-scan 2.6s cubic-bezier(.45,0,.55,1) infinite; }
   @keyframes fp-found { from { opacity: 0; transform: scale(1.08); } to { opacity: 1; transform: none; } }
-  .fp-found { position: absolute; border: 2px solid #B98A3E; border-radius: 6px; background: rgba(185,138,62,.12);
+  .fp-found { position: absolute; border: 2px solid #B5482A; border-radius: 6px; background: rgba(185,138,62,.12);
     opacity: 0; animation: fp-found .5s ease-out forwards; }
-  .fp-found-label { position: absolute; left: -2px; top: -26px; white-space: nowrap; background: #B98A3E; color: #0D1B2A;
+  .fp-found-label { position: absolute; left: -2px; top: -26px; white-space: nowrap; background: #B5482A; color: #16181A;
     font-weight: 600; font-size: 13px; line-height: 1.5; padding: 1px 8px; border-radius: 999px; }
   @media (prefers-reduced-motion: reduce) { .fp-scanline { display: none; } .fp-found { animation: none; opacity: 1; } }
 
@@ -378,8 +382,8 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
 <header class="sticky top-0 z-30 backdrop-blur-xl bg-[#FBF8F3]/80 border-b border-zinc-200">
   <div class="max-w-6xl mx-auto px-6 py-2 sm:py-4 flex items-center justify-between">
     <a href="/" class="flex items-center gap-3 min-h-[44px]" aria-label="Facet Pro home">
-      <span class="w-8 h-8 rounded-[7px] bg-zinc-900 text-white grid place-items-center serif text-[18px] leading-none" aria-hidden="true">F</span>
-      <span class="serif text-[19px] tracking-tight">Facet Pro</span>
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><path d="M13 2L24 9V24H2V9Z" fill="none" stroke="#16181A" stroke-width="2"/><path d="M13 2V24M2 9L13 15L24 9" fill="none" stroke="#B5482A" stroke-width="2"/></svg>
+      <span style="font-weight:700;letter-spacing:.14em;font-size:15px">FACET PRO</span>
       <!-- The BETA badge stood here, beside the wordmark, and was the first
            thing every visitor read. Section 03 of the homepage copy handoff:
            it signals "unfinished, don't trust the numbers" before anybody has
@@ -401,7 +405,7 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
            "Start with a photo", the hero said "See what my house could look
            like" and the close said the same again — three labels for one
            action, which is the list the brief asks to stop rotating between. -->
-      <a href="/design" class="text-base px-4 rounded-full bg-zinc-900 text-white hover:bg-zinc-800 transition min-h-[44px] inline-grid place-items-center whitespace-nowrap">See my house &amp; price &rarr;</a>
+      <a href="/design" class="cta text-sm sm:text-base font-semibold px-3 sm:px-4 transition min-h-[44px] inline-grid place-items-center whitespace-nowrap">See my house &amp; price &rarr;</a>
     </nav>
   </div>
   <!-- The products, on every page, the way the big installers' sites open.
@@ -419,7 +423,7 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
     <ul id="product-menu" class="max-w-6xl mx-auto px-3 sm:px-6 flex gap-1 overflow-x-auto whitespace-nowrap text-lg">
       <li><a href="/design?journey=windows" data-journey="windows" class="product-link inline-grid place-items-center min-h-[44px] px-3 border-b-2 border-transparent text-zinc-600 hover:text-zinc-900 transition">Windows</a></li>
       <li><a href="/design?journey=doors" data-journey="doors" class="product-link inline-grid place-items-center min-h-[44px] px-3 border-b-2 border-transparent text-zinc-600 hover:text-zinc-900 transition">Doors</a></li>
-      <li><a href="/design?journey=roofline" data-journey="roofline" class="product-link inline-grid place-items-center min-h-[44px] px-3 border-b-2 border-transparent text-zinc-600 hover:text-zinc-900 transition">Roof edge &amp; gutters</a></li>
+      <li><a href="/design?journey=roofline" data-journey="roofline" class="product-link inline-grid place-items-center min-h-[44px] px-3 border-b-2 border-transparent text-zinc-600 hover:text-zinc-900 transition">Roofline</a></li>
       <li><a href="/design?journey=roof" data-journey="roof" class="product-link inline-grid place-items-center min-h-[44px] px-3 border-b-2 border-transparent text-zinc-600 hover:text-zinc-900 transition">Roofs</a></li>
       <li><a href="/design?journey=cladding" data-journey="cladding" class="product-link inline-grid place-items-center min-h-[44px] px-3 border-b-2 border-transparent text-zinc-600 hover:text-zinc-900 transition">Walls</a></li>
       <li><a href="/cost/conservatory-cost-uk" class="product-link inline-grid place-items-center min-h-[44px] px-3 border-b-2 border-transparent text-zinc-600 hover:text-zinc-900 transition">Conservatories</a></li>
@@ -560,7 +564,7 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
           <p class="serif text-[26px] sm:text-[30px] leading-tight tracking-tight">&pound;5,643 &ndash; &pound;10,259</p>
           <p class="text-base text-white/75">Planning estimate &middot; inc. VAT &middot; not a quotation</p>
         </div>
-        <button type="button" class="mt-2 sm:mt-0 text-lg font-medium text-[#E8C478] underline underline-offset-4 min-h-[44px] whitespace-nowrap" onclick="goToUpload()">See my house &amp; price &rarr;</button>
+        <button type="button" class="mt-2 sm:mt-0 text-lg font-medium text-[#E08A6C] underline underline-offset-4 min-h-[44px] whitespace-nowrap" onclick="goToUpload()">See my house &amp; price &rarr;</button>
       </div>
       <figcaption class="mt-2 text-base leading-6 text-zinc-500">House: AI-generated illustration. The picture on the right and the price are real Facet Pro output (AI visualisation).</figcaption>
     </figure>
@@ -596,7 +600,7 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
       <a href="/design?journey=roofline" class="group rounded-2xl overflow-hidden border border-zinc-200 bg-white hover:border-zinc-900 transition">
         <img src="/assets/products/roofline-grey.jpg" srcset="/assets/products/roofline-grey-320.jpg 320w, /assets/products/roofline-grey-480.jpg 480w, /assets/products/roofline-grey.jpg 640w" sizes="(min-width: 1024px) 260px, (min-width: 640px) 23vw, 46vw" alt="Illustration: grey fascia and soffit with black guttering and a downpipe on a brick house" width="640" height="480" class="w-full aspect-[4/3] object-cover bg-zinc-100" loading="lazy" decoding="async">
         <span class="block p-3">
-          <span class="block text-base font-semibold">Roof edge &amp; gutters</span>
+          <span class="block text-base font-semibold">Roofline</span>
           <span class="block mt-0.5 text-base leading-6 text-zinc-600">Fascias, soffits and guttering</span>
         </span>
       </a>
@@ -637,7 +641,7 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
        strongest positioning on the site and was folded away on /how-we-price.
        It makes Facet Pro the answer to a consumer problem, not an AI toy. -->
   <section data-page="home" id="problem" class="rounded-2xl bg-zinc-900 text-[#FBF8F3] p-6 md:p-10" aria-labelledby="problem-heading">
-    <p class="text-base font-semibold text-[#E8C478]">The pricing problem</p>
+    <p class="text-base font-semibold text-[#E08A6C]">The pricing problem</p>
     <h2 id="problem-heading" class="mt-2 serif text-[30px] md:text-[44px] leading-[1.02] tracking-[-0.02em]">Two neighbours. Same street.<br>Same windows. Thousands apart.</h2>
     <!-- Softened 5 October (Mike). It read: "The traditional sales process can
          decide the price as much as the product does: who visits, how long
@@ -787,7 +791,7 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
           <p class="serif text-[26px] sm:text-[30px] leading-tight tracking-tight">&pound;10,333 &ndash; &pound;18,787</p>
           <p class="text-base text-white/75">Planning estimate &middot; inc. VAT &middot; not a quotation</p>
         </div>
-        <button type="button" class="mt-2 sm:mt-0 text-lg font-medium text-[#E8C478] underline underline-offset-4 min-h-[44px] whitespace-nowrap" onclick="goToUpload()">See my house &amp; price &rarr;</button>
+        <button type="button" class="mt-2 sm:mt-0 text-lg font-medium text-[#E08A6C] underline underline-offset-4 min-h-[44px] whitespace-nowrap" onclick="goToUpload()">See my house &amp; price &rarr;</button>
       </div>
       <figcaption class="mt-2 text-base leading-6 text-zinc-500">Not a customer&rsquo;s house. House photo: Unsplash. The picture on the right and the price are real Facet Pro output (AI visualisation).</figcaption>
     </figure>
@@ -1764,8 +1768,8 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
   <div class="rounded-2xl border border-zinc-200 bg-white p-6">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div class="flex items-center gap-3">
-        <span class="w-7 h-7 rounded-[6px] bg-zinc-900 text-white grid place-items-center serif text-lg leading-none" aria-hidden="true">F</span>
-        <span class="serif text-[17px] tracking-tight">Facet Pro</span>
+        <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><path d="M13 2L24 9V24H2V9Z" fill="none" stroke="#16181A" stroke-width="2"/><path d="M13 2V24M2 9L13 15L24 9" fill="none" stroke="#B5482A" stroke-width="2"/></svg>
+        <span style="font-weight:700;letter-spacing:.14em;font-size:15px">FACET PRO</span>
         <span class="text-base text-zinc-600 hidden sm:inline">See every facet of your home.</span>
       </div>
       <nav class="flex flex-wrap gap-x-5 gap-y-2 text-base text-zinc-600" aria-label="Footer">
@@ -11197,7 +11201,7 @@ async function makeShareCard() {
   const c = document.createElement('canvas'); c.width = W; c.height = H;
   const g = c.getContext('2d');
   g.fillStyle = '#FAF8F5'; g.fillRect(0, 0, W, H);
-  g.fillStyle = '#0D1B2A'; g.font = '600 46px Georgia, serif';
+  g.fillStyle = '#16181A'; g.font = '600 46px Georgia, serif';
   g.fillText('My house, before and after', pad, 92);
   const cover = (img, x) => {
     const s = Math.max(cw / img.naturalWidth, ch / img.naturalHeight);
@@ -11208,13 +11212,13 @@ async function makeShareCard() {
   const tag = (txt, x, bg, fg) => { g.font = '600 26px system-ui, sans-serif'; const tw = g.measureText(txt).width;
     g.fillStyle = bg; g.beginPath(); g.roundRect ? g.roundRect(x + 14, 144, tw + 28, 40, 20) : g.rect(x + 14, 144, tw + 28, 40); g.fill();
     g.fillStyle = fg; g.fillText(txt, x + 28, 173); };
-  tag('Before', pad, '#FFFFFF', '#0D1B2A'); tag('After', pad + cw + gap, '#047857', '#FFFFFF');
+  tag('Before', pad, '#FFFFFF', '#16181A'); tag('After', pad + cw + gap, '#047857', '#FFFFFF');
   let y = 130 + ch + 64;
-  g.fillStyle = '#0D1B2A'; g.font = '600 40px ui-monospace, Menlo, monospace';
+  g.fillStyle = '#16181A'; g.font = '600 40px ui-monospace, Menlo, monospace';
   for (const l of lines) { g.fillText(l, pad, y); y += 52; }
   g.fillStyle = '#52525B'; g.font = '26px system-ui, sans-serif';
   g.fillText('Planning estimate · inc. VAT · not a quotation · After: AI visualisation', pad, y + 6);
-  g.fillStyle = '#A87B36'; g.font = '600 34px system-ui, sans-serif';
+  g.fillStyle = '#B5482A'; g.font = '600 34px system-ui, sans-serif';
   g.fillText('See yours free at facetpro.co.uk', pad, y + 70);
   return new Promise(ok => c.toBlob(ok, 'image/png'));
 }

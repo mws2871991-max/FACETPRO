@@ -29,14 +29,14 @@ table { border-collapse: collapse; }
    are stated here as well as in index.html rather than shared — two files,
    four constants, and no build step between them. */
 :root{
-  --brand-navy:#0D1B2A;
-  --brand-cream:#FAF8F5;
-  --brand-card:#FFFDFA;
+  --brand-navy:#16181A;
+  --brand-cream:#F6F4F0;
+  --brand-card:#FFFFFF;
 }
 
 /* ── type ── */
 * { font-family: Geist, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
-.serif { font-family: 'Instrument Serif', Georgia, serif; }
+.serif { font-family: Geist, ui-sans-serif, system-ui, sans-serif; font-weight: 700; letter-spacing: -0.03em; }
 body { background: var(--brand-cream); }
 
 /* ── layout ── */
@@ -74,7 +74,7 @@ body { background: var(--brand-cream); }
 
 /* ── colour and surface ── */
 .bg-\[\#FBF8F3\] { background-color: var(--brand-cream); }
-.bg-\[\#FBF8F3\]\/80 { background-color: rgba(250, 248, 245, 0.85); }
+.bg-\[\#FBF8F3\]\/80 { background-color: rgba(255, 255, 255, 0.93); }
 .bg-zinc-900 { background-color: var(--brand-navy); }
 .hover\:bg-white:hover { background-color: #fff; }
 .text-white { color: #fff; }
@@ -112,7 +112,7 @@ body { background: var(--brand-cream); }
 }
 
 /* ── the documents themselves ── */
-.prose h2 { font-family: 'Instrument Serif', Georgia, serif; font-size: 26px; letter-spacing: -0.02em; margin-top: 2.5rem; margin-bottom: 0.75rem; font-weight: 400; }
+.prose h2 { font-family: Geist, ui-sans-serif, system-ui, sans-serif; font-size: 24px; letter-spacing: -0.03em; margin-top: 2.5rem; margin-bottom: 0.75rem; font-weight: 700; }
 .prose h3 { font-size: 15px; font-weight: 500; margin-top: 1.5rem; margin-bottom: 0.375rem; }
 .prose p, .prose li { font-size: 14px; line-height: 1.75; color: #3f3f46; }
 .prose ul { list-style: disc; padding-left: 1.25rem; margin: 0.5rem 0; }
@@ -136,3 +136,7 @@ body { background: var(--brand-cream); }
 
 .toc a { font-size: 13px; color: #52525b; text-decoration: none; }
 .toc a:hover { color: var(--brand-navy); text-decoration: underline; }
+
+/* The FACET PRO wordmark beside the house mark (6 Oct). A class, not a
+   style attribute: these pages run under style-src 'self'. */
+.wordmark { display: inline-block; font-weight: 700; letter-spacing: .14em; font-size: 15px; color: #16181A; }

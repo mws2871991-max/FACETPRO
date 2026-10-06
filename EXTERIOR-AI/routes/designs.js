@@ -113,14 +113,15 @@ module.exports = function designRoutes({ perMinute, record, SITE_URL }) {
   <link rel="icon" href="/assets/favicon-32.png">
   <style>
     :root{color-scheme:light}
-    body{font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#FBF8F3;color:#0F1012;margin:0;padding:24px 16px}
+    @font-face{font-family:'Geist';font-style:normal;font-weight:100 900;font-display:swap;src:url(/assets/fonts/geist-variable.woff2) format('woff2')}
+    body{font:16px/1.6 Geist,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#F6F4F0;color:#16181A;margin:0;padding:24px 16px}
     main{max-width:620px;margin:0 auto}
     .card{background:#fff;border:1px solid #e4e4e7;border-radius:20px;overflow:hidden}
     img{display:block;width:100%;height:auto;background:#E8DED0}
     .body{padding:22px 20px}
     h1{font-size:23px;line-height:1.25;margin:0 0 8px;font-weight:600}
     p{color:#3f3f46;margin:10px 0}
-    .cta{display:block;margin-top:18px;padding:16px 20px;background:#0F1012;color:#fff;text-decoration:none;border-radius:999px;text-align:center;font-weight:600}
+    .cta{display:block;margin-top:18px;padding:16px 20px;background:#B5482A;color:#fff;text-decoration:none;border-radius:4px;text-align:center;font-weight:600}
     .muted{color:#6B6E78;font-size:13px}
     footer{max-width:620px;margin:20px auto 0;color:#6B6E78;font-size:12px;text-align:center}
   </style></head><body><main>

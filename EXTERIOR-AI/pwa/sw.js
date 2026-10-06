@@ -10,7 +10,7 @@
    the stale-stylesheet problem server.js already refuses for app.css. */
 /* global self, caches, Request */
 'use strict';
-const CACHE = 'fp-offline-v1';
+const CACHE = 'fp-offline-v2';
 const OFFLINE = '/offline';
 
 self.addEventListener('install', (e) => {

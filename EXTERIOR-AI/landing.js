@@ -1299,7 +1299,7 @@ const BETA_NOTICE = 'Facet Pro is in early access. We are starting to check how 
 const PRODUCTS = [
   ['Windows', '/design?journey=windows'],
   ['Doors', '/design?journey=doors'],
-  ['Fascias & guttering', '/design?journey=roofline'],
+  ['Roofline', '/design?journey=roofline'],
   ['Roofs', '/design?journey=roof'],
   ['Render & cladding', '/design?journey=cladding'],
   ['Conservatories', '/cost/conservatory-cost-uk'],
@@ -1369,7 +1369,7 @@ function page({ title, description, h1, canonical, body, siteUrl, siteMode, rela
 ${schema ? `<script type="application/ld+json">${JSON.stringify(schema).replace(/</g, '\\u003c')}</script>` : ''}
 </head><body>
 <header class="site"><div class="wrap">
-  <a class="logo" href="${escapeHtml(siteUrl)}/">Facet Pro</a>
+  <a class="logo" href="${escapeHtml(siteUrl)}/" aria-label="Facet Pro home"><svg width="24" height="24" viewBox="0 0 26 26" aria-hidden="true"><path d="M13 2L24 9V24H2V9Z" fill="none" stroke="#16181A" stroke-width="2"/><path d="M13 2V24M2 9L13 15L24 9" fill="none" stroke="#B5482A" stroke-width="2"/></svg>FACET PRO</a>
   <a class="cta-top" href="${escapeHtml(ctaHref(siteUrl, slug, 'header'))}">See my house &amp; price &rarr;</a>
 </div>${productMenu(siteUrl, slug)}</header>
 <main class="wrap">

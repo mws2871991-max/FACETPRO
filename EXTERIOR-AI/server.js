@@ -369,12 +369,12 @@ app.get('/sw.js', (req, res) => {
 /* What the worker shows when a page is opened with no connection. No script,
    no external anything; it has to work from the cache alone. */
 const OFFLINE_HTML = `<!doctype html><html lang="en-GB"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#FBF8F3">
+<meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#FFFFFF">
 <title>You're offline — Facet Pro</title>
-<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#FBF8F3;color:#0D1B2A;
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#F6F4F0;color:#16181A;
 font:18px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;text-align:center;padding:24px}
-h1{font-size:26px;margin:0 0 8px}p{margin:0 0 20px;color:#444}a{display:inline-block;padding:12px 22px;border-radius:999px;
-background:#0D1B2A;color:#fff;text-decoration:none;font-weight:600}</style></head>
+h1{font-size:26px;margin:0 0 8px}p{margin:0 0 20px;color:#444}a{display:inline-block;padding:12px 22px;border-radius:4px;
+background:#B5482A;color:#fff;text-decoration:none;font-weight:600}</style></head>
 <body><main><h1>You're offline</h1><p>Facet Pro needs a connection to read your photo and price your house.</p>
 <a href="/design">Try again</a></main></body></html>`;
 app.get('/offline', (req, res) => {
@@ -5361,8 +5361,8 @@ app.use((req, res) => {
   if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Not found.' });
   res.status(404).type('html').send(
     '<!doctype html><meta charset="utf-8"><title>Not found — Facet Pro</title>' +
-    '<body style="font:16px/1.6 -apple-system,sans-serif;background:#FBF8F3;color:#0F1012;padding:40px">' +
-    '<p>We couldn\'t find that page. <a href="/" style="color:#0F1012">Back to Facet Pro</a>.</p>');
+    '<body style="font:16px/1.6 -apple-system,sans-serif;background:#F6F4F0;color:#16181A;padding:40px">' +
+    '<p>We couldn\'t find that page. <a href="/" style="color:#B5482A">Back to Facet Pro</a>.</p>');
 });
 
 app.use((err, req, res, next) => {

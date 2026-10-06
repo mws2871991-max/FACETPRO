@@ -34,7 +34,7 @@ const row = (label, value) =>
   `<tr><td style="padding:8px 0;color:#6B6E78;width:150px">${label}</td><td style="padding:8px 0">${value}</td></tr>`;
 
 const priceRow = (label, value, strong) =>
-  `<tr><td style="padding:6px 0;color:${strong ? '#0F1012' : '#6B6E78'}">${label}</td>` +
+  `<tr><td style="padding:6px 0;color:${strong ? '#16181A' : '#6B6E78'}">${label}</td>` +
   `<td style="padding:6px 0;text-align:right${strong ? ';font-weight:600' : ''}">${money(value)}</td></tr>`;
 
 /* ── internal: new lead notification ── */
@@ -88,7 +88,7 @@ function leadNotificationHtml(lead, price, siteUrl) {
     ? `${lead.conservatory.name} (guide ${money(lead.conservatory.priceMin)}–${money(lead.conservatory.priceMax)})`
     : null;
 
-  return `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;color:#0F1012">
+  return `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;color:#16181A">
     <h2 style="font-size:20px;margin-bottom:16px">New lead from Facet Pro</h2>
     <table style="width:100%;border-collapse:collapse;font-size:14px">
       ${row('Reference', escapeHtml(lead.id))}
@@ -196,7 +196,7 @@ function designPackHtml(lead, price, siteUrl, withdrawToken, recipients) {
       ? 'They may contact you by email, telephone or text message to talk it through and arrange a survey. There is no obligation to go ahead at any point.'
       : 'We don\'t currently have an installer covering your area, so we haven\'t passed your details to anyone. We\'ll let you know if that changes — your design and your estimate are saved either way.';
 
-  return `<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:560px;margin:0 auto;color:#0F1012;background:#FBF8F3;padding:28px 24px">
+  return `<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:560px;margin:0 auto;color:#16181A;background:#F6F4F0;padding:28px 24px">
 
     <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#8A8A8F">Facet Pro</div>
     <h1 style="font-size:26px;line-height:1.2;margin:12px 0 0;font-weight:600">Your home, as you designed it</h1>
@@ -343,7 +343,7 @@ function sharingConfirmationHtml(lead, recipients, siteUrl, withdrawToken) {
   const base = site.replace(/\/$/, '');
   const withdrawLink = withdrawToken ? `${base}/withdraw?t=${encodeURIComponent(withdrawToken)}` : null;
 
-  return `<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:560px;margin:0 auto;color:#0F1012;background:#FBF8F3;padding:28px 24px">
+  return `<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:560px;margin:0 auto;color:#16181A;background:#F6F4F0;padding:28px 24px">
 
     <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#8A8A8F">Facet Pro</div>
     <h1 style="font-size:24px;line-height:1.25;margin:12px 0 0;font-weight:600">Your enquiry is on its way</h1>
@@ -366,7 +366,7 @@ function sharingConfirmationHtml(lead, recipients, siteUrl, withdrawToken) {
 
     ${withdrawLink ? `<p style="font-size:14px;line-height:1.6;color:#3f3f46;margin:22px 0 0">
       Changed your mind? You can
-      <a href="${escapeHtml(withdrawLink)}" style="color:#0F1012"><strong>stop this at any time</strong></a>
+      <a href="${escapeHtml(withdrawLink)}" style="color:#16181A"><strong>stop this at any time</strong></a>
       — we will tell the installers, and you can ask us to delete your details altogether.
     </p>` : ''}
 
@@ -428,7 +428,7 @@ function noInstallersHtml(lead, siteUrl, withdrawToken) {
   const withdrawLink = withdrawToken ? `${base}/withdraw?t=${encodeURIComponent(withdrawToken)}` : null;
   const where = lead.postcode ? ` covering ${escapeHtml(lead.postcode)}` : ' in your area';
 
-  return `<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:560px;margin:0 auto;color:#0F1012;background:#FBF8F3;padding:28px 24px">
+  return `<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:560px;margin:0 auto;color:#16181A;background:#F6F4F0;padding:28px 24px">
 
     <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#8A8A8F">Facet Pro</div>
     <h1 style="font-size:24px;line-height:1.25;margin:12px 0 0;font-weight:600">Your design is saved</h1>
@@ -449,7 +449,7 @@ function noInstallersHtml(lead, siteUrl, withdrawToken) {
     </div>
 
     ${withdrawLink ? `<p style="font-size:14px;line-height:1.6;color:#3f3f46;margin:22px 0 0">
-      You can <a href="${escapeHtml(withdrawLink)}" style="color:#0F1012"><strong>ask us to delete your details</strong></a>
+      You can <a href="${escapeHtml(withdrawLink)}" style="color:#16181A"><strong>ask us to delete your details</strong></a>
       at any time.
     </p>` : ''}
 

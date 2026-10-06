@@ -23,13 +23,15 @@ test('the button gold clears 3:1 against every background it sits on', () => {
   }
 });
 
+// ProFacet (6 Oct): white text on brick, as on the homepage.
 test('the text on it clears 4.5:1, resting and on hover', () => {
+  assert.match(h, /\.cta\{[^}]*color:#FFFFFF !important/);
   for (const name of ['brand-gold-cta', 'brand-gold-cta-hover']) {
-    assert.ok(ratio(v(name), '#111111') >= 4.5, `${name}: ${ratio(v(name), '#111111').toFixed(2)}:1`);
+    assert.ok(ratio(v(name), '#FFFFFF') >= 4.5, `${name}: ${ratio(v(name), '#FFFFFF').toFixed(2)}:1`);
   }
 });
 
 test('.cta uses the button gold and has a visible focus ring', () => {
   assert.match(h, /\.cta\{background-color:var\(--brand-gold-cta\) !important/);
-  assert.match(h, /\.cta:focus-visible\{outline:3px solid #0D1B2A/);
+  assert.match(h, /\.cta:focus-visible\{outline:3px solid #16181A/);
 });

@@ -57,13 +57,14 @@ module.exports = function withdrawRoutes({
   <meta name="robots" content="noindex,nofollow">
   <title>Your choices — Facet Pro</title>
   <style>
-    body{font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#FBF8F3;color:#0F1012;margin:0;padding:40px 20px}
+    @font-face{font-family:'Geist';font-style:normal;font-weight:100 900;font-display:swap;src:url(/assets/fonts/geist-variable.woff2) format('woff2')}
+    body{font:16px/1.6 Geist,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#F6F4F0;color:#16181A;margin:0;padding:40px 20px}
     main{max-width:560px;margin:0 auto;background:#fff;border-radius:16px;padding:32px 28px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
     h1{font-size:24px;margin:0 0 8px;font-weight:600}
     p{color:#3f3f46;margin:12px 0}
     .muted{color:#6B6E78;font-size:14px}
     button{display:block;width:100%;text-align:left;font:inherit;margin:10px 0 0;padding:14px 16px;border:1px solid #d4d4d8;border-radius:12px;background:#fff;cursor:pointer}
-    button:hover{border-color:#0F1012}
+    button:hover{border-color:#16181A}
     button.danger{border-color:#fca5a5;color:#991b1b}
     button.danger:hover{border-color:#dc2626}
     .done{background:#F0FDF4;border:1px solid #86efac;border-radius:12px;padding:16px}

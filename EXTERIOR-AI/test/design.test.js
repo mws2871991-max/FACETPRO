@@ -77,10 +77,10 @@ test('a request for less movement is honoured', () => {
   assert.match(html, /transition-duration:\.01ms !important/);
 });
 
-test('measured figures are set in the mono, with tabular numerals', () => {
+test('measured figures are set in Geist, with tabular numerals', () => {
   // A column of prices that does not line up, or a total that shuffles
   // sideways as it changes, is the thing tabular figures exist to stop.
-  assert.match(html, /\.measured\{[^}]*JetBrains Mono/);
+  assert.match(html, /\.measured\{[^}]*Geist/);
   assert.match(html, /\.measured\{[^}]*tabular-nums/);
   const uses = (html.match(/className: 'measured|className: `measured| measured /g) || []).length;
   assert.ok(uses >= 5, `only ${uses} measured figures — the estimate build-up should be one`);
