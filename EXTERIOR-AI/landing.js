@@ -1100,7 +1100,12 @@ const cta = (siteUrl, slug) => (isConservatory(slug) ? conservatoryCta(siteUrl, 
    and no page may override them. */
 const CAVEAT = 'These are planning estimates — not a quotation, and not a survey. Windows and doors: what these jobs actually sell for, from 24 years of selling them, checked against current UK prices. Walls, roof and roofline: UK material and labour rates, with scaffolding, waste and VAT. What you pay depends on your own house and, more than anything else, on which company quotes it. Your installer confirms the figure on survey.';
 
-const BETA_NOTICE = 'Facet Pro is in beta. Our measurement of wall area from a photograph is still being calibrated against surveyed properties, so treat wall and roof figures as indicative and window figures as a guide.';
+/* "Early access", not "beta" (developer brief, 6 Oct, §7). And "starting to
+   check", not "being calibrated": no surveyed house has been measured against
+   yet (data/survey-samples.json), so the brief's "continuously calibrated
+   against real surveyed properties" would be a claim we cannot back. Same
+   words as the site footer. */
+const BETA_NOTICE = 'Facet Pro is in early access. We are starting to check how we measure wall area from a photograph against surveyed properties, so treat wall and roof figures as indicative and window figures as a guide.';
 
 /* The same six products as the homepage boxes and the main site's header, so
    somebody who searched "conservatory cost" can get to windows without going

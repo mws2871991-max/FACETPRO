@@ -11,8 +11,11 @@ const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
 const LINES = [
   ['the h1', '>See your house.<br>See what it could cost.</h1>'],
-  ['the sub-head', 'Upload one photo. Try new windows, doors and exterior improvements on your actual home &mdash; then see an itemised planning estimate before you speak to an installer.'],
-  ['the five steps', '>Speak to someone last &mdash; if you want to.</p>'],
+  /* Developer brief, 6 Oct: the sub-head, the trust line and four steps. */
+  ['the sub-head', 'Upload one photo of your home to visualise improvements and get a planning estimate &mdash; before speaking to an installer.'],
+  ['the trust line', '>Free &middot; No account &middot; No measurements &middot; No sales call</p>'],
+  ['the four steps', '>Choose whether you&rsquo;d like up to three installers to quote.</p>'],
+  ['never twenty companies', '<strong class="font-semibold text-zinc-900">Never sent to 20 companies.</strong> At most three installers, and only if you ask.'],
   ['the primary button', '>See my house &amp; price &rarr;</button>'],
   ['the two neighbours, near the top', 'Two neighbours. Same street.<br>Same windows. Thousands apart.'],
   ['the simple answer first', 'It&rsquo;s a planning estimate, not a survey.'],

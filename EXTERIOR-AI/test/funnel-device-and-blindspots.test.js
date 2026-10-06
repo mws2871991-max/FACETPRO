@@ -171,3 +171,15 @@ test('a rate spanning two different histories is reported, and flagged as one', 
   assert.strictEqual(started.count, 8);
   assert.strictEqual(shown.ofPreviousPct, 387.5);
 });
+
+/* Developer brief, 6 Oct (§3): the three events it asked for that had no stage. */
+test('project type, sharing and the installer match are counted', () => {
+  const fs = require('fs'), path = require('path');
+  const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  const page = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  for (const st of ['project_type_selected', 'estimate_shared', 'installer_match_shown']) {
+    assert.match(server, new RegExp(`\\['${st}', \\{ of: '`), `${st} is not allowlisted`);
+    assert.match(page, new RegExp(`reachedStage\\('${st}'\\)`), `${st} is never fired`);
+  }
+  assert.match(page, /if \(res\.ok\) reachedStage\('installer_match_shown'\)/, 'only when the match actually came back');
+});
