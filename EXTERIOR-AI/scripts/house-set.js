@@ -20,6 +20,9 @@
      npm run houses -- --scenario roof --only 05,07  (file-name prefixes)
      npm run houses -- --site http://localhost:3999
 
+   Against the live site it needs --yes: every render comes out of the same
+   DAILY_RENDER_LIMIT real visitors use, and a run that hits it stops at once.
+
    Each house costs one photo analysis and one render against the site's
    daily caps. Run it against the live site only for a reason. */
 
@@ -80,10 +83,24 @@ function prepare(file) {
   return { img, jpeg: jpeg.encode(img, QUALITY).data };
 }
 
-const post = async (p, body) => {
-  const r = await fetch(SITE + p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  let j = {}; try { j = await r.json(); } catch (_) { /* not JSON */ }
-  return { status: r.status, body: j };
+/* The site limits renders and analyses per minute from one address, as it
+   should. A 429 waits a minute and tries again, up to three times; PACE
+   seconds between houses keeps most runs under the limit to begin with. */
+const PACE = Number(arg('pace', '12'));
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+const post = async (p, body, tries = 3) => {
+  for (let t = 0; ; t++) {
+    const r = await fetch(SITE + p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    let j = {}; try { j = await r.json(); } catch (_) { /* not JSON */ }
+    /* The daily cap is the live site's, shared with real visitors (6 Oct: a
+       run used the last of it). Stop the whole run on it — never retry. */
+    if (r.status === 429 && /photorealistic pictures right now|daily/i.test(String(j.error || '') + String(j.reason || ''))) {
+      console.error(`\nThe site's DAILY render cap is used up — stopping. Real visitors can't get renders until midnight UTC.`);
+      process.exit(3);
+    }
+    if (r.status === 429 && t < tries) { console.log(`  ${p}: rate limited, waiting a minute`); await sleep(61000); continue; }
+    return { status: r.status, body: j };
+  }
 };
 
 /* Every pixel the render moved, in red over a dimmed copy of the photo, and
@@ -112,9 +129,14 @@ function diff(before, renderPng) {
   const out = path.join(DIR, 'runs', `${stamp}-${SCENARIO}${EXP ? `-${EXP}` : ''}`);
   fs.mkdirSync(out, { recursive: true });
   console.log(`${houses.length} houses · scenario ${SCENARIO}${EXP ? ` · exp ${EXP}` : ''} · ${SITE}\n→ ${out}`);
+  if (/facetpro\.co\.uk/.test(SITE)) {
+    console.log(`\nThis uses up to ${houses.length} of the LIVE site's daily renders, which real visitors share.`);
+    if (!process.argv.includes('--yes')) { console.log('Add --yes to go ahead (best overnight, or after raising DAILY_RENDER_LIMIT).'); process.exit(1); }
+  }
 
   const rows = [];
-  for (const file of houses) {
+  for (const [n, file] of houses.entries()) {
+    if (n) await sleep(PACE * 1000);
     const name = file.replace(/\.jpe?g$/i, '');
     const row = { name };
     try {
