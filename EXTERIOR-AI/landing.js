@@ -910,6 +910,176 @@ const COST_PAGES = [
       };
     },
   },
+  /* ── Developer brief, 6 Oct (§11): the content clusters it lists that had no
+     page. Each prices through the same engine as the tool (windowJob,
+     estimateGlazing, rooflineFor), so a page and the visualiser cannot quote
+     the same job two ways. ── */
+  {
+    slug: '8-window-replacement-cost',
+    title: '8 Window Replacement Cost UK 2026 | Fitted Prices',
+    h1: 'How Much Does It Cost to Replace 8 Windows?',
+    intent: '8 window replacement cost',
+    description: 'What replacing eight windows costs in the UK — the usual count for a three-bed semi — fitted and inc VAT, with six to ten windows for comparison.',
+    build: (c) => {
+      const eight = windowJob(c, { count: 8 });
+      return {
+        answer: `${money(eight.low)} to ${money(eight.high)} fitted, inc VAT — around ${money(eight.perWindowLow)} to ${money(eight.perWindowHigh)} a window.`,
+        sections: [
+          { heading: 'Eight windows, and either side of it', table: {
+            head: ['Windows', 'Estimated cost fitted, inc VAT'],
+            rows: [6, 7, 8, 9, 10].map(n => {
+              const j = windowJob(c, { count: n });
+              return [String(n), `${money(j.low)} – ${money(j.high)}`];
+            }),
+          } },
+          { heading: 'Eight windows is a typical three-bed semi', paras: [
+            'Eight is roughly what a three-bedroom semi has, front and back.',
+            'What moves the figure more than the count: how many are upstairs, how many open, and whether any of them is a bay. A bay is priced as more than one window, because it is.',
+          ] },
+        ],
+        faqs: [
+          { q: 'How much do 8 new windows cost?', a: `About ${money(eight.low)} to ${money(eight.high)}, fitted and inc VAT, for white uPVC casements.` },
+          { q: 'How long does it take to fit 8 windows?', a: 'Usually one to two days for a fitting team, depending on access and how many are upstairs.' },
+        ],
+      };
+    },
+  },
+  {
+    slug: 'windows-and-front-door-cost',
+    title: 'New Windows and Front Door Cost UK 2026 | Priced Together',
+    h1: 'What Do New Windows and a Front Door Cost Together?',
+    intent: 'windows and front door cost',
+    description: 'New windows and a new front door priced as one job, fitted and inc VAT — uPVC or composite door, with six to ten windows.',
+    build: (c) => {
+      const both = (count, doorStyleId) => {
+        const out = glazing.estimateGlazing({ rates: c.glazing, houseType: 'semi', windowCountOverride: count,
+          selections: { windowStyleId: 'casement', doorStyleId } });
+        return glazing.publishedRange(out);
+      };
+      const eightComposite = both(8, 'composite');
+      return {
+        answer: `${money(eightComposite.low)} to ${money(eightComposite.high)} for eight windows and a composite front door, fitted and inc VAT.`,
+        sections: [
+          { heading: 'Windows and a door, priced as one job', table: {
+            head: ['Windows', 'With a uPVC door', 'With a composite door'],
+            rows: [6, 8, 10].map(n => {
+              const u = both(n, 'upvc'), k = both(n, 'composite');
+              return [String(n), `${money(u.low)} – ${money(u.high)}`, `${money(k.low)} – ${money(k.high)}`];
+            }),
+          } },
+          { heading: 'Doing them together', paras: [
+            'The door and the windows are usually made and fitted by the same company, so one survey covers both and the frames match in colour and finish.',
+            'The figures above are the windows and the door each priced as they would be on their own and added together. Ask whether a combined order changes the price — some installers will, and it is worth knowing before you agree to anything.',
+          ] },
+        ],
+        faqs: [
+          { q: 'How much are 8 windows and a front door?', a: `About ${money(eightComposite.low)} to ${money(eightComposite.high)} with a composite door, fitted and inc VAT.` },
+          { q: 'Should I replace the front door at the same time as the windows?', a: 'If the door is due, usually yes: one survey, one fitting visit, and the colours match.' },
+        ],
+      };
+    },
+  },
+  {
+    slug: 'windows-and-roofline-cost',
+    title: 'New Windows and Roofline Cost UK 2026 | Fascias, Soffits & Windows',
+    h1: 'New Windows and a New Roofline: What It Costs',
+    intent: 'windows and roofline cost',
+    description: 'New windows with new fascias, soffits and guttering, fitted and inc VAT, for a typical semi — and why the roofline is priced differently.',
+    build: (c) => {
+      const w = windowJob(c, { count: 8 });
+      const run = c.defaultTrimLengthM || 24;
+      const r = rooflineFor(c, run);
+      return {
+        answer: `About ${money(w.low + r.total)} to ${money(w.high + r.total)} for eight windows and ${run} m of new fascia, soffit and guttering, fitted and inc VAT.`,
+        sections: [
+          { heading: 'A typical semi, both jobs', table: {
+            head: ['Job', 'Estimated cost fitted, inc VAT'],
+            rows: [
+              ['8 windows, white uPVC casement', `${money(w.low)} – ${money(w.high)}`],
+              [`Roofline, ${run} m (fascia, soffit, guttering), with scaffolding`, money(r.total)],
+              ['Together', `${money(w.low + r.total)} – ${money(w.high + r.total)}`],
+            ],
+          } },
+          { heading: 'Why the two are priced differently', paras: [
+            'Windows are priced from what these jobs actually sell for, so the range is mostly which company quotes. The roofline is priced from material and labour rates by the metre, plus scaffolding, so its figure moves with the length of roof edge rather than the company.',
+            `The scaffolding — about ${money(r.scaffolding)} of the roofline figure — is there for the roofline. It does not usually come off the window price, so treat any quote that bundles both with a large "saving" with care.`,
+          ] },
+        ],
+        faqs: [
+          { q: 'How much do new windows and fascias cost together?', a: `About ${money(w.low + r.total)} to ${money(w.high + r.total)} for a typical semi, fitted and inc VAT.` },
+        ],
+      };
+    },
+  },
+  {
+    slug: 'replacing-windows-3-bed-semi-cost',
+    title: 'Cost of Replacing Windows in a 3-Bed Semi UK 2026',
+    h1: 'What Does It Cost to Replace the Windows in a 3-Bed Semi?',
+    intent: 'cost of replacing windows in a 3 bed semi',
+    description: 'Replacing the windows in a typical three-bedroom semi, fitted and inc VAT — by style and colour, and what changes the figure on your house.',
+    build: (c) => {
+      const style = (styleId, colourId = null) => windowJob(c, { count: 8, styleId, colourId });
+      const white = style('casement');
+      const anth = style('casement', 'anthracite');
+      const sash = style('sliding-sash');
+      return {
+        answer: `${money(white.low)} to ${money(white.high)} for the eight windows of a typical three-bed semi in white uPVC casements, fitted and inc VAT.`,
+        sections: [
+          { heading: 'Eight windows, by style', table: {
+            head: ['Style', 'Estimated cost fitted, inc VAT'],
+            rows: [
+              ['White uPVC casement', `${money(white.low)} – ${money(white.high)}`],
+              ['Anthracite uPVC casement', `${money(anth.low)} – ${money(anth.high)}`],
+              ['Sliding sash style', `${money(sash.low)} – ${money(sash.high)}`],
+            ],
+          } },
+          { heading: 'What changes it on your house', paras: [
+            'Eight is the usual count for a three-bed semi, front and back. Yours may have a bay, a landing window or a small toilet window, and each one changes the total.',
+            'Bays cost the most and are easy to under-count: a three-sided bay is several frames, not one. Your front photograph shows us yours.',
+          ] },
+        ],
+        faqs: [
+          { q: 'How many windows does a 3-bed semi have?', a: 'Usually around eight, front and back — more with a bay or a landing window.' },
+          { q: 'How much are new windows for a 3-bed semi?', a: `About ${money(white.low)} to ${money(white.high)} in white uPVC, fitted and inc VAT.` },
+        ],
+      };
+    },
+  },
+  {
+    slug: 'windows-1930s-semi-cost',
+    title: 'New Windows for a 1930s Semi UK 2026 | Bay Window Costs',
+    h1: 'New Windows for a 1930s Semi: What It Costs',
+    intent: 'windows for 1930s semi detached house',
+    description: 'Replacement windows for a 1930s semi, with its bay windows, fitted and inc VAT — and why the bays are most of the question.',
+    build: (c) => {
+      const all = windowJob(c, { count: 8 });
+      /* A bay is priced as bayUplift times a window in the engine. Two bays
+         on an eight-window semi: the extra those two carry, on top. */
+      const uplift = (c.glazing.bayUplift || 1) - 1;
+      const extraLow = Math.round(all.perWindowLow * uplift * 2);
+      const extraHigh = Math.round(all.perWindowHigh * uplift * 2);
+      return {
+        answer: `About ${money(all.low + extraLow)} to ${money(all.high + extraHigh)} for a typical 1930s semi — eight windows including two bays — in white uPVC, fitted and inc VAT.`,
+        sections: [
+          { heading: 'Eight windows, two of them bays', table: {
+            head: ['', 'Estimated cost fitted, inc VAT'],
+            rows: [
+              ['Eight windows, no bays', `${money(all.low)} – ${money(all.high)}`],
+              ['What two bays add', `${money(extraLow)} – ${money(extraHigh)}`],
+              ['Eight windows including two bays', `${money(all.low + extraLow)} – ${money(all.high + extraHigh)}`],
+            ],
+          } },
+          { heading: 'The bays are most of the question', paras: [
+            'Many 1930s semis have a bay up and down at the front. Each is three or more frames meeting at angles, often with a roof or a tile-hung panel over it, and that is where most of the difference between two quotes comes from.',
+            'Original leaded lights or a curved bay are their own conversation with the installer. The figures here are for standard three-sided bays.',
+          ] },
+        ],
+        faqs: [
+          { q: 'How much are new bay windows for a 1930s semi?', a: `Two bays add about ${money(extraLow)} to ${money(extraHigh)} on top of the window price, fitted and inc VAT.` },
+        ],
+      };
+    },
+  },
 ];
 
 /* Area pages. Kept to the outward codes and towns the business actually works
