@@ -1121,7 +1121,7 @@ async function deliverAndRecord(lead, plan) {
 
   let results;
   /* Only what the consent wording lists — see leadview.js. */
-  const forInstaller = leadview.forInstaller(lead);
+  const forInstaller = leadview.forInstaller(lead, { siteUrl: SITE_URL });
   try {
     results = await delivery.deliverLead(forInstaller, chosen, { fetchImpl: (...a) => fetch(...a) });
   } catch (err) {
@@ -1215,7 +1215,7 @@ async function notifyNewLead(lead, price) {
       to: LEAD_NOTIFY_EMAIL,
       replyTo: lead.email,
       subject: `New lead: ${lead.name} — ${lead.postcode || 'no postcode'}`,
-      html: emails.leadNotificationHtml(lead, price),
+      html: emails.leadNotificationHtml(lead, price, SITE_URL),
     });
     console.log(`Lead ${lead.id} emailed to ${LEAD_NOTIFY_EMAIL}.`);
     return { attempted: true, sent: true, id };

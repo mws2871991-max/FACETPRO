@@ -31,7 +31,14 @@ test('installers get only what the consent wording lists', () => {
   assert.strictEqual(out.name, 'N');
   assert.ok(!JSON.stringify(out).includes('abc'), 'no IP hash');
   const server = read('server.js');
-  assert.match(server, /const forInstaller = leadview\.forInstaller\(lead\);/);
+  assert.match(server, /const forInstaller = leadview\.forInstaller\(lead, \{ siteUrl: SITE_URL \}\);/);
+  /* Developer brief, 6 Oct (§9): the design as a link that opens, and the
+     quote request said plainly. Both come from what the lead already holds. */
+  const withLink = forInstaller({ ...lead, renderUrl: '/r/abc123' }, { siteUrl: 'https://www.facetpro.co.uk/' });
+  assert.strictEqual(withLink.renderLink, 'https://www.facetpro.co.uk/r/abc123');
+  assert.deepStrictEqual(withLink.quoteRequest, { status: 'requested', at: 'a' });
+  assert.ok(!('renderLink' in forInstaller({ ...lead, renderUrl: 'https://elsewhere.example/x' }, { siteUrl: 'https://www.facetpro.co.uk' })),
+    'only our own render paths become links');
   assert.match(read('routes/installers.js'), /leadview'\)\.forInstaller/);
 });
 

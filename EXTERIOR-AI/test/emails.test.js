@@ -136,3 +136,12 @@ test('the notification carries what you need to act on a lead', () => {
     assert.ok(html.includes(needle), `notification should mention ${needle}`);
   }
 });
+
+/* Developer brief, 6 Oct (§9): the lead notification links the design, and
+   says whether quotes were asked for. */
+test('the lead notification links the visualisation and says if quotes were requested', () => {
+  const emails = require('../emails');
+  const html = emails.leadNotificationHtml({ id: 'L1', name: 'N', email: 'e@x.co', renderUrl: '/r/abc', consent: { installerQuotes: true } }, null, 'https://www.facetpro.co.uk');
+  assert.match(html, /href="https:\/\/www\.facetpro\.co\.uk\/r\/abc">Open their design<\/a>/);
+  assert.match(html, /Quotes requested[\s\S]*?Yes/);
+});

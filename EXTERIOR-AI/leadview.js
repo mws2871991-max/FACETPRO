@@ -29,10 +29,23 @@ const INSTALLER_FIELDS = [
   'project', 'property', 'leadScore',
 ];
 
-function forInstaller(lead) {
+function forInstaller(lead, { siteUrl } = {}) {
   if (!lead || typeof lead !== 'object') return lead;
   const out = {};
   for (const k of INSTALLER_FIELDS) if (lead[k] !== undefined) out[k] = lead[k];
+  /* Developer brief, 6 Oct (§9): the installer should get the whole brief.
+     Two things it was missing. The visualisation as a link that opens —
+     renderUrl is a path on our own site, which means nothing in a webhook or
+     an installer's inbox. And the quote-request status said plainly, rather
+     than left to be inferred from a consent flag. Both are the same facts the
+     lead already carries, in a usable form; nothing new is disclosed. */
+  if (typeof lead.renderUrl === 'string' && lead.renderUrl.startsWith('/r/') && siteUrl) {
+    out.renderLink = String(siteUrl).replace(/\/$/, '') + lead.renderUrl;
+  }
+  out.quoteRequest = {
+    status: lead.consent?.installerQuotes === true ? 'requested' : 'not_requested',
+    at: lead.consent?.at || null,
+  };
   /* The installer's own evidence that the homeowner asked to be contacted:
      when, which wording, and that wording — nothing about the other boxes. */
   if (lead.consent) {

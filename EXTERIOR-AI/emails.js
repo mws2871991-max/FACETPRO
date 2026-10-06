@@ -79,7 +79,11 @@ const windowsRow = (lead) => {
   return row('Windows', [head, spec ? escapeHtml(spec) : '', ...lines.map(escapeHtml)].filter(Boolean).join('<br>'));
 };
 
-function leadNotificationHtml(lead, price) {
+function leadNotificationHtml(lead, price, siteUrl) {
+  /* The picture they designed, which this email never linked (developer
+     brief, 6 Oct, §9) — the homeowner's own email always has. */
+  const base = (safeUrl(siteUrl) || 'https://www.facetpro.co.uk').replace(/\/$/, '');
+  const render = lead.renderUrl && String(lead.renderUrl).startsWith('/r/') ? base + lead.renderUrl : null;
   const conservatory = lead.conservatory
     ? `${lead.conservatory.name} (guide ${money(lead.conservatory.priceMin)}–${money(lead.conservatory.priceMax)})`
     : null;
@@ -97,6 +101,8 @@ function leadNotificationHtml(lead, price) {
       ${price ? row('Quote total', `<strong>${money(price.total)}</strong>`) : ''}
       ${conservatory ? row('Conservatory', escapeHtml(conservatory)) : ''}
       ${windowsRow(lead)}
+      ${render ? row('Visualisation', `<a href="${escapeHtml(render)}">Open their design</a>`) : ''}
+      ${row('Quotes requested', lead.consent?.installerQuotes === true ? 'Yes' : 'No')}
     </table>
   </div>`;
 }
