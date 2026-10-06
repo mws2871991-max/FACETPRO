@@ -182,3 +182,11 @@ test('fonts and photographs are cached; the stylesheet is not', async () => {
   assert.match(page.headers.get('cache-control') || '', /max-age=0/,
     'the page itself must never be held — it carries the app');
 });
+
+/* Pinterest claims the site by finding this on the homepage (6 Oct 2026).
+   Removing it silently un-verifies the account. */
+test('the Pinterest verification tag stays in the homepage head', () => {
+  const page = require('fs').readFileSync(require('path').join(__dirname, '..', 'index.html'), 'utf8');
+  const head = page.slice(0, page.indexOf('</head>'));
+  assert.match(head, /<meta name="p:domain_verify" content="f04c9c0b39fbb4b990b9484ccbacb629"\/>/);
+});
