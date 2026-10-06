@@ -5183,6 +5183,7 @@ const BRANCH_STAGES = new Map([
   ['count_corrected', { of: 'upload_completed', label: 'corrected the window count' }],
   /* Developer brief, 6 Oct (§3): three events it asks for that had no stage.
      Branches rather than steps — not everybody passes through them. */
+  ['homepage_view', { of: 'landing', label: 'landed on the homepage itself' }],
   ['project_type_selected', { of: 'upload_completed', label: 'told us what they want priced' }],
   ['estimate_shared', { of: 'estimate_viewed', label: 'shared or saved the before-and-after picture' }],
   ['installer_match_shown', { of: 'estimate_viewed', label: 'checked their postcode and saw the installer match' }],

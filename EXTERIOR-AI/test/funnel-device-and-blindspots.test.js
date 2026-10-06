@@ -177,9 +177,10 @@ test('project type, sharing and the installer match are counted', () => {
   const fs = require('fs'), path = require('path');
   const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
   const page = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  for (const st of ['project_type_selected', 'estimate_shared', 'installer_match_shown']) {
+  for (const st of ['homepage_view', 'project_type_selected', 'estimate_shared', 'installer_match_shown']) {
     assert.match(server, new RegExp(`\\['${st}', \\{ of: '`), `${st} is not allowlisted`);
     assert.match(page, new RegExp(`reachedStage\\('${st}'\\)`), `${st} is never fired`);
   }
   assert.match(page, /if \(res\.ok\) reachedStage\('installer_match_shown'\)/, 'only when the match actually came back');
+  assert.match(page, /if \(PAGE === 'home'\) reachedStage\('homepage_view'\);/, 'homepage views only on the homepage');
 });

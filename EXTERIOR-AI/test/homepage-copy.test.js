@@ -52,3 +52,14 @@ test('homepage: the cost guides block links real guides and copies no prices', (
   for (const sl of slugs) assert.ok(landing.includes(`'${sl}'`) || landing.includes(`"${sl}"`) || landing.includes(sl), `${sl} is not a guide`);
   assert.doesNotMatch(sec.replace(/<!--[\s\S]*?-->/g, ''), /£|&pound;/, 'a price copied onto the homepage goes stale');
 });
+
+/* Developer brief, 6 Oct (§12): about / credibility on the homepage, in the
+   words already used elsewhere, third person and unnamed. */
+test('homepage: the about block says who is behind it without naming anyone', () => {
+  const a = html.indexOf('id="about"');
+  assert.ok(a > html.indexOf('id="cost-guides"') && a < html.indexOf('id="faq"'), 'after the cost guides, before the FAQ');
+  const sec = html.slice(a, html.indexOf('</section>', a)).replace(/<!--[\s\S]*?-->/g, '');
+  assert.match(sec, /Built by somebody who sold these jobs for twenty-four years\./);
+  assert.match(sec, /FACETPRO LTD, registered in England and Wales, no\. 17346500\./);
+  assert.doesNotMatch(sec, /Mike|Sheehan|\bI (sold|spent)\b/, 'the founder is not named on the page');
+});
