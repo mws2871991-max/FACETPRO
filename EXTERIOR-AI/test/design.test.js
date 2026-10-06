@@ -91,7 +91,11 @@ test('measured figures are set in the mono, with tabular numerals', () => {
 test('the total bar shows composition, not just a number', () => {
   const start = html.indexOf('function buildTotalBar');
   const body = html.slice(start, html.indexOf('function buildDetailOptions'));
-  assert.match(body, /window\$\{n === 1/, 'it should say how many windows');
+  /* The window and door wording lives in glazingCovers, shared with the
+     estimate panel so the two describe one figure the same way. */
+  const covers = html.slice(html.indexOf('function glazingCovers'), html.indexOf('function glazingAlongside'));
+  assert.match(covers, /window\$\{n === 1/, 'it should say how many windows');
+  assert.match(body, /glazingCovers\(glaz\)/);
   assert.match(body, /m² of wall/);
   assert.match(body, /inc VAT/);
   assert.match(body, /See breakdown/, 'one place owns the itemisation; this links to it');
@@ -154,4 +158,22 @@ test('it tells the truth about access either way', () => {
   const body = html.slice(start, start + 1400);
   assert.match(body, /g\.price\.access/, 'access should be conditional on there being any');
   assert.match(body, /No access equipment needed/);
+});
+
+/* Demo handoff bug 6: windows plus Ink Trim showed the roofline alone in the
+   panel, under "Your estimated project cost", and "We could not measure your
+   house" about a wall area the roofline never uses. */
+test('the trades panel shows the windows figure beside it, labelled and not added in', () => {
+  const panel = html.slice(html.indexOf('function buildPricePanel'), html.indexOf('function buildPricePanel') + 20000);
+  assert.ok((panel.match(/glazingAlongside\(\)/g) || []).length >= 2, 'both trades layouts carry it');
+  assert.match(panel, /tradesHeading\(priced, 'Your estimated project cost'\)/);
+  const fn = html.slice(html.indexOf('function glazingAlongside'), html.indexOf('function tradesHeading'));
+  assert.match(fn, /publishedRange\(glaz\)/, 'the same figure the bar shows');
+  assert.match(fn, /not added in/);
+  assert.ok(!/\.total \+|\+ r\.|low \+/.test(fn), 'never summed');
+});
+
+test('the could-not-measure note only speaks when walls or a roof are priced', () => {
+  const fn = html.slice(html.indexOf('function photoNotUsed'), html.indexOf('function photoNotUsed') + 900);
+  assert.match(fn, /if \(!priced\.includes\('cladding'\) && !priced\.includes\('roof'\)\) return null;/);
 });
