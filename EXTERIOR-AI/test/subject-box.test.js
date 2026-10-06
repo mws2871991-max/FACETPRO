@@ -189,9 +189,22 @@ test('a roof that is a sliver along the top edge is refused', () => {
     mkBox('roof', 'Main Roof', 16),
     mkBox('cladding', 'Tile Hanging Cladding Upper', 25),
   ]);
+  /* Still refused since the cut-off fell to 10 (6 Oct) — by the tiled-wall
+     rule now, which is the real reason on this house. */
   assert.strictEqual(v.ok, false);
-  assert.strictEqual(v.reason, 'roof_sliver');
+  assert.strictEqual(v.reason, 'tiled_wall_larger');
   assert.strictEqual(v.roofHPct, 16);
+  /* And a true sliver is still a sliver. */
+  assert.strictEqual(geometry.roofFraming([mkBox('roof', 'Main Roof', 8)]).reason, 'roof_sliver');
+});
+
+test('a low roof fully in view is shown, and the neighbour\'s roof is not ours', () => {
+  /* House 01 of the test set: a hipped roof, whole, 16% of the frame. */
+  assert.strictEqual(geometry.roofFraming([mkBox('roof', 'Main Roof', 16)]).ok, true);
+  /* House 08: judged on the neighbour's taller roof until 6 Oct. */
+  const v = geometry.roofFraming([mkBox('roof', 'Main Hipped Roof', 12.5), mkBox('roof', 'Neighbouring House Roof (right)', 14)]);
+  assert.strictEqual(v.roofHPct, 12.5);
+  assert.strictEqual(v.ok, true);
 });
 
 test('a tiled wall bigger than the roof is refused even when the roof is large', () => {

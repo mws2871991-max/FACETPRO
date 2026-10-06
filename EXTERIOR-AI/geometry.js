@@ -384,7 +384,13 @@ const TILED_WALL_LABEL = /\btiles?\b/i;
    an equal-sized tiled wall must pass. It clears the guard by nothing at all.
    If that photograph ever starts being refused, this is the line to look at
    first, and the answer is a margin rather than a different rule. */
-const ROOF_MIN_H_PCT = 20;
+/* 20 → 10 (6 Oct), on nine houses rather than two (npm run houses). At 20
+   the check refused six of nine for a roof "at the top edge", three of them
+   with the whole roof in view: a low hipped roof from across the road is 12–
+   16% of the frame (houses 01, 08, 09 in the test set: 16, 12.5, 11.5). The
+   houses it should refuse — a roof cut off at the top above tile-hanging —
+   are still refused, by the tiled-wall rule below, which is unchanged. */
+const ROOF_MIN_H_PCT = 10;
 
 /* Can this photograph support a roof change at all?
 
@@ -407,7 +413,9 @@ function roofFraming(detections) {
     .filter(Boolean)
     .reduce((best, b) => (!best || b.h > best.h ? b : best), null);
 
-  const roof = tallest(d => d.type === 'roof');
+  /* Not the neighbour's roof (6 Oct): house 08 was judged on "Neighbouring
+     House Roof (right)" because it was the tallest roof in the frame. */
+  const roof = tallest(d => d.type === 'roof' && !/neighbou?r/i.test(String(d.label || '')));
   const tiledWall = tallest(d => d.type === 'cladding' && TILED_WALL_LABEL.test(String(d.label || '')));
 
   const roofHPct = roof ? roof.h : null;
