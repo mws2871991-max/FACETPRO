@@ -238,3 +238,17 @@ test('the photo names four things at most, and never the neighbour\'s house', ()
   assert.match(block, /const text = named\.has\(d\) \? d\.label : null;/);
   assert.match(block, /if \(text\) overlay\.appendChild\(/);
 });
+
+/* Open-items handoff, 6 Oct. */
+test('a roof left out of the picture is explained by its real reason', () => {
+  const server = require('fs').readFileSync(require('path').join(__dirname, '..', 'server.js'), 'utf8');
+  assert.match(server, /roofSkipped: roofUnsupported \? \(framing\.reason \|\| true\) : undefined,/);
+  assert.match(server, /framing\.reason === 'tiled_wall_larger'\s*\? 'In this photo your tile-hung wall is bigger than the roof/);
+  assert.match(html, /state\.roofSkipped === 'tiled_wall_larger'\s*\? 'Roof shown unchanged — your roof isn’t clear in this photo/);
+});
+
+test('"drag the slider" waits for the reveal', () => {
+  assert.match(html, /U\(state\.revealed \? 'Your new look is ready — drag the slider to compare' : 'Your new look is ready — tap “Reveal my design”'\);/);
+  const land = html.slice(html.indexOf('function landReveal'), html.indexOf('function landReveal') + 200);
+  assert.match(land, /U\('Your new look — drag the slider to compare'\);/);
+});

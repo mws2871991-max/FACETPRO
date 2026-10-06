@@ -4041,9 +4041,16 @@ app.post('/api/render', renderLimiter, async (req, res) => {
      generic "choose a finish, a roof or a trim colour" would be absurd here,
      since a roof is exactly what they chose. */
   if (!prompt && roofUnsupported) {
+    /* Said for the reason it is (open-items handoff, 6 Oct). A tile-hung
+       house with little roof in shot was told its roof was "at the top edge"
+       when the real reason is that the tile-hanging is bigger than the roof,
+       and a new roof would be laid over the wall. */
     return res.status(400).json({
-      error: 'Your roof is right at the top edge of this photo, so we can’t show a new one on it. '
-        + 'Step back across the road and we’ll get the whole roof in — or carry on and we’ll price it anyway.',
+      error: framing.reason === 'tiled_wall_larger'
+        ? 'In this photo your tile-hung wall is bigger than the roof, so a new roof would go over the wall too — we’d rather not show that. '
+          + 'A photo from further back with more of the roof in would let us show it — or carry on and we’ll price it anyway.'
+        : 'Your roof is right at the top edge of this photo, so we can’t show a new one on it. '
+          + 'Step back across the road and we’ll get the whole roof in — or carry on and we’ll price it anyway.',
       reason: 'roof_not_in_frame',
     });
   }
@@ -4351,7 +4358,8 @@ app.post('/api/render', renderLimiter, async (req, res) => {
     }
 
     return respondWithRender(res, url, {
-      roofSkipped: roofUnsupported || undefined,
+      /* The reason, not just the fact, so the page can say which it was. */
+      roofSkipped: roofUnsupported ? (framing.reason || true) : undefined,
       ...(missedChanges.length ? { missedChanges } : {}),
       ...(drivewayNotDrawn ? { drivewayNotDrawn: true } : {}),
     }, restorePlan);

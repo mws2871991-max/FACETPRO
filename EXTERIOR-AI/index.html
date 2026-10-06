@@ -5647,7 +5647,9 @@ function buildVisualizer() {
                  can say so rather than inviting them to spot it. */
               (state.renderUrl && !state.rendering && state.roofSkipped)
                 ? h('p', { className: 'mt-2 text-base leading-6 text-zinc-700 text-center' },
-                  'Roof shown unchanged — it sits right at the top edge of your photo, so a new one wouldn’t show. Your estimate still includes the new roof.')
+                  state.roofSkipped === 'tiled_wall_larger'
+                    ? 'Roof shown unchanged — your roof isn’t clear in this photo, and the tile-hung wall is bigger than it, so we leave it alone rather than tile over the wall. Your estimate still includes the new roof.'
+                    : 'Roof shown unchanged — it sits right at the top edge of your photo, so a new one wouldn’t show. Your estimate still includes the new roof.')
                 : null,
               /* The Georgian bars are drawn on after the render, by finding the
                  new frames against the photograph. When the frame colour does
@@ -8474,7 +8476,7 @@ async function generateRealRender({ settled = false, revived = false } = {}) {
        this photograph could not show it. Said on the picture rather than left
        for them to notice, and paired with the fact that protects them: the
        estimate still prices the roof they chose. */
-    state.roofSkipped = !!data.roofSkipped;
+    state.roofSkipped = data.roofSkipped || false;   // true, or the reason: 'roof_sliver' | 'tiled_wall_larger'
     state.barsMissing = !!data.barsMissing;
     state.drivewayNotDrawn = !!data.drivewayNotDrawn;
     /* The server checks the roof and walls changed and retries once; this is
@@ -8496,7 +8498,11 @@ async function generateRealRender({ settled = false, revived = false } = {}) {
        card" are the same number, and they are the two halves of the drop-off
        the reveal card creates. */
     reachedStage('render_shown');
-    U('Your new look is ready — drag the slider to compare');
+    /* Only once there is a slider to drag (open-items handoff, 6 Oct). A
+       picture still behind "Reveal my design" gets a line pointing at the
+       button; "drag the slider" waits for landReveal. A picture that arrives
+       already revealed — a later change — says it here as before. */
+    U(state.revealed ? 'Your new look is ready — drag the slider to compare' : 'Your new look is ready — tap “Reveal my design”');
     /* And put it where they can see it (Mike's phone walk, 5 Oct).
      *
      * On a 375x812 screen the reader is left on the "What we found" list at
@@ -10963,6 +10969,7 @@ function runFacets(cap, img) {
 
 function landReveal(cv, fx) {
   state.afterPct = 100;
+  U('Your new look — drag the slider to compare');
   renderVisualizerOnly();
   try { if (navigator.vibrate) navigator.vibrate(18); } catch (_) { /* not on this phone */ }
   /* The real picture is now underneath; let the canvases go next frame so

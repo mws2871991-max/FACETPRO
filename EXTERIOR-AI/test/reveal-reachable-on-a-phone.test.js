@@ -32,7 +32,7 @@ const h = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const code = h.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
 
 test('a finished render brings the reveal card into view', () => {
-  const i = code.indexOf("U('Your new look is ready");
+  const i = code.indexOf("reachedStage('render_shown');");
   assert.ok(i > 0, 'the render-ready toast has moved');
   const after = code.slice(i, i + 700);
   assert.match(after, /getElementById\('visualizer-section'\)/, 'nothing goes looking for the card');
@@ -43,7 +43,7 @@ test('it only scrolls when the card is actually off screen', () => {
   /* A reader who has already scrolled down to the picture must not be yanked
      anywhere. Moving somebody who can already see the thing is worse than
      leaving them alone. */
-  const i = code.indexOf("U('Your new look is ready");
+  const i = code.indexOf("reachedStage('render_shown');");
   const after = code.slice(i, i + 700);
   assert.match(after, /getBoundingClientRect\(\)\.top/, 'it scrolls without checking where the card is');
   assert.match(after, /window\.innerHeight/, 'off-screen is not being judged against the viewport');
