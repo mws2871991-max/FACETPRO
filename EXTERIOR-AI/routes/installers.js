@@ -159,10 +159,12 @@ module.exports = function installerRoutes({
        somebody accepted a job is how a second buyer avoids ringing the same
        homeowner about it. */
     const decisions = await responsesFor(req.installer?.scope === 'installer' ? req.installer.id : null);
+    const outcomes = await outcomesFor(req.installer?.scope === 'installer' ? req.installer.id : null);
 
     res.json({
       leads: leads.slice().reverse(),
       decisions,
+      outcomes,
       scope: req.installer?.scope || 'all',
       installer: req.installer?.id || null,
     });
@@ -203,12 +205,7 @@ module.exports = function installerRoutes({
        the same source /api/leads scopes on — so an installer cannot accept a
        lead they were never shown, and the two endpoints cannot disagree about
        what they were shown. */
-    let received = false;
-    for (const d of await store.readAll('deliveries')) {
-      if (d?.leadId !== leadId || !Array.isArray(d.results)) continue;
-      if (d.results.some(r => r?.id === req.installer.id && r?.ok)) { received = true; break; }
-    }
-    if (!received) return res.status(404).json({ error: 'That project was not sent to you.' });
+    if (!(await receivedLead(req.installer.id, leadId))) return res.status(404).json({ error: 'That project was not sent to you.' });
 
     const record = {
       ts: new Date().toISOString(),
@@ -229,11 +226,79 @@ module.exports = function installerRoutes({
     res.json({ ok: true, leadId, action, at: record.ts });
   });
 
-  /* What each installer has decided, keyed by lead id. Latest row wins. */
+  async function receivedLead(installerId, leadId) {
+    for (const d of await store.readAll('deliveries')) {
+      if (d?.leadId !== leadId || !Array.isArray(d.results)) continue;
+      if (d.results.some(r => r?.id === installerId && r?.ok)) return true;
+    }
+    return false;
+  }
+
+  /* ── WHAT HAPPENED NEXT: QUOTED, WON, LOST ──
+
+     Developer brief, 6 Oct (§6): the estimate is only as good as what it is
+     measured against, and nothing recorded what the installer quoted after
+     the survey or what the job sold for. So the estimate on every enquiry had
+     nothing to be checked against, and "how accurate is Facet?" had no
+     answer but a promise.
+
+     Recorded by the installer, about a project they accepted, in the same
+     append-only table as accept and pass — a corrected quote is another row,
+     the latest wins, nothing is overwritten. Whole pounds, inc VAT, because
+     that is how the estimate beside it is stated. */
+  const { LEAD_OUTCOMES } = require('../accuracy');
+  const OUTCOME_MIN = 100;
+  const OUTCOME_MAX = 1_000_000;
+
+  router.post('/api/installer/lead-outcome', installerLimiter, requireInstaller, logAccess('/api/installer/lead-outcome'), async (req, res) => {
+    if (req.installer?.scope !== 'installer' || !req.installer.id) {
+      return res.status(403).json({ error: 'Recording a quote needs your own installer sign-in, not the shared password.', reason: 'account_required' });
+    }
+    const leadId = String(req.body?.leadId || '').trim().slice(0, 40);
+    const outcome = String(req.body?.outcome || '').trim().toLowerCase();
+    if (!leadId) return res.status(400).json({ error: 'leadId is required.' });
+    if (!LEAD_OUTCOMES.includes(outcome)) return res.status(400).json({ error: 'outcome must be quoted, won or lost.' });
+    let amount = null;
+    if (outcome !== 'lost') {
+      amount = Math.round(Number(req.body?.amount));
+      if (!Number.isFinite(amount) || amount < OUTCOME_MIN || amount > OUTCOME_MAX) {
+        return res.status(400).json({ error: `Enter the price in pounds, inc VAT — between £${OUTCOME_MIN} and £${OUTCOME_MAX.toLocaleString('en-GB')}.` });
+      }
+    }
+    if (!(await receivedLead(req.installer.id, leadId))) return res.status(404).json({ error: 'That project was not sent to you.' });
+    /* Only after accepting: an outcome on a project they passed on is a
+       mistake, and one recorded against nobody's decision cannot be trusted. */
+    const decision = (await responsesFor(req.installer.id))[leadId];
+    if (decision?.action !== 'accept') return res.status(409).json({ error: 'Accept the project first.' });
+
+    const record = {
+      ts: new Date().toISOString(), leadId, installerId: req.installer.id, action: outcome,
+      ...(amount !== null ? { amount } : {}),
+      ...(outcome === 'quoted' ? { surveyed: req.body?.surveyed === true } : {}),
+    };
+    await store.append('leadResponses', record);
+    /* No amount in the audit event: lead events are kept six years as
+       consent evidence, and the price is enquiry data, kept 24 months with
+       the response row above (privacy notice, "How long we keep it"). */
+    await leadEvent(`installer.${outcome}`, leadId, { installerId: req.installer.id });
+    console.log(`Lead ${leadId}: ${req.installer.id} recorded ${outcome}${amount !== null ? ` £${amount}` : ''}.`);
+    res.json({ ok: true, leadId, outcome, amount, at: record.ts });
+  });
+
+  /* The latest quote and the latest won/lost per lead, for one installer
+     (or everybody, for the operator). The fold lives in accuracy.js, which
+     reads the same rows for the report. */
+  async function outcomesFor(installerId) {
+    return require('../accuracy').foldOutcomes(await store.readAll('leadResponses'), installerId);
+  }
+
+  /* What each installer has decided, keyed by lead id. Latest accept or pass
+     wins; quotes and results are outcomesFor's, and must not read as a change
+     of decision. */
   async function responsesFor(installerId) {
     const out = {};
     for (const r of await store.readAll('leadResponses')) {
-      if (!r?.leadId) continue;
+      if (!r?.leadId || !LEAD_ACTIONS.includes(r.action)) continue;
       if (installerId && r.installerId !== installerId) continue;
       out[r.leadId] = { action: r.action, at: r.ts, installerId: r.installerId };
     }
