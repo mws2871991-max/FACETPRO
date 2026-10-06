@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "updated": "2026-08-06",
   "note": "Based on current UK material and labour rates, including scaffolding, a waste allowance and VAT.",
   "internalNote": "Real UK material rates and quote methodology, taken from the actual facetpro.co.uk production backend (material_detector.py and quote_generator.py) — not invented placeholders. Not shown to homeowners; `note` is the customer-facing line rendered under the price breakdown.",
@@ -67,7 +67,8 @@
       "image": "/assets/swatches/slate-roof.jpg",
       "materialType": "slate",
       "materialLabel": "Slate Tiles",
-      "pricePerM2": 180
+      "pricePerM2": 135,
+      "priceNote": "Material per m², ex VAT; labour (£25) and strip-out (£20) are added separately. Was £180 until 6 Oct 2026: all-in £160/m² now, inside the 2026 guides’ £140–£210 for natural slate (MyBuilder, Aug 2026; Checkatrade, Sep 2026)."
     },
     {
       "id": "charcoal-roof",
@@ -85,7 +86,8 @@
       "image": "/assets/swatches/terracotta.jpg",
       "materialType": "clay_tile",
       "materialLabel": "Clay Tile",
-      "pricePerM2": 150
+      "pricePerM2": 125,
+      "priceNote": "Material per m², ex VAT; labour and strip-out added separately. Was £150 until 6 Oct 2026, when the roof area was corrected; all-in £150/m² now."
     }
   ],
   "labour": {
@@ -105,6 +107,15 @@
     "internalNote": "Real per-metre rates from quote_generator.py — fascia £35/m + £12/m labour, soffit £30/m + £12/m labour, guttering £40/m + £15/m labour. Colour choice (Coastal Fog/Ink Trim/Cedar) doesn't change the real cost, only the material rates do."
   },
   "scaffoldingCost": 800,
+  "scaffolding": {
+    "base": 800,
+    "baseWallM2": 50,
+    "perExtraWallM2": 12.5,
+    "max": 2200,
+    "note": "Scaled with exterior wall area (scaffold.js): about £800 for a terrace, £1,240 for a semi, £1,800 for a detached house, ex VAT. Set 6 October 2026 against 2026 UK guides (Checkatrade scaffolding guide Feb 2026: terrace £800, semi £875, detached £1,200 a month; Homebuilding & Renovating: £1,000–£1,800 for a 3-bed semi; MyBuilder £1,500–£3,000 full wrap). scaffoldingCost stays as the base and the fallback."
+  },
+  "roofStripPerM2": 20,
+  "roofStripNote": "Stripping and disposing of the old roof covering, per m² of roof, ex VAT (6 October 2026). The guides price it separately at £1,000–£2,500 a job (Checkatrade roof replacement guide, Mar 2026; MyBuilder) or about £950 plus skips (Rated People); £20/m² gives £760–£1,980 across a terrace to a detached house.",
   "wastePct": 0.1,
   "vatPct": 0.2,
   "defaultFootprintM2": 95,
@@ -234,8 +245,8 @@
     "areaMaxM2": 200,
     "areaDefaultM2": 95,
     "internalNote": "Estimated illustrative finish prices, CSS textures only (no photos) — not the real quote. Two things worth knowing: 'White Render' and 'Cream Render' here (£45/m²) are close to but different from the real Alabaster render swatch already priced at £50/m² in the cladding catalogue above, and 'Brick Slips' here (£85/m² of wall area) is a different product and unit than 'Brick Slip' in the Roofline & Cladding tab (£110 per linear metre of trim). Use the real cladding/roof/trim visualizer for a sourced quote.",
-    "roofAreaFromWall": 0.55,
-    "roofAreaFromWallNote": "Roof area as a share of exterior wall area. UNSOURCED — see notes/roof-area-needs-a-source.md and the comment at server.js ROOF_AREA_FROM_WALL. It is here rather than in two files so the visualiser and the cost guides cannot quote different roofs for the same house, which they did until 30 September: the guides used a flat 80 m2 while the tool used 85 x 0.55 = 47 m2 for a semi, so the same re-roof was about 12,900 pounds on the page and about 7,900 in the tool. Changing this number moves every roof price on the site; it needs real roofs, not a better guess."
+    "roofAreaFromWall": 0.76,
+    "roofAreaFromWallNote": "Roof slope area as a share of exterior wall area: 0.76 since 6 October 2026, was 0.55. 0.55 had no source and gave a semi 47 m² of roof; the 2026 guides price a 3-bed semi on 64–65 m² (Checkatrade roof replacement guide, Mar 2026: 64 m²; Homebuilding & Renovating, Sep 2025: 65 m²). 0.76 gives a terrace 38, a semi 65 and a detached house 99 m², against the guides’ ~40 / 64–65 / ~95–100, and still scales with the wall area the photo measures. One ratio for the visualiser and the cost guides, so they cannot quote different roofs for the same house. Taken from published guides, so still UNSOURCED against measured roofs: see notes/roof-area-needs-a-source.md."
   },
   "conservatories": {
     "note": "Broad guide ranges to help compare styles. A conservatory is priced on size, glazing, groundworks and access.",

@@ -49,6 +49,7 @@
 'use strict';
 
 const glazing = require('./glazing');
+const { scaffoldingFor } = require('./scaffold');
 const routing = require('./routing');
 const measure = require('./measure');
 
@@ -144,7 +145,7 @@ function rooflineFor(catalogue, metres) {
     + (r.soffitPerM || 0) + (r.soffitLabourPerM || 0)
     + (r.gutteringPerM || 0) + (r.gutteringLabourPerM || 0);
   const net = perM * metres;
-  const scaffolding = catalogue.scaffoldingCost || 0;
+  const scaffolding = scaffoldingFor(catalogue, SEMI_WALL_M2);
   /* Waste is on materials only, not on labour — the same rule computePrice
      applies. A waste allowance is spoiled board, not spoiled hours. */
   const materials = ((r.fasciaPerM || 0) + (r.soffitPerM || 0) + (r.gutteringPerM || 0)) * metres;
@@ -169,12 +170,12 @@ function wallsFor(catalogue, m2) {
       name: c.name,
       material: c.materialLabel || c.materialType || '',
       perM2: Math.round((c.pricePerM2 + labour) * vat),
-      total: Math.round((net + waste + (catalogue.scaffoldingCost || 0)) * vat),
+      total: Math.round((net + waste + scaffoldingFor(catalogue, m2)) * vat),
       /* The same figures with the scaffold taken out, for the one page that
          prices several trades at once. A scaffold goes up once however many
          jobs are done off it — see house-exterior-renovation-cost. */
       exScaffold: Math.round((net + waste) * vat),
-      scaffolding: Math.round((catalogue.scaffoldingCost || 0) * vat),
+      scaffolding: Math.round(scaffoldingFor(catalogue, m2) * vat),
     };
   });
   return { m2, rows };
@@ -205,14 +206,19 @@ function roofFor(catalogue, m2) {
   const vat = vatMult(catalogue.vatPct);
   return (catalogue.roof || []).map(r => {
     const labour = catalogue.labour?.roofPerM2 || 0;
-    const net = (r.pricePerM2 + labour) * m2;
+    const strip = catalogue.roofStripPerM2 || 0;
+    const net = (r.pricePerM2 + labour + strip) * m2;
     const waste = r.pricePerM2 * m2 * asFraction(catalogue.wastePct);
+    /* The scaffold for the house this roof sits on: roof area back to wall
+       area by the same ratio, so the guide and the tool agree. */
+    const wallM2 = m2 / (catalogue.wholeHouse?.roofAreaFromWall || 0.55);
+    const scaffold = scaffoldingFor(catalogue, wallM2);
     return {
       name: r.name,
-      perM2: Math.round((r.pricePerM2 + labour) * vat),
-      total: Math.round((net + waste + (catalogue.scaffoldingCost || 0)) * vat),
+      perM2: Math.round((r.pricePerM2 + labour + strip) * vat),
+      total: Math.round((net + waste + scaffold) * vat),
       exScaffold: Math.round((net + waste) * vat),
-      scaffolding: Math.round((catalogue.scaffoldingCost || 0) * vat),
+      scaffolding: Math.round(scaffold * vat),
     };
   });
 }

@@ -40,7 +40,8 @@ test('the scaffold goes up once, however many trades are done off it', () => {
   assert.strictEqual(scaffoldRows.length, 1, 'the scaffold should appear exactly once, as its own row');
 
   const vat = 1 + (catalogue.vatPct ?? 0.2);
-  const expected = Math.round((catalogue.scaffoldingCost || 0) * vat);
+  /* One scaffold for a typical semi (scaffold.js scales it with wall area since 6 Oct). */
+  const expected = Math.round(require('../scaffold').scaffoldingFor(catalogue, 85) * vat);
   assert.deepStrictEqual(poundsIn(scaffoldRows[0][1]), [expected],
     `the scaffold row should be one scaffold inc VAT (£${expected})`);
 

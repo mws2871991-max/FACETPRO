@@ -29,6 +29,7 @@ const { buildRenderPrompt } = require('./renderprompt');
 const keptparts = require('./keptparts');
 const { restoreDoor, restoreSurroundings, restoreOutsideMask, restoreInsideMask, restoreKeptParts, doorBox, restorePillars, cropToBox, pillarsFromObjects, correctFrameColour, drawGeorgianBars, changedShare } = require('./hold');
 const driveways = require('./driveways');
+const { scaffoldingFor } = require('./scaffold');
 const { fetchWindowMask, fetchObjectMasks, maskWithinGrace } = require('./windowmask');
 /* How long a mask started at upload may take. Generous, because nothing is
    waiting on it — a cold start at 83s still lands well before most people have
@@ -1967,6 +1968,9 @@ function computePrice({ claddingId, trimId, roofId, footprintM2, trimLengthM }) 
      until 30 September. The reasoning above is unchanged and still open. */
   const ROOF_AREA_FROM_WALL = catalogue.wholeHouse?.roofAreaFromWall ?? 0.55;
   const roofArea = claddingArea * ROOF_AREA_FROM_WALL;
+  /* Stripping and disposing of the old covering (6 Oct): part of every
+     re-roof, missing until now. Per m² of roof, no waste on it. */
+  const roofStrip = roof ? (catalogue.roofStripPerM2 || 0) * roofArea : 0;
   // Same reasoning as the wall area: the perimeter of a house is bounded too.
   const trimAsked = Number(trimLengthM);
   const trimLength = Number.isFinite(trimAsked) && trimAsked >= TRIM_LENGTH_MIN_M && trimAsked <= TRIM_LENGTH_MAX_M
@@ -1985,14 +1989,14 @@ function computePrice({ claddingId, trimId, roofId, footprintM2, trimLengthM }) 
   const claddingLabour = cladding ? catalogue.labour.claddingPerM2 * claddingArea : 0;
   const roofLabour = roof ? catalogue.labour.roofPerM2 * roofArea : 0;
   const trimLabour = trim ? (tr.fasciaLabourPerM + tr.soffitLabourPerM + tr.gutteringLabourPerM) * trimLength : 0;
-  const labourSubtotal = claddingLabour + roofLabour + trimLabour;
+  const labourSubtotal = claddingLabour + roofLabour + roofStrip + trimLabour;
 
   /* Scaffolding follows the work, not the roof. Rendering the walls of a
      two-storey house needs a scaffold just as much as re-roofing it does,
      which is why the walls-only calculator has always charged it. It goes
      only when there is no external work left to reach. */
   const anyWork = Boolean(cladding || roof || trim);
-  const scaffolding = anyWork ? catalogue.scaffoldingCost : 0;
+  const scaffolding = anyWork ? scaffoldingFor(catalogue, claddingArea) : 0;
   const waste = materialsSubtotal * catalogue.wastePct;
   const subtotal = materialsSubtotal + labourSubtotal + scaffolding + waste;
   const vat = subtotal * catalogue.vatPct;
@@ -2000,7 +2004,7 @@ function computePrice({ claddingId, trimId, roofId, footprintM2, trimLengthM }) 
 
   return {
     cladding: Math.round(claddingMaterial + claddingLabour),
-    roof: Math.round(roofMaterial + roofLabour),
+    roof: Math.round(roofMaterial + roofLabour + roofStrip),
     trim: Math.round(trimMaterial + trimLabour),
     scaffolding: Math.round(scaffolding),
     waste: Math.round(waste),
@@ -3152,7 +3156,7 @@ app.post('/api/whole-house', (req, res) => {
 
   const materials = finish.pricePerM2 * area;
   const labour = catalogue.labour.claddingPerM2 * area;
-  const scaffolding = catalogue.scaffoldingCost;
+  const scaffolding = scaffoldingFor(catalogue, area);
   const waste = materials * catalogue.wastePct;
   const subtotal = materials + labour + scaffolding + waste;
   const vat = subtotal * catalogue.vatPct;

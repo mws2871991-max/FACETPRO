@@ -79,7 +79,7 @@ test('scaffolding follows the walls, not the roof', async () => {
      does, which is why the walls-only calculator has always charged it. The
      mistake would be tying it to the roof and quietly dropping it. */
   const walls = await quote({ claddingId: 'alabaster', roofId: 'none', trimId: 'none' });
-  assert.strictEqual(walls.scaffolding, catalogue.scaffoldingCost);
+  assert.strictEqual(walls.scaffolding, require('../scaffold').scaffoldingFor(catalogue, walls.footprintM2));
 });
 
 test('choosing no work at all costs nothing, not a floor of scaffolding and VAT', async () => {

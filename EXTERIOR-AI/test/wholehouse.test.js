@@ -98,7 +98,7 @@ test('the response is flagged illustrative and carries the catalogue caveat', as
 test('the build-up uses the same rates as the main quote', async () => {
   const { body } = await post({ finishId: 'white-render', areaM2: 100 });
   assert.strictEqual(body.labour, Math.round(catalogue.labour.claddingPerM2 * 100));
-  assert.strictEqual(body.scaffolding, Math.round(catalogue.scaffoldingCost));
+  assert.strictEqual(body.scaffolding, require('../scaffold').scaffoldingFor(catalogue, 100));
   assert.strictEqual(body.waste, Math.round(body.materials * catalogue.wastePct));
   assert.strictEqual(body.vat, Math.round((body.materials + body.labour + body.scaffolding + body.waste) * catalogue.vatPct));
   const sum = body.materials + body.labour + body.scaffolding + body.waste + body.vat;

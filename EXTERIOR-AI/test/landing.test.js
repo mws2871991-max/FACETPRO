@@ -65,7 +65,8 @@ test('VAT is actually applied to wall, roof and roofline figures', () => {
   assert.strictEqual(wall.perM2, Math.round(wallNet * 1.2));
 
   const roof = roofFor(catalogue, 80)[0];
-  const roofNet = catalogue.roof[0].pricePerM2 + catalogue.labour.roofPerM2;
+  /* Strip-out of the old covering is part of the per-m² roof figure since 6 Oct. */
+  const roofNet = catalogue.roof[0].pricePerM2 + catalogue.labour.roofPerM2 + (catalogue.roofStripPerM2 || 0);
   assert.strictEqual(roof.perM2, Math.round(roofNet * 1.2));
 });
 
@@ -77,7 +78,8 @@ test('waste is charged on materials, not on labour', () => {
   const c = catalogue.cladding[0];
   const net = (c.pricePerM2 + catalogue.labour.claddingPerM2) * m2;
   const waste = c.pricePerM2 * m2 * 0.1;
-  const expected = Math.round((net + waste + catalogue.scaffoldingCost) * 1.2);
+  const { scaffoldingFor } = require('../scaffold');   // by house size since 6 Oct
+  const expected = Math.round((net + waste + scaffoldingFor(catalogue, m2)) * 1.2);
   assert.strictEqual(wallsFor(catalogue, m2).rows[0].total, expected);
 });
 
