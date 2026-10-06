@@ -1172,6 +1172,44 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
     </div>
   </section>
 
+  <!-- Cost guides on the homepage (developer brief, 6 Oct, §11–12): they were
+       in the footer only. Google search → useful answer → the visualiser, so
+       the homepage points at the answers too. No prices here on purpose: the
+       guides compute theirs from catalogue.json, and a figure copied onto
+       this page would be the one that went stale. -->
+  <section data-page="home" id="cost-guides" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24" aria-labelledby="cost-guides-heading">
+    <p class="text-base font-semibold text-zinc-600">Cost guides</p>
+    <h2 id="cost-guides-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">What things cost, worked through.</h2>
+    <p class="mt-2 text-lg leading-6 text-zinc-600 max-w-[64ch]">Typical UK prices for each job, and what moves them. Then see yours on your own house.</p>
+    <div class="mt-6 grid gap-6 md:grid-cols-3">
+      <div>
+        <h3 class="text-base font-semibold text-zinc-600">Windows</h3>
+        <ul class="mt-2 grid gap-3">
+          <li><a href="/cost/window-replacement-cost-uk" class="block h-full rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4 hover:border-zinc-400 transition"><span class="text-lg font-medium text-zinc-900">Window replacement cost &rarr;</span><span class="mt-1 block text-base leading-6 text-zinc-600">What a typical UK house pays, window by window.</span></a></li>
+          <li><a href="/cost/window-replacement-calculator" class="block h-full rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4 hover:border-zinc-400 transition"><span class="text-lg font-medium text-zinc-900">Window cost calculator &rarr;</span><span class="mt-1 block text-base leading-6 text-zinc-600">Your house, not an average: count, sizes and style.</span></a></li>
+          <li><a href="/cost/anthracite-windows-cost" class="block h-full rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4 hover:border-zinc-400 transition"><span class="text-lg font-medium text-zinc-900">Anthracite windows &rarr;</span><span class="mt-1 block text-base leading-6 text-zinc-600">What the colour adds, and when it is worth it.</span></a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="text-base font-semibold text-zinc-600">Doors</h3>
+        <ul class="mt-2 grid gap-3">
+          <li><a href="/cost/front-door-replacement-cost" class="block h-full rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4 hover:border-zinc-400 transition"><span class="text-lg font-medium text-zinc-900">Front door cost &rarr;</span><span class="mt-1 block text-base leading-6 text-zinc-600">uPVC or composite, fitted with the old door taken away.</span></a></li>
+          <li><a href="/cost/composite-door-cost" class="block h-full rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4 hover:border-zinc-400 transition"><span class="text-lg font-medium text-zinc-900">Composite door cost &rarr;</span><span class="mt-1 block text-base leading-6 text-zinc-600">What you get for the extra over uPVC.</span></a></li>
+          <li><a href="/cost/bifold-doors-cost" class="block h-full rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4 hover:border-zinc-400 transition"><span class="text-lg font-medium text-zinc-900">Bifold doors &rarr;</span><span class="mt-1 block text-base leading-6 text-zinc-600">Width, panels and the opening they need.</span></a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="text-base font-semibold text-zinc-600">Outside the house</h3>
+        <ul class="mt-2 grid gap-3">
+          <li><a href="/cost/fascia-soffit-replacement-cost" class="block h-full rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4 hover:border-zinc-400 transition"><span class="text-lg font-medium text-zinc-900">Fascias &amp; soffits &rarr;</span><span class="mt-1 block text-base leading-6 text-zinc-600">The roofline: what is priced by the metre, and why.</span></a></li>
+          <li><a href="/cost/new-roof-cost" class="block h-full rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4 hover:border-zinc-400 transition"><span class="text-lg font-medium text-zinc-900">New roof cost &rarr;</span><span class="mt-1 block text-base leading-6 text-zinc-600">Roof area, the tiles, and the scaffold that goes with it.</span></a></li>
+          <li><a href="/cost/house-rendering-cost" class="block h-full rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4 hover:border-zinc-400 transition"><span class="text-lg font-medium text-zinc-900">Rendering cost &rarr;</span><span class="mt-1 block text-base leading-6 text-zinc-600">Render over brick, priced by the square metre.</span></a></li>
+        </ul>
+      </div>
+    </div>
+    <p class="mt-5 text-lg"><a href="/cost" class="underline underline-offset-2 inline-flex items-center min-h-[44px]">All cost guides &rarr;</a></p>
+  </section>
+
   <section data-page="home" id="faq" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="faq-heading">
     <h2 id="faq-heading" class="serif text-[26px] md:text-[32px] tracking-tight">Questions homeowners ask</h2>
     <div class="mt-6 divide-y divide-zinc-200 border-y border-zinc-200">
