@@ -4,7 +4,13 @@ Fonts served from this directory
 geist-variable.woff2
   Geist, by Vercel. SIL Open Font License 1.1.
   https://github.com/vercel/geist-font
-  One variable file covering weights 300-600. Latin subset only.
+  One variable file; the weight axis runs past 800 (measured 6 Oct 2026 —
+  text widens at 600, 700 and 800 with font synthesis off). Latin subset only.
+
+GeistMono-500.woff2
+  Geist Mono, by Vercel. SIL Open Font License 1.1.
+  https://github.com/vercel/geist-font
+  Weight 500, latin subset. The eyebrow labels on the ProFacet homepage.
 
 instrument-serif-400.woff2
 instrument-serif-400-italic.woff2
@@ -21,7 +27,7 @@ jetbrains-mono-variable.woff2
   monospace numeral reads as taken off a building, and a proportional one
   reads as chosen.
 
-All three licences permit redistribution and self-hosting. They are here rather
+All four licences permit redistribution and self-hosting. They are here rather
 than on fonts.googleapis.com so that no visitor's IP address reaches a third
 party just for loading a page — which matters most on the privacy notice,
 whose purpose is to explain that we do not do that sort of thing.

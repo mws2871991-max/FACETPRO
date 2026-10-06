@@ -340,6 +340,14 @@ app.use((req, res, next) => {
   res.redirect(301, `/design${s ? `?${s}` : ''}`);
 });
 
+/* ProFacet's homepage (6 Oct 2026): home.html, the v4 design, at `/` only.
+   The tool routes (/design, /installers, /how-we-price) still serve
+   index.html through routes/pages.js. */
+app.get('/', (req, res) => {
+  res.set('Cache-Control', 'public, max-age=0, must-revalidate');
+  res.sendFile(path.join(__dirname, 'home.html'));
+});
+
 app.use((req, res, next) => {
   if (req.path.startsWith('/api/') || !isPublicPath(req.path)) return next();
   serveStatic(req, res, next);

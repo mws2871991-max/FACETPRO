@@ -1,0 +1,779 @@
+<title>ProFacet</title>
+<style>
+/* Fonts served from this site, not Google (CSP font-src 'self'; no visitor IP to a third party). */
+@font-face{font-family:'Geist';font-style:normal;font-weight:100 900;font-display:swap;src:url(/assets/fonts/geist-variable.woff2) format('woff2')}
+@font-face{font-family:'Geist Mono';font-style:normal;font-weight:500;font-display:swap;src:url(/assets/fonts/GeistMono-500.woff2) format('woff2')}
+
+/* Layout: one product demo per screen — big house image, one price, one action. Single light look by choice. */
+:root{
+  --paper:#FFFFFF; --stone:#F6F4F0; --line:#E6E3DD; --ink:#16181A; --ink-2:#45494D; --ink-3:#5B5F63;
+  --brick:#B5482A; --brick-dk:#8E3720; --brick-lt:#E08A6C; --night:#16181A; --night-line:#3A3D40;
+  --sans:'Geist',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'Geist Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
+  color-scheme:light;
+}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+a{color:var(--brick)}a:hover{color:var(--brick-dk)}
+:focus-visible{outline:3px solid var(--brick);outline-offset:3px}
+h1,h2,h3{text-wrap:balance;margin:0}
+p{margin:0}
+.wrap{max-width:1240px;margin:0 auto;padding-inline:24px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.h2{font-size:clamp(32px,4vw,52px);line-height:1.05;letter-spacing:-.03em;font-weight:700}
+.lead{font-size:18px;line-height:1.6;color:var(--ink-2);max-width:62ch}
+section{padding-block:clamp(72px,10vw,128px)}
+.stone{background:var(--stone)}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;background:var(--brick);color:#fff;text-decoration:none;font-weight:600;font-size:17px;padding:16px 26px;border-radius:4px;border:0;cursor:pointer;transition:background .2s}
+.btn:hover{background:var(--brick-dk);color:#fff}
+.btn.lg{font-size:clamp(19px,2vw,23px);padding:20px 32px;font-weight:700}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--ink)}
+.btn.ghost:hover{background:var(--ink);color:#fff}
+.reassure{font-size:14px;font-weight:500;color:var(--ink-2)}
+.price{font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1}
+.muted{color:var(--ink-3)}
+
+/* header */
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:rgba(255,255,255,.93);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;justify-content:space-between;gap:24px;height:72px}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);font-weight:700;letter-spacing:.14em;font-size:15px}
+.links{display:flex;gap:32px}
+.links a{color:var(--ink);text-decoration:none;font-weight:500;font-size:15px}
+.links a:hover{color:var(--brick)}
+.nav .btn{font-size:15px;padding:12px 20px}
+
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:56px;align-items:center}
+.hero h1{font-size:clamp(42px,5.6vw,80px);line-height:.98;letter-spacing:-.035em}
+.hero h1 span{color:var(--brick)}
+.stack{display:flex;flex-direction:column;gap:24px}
+.cta-block{display:flex;flex-direction:column;align-items:flex-start;gap:14px}
+.hero-visual{position:relative}
+.est{position:absolute;right:-8px;bottom:0;z-index:7;background:#fff;border-radius:6px;padding:20px 22px;box-shadow:0 24px 48px -16px rgba(22,24,26,.35);width:min(320px,80%);display:flex;flex-direction:column;gap:8px;animation:lift .9s ease .3s both}
+@keyframes lift{from{transform:translateY(14px)}to{transform:none}}
+.chips{display:flex;flex-wrap:wrap;gap:6px;border-top:1px solid var(--line);padding-top:10px;margin-top:4px}
+.chips span{font-size:12px;background:var(--stone);padding:4px 8px;border-radius:3px}
+
+/* before/after */
+.ba{--pos:50%;position:relative;width:100%;max-width:100%;aspect-ratio:800/560;overflow:hidden;border-radius:6px;background:#DCE3E6;touch-action:pan-y;user-select:none}
+.ba.shadow{box-shadow:0 30px 60px -30px rgba(22,24,26,.45)}
+.ba .layer{position:absolute;inset:0}
+.ba .layer svg,.ba .layer img{display:block;width:100%;height:100%;object-fit:cover}
+.ba .layer img{position:absolute;inset:0}
+.ba .after{clip-path:inset(0 0 0 var(--pos))}
+.ba .line{position:absolute;top:0;bottom:0;left:var(--pos);width:2px;margin-left:-1px;background:#fff;z-index:4;pointer-events:none}
+.ba .knob{position:absolute;top:50%;left:var(--pos);width:48px;height:48px;margin:-24px 0 0 -24px;border-radius:50%;background:#fff;box-shadow:0 6px 18px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;z-index:5;pointer-events:none}
+.ba.sm .knob{width:36px;height:36px;margin:-18px 0 0 -18px}
+.ba .tag{position:absolute;top:14px;z-index:4;font-family:var(--mono);font-size:11px;letter-spacing:.14em;padding:6px 10px;border-radius:3px;color:#fff}
+.ba .tag.b{left:14px;background:rgba(22,24,26,.72)}
+.ba .tag.a{right:14px;background:var(--brick)}
+.ba input{position:absolute;inset:0;width:100%;height:100%;opacity:0;margin:0;cursor:ew-resize;z-index:6}
+.ba:has(input:focus-visible) .knob{outline:3px solid var(--brick);outline-offset:2px}
+
+/* steps */
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:56px}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:32px}
+.step{display:flex;flex-direction:column;gap:14px;padding-top:24px;border-top:2px solid var(--ink)}
+.step .art{aspect-ratio:4/3;background:var(--stone);border-radius:4px;display:flex;align-items:center;justify-content:center}
+.step .n{font-family:var(--mono);font-size:13px;color:var(--brick)}
+.step h3{font-size:26px;letter-spacing:-.02em}
+.step p{font-size:17px;color:var(--ink-2)}
+
+/* demo */
+.demo{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:40px;align-items:start}
+.demo>.ba{position:sticky;top:calc(env(safe-area-inset-top,0px) + 96px)}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tags span{font-size:12px;font-weight:500;background:var(--stone);color:var(--ink-2);padding:4px 8px;border-radius:3px}
+.ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:var(--stone);color:var(--ink-3);font-size:13px;border:1.5px dashed #D6D3CC;border-radius:4px}
+.rear{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;border-top:1px solid var(--line);padding-top:32px}
+.rear .item{display:flex;gap:18px;align-items:flex-start}
+.rear .ico{flex:none;width:72px;height:72px;border-radius:4px;background:var(--stone);display:flex;align-items:center;justify-content:center}
+.guides{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line)}
+.guides a{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 4px;border-bottom:1px solid var(--line);color:var(--ink);text-decoration:none;font-weight:500;min-height:44px}
+.guides a:hover{color:var(--brick)}
+.guides a span{color:var(--brick)}
+.guides a:nth-child(3n+1),.guides a:nth-child(3n+2){margin-right:24px}
+@media (max-width:960px){.rear,.guides{grid-template-columns:minmax(0,1fr)}.guides a{margin-right:0!important}.demo>.ba{position:relative;top:auto}}
+.panel{background:#fff;border-radius:6px;padding:28px;display:flex;flex-direction:column;gap:22px}
+.group{display:flex;flex-direction:column;gap:10px;border:0;padding:0;margin:0}
+.group legend{font-size:13px;font-weight:600;letter-spacing:.04em;padding:0;margin-bottom:10px}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:44px;padding:10px 14px;border-radius:4px;font:inherit;font-size:14px;font-weight:500;cursor:pointer;background:#fff;color:var(--ink);border:1.5px solid #D6D3CC;transition:background .15s,color .15s,border-color .15s}
+.chip:hover{border-color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.estblock{border-top:1px solid var(--line);padding-top:22px;display:flex;flex-direction:column;gap:8px}
+
+/* differentiator */
+.dark{background:var(--night);color:#fff}
+.dark .h2{font-size:clamp(38px,5vw,68px);line-height:1;letter-spacing:-.035em}
+.dark .lead{color:#C9CBCD}
+.state{padding:32px 32px 32px 0;border-top:1px solid var(--night-line);display:flex;flex-direction:column;gap:12px}
+.state h3{font-size:28px;letter-spacing:-.02em}
+.state p{color:#B4B7BA}
+.nos{background:var(--stone);color:var(--ink);border-radius:6px;padding:clamp(28px,5vw,64px);display:flex;flex-direction:column;gap:28px}
+.hcap{max-width:42%}
+.info{font-size:12px;color:var(--ink-3);margin-top:6px}
+.info summary{cursor:pointer;list-style:none;display:inline-flex;gap:6px;align-items:center;font-weight:600}
+.info summary::-webkit-details-marker{display:none}
+.info p{margin-top:6px;max-width:60ch;line-height:1.45}
+.rear.r4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:960px){.rear.r4{grid-template-columns:minmax(0,1fr)}}
+.hero-est{background:#fff;border-radius:0 0 6px 6px;padding:20px 22px;display:flex;flex-direction:column;gap:8px;box-shadow:0 24px 48px -24px rgba(22,24,26,.35)}
+.hero-visual .ba{border-radius:6px 6px 0 0}
+.hero-est .row1{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.badge3{display:flex;gap:18px;align-items:center;background:var(--brick);color:#fff;border-radius:6px;padding:20px 24px}
+.badge3 .n{font-size:44px;font-weight:700;line-height:1;letter-spacing:-.03em}
+.badge3 b{display:block;font-size:18px}
+.chap{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--brick);font-weight:600}
+.dark .chap{color:var(--brick-lt)}
+.backcard{border:1.5px solid var(--ink);border-radius:8px;padding:clamp(24px,4vw,44px);display:flex;flex-direction:column;gap:24px}
+@media (max-width:960px){.hcap{max-width:none}}
+.nos .lead{color:var(--ink-2)}
+.cap{font-size:13px;color:var(--ink-3);line-height:1.45}
+.dark .cap{color:#A9ACAF}
+.looks{display:flex;flex-wrap:wrap;gap:8px}
+.brk{font-size:14px;color:var(--ink-2);display:grid;gap:4px}
+.brk div{display:flex;justify-content:space-between;gap:12px}
+.nos>div:first-child>div{font-size:clamp(30px,4vw,52px);font-weight:700;letter-spacing:-.03em;line-height:1.08}
+.nos>div:first-child>div:last-child{color:var(--brick)}
+
+/* change cards */
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
+.card{display:flex;flex-direction:column;gap:14px;text-decoration:none;color:var(--ink)}
+.card .img{position:relative;aspect-ratio:4/3;overflow:hidden;border-radius:4px;background:#DCE3E6}
+.card .img .zoom{position:absolute;inset:0;transition:transform .7s ease}
+.card .img .zoom>*{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.card:hover .zoom{transform:scale(1.04)}
+.card .row{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.card h3{font-size:22px;letter-spacing:-.015em}
+.card p{font-size:15px;color:var(--ink-3);margin-top:-6px}
+
+.feat{display:flex;flex-direction:column;gap:14px}
+.feat h3{font-size:20px;letter-spacing:-.015em}
+.feat p{font-size:15px;color:var(--ink-3)}
+
+/* estimate */
+.q{background:var(--stone);border-radius:6px;padding:32px;display:flex;flex-direction:column;gap:12px}
+.q .big{font-size:clamp(26px,3vw,36px);font-weight:700;letter-spacing:-.025em;line-height:1.15}
+details.method summary{cursor:pointer;font-weight:600;color:var(--brick);list-style:none;min-height:44px;display:flex;align-items:center}
+details.method summary::-webkit-details-marker{display:none}
+details.method[open] summary .arr{transform:rotate(90deg)}
+.arr{display:inline-block;transition:transform .2s;margin-left:6px}
+.method ol{list-style:none;margin:8px 0 16px;padding:0;border-top:1px solid var(--line)}
+.method li{display:flex;gap:16px;padding:16px 0;border-bottom:1px solid var(--line);font-size:15px}
+.method li span{font-family:var(--mono);color:var(--brick);font-size:13px;padding-top:2px}
+
+/* trust */
+.tile{background:#fff;border-radius:6px;padding:28px;display:flex;flex-direction:column;gap:6px}
+.tile .k{font-family:var(--mono);font-size:12px;letter-spacing:.1em;color:var(--ink-3)}
+.tile b{font-weight:600}
+.stat .v{font-size:40px;font-weight:700;color:#B9B5AD}
+.stat .l{font-size:14px;color:var(--ink-3)}
+
+/* cases */
+.case{display:flex;flex-direction:column;gap:14px}
+.case .t{font-weight:600;font-size:18px}
+.case .money{display:flex;justify-content:space-between;gap:16px;padding-block:14px;border-block:1px solid var(--line)}
+.case .money small{display:block;font-size:12px;color:var(--ink-3)}
+.badge{font-size:13px;color:var(--ink-3);background:var(--stone);padding:6px 10px;border-radius:3px}
+
+/* installers */
+.inst{background:var(--night);color:#fff;border-radius:6px;padding:clamp(28px,6vw,80px);display:flex;flex-direction:column;gap:44px}
+.inst .h2{font-size:clamp(38px,5vw,68px);line-height:1;letter-spacing:-.035em}
+.inst .sub{font-size:clamp(20px,2vw,26px);color:#C9CBCD;line-height:1.35}
+.checks{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:32px}
+.checks li{display:flex;gap:14px;align-items:center;padding-block:18px;border-top:1px solid var(--night-line);font-size:17px}
+.inst .eyebrow{color:var(--brick-lt)}
+
+/* faq */
+.faq details{border-bottom:1px solid #DEDBD4}
+.faq summary{list-style:none;cursor:pointer;padding-block:22px;display:flex;justify-content:space-between;gap:16px;font-size:18px;font-weight:600}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";color:var(--brick);font-weight:400;font-size:22px;line-height:1}
+.faq details[open] summary::after{content:"−"}
+.faq details p{padding-bottom:22px;color:var(--ink-2);max-width:56ch}
+
+footer{background:var(--night);color:#C9CBCD;padding-block:72px 48px}
+footer nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 56px}
+footer a{color:#fff;text-decoration:none}
+footer a:hover{color:var(--brick-lt)}
+
+.mbar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:60;background:#fff;border-top:1px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));gap:12px;align-items:center;justify-content:space-between;box-shadow:0 -8px 24px rgba(0,0,0,.08)}
+.mbar .btn{font-size:15px;padding:13px 16px;white-space:nowrap}
+
+@media (max-width:960px){
+  .hero,.demo,.g2{grid-template-columns:minmax(0,1fr);gap:32px}
+  .g3,.checks{grid-template-columns:minmax(0,1fr)}
+  .g4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .links{display:none}
+  .state{padding-right:0}
+}
+@media (max-width:760px){
+  body{padding-bottom:84px}
+  .nav .btn{display:none}
+  .mbar{display:flex}
+  .g4{grid-template-columns:minmax(0,1fr)}
+  .cards,.hs{display:grid;grid-auto-flow:column;grid-auto-columns:82%;grid-template-columns:none;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:8px;gap:16px}
+  .cards>*,.hs>*{scroll-snap-align:start}
+  .est{position:relative;right:auto;width:auto;margin-top:-28px;margin-inline:12px}
+  .hero-visual{padding-bottom:0}
+}
+</style>
+
+<!-- shared SVG paint for the house drawings -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="pfSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D9E2E6"/><stop offset="1" stop-color="#F1EFEA"/></linearGradient>
+    <linearGradient id="pfGlass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#C3D2D8"/><stop offset=".55" stop-color="#8FA6B0"/><stop offset="1" stop-color="#6F8792"/></linearGradient>
+    <pattern id="pfBrick" width="28" height="12" patternUnits="userSpaceOnUse"><rect width="28" height="12" fill="#985843"/><path d="M0 11.5H28M14 0V6M0 5.5H28M0 6V12M28 6V12" stroke="#7F4636" stroke-width="1" opacity=".55"/></pattern>
+  </defs>
+</svg>
+
+<header>
+  <div class="wrap nav">
+    <a class="logo" href="#top" aria-label="ProFacet home">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><path d="M13 2L24 9V24H2V9Z" fill="none" stroke="#16181A" stroke-width="2"/><path d="M13 2V24M2 9L13 15L24 9" fill="none" stroke="#B5482A" stroke-width="2"/></svg>
+      PROFACET
+    </a>
+    <nav class="links" aria-label="Main">
+      <a href="#how">How it works</a>
+      <a href="#change">What you can change</a>
+      <a href="#costs">Costs</a>
+      <a href="#installers">For installers</a>
+    </nav>
+    <a class="btn" href="/design?journey=windows">See my house &amp; price →</a>
+  </div>
+</header>
+
+<main id="top">
+  <!-- HERO -->
+  <section class="stone" style="padding-block:clamp(48px,7vw,80px) clamp(72px,9vw,104px)">
+    <div class="wrap hero">
+      <div class="stack">
+        <div class="eyebrow">See it · Price it · Then decide</div>
+        <h1>See your house.<br><span>See what it could cost.</span></h1>
+        <p class="lead" style="max-width:30em">Upload one photo of your home and see how new windows, doors and exterior finishes could look — with an estimated project cost before you speak to an installer.</p>
+        <div class="cta-block">
+          <a class="btn lg" href="/design?journey=windows">See my house &amp; price →</a>
+          <div class="reassure">Free · No account · No measurements · No sales call</div>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="ba shadow" data-before="pbBefore" data-start="30" data-after="pbAnth" data-label="Drag to compare the example house before and after new anthracite windows"></div>
+        <div class="hero-est">
+          <div class="muted" style="font-size:13px;font-weight:500">Estimated project cost</div>
+          <div class="row1"><div class="price" style="font-size:clamp(34px,3.4vw,44px)">£4,880–£8,874</div><a class="btn" href="/design?journey=windows">See my house &amp; price →</a></div>
+          <div style="font-size:13px;color:var(--ink-2)"><b>Planning estimate · inc. VAT</b> · Not a quotation. Final price confirmed after survey.</div>
+          <div class="chips"><span>3 front windows incl. the bay</span><span>uPVC casement · Anthracite</span></div>
+        </div>
+        <div style="margin-top:12px"><p class="cap">Example property illustration. Visualisation and estimate are genuine output from our pricing engine.</p><details class="info"><summary>ⓘ About these pictures</summary><p>The house shown is an AI-generated illustration used to demonstrate ProFacet. The visualisation and estimated price are genuine output from our pricing engine. When you upload your own photograph, ProFacet visualises the changes on your property.</p></details></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section id="how">
+    <div class="wrap stack" style="gap:56px">
+      <div class="stack" style="gap:18px;max-width:760px">
+        <h2 class="h2">From one photo to a clearer idea of your project.</h2>
+        <p class="lead">No measurements. No sales visit. No need to know exactly what you want.<br>Start with one photograph and explore from there.</p>
+      </div>
+      <div class="g3">
+        <div class="step">
+          <div class="art"><svg width="96" height="96" viewBox="0 0 64 64" fill="none" stroke="#16181A" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="16" width="48" height="36" rx="3"/><circle cx="32" cy="34" r="10"/><path d="M22 16L26 10H38L42 16"/><circle cx="32" cy="34" r="4" stroke="#B5482A"/></svg></div>
+          <div class="n">01</div><h3>Upload</h3><p>Take one photo of your house.</p>
+        </div>
+        <div class="step">
+          <div class="art"><svg width="96" height="96" viewBox="0 0 64 64" fill="none" stroke="#16181A" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M8 30L32 12L56 30V54H8Z"/><rect x="16" y="34" width="12" height="10" stroke="#B5482A"/><rect x="36" y="34" width="10" height="20"/></svg></div>
+          <div class="n">02</div><h3>Visualise</h3><p>Try different windows, doors, colours and exterior finishes.</p>
+        </div>
+        <div class="step">
+          <div class="art"><svg width="96" height="96" viewBox="0 0 64 64" fill="none" stroke="#16181A" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="10" y="10" width="44" height="44" rx="3"/><path d="M18 22H46"/><path d="M18 34H38" stroke="#B5482A"/><path d="M18 44H30"/></svg></div>
+          <div class="n">03</div><h3>Estimate</h3><p>See what your project could cost before requesting quotes.</p>
+        </div>
+      </div>
+      <div><a class="btn ghost" href="#demo">See how it works →</a></div>
+    </div>
+  </section>
+
+  <!-- DEMO -->
+  <section id="demo" class="stone">
+    <div class="wrap stack" style="gap:44px">
+      <div class="stack" style="gap:12px">
+        <div class="chap">See it</div>
+        <h2 class="h2">What difference could a new look make?</h2>
+      </div>
+      <div class="demo">
+        <div class="ba" id="demoBA" data-before="pbBefore" data-start="22" data-after="custom" data-label="Drag to compare the demo house before and after"></div>
+        <div class="panel">
+          <fieldset class="group"><legend>CHOOSE YOUR LOOK</legend>
+            <div class="looks opts" data-group="win">
+              <button type="button" class="chip" data-v="white" aria-pressed="false">White</button>
+              <button type="button" class="chip" data-v="anth" aria-pressed="true">Anthracite</button>
+              <button type="button" class="chip" data-v="black" aria-pressed="false">Black</button>
+            </div>
+          </fieldset>
+          <fieldset class="group"><legend>ADD A DOOR</legend>
+            <div class="looks opts" data-group="door">
+              <button type="button" class="chip" data-v="orig" aria-pressed="true">Original</button>
+              <button type="button" class="chip" data-v="comp" aria-pressed="false">Composite</button>
+            </div>
+          </fieldset>
+          <div class="estblock">
+            <div class="muted" style="font-size:14px;font-weight:500">Estimated project cost</div>
+            <div class="price" id="demoPrice" style="font-size:clamp(40px,4.6vw,56px)">£4,880–£8,874</div>
+            <div class="muted" style="font-size:13px">Planning estimate · inc. VAT</div>
+            <div class="brk" id="demoBrk"></div>
+            <p style="font-size:15px;color:var(--ink-2);margin-top:6px">The estimate is based on what we can see in the photograph and the options chosen. An installer confirms the final specification and price after a survey.</p>
+            <p class="cap">Example property illustration. Every look is a genuine render with its own estimate. Walls, roof and roofline: try them on your own house.</p><details class="info"><summary>ⓘ About these pictures</summary><p>The house shown is an AI-generated illustration used to demonstrate ProFacet. The visualisation and estimated price are genuine output from our pricing engine. When you upload your own photograph, ProFacet visualises the changes on your property.</p></details>
+          </div>
+          <a class="btn" href="/design?journey=windows">See my house &amp; price →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DIFFERENTIATOR -->
+  <section class="dark">
+    <div class="wrap stack" style="gap:64px">
+      <div class="g2" style="align-items:end">
+        <div class="stack" style="gap:12px"><div class="chap">Then decide</div><h2 class="h2">Know what you want before you meet a salesperson.</h2></div>
+        <div class="stack" style="gap:16px">
+          <p class="lead">Getting quotes can feel backwards.<br>Someone arrives, measures your house, recommends what they think you need — and only then do you find out what it might cost.</p>
+          <p class="lead" style="color:#fff;font-weight:600">ProFacet puts you in control first.</p>
+        </div>
+      </div>
+      <div class="g3" style="gap:0 32px">
+        <div class="state"><h3>Explore the options.</h3><p>See different possibilities on your own home.</p></div>
+        <div class="state"><h3>Understand the likely cost.</h3><p>Get a project estimate before requesting quotes.</p></div>
+        <div class="state"><h3>Decide when you're ready.</h3><p>No pressure to speak to an installer until you choose.</p></div>
+      </div>
+      <div class="nos">
+        <div><div>No pressure.</div><div>No mystery price.</div><div>No twenty companies calling you.</div></div>
+        <div class="badge3"><div class="n">3</div><div><b>Your details aren’t sprayed across the market.</b>At most 3 installers. Only when you ask.</div></div>
+        <p class="lead" style="color:var(--ink-2)">If you decide to request quotes, your details are shared with at most three suitable installers — and only because you’ve asked us to.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Kept from the Facet Pro homepage (homepage v2 handoff, §1 row 5): the
+       hook that makes this the answer to a pricing problem, not an AI toy. -->
+  <section class="stone" id="neighbours">
+    <div class="wrap">
+      <div class="g2" style="align-items:end">
+        <div class="stack" style="gap:12px"><div class="eyebrow">The pricing problem</div><h2 class="h2">Two neighbours. Same street. Same windows. Thousands apart.</h2></div>
+        <div class="stack" style="gap:16px">
+          <p class="lead">Your starting point doesn’t change because you’re a better negotiator. Same house, same work, same figure — before anyone comes round.</p>
+          <p class="lead" style="color:var(--ink);font-weight:600">ProFacet gives you a starting point before the salesperson arrives.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BACK OF HOUSE -->
+  <section id="rear" style="padding-block:clamp(56px,7vw,88px)">
+    <div class="wrap">
+      <div class="backcard">
+        <div class="stack" style="gap:10px;max-width:720px">
+          <h2 class="h2" style="font-size:clamp(28px,3.4vw,44px)">What about the back?</h2>
+          <p class="lead">Upload a second photo to explore doors that aren’t visible from the front.</p>
+        </div>
+        <div class="rear r4">
+          <div class="item">
+            <div class="ico"><svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="#16181A" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="6" width="30" height="28"/><path d="M20 6V34"/><path d="M15 20H18M22 20H25" stroke="#B5482A"/></svg></div>
+            <div class="stack" style="gap:6px"><b style="font-size:18px">Patio doors</b><span class="muted" style="font-size:14px">Glass doors that slide open</span><span style="font-size:14px">Guide price <b class="price" style="font-size:14px">£1,876–£3,411</b> · sliding</span></div>
+          </div>
+          <div class="item">
+            <div class="ico"><svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="#16181A" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="6" width="32" height="28"/><path d="M12 6L16 34M20 6V34M28 6L24 34" stroke="#B5482A"/></svg></div>
+            <div class="stack" style="gap:6px"><b style="font-size:18px">Bifolds</b><span class="muted" style="font-size:14px">Folding glass doors to the garden</span><span style="font-size:14px">Guide price <b class="price" style="font-size:14px">£3,557–£6,467</b> · up to 2.4 m</span></div>
+          </div>
+          <div class="item">
+            <div class="ico"><svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="#16181A" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="6" width="28" height="28"/><path d="M20 6V34"/><rect x="10" y="10" width="7" height="20" stroke="#B5482A"/><rect x="23" y="10" width="7" height="20" stroke="#B5482A"/></svg></div>
+            <div class="stack" style="gap:6px"><b style="font-size:18px">French doors</b><span class="muted" style="font-size:14px">A pair of glazed doors</span><span style="font-size:14px">Guide price <b class="price" style="font-size:14px">£2,407–£4,376</b> · pair</span></div>
+          </div>
+          <div class="item">
+            <div class="ico"><svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="#16181A" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="11" y="4" width="18" height="32"/><rect x="15" y="9" width="10" height="10"/><path d="M25 22V25" stroke="#B5482A"/></svg></div>
+            <div class="stack" style="gap:6px"><b style="font-size:18px">Back doors</b><span class="muted" style="font-size:14px">Composite and uPVC</span><span style="font-size:14px">Guide price <b class="price" style="font-size:14px">£1,092–£3,579</b> · uPVC to composite</span></div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap">
+          <p class="cap">Guide prices · supplied and fitted · planning estimate · inc. VAT</p>
+          <a class="btn" href="/design?journey=windows">See my house &amp; price →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT CAN I CHANGE -->
+  <section id="change">
+    <div class="wrap stack" style="gap:44px">
+      <div style="display:flex;justify-content:space-between;align-items:end;gap:24px;flex-wrap:wrap">
+        <h2 class="h2">Change the look of your home.</h2>
+        <a href="/design?journey=windows" style="font-weight:600;text-decoration:none">See my house &amp; price →</a>
+      </div>
+      <div class="cards">
+        <a class="card" href="#guides"><div class="img"><div class="zoom" data-stack="pbAnth" data-crop="1.9,30%,58%"></div></div><div class="row"><h3>Windows</h3><span aria-hidden="true" style="color:var(--brick)">→</span></div><p>Change the style, colour and material.</p><div class="tags"><span>Casement</span><span>Georgian bars</span><span>Anthracite</span><span>uPVC</span></div></a>
+        <a class="card" href="#guides"><div class="img"><div class="zoom" data-stack="pbDoor" data-crop="2.4,58%,62%"></div></div><div class="row"><h3>Doors</h3><span aria-hidden="true" style="color:var(--brick)">→</span></div><p>Front, back, patio and bifold.</p><div class="tags"><span>Composite</span><span>uPVC</span><span>Patio</span><span>Bifold</span></div></a>
+        <a class="card" href="#guides"><div class="img"><div class="zoom" data-stack="c30Full" data-crop="3,72%,33%"></div></div><div class="row"><h3>Roofline</h3><span aria-hidden="true" style="color:var(--brick)">→</span></div><p>Fascias, soffits &amp; guttering.</p><div class="tags"><span>Fascias</span><span>Soffits</span><span>Guttering</span></div></a>
+        <a class="card" href="#guides"><div class="img"><div class="zoom" data-stack="c30Clad" data-crop="1.25,40%,40%"></div></div><div class="row"><h3>Walls</h3><span aria-hidden="true" style="color:var(--brick)">→</span></div><p>Render, cladding &amp; weatherboard.</p><div class="tags"><span>Render</span><span>Cladding</span><span>Weatherboard</span></div></a>
+        <a class="card" href="#guides"><div class="img"><div class="zoom" data-stack="c30Full" data-crop="2,62%,18%"></div></div><div class="row"><h3>Roofs</h3><span aria-hidden="true" style="color:var(--brick)">→</span></div><p>Slate, tile &amp; clay.</p><div class="tags"><span>Slate</span><span>Tile</span><span>Clay</span></div></a>
+        <a class="card" href="#rear"><div class="img"><div class="ph"><svg width="56" height="56" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M6 28L32 10L58 28"/><path d="M12 28V54H52V28"/><path d="M12 38H52M24 28V54M40 28V54"/></svg>From £10,000–£16,000 (lean-to)</div></div><div class="row"><h3>Conservatories</h3><span aria-hidden="true" style="color:var(--brick)">→</span></div><p>Explore styles and guide prices.</p><div class="tags"><span>Lean-to</span><span>Edwardian</span><span>Victorian</span><span>Gable</span><span>Orangery</span></div></a>
+      </div>
+
+      <p class="cap" style="margin-top:-24px">Example property illustrations · genuine visualisations. Conservatories: guide prices.</p>
+
+    </div>
+  </section>
+
+  <!-- USEFUL -->
+  <section class="stone">
+    <div class="wrap stack" style="gap:44px">
+      <div class="stack" style="gap:10px"><div class="chap">Price it</div><h2 class="h2">What makes the estimate useful?</h2></div>
+      <div class="g4">
+        <div class="feat"><h3>Property-specific</h3><p>It’s based on your actual house, not a generic calculator.</p></div>
+        <div class="feat"><h3>Specification-specific</h3><p>Change the product and the estimate changes.</p></div>
+        <div class="feat"><h3>Transparent</h3><p>See what’s included and what can affect the final price.</p></div>
+        <div class="feat"><h3>Installer-confirmed</h3><p>Your final quote comes after a survey.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ESTIMATE -->
+  <section>
+    <div class="wrap g2" style="align-items:start">
+      <div class="stack" style="gap:18px">
+        <h2 class="h2">How can you estimate the price from one photo?</h2>
+        <p class="lead">We use your photograph, the visible dimensions of your property and the options you select to create a planning estimate.</p>
+      </div>
+      <div class="stack" style="gap:22px">
+        <div class="q"><div class="muted" style="font-size:14px;font-weight:600">The question we're helping you answer:</div><div class="big">“Is this project roughly within my budget?”</div></div>
+        <p style="color:var(--ink-2)">The estimate is not a quotation. The final price can change following a site survey, depending on measurements, specification, access, structural condition and installation requirements.</p>
+        <details class="method">
+          <summary>How we calculate your estimate <span class="arr" aria-hidden="true">→</span></summary>
+          <ol>
+            <li><span>01</span><div><b>Your photo.</b> We identify the windows, doors, roofline and walls visible on the front of your home.</div></li>
+            <li><span>02</span><div><b>Visible dimensions.</b> Sizes are estimated from the proportions of your property, so you don't need a tape measure.</div></li>
+            <li><span>03</span><div><b>Your selections.</b> The products, materials and colours you choose are priced from two sources: windows and doors from what these jobs actually sell for, checked against current UK prices; walls, roof and roofline from UK material and labour rates, with scaffolding, waste and VAT.</div></li>
+            <li><span>04</span><div><b>A range, not one figure.</b> We show a low-to-high range including VAT, because survey details can move the final price.</div></li>
+          </ol>
+          <a href="/how-we-price" style="font-size:14px;font-weight:600">Read the full methodology →</a>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRUST -->
+  <section class="stone" id="trust">
+    <div class="wrap stack" style="gap:52px">
+      <div class="g2" style="align-items:end">
+        <h2 class="h2">Built by someone who’s been on the other side of the sales conversation.</h2>
+        <div class="stack" style="gap:14px">
+          <p style="font-size:17px;color:var(--ink-2)">ProFacet was built by someone who has spent twenty-four years selling windows, doors and home improvements, and has seen how differently two similar houses can be priced.</p>
+          <p style="font-size:17px;color:var(--ink-2)">That experience has been turned into a simpler way for homeowners to research a project before entering the sales process.</p>
+        </div>
+      </div>
+      <div class="g3">
+        <div class="tile" style="flex-direction:row;align-items:center;gap:18px"><div style="width:64px;height:64px;flex:none;border-radius:50%;background:var(--night);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff">MS</div><div><b>Mike Sheehan</b><div class="muted" style="font-size:14px">Founder · 24 years in home improvement</div></div></div>
+        <div class="tile"><div class="k">WHY PROFACET EXISTS</div><b>“I’ve spent 24 years seeing how differently similar homes can be priced. ProFacet is designed to give homeowners a clearer starting point before they enter that process.”</b></div>
+        <div class="tile"><div class="k">COMPANY</div><b>FACETPRO LTD · Registered in England &amp; Wales · No. 17346500</b></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- REAL HOMES -->
+  <section>
+    <div class="wrap stack" style="gap:44px">
+      <div style="display:flex;justify-content:space-between;align-items:end;gap:24px;flex-wrap:wrap">
+        <h2 class="h2">Example designs, priced from one photo.</h2>
+        <span class="badge">Example properties · real visualisations &amp; estimates</span>
+      </div>
+      <div class="g3 hs">
+        <article class="case">
+          <div class="ba sm" data-before="thBefore" data-after="thAfter" data-label="Drag to compare example three"></div>
+          <div><div class="t">Tile-hung detached</div><div class="muted" style="font-size:14px">2 windows incl. bay · anthracite</div></div>
+          <div class="money"><div><small>Estimated project cost</small><span class="price" style="font-size:18px">£4,844–£8,806</span></div></div>
+        </article>
+        <article class="case">
+          <div class="ba sm" data-before="pbBefore" data-after="pbDoor" data-label="Drag to compare example one"></div>
+          <div><div class="t">Bay-fronted detached</div><div class="muted" style="font-size:14px">3 windows incl. bay · composite door</div></div>
+          <div class="money"><div><small>Estimated project cost</small><span class="price" style="font-size:18px">£7,004–£12,734</span></div></div>
+        </article>
+        <article class="case">
+          <div class="ba sm" data-before="c30Before" data-after="c30Full" data-label="Drag to compare example two"></div>
+          <div><div class="t">1930s detached</div><div class="muted" style="font-size:14px">4 windows · door · roofline · grey roof</div></div>
+          <div class="money"><div><small>Estimated project cost</small><span class="price" style="font-size:18px">£28,654–£48,962</span></div></div>
+          <p class="cap">Wider range because a new roof depends on the tiles, battens and what’s underneath — the survey narrows it.</p>
+        </article>
+      </div>
+      <p class="cap">Planning estimates · inc. VAT</p><details class="info"><summary>ⓘ About these pictures</summary><p>These houses are AI-generated illustrations used to demonstrate ProFacet. The visualisations and estimated prices are genuine output from our pricing engine. The 1930s total adds the windows-and-door and roof-and-roofline estimates together.</p></details>
+    </div>
+  </section>
+
+  <!-- INSTALLERS -->
+  <section id="installers" style="padding-top:0">
+    <div class="wrap">
+      <div class="inst">
+        <div class="stack" style="gap:16px;max-width:760px">
+          <div class="eyebrow">For installers</div>
+          <h2 class="h2">Stop buying cold leads.</h2>
+          <p class="sub">Start meeting homeowners who've already thought about the job.</p>
+        </div>
+        <ul class="checks">
+          <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E08A6C" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12L10 18L20 6"/></svg>Uploaded their property</li>
+          <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E08A6C" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12L10 18L20 6"/></svg>Chosen the products</li>
+          <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E08A6C" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12L10 18L20 6"/></svg>Selected colours and finishes</li>
+          <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E08A6C" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12L10 18L20 6"/></svg>Seen the visualisation</li>
+          <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E08A6C" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12L10 18L20 6"/></svg>Seen an estimated project cost</li>
+          <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E08A6C" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12L10 18L20 6"/></svg>Decided they're ready for a quote</li>
+        </ul>
+        <!-- Kept from the Facet Pro homepage (handoff §1 row 12): what an
+             installer actually receives, for the house in the hero. -->
+        <div class="panel" style="color:var(--ink);max-width:520px">
+          <div class="eyebrow">Example ProFacet enquiry · the bay-fronted house above</div>
+          <dl style="margin:0"><div style="display:flex;justify-content:space-between;gap:16px;padding:8px 0;border-top:1px solid var(--line)"><dt class="muted">Windows</dt><dd style="margin:0;text-align:right;font-weight:600">3, incl. the bay</dd></div><div style="display:flex;justify-content:space-between;gap:16px;padding:8px 0;border-top:1px solid var(--line)"><dt class="muted">Style</dt><dd style="margin:0;text-align:right;font-weight:600">Casement, uPVC</dd></div><div style="display:flex;justify-content:space-between;gap:16px;padding:8px 0;border-top:1px solid var(--line)"><dt class="muted">Colour</dt><dd style="margin:0;text-align:right;font-weight:600">Anthracite</dd></div><div style="display:flex;justify-content:space-between;gap:16px;padding:8px 0;border-top:1px solid var(--line)"><dt class="muted">Front door</dt><dd style="margin:0;text-align:right;font-weight:600">Kept as it is</dd></div><div style="display:flex;justify-content:space-between;gap:16px;padding:8px 0;border-top:1px solid var(--line)"><dt class="muted">Estimated project</dt><dd style="margin:0;text-align:right;font-weight:600">£4,880–£8,874<br><span class="muted" style="font-size:13px;font-weight:400">Planning estimate · inc. VAT</span></dd></div><div style="display:flex;justify-content:space-between;gap:16px;padding:8px 0;border-top:1px solid var(--line)"><dt class="muted">Visualisation</dt><dd style="margin:0;text-align:right;font-weight:600"><span style="color:#2E7D4F;font-weight:700" aria-label="yes">✓</span></dd></div><div style="display:flex;justify-content:space-between;gap:16px;padding:8px 0;border-top:1px solid var(--line)"><dt class="muted">Homeowner has chosen</dt><dd style="margin:0;text-align:right;font-weight:600"><span style="color:#2E7D4F;font-weight:700" aria-label="yes">✓</span></dd></div><div style="display:flex;justify-content:space-between;gap:16px;padding:8px 0;border-top:1px solid var(--line)"><dt class="muted">Quote requested</dt><dd style="margin:0;text-align:right;font-weight:600"><span style="color:#2E7D4F;font-weight:700" aria-label="yes">✓</span></dd></div></dl>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:wrap">
+          <div style="font-size:24px;font-weight:600;letter-spacing:-.015em">You survey and quote as normal.</div>
+          <a class="btn" href="/installers">Become a ProFacet installer →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="stone">
+    <div class="wrap g2" style="align-items:start">
+      <div class="stack" style="gap:16px">
+        <h2 class="h2">Questions, answered.</h2>
+        <p style="font-size:17px;color:var(--ink-2)">Short answers here. The detail lives in our <a href="/privacy">privacy policy</a> and <a href="/how-we-price">estimate methodology</a>.</p>
+      </div>
+      <div class="faq" style="border-top:1px solid #DEDBD4">
+        <details open><summary>If it’s free, how does ProFacet make money?</summary><p><b>ProFacet is free for homeowners.</b></p><p>We earn a fee from installers when you choose to request quotes from them. At most three installers receive your enquiry.</p><p>We don’t charge you to use the visualiser or see your estimate, and <b>we don’t sell your personal details.</b></p></details>
+        <details><summary>Is ProFacet free?</summary><p>Yes. Uploading your photo, trying options and seeing your estimate is free for homeowners. No account needed.</p></details>
+                <details><summary>Do I need measurements?</summary><p>No. We estimate sizes from what is visible in your photo. An installer takes exact measurements at the survey.</p></details>
+        <details><summary>Is the price a quotation?</summary><p>No. It is a planning estimate to help you judge your budget. The final price is confirmed by an installer after a site survey. <a href="/how-we-price">See how we calculate it</a>.</p></details>
+        <details><summary>Will installers contact me?</summary><p>Only if you ask for quotes. Exploring options and seeing your estimate does not share your details with anyone.</p></details>
+        <details><summary>How many installers receive my enquiry?</summary><p>At most three suitable installers, and only when you choose to request quotes.</p></details>
+        <details><summary>What happens to my photograph?</summary><p>It is used to create your visualisation and then deleted — your original photograph isn’t kept. We keep the picture we generate and your design choices for 6 months, so your link keeps working. Full detail is in our <a href="/privacy">privacy policy</a>.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <!-- COST GUIDES + HOW WE PRICE -->
+  <section id="guides" style="padding-block:clamp(64px,8vw,96px)">
+    <div class="wrap stack" style="gap:36px">
+      <div style="display:flex;justify-content:space-between;align-items:end;gap:24px;flex-wrap:wrap">
+        <div class="stack" style="gap:10px">
+          <div class="eyebrow">Cost guides</div>
+          <h2 class="h2" style="font-size:clamp(28px,3vw,40px)">What does home improvement actually cost?</h2>
+          <p class="lead" style="max-width:44em">Planning guides built on the same pricing approach as ProFacet.</p>
+        </div>
+        <a class="btn ghost" href="/how-we-price" id="how-we-price">How we price →</a>
+      </div>
+      <nav class="guides" aria-label="Cost guides">
+        <a href="/cost/window-replacement-cost-uk">Window replacement cost <span aria-hidden="true">→</span></a>
+        <a href="/cost/window-replacement-calculator">Window calculator <span aria-hidden="true">→</span></a>
+        <a href="/cost/anthracite-windows-cost">Anthracite windows <span aria-hidden="true">→</span></a>
+        <a href="/cost/front-door-replacement-cost">Front door cost <span aria-hidden="true">→</span></a>
+        <a href="/cost/composite-door-cost">Composite door cost <span aria-hidden="true">→</span></a>
+        <a href="/cost/bifold-doors-cost">Bifold doors <span aria-hidden="true">→</span></a>
+        <a href="/cost/fascia-soffit-replacement-cost">Fascias &amp; soffits <span aria-hidden="true">→</span></a>
+        <a href="/cost/new-roof-cost">New roof cost <span aria-hidden="true">→</span></a>
+        <a href="/cost/house-rendering-cost">Rendering cost <span aria-hidden="true">→</span></a>
+      </nav>
+      <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap"><b>Want to see this on your house?</b><a class="btn" href="/design?journey=windows">See my house &amp; price →</a></div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section id="start">
+    <div class="wrap hero">
+      <div class="stack">
+        <div class="chap">Ready?</div>
+        <h2 style="font-size:clamp(42px,6vw,84px);line-height:.98;letter-spacing:-.04em;font-weight:700">See it on your house.</h2>
+        <p class="lead" style="max-width:28em">One photo. Your home. A clearer idea of what it could look like — and what it could cost.</p>
+        <div class="cta-block">
+          <a class="btn lg" href="/design?journey=windows">See my house &amp; price →</a>
+          <div class="reassure">Free · No account · No measurements · No sales call</div>
+        </div>
+      </div>
+      <div style="position:relative">
+        <div class="ba" data-before="c30Before" data-after="c30Full" data-label="Drag to compare the 1930s example before and after"></div>
+        <div style="position:absolute;left:14px;bottom:14px;background:rgba(255,255,255,.94);border-radius:4px;padding:12px 16px">
+          <div class="muted" style="font-size:12px">Example property · real visualisation</div>
+          <div style="font-weight:700;font-size:20px;letter-spacing:-.01em">See it. Price it. Then decide.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap stack" style="gap:44px">
+    <div style="display:flex;justify-content:space-between;gap:40px;flex-wrap:wrap">
+      <div class="stack" style="gap:14px;max-width:320px">
+        <div class="logo" style="color:#fff"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><path d="M13 2L24 9V24H2V9Z" fill="none" stroke="#FFFFFF" stroke-width="2"/><path d="M13 2V24M2 9L13 15L24 9" fill="none" stroke="#E08A6C" stroke-width="2"/></svg>PROFACET</div>
+        <p style="font-size:14px">The smarter first step before getting home-improvement quotes.</p>
+      </div>
+      <nav aria-label="Footer">
+        <a href="#how">How it works</a><a href="#trust">About</a>
+        <a href="#change">What you can change</a><a href="mailto:hello@facetpro.co.uk">Contact</a>
+        <a href="#guides">Costs</a><a href="/privacy">Privacy</a>
+        <a href="#installers">For installers</a><a href="/terms">Terms</a>
+        <a href="/how-we-price">How we price</a><a href="/cost">Cost guides</a>
+      </nav>
+    </div>
+    <div style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;border-top:1px solid var(--night-line);padding-top:24px;font-size:13px;color:#9A9DA0">
+      <span>© 2026 FACETPRO LTD · Registered in England &amp; Wales No. 17346500 · Crown House, 27 Old Gloucester Street, London WC1N 3AX</span>
+      <span><a href="https://www.facebook.com/facetprouk" style="color:inherit">Facebook</a> · <a href="https://x.com/FacetProUK" style="color:inherit">X</a> · <a href="https://www.pinterest.co.uk/facetpro/" style="color:inherit">Pinterest</a> · <a href="https://www.tiktok.com/@facetpro" style="color:inherit">TikTok</a></span>
+    </div>
+  </div>
+</footer>
+
+<div class="mbar">
+  <div style="line-height:1.2"><div class="muted" style="font-size:11px">Free · No sales call</div><div style="font-size:14px;font-weight:700">One photo is all it takes</div></div>
+  <a class="btn" href="/design?journey=windows">See my house &amp; price →</a>
+</div>
+
+<script>
+/* ---- PHOTOS: to use real photos later, put image URLs here (before/after of the same house).
+   Leave empty to use the drawn house. ---- */
+const PHOTOS = {
+  pbWhiteDoor: "/assets/home/pbWhiteDoor.webp",
+  pbBlackDoor: "/assets/home/pbBlackDoor.webp",
+  pbBefore: "/assets/home/pbBefore.webp",
+  pbAnth: "/assets/home/pbAnth.webp",
+  pbBlack: "/assets/home/pbBlack.webp",
+  pbDoor: "/assets/home/pbDoor.webp",
+  thBefore: "/assets/home/thBefore.webp",
+  thAfter: "/assets/home/thAfter.webp",
+  c30Before: "/assets/home/c30Before.webp",
+  c30Full: "/assets/home/c30Full.webp",
+  c30Clad: "/assets/home/c30Clad.webp",
+};
+const ALTS = {"pbWhiteDoor": "AI visualisation: the same house with its white windows kept and a composite front door", "pbBlackDoor": "AI visualisation: the same house with black windows and a composite front door", "pbBefore": "Illustration: red-brick detached house with white uPVC windows and a bay window", "pbAnth": "AI visualisation: the same house with anthracite uPVC casement windows", "pbBlack": "AI visualisation: the same house with black uPVC casement windows", "pbDoor": "AI visualisation: the same house with anthracite windows and a composite front door", "thBefore": "Illustration: detached house with red tile-hanging and white windows", "thAfter": "AI visualisation: the same house with anthracite windows", "c30Before": "Illustration: 1930s detached house with white windows and a brown roof", "c30Full": "AI visualisation: the same house with anthracite windows, new door, light roofline and a grey roof", "c30Clad": "AI visualisation: the same house with anthracite windows and graphite cladding upstairs"};
+
+const OLD = {frame:'#E9E5D8',door:'#6B3A2A',doorNew:false,fascia:'#E2DCCD',soffit:'#CBC4B4',gutter:'#D6D3CA'};
+const ANTH = {frame:'#3B4045',door:'#2E3337',doorNew:true,fascia:'#34393D',soffit:'#3A3F43',gutter:'#2A2E32'};
+const PRESETS = {
+  original: OLD,
+  anthracite: ANTH,
+  white: {...ANTH, frame:'#F8F8F5', fascia:'#F2F1EC', soffit:'#ECEBE6', gutter:'#F2F1EC'},
+  black: {...ANTH, frame:'#25282B', door:OLD.door, doorNew:false, fascia:'#25282B', soffit:'#2A2D30', gutter:'#25282B'}
+};
+
+function house(o){
+  const g = 'url(#pfGlass)';
+  const oldOp = o.doorNew ? 0 : 1, newOp = o.doorNew ? 1 : 0;
+  return `<svg viewBox="0 0 800 560" preserveAspectRatio="xMidYMid slice" role="img" aria-label="1930s semi-detached house">
+<rect width="800" height="560" fill="url(#pfSky)"/>
+<ellipse cx="60" cy="300" rx="110" ry="150" fill="#9DAA8C" opacity=".55"/><ellipse cx="20" cy="360" rx="80" ry="110" fill="#879673" opacity=".6"/>
+<rect x="640" y="36" width="44" height="64" fill="url(#pfBrick)"/><rect x="634" y="32" width="56" height="8" fill="#6F3D30"/>
+<rect x="646" y="18" width="10" height="16" fill="#9A4E37"/><rect x="668" y="20" width="10" height="14" fill="#9A4E37"/>
+<polygon points="106,202 800,202 800,88 220,88" fill="#5A4741"/>
+<path d="M198 110H800M178 130H800M158 150H800M138 170H800M118 190H800" stroke="#000" stroke-opacity=".13" stroke-width="1.5"/>
+<rect x="130" y="212" width="670" height="268" fill="url(#pfBrick)"/><rect x="130" y="212" width="670" height="120" fill="#ECE7DC"/>
+<line x1="660" y1="212" x2="660" y2="480" stroke="#6E3C2F" stroke-opacity=".35" stroke-width="2"/>
+<rect x="104" y="200" width="696" height="12" fill="${o.fascia}"/><rect x="112" y="212" width="688" height="6" fill="${o.soffit}"/>
+<rect x="98" y="206" width="702" height="9" rx="4" fill="${o.gutter}"/><rect x="636" y="214" width="8" height="266" fill="${o.gutter}"/>
+<rect x="163" y="222" width="224" height="258" fill="#000" opacity=".06"/><rect x="165" y="330" width="220" height="24" fill="#E3DDD0"/>
+<rect x="165" y="222" width="10" height="258" fill="#000" opacity=".12"/><rect x="375" y="222" width="10" height="258" fill="#000" opacity=".12"/>
+<rect x="185" y="240" width="180" height="82" rx="2" fill="${o.frame}"/>
+<rect x="192" y="247" width="51" height="68" fill="${g}" opacity=".85"/><rect x="249" y="247" width="52" height="68" fill="${g}"/><rect x="307" y="247" width="51" height="68" fill="${g}" opacity=".85"/>
+<rect x="185" y="268" width="180" height="5" fill="${o.frame}"/><path d="M256 252L270 252L258 290Z" fill="#fff" opacity=".18"/>
+<rect x="180" y="322" width="190" height="6" fill="#D6D0C3"/>
+<rect x="185" y="362" width="180" height="92" rx="2" fill="${o.frame}"/>
+<rect x="192" y="369" width="51" height="78" fill="${g}" opacity=".85"/><rect x="249" y="369" width="52" height="78" fill="${g}"/><rect x="307" y="369" width="51" height="78" fill="${g}" opacity=".85"/>
+<rect x="185" y="392" width="180" height="5" fill="${o.frame}"/><path d="M256 374L272 374L258 418Z" fill="#fff" opacity=".18"/>
+<rect x="180" y="454" width="190" height="6" fill="#D6D0C3"/>
+<rect x="445" y="248" width="100" height="74" rx="2" fill="${o.frame}"/><rect x="452" y="255" width="40" height="60" fill="${g}"/><rect x="498" y="255" width="40" height="60" fill="${g}"/>
+<rect x="445" y="274" width="100" height="5" fill="${o.frame}"/><rect x="440" y="322" width="110" height="6" fill="#D6D0C3"/>
+<path d="M434 480V392Q495 332 556 392V480Z" fill="#7E4535"/><path d="M442 480V394Q495 344 548 394V480Z" fill="#3E2C25"/>
+<rect x="462" y="380" width="66" height="100" rx="2" fill="${o.door}"/>
+<g opacity="${oldOp}"><rect x="470" y="390" width="22" height="34" fill="none" stroke="#000" stroke-opacity=".3" stroke-width="2"/><rect x="498" y="390" width="22" height="34" fill="none" stroke="#000" stroke-opacity=".3" stroke-width="2"/><rect x="470" y="436" width="22" height="36" fill="none" stroke="#000" stroke-opacity=".3" stroke-width="2"/><rect x="498" y="436" width="22" height="36" fill="none" stroke="#000" stroke-opacity=".3" stroke-width="2"/><rect x="484" y="428" width="22" height="4" fill="#C9A85A"/><circle cx="521" cy="432" r="2.6" fill="#C9A85A"/></g>
+<g opacity="${newOp}"><rect x="471" y="392" width="10" height="76" fill="${g}"/><rect x="488" y="430" width="30" height="1.5" fill="#fff" opacity=".18"/><rect x="517" y="404" width="4" height="48" rx="2" fill="#C8CCCF"/><rect x="488" y="446" width="22" height="4" fill="#BFC4C7"/></g>
+<rect x="450" y="476" width="90" height="6" fill="#BDB5A8"/>
+<rect x="585" y="380" width="44" height="54" rx="2" fill="${o.frame}"/><rect x="591" y="386" width="32" height="42" fill="${g}"/><rect x="580" y="434" width="54" height="5" fill="#D6D0C3"/>
+<rect x="690" y="248" width="100" height="74" rx="2" fill="#EDEBE5"/><rect x="697" y="255" width="40" height="60" fill="${g}"/><rect x="743" y="255" width="40" height="60" fill="${g}"/><rect x="690" y="274" width="100" height="5" fill="#EDEBE5"/>
+<rect x="700" y="370" width="90" height="80" rx="2" fill="#EDEBE5"/><rect x="707" y="377" width="36" height="66" fill="${g}"/><rect x="749" y="377" width="34" height="66" fill="${g}"/>
+<rect x="130" y="470" width="670" height="10" fill="#6E3C2F"/><rect y="480" width="800" height="80" fill="#8B9A69"/>
+<polygon points="462,480 528,480 566,560 424,560" fill="#CFC7B9"/>
+<rect x="-10" y="486" width="430" height="34" rx="16" fill="#5C7043"/><rect x="-10" y="486" width="430" height="10" rx="5" fill="#6E8452"/>
+<rect x="572" y="486" width="240" height="34" rx="16" fill="#5C7043"/><rect x="572" y="486" width="240" height="10" rx="5" fill="#6E8452"/>
+</svg>`;
+}
+function art(key, opts){
+  if (PHOTOS[key]) return `<img src="${PHOTOS[key]}" alt="${ALTS[key] || ''}" draggable="false">`;
+  return house(opts || PRESETS[key]);
+}
+
+const arrows = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16181A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6L3 12L9 18"/><path d="M15 6L21 12L15 18"/></svg>';
+
+let uid = 0;
+document.querySelectorAll('.ba[data-before]').forEach((el) => {
+  const id = 'ba' + (++uid);
+  const start = +(el.dataset.start || 50);
+  el.innerHTML = `<div class="layer before">${art(el.dataset.before)}</div>
+<div class="layer after">${el.dataset.after === 'custom' ? '' : art(el.dataset.after)}</div>
+<div class="line"></div><div class="knob">${arrows}</div>
+<span class="tag b">BEFORE</span><span class="tag a">AFTER</span>
+<input id="${id}" type="range" min="0" max="100" value="${start}" aria-label="${el.dataset.label || 'Drag to compare before and after'}">`;
+  const input = el.querySelector('input');
+  const set = (v) => el.style.setProperty('--pos', v + '%');
+  set(start);
+  input.addEventListener('input', () => set(input.value));
+});
+document.querySelectorAll('[data-stack]').forEach((el) => {
+  const keys = el.dataset.stack.split(',');
+  const inner = document.createElement('div');
+  inner.style.cssText = 'position:absolute;inset:0';
+  keys.forEach((k, i) => {
+    const img = document.createElement('img');
+    img.src = PHOTOS[k]; img.alt = ALTS[k] || ''; img.draggable = false;
+    img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover';
+    inner.appendChild(img);
+  });
+  const [s, x, y] = (el.dataset.crop || '1,50%,50%').split(',');
+  inner.style.transform = `scale(${s})`; inner.style.transformOrigin = `${x} ${y}`;
+  el.appendChild(inner);
+});
+document.querySelectorAll('[data-house]').forEach((el) => {
+  el.innerHTML = art(el.dataset.house);
+  if (el.dataset.crop) {
+    const [s, x, y] = el.dataset.crop.split(',');
+    el.firstElementChild.style.cssText = `transform:scale(${s});transform-origin:${x} ${y}`;
+  }
+});
+
+/* demo: each combination is one real render of this house, with the price the live engine gave for it */
+const W = {white:'', anth:'3 windows incl. bay · anthracite', black:'3 windows incl. bay · black'};
+const LOOKS = {
+  white_orig: {img:'pbBefore',    price:'—',                rows:[['Nothing changed yet','—']]},
+  white_comp: {img:'pbWhiteDoor', price:'£2,123–£3,859',   rows:[['Composite front door','£2,123–£3,859']]},
+  anth_orig:  {img:'pbAnth',      price:'£4,880–£8,874',   rows:[[W.anth,'£4,880–£8,874']]},
+  anth_comp:  {img:'pbDoor',      price:'£7,004–£12,734',  rows:[[W.anth,'£4,880–£8,874'],['Composite front door','£2,124–£3,860']]},
+  black_orig: {img:'pbBlack',     price:'£4,880–£8,874',   rows:[[W.black,'£4,880–£8,874']]},
+  black_comp: {img:'pbBlackDoor', price:'£7,004–£12,734',  rows:[[W.black,'£4,880–£8,874'],['Composite front door','£2,124–£3,860']]}
+};
+const state = {win:'anth', door:'orig'};
+const after = document.querySelector('#demoBA .after');
+after.innerHTML = '<img alt="" draggable="false">';
+const dImg = after.querySelector('img');
+function renderDemo(){
+  const L = LOOKS[state.win + '_' + state.door];
+  dImg.src = PHOTOS[L.img]; dImg.alt = ALTS[L.img];
+  document.getElementById('demoPrice').textContent = L.price;
+  document.getElementById('demoBrk').innerHTML = L.rows.map(r => `<div><span>${r[0]}</span><b>${r[1]}</b></div>`).join('');
+}
+document.querySelectorAll('.opts').forEach((grp) => {
+  grp.addEventListener('click', (e) => {
+    const b = e.target.closest('.chip'); if (!b) return;
+    grp.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-pressed', String(c === b)));
+    state[grp.dataset.group] = b.dataset.v;
+    renderDemo();
+  });
+});
+renderDemo();
+</script>
