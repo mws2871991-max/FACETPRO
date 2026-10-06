@@ -227,6 +227,19 @@ function roofFor(catalogue, m2) {
    index.html carries, from the same company.json, so the two cannot disagree.
    See the comment on that footer for why it is there at all. */
 const COMPANY = require('./company.json');
+/* The company's social profiles, as icons in the footer (Mike, 6 Oct). Drawn
+   here as plain SVG rather than loaded from each platform, so a footer link
+   carries no tracking pixel and no third-party script. Only profiles listed
+   in company.json appear; see its socialNote for why the list is short. */
+const SOCIAL_ICONS = {
+  instagram: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.3" cy="6.7" r="1" fill="currentColor" stroke="none"/></svg>',
+};
+const socialLinks = () => {
+  const items = (COMPANY.social || []).filter(x => x && x.url && SOCIAL_ICONS[x.id]);
+  if (!items.length) return '';
+  return `<p class="social">${items.map(x => `<a href="${escapeHtml(x.url)}" target="_blank" rel="noopener noreferrer" aria-label="Facet Pro on ${escapeHtml(x.label)} (opens in a new tab)" title="${escapeHtml(x.label)} ${escapeHtml(x.handle || '')}">${SOCIAL_ICONS[x.id]}</a>`).join('')}</p>`;
+};
+
 const COMPANY_LINE = `${COMPANY.legalName}, a company registered in ${COMPANY.jurisdiction} `
   + `no. ${COMPANY.companyNumber}. Registered office: ${COMPANY.registeredOffice}.`;
 
@@ -1384,6 +1397,7 @@ ${related ? `<nav class="related"><h2>Related costs</h2><ul>${related.map(r =>
 <footer class="site"><div class="wrap">
   Facet Pro &middot; <a href="/privacy">Privacy notice</a> &middot; <a href="/terms">Terms of use</a>
   <p class="company">${escapeHtml(COMPANY_LINE)}</p>
+  ${socialLinks()}
 </div></footer>
 </body></html>`;
 }

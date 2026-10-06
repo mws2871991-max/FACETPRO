@@ -101,6 +101,10 @@
    17px tall, the smallest controls on the guides. */
 footer.site .wrap>a{display:inline-block;padding:12px 2px;min-height:44px}
 footer.site .company{margin:.6rem 0 0;font-size:1rem;line-height:1.5;color:#6b7280;max-width:70ch}
+/* Social icons (6 Oct): 44px targets, quiet until hovered. */
+footer.site .social{display:flex;gap:12px;margin:.8rem 0 0}
+footer.site .social a{display:inline-grid;place-items:center;width:44px;height:44px;border-radius:999px;border:1px solid #d4d4d8;color:#3f3f46;padding:0}
+footer.site .social a:hover{color:#18181b;border-color:#71717a}
 
   footer.site .wrap{padding:20px 18px;font-size:16px;color:#52525b}
   a{color:#0F1012}

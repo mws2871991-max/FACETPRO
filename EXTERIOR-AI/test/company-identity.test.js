@@ -70,3 +70,20 @@ test('the line is styled, or it ships unstyled and only a browser notices', () =
   const built = fs.readFileSync(path.join(root, 'assets', 'app.css'), 'utf8');
   assert.ok(built.length > 1000, 'the built stylesheet looks empty');
 });
+
+/* Social icons (6 Oct): the homepage footer and the guides show exactly the
+   profiles company.json lists, open them in a new tab, and load nothing from
+   the platforms. */
+test('the footers link exactly the social profiles company.json lists', () => {
+  const fs = require('fs'), path = require('path');
+  const company = require('../company.json');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const footer = html.slice(html.lastIndexOf('<footer'), html.indexOf('</footer>', html.lastIndexOf('<footer')));
+  const listed = (company.social || []).filter(s => s.url).map(s => s.url).sort();
+  const inFooter = [...footer.matchAll(/href="(https:\/\/[^"]*(instagram|facebook|tiktok|youtube|linkedin|pinterest)[^"]*)"/g)].map(m => m[1]).sort();
+  assert.deepStrictEqual(inFooter, listed, 'the homepage footer and company.json disagree');
+  const landing = require('../landing');
+  const page = landing.renderCostPage('new-windows-cost-uk', { catalogue: require('../catalogue.json'), siteUrl: 'https://www.facetpro.co.uk', siteMode: 'live' });
+  for (const u of listed) assert.ok(page.includes(`href="${u}" target="_blank" rel="noopener noreferrer"`), `${u} is missing from the guides`);
+  assert.doesNotMatch(footer + page, /<script[^>]+(instagram|facebook|tiktok)\.com/, 'no platform scripts');
+});

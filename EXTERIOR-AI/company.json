@@ -7,5 +7,14 @@
   "incorporated": "2026-07-17",
   "jurisdiction": "England and Wales",
   "contactEmail": "hello@facetpro.co.uk",
-  "privacyEmail": "privacy@facetpro.co.uk"
+  "privacyEmail": "privacy@facetpro.co.uk",
+  "social": [
+    {
+      "id": "instagram",
+      "label": "Instagram",
+      "handle": "@facetpro2.0",
+      "url": "https://www.instagram.com/facetpro2.0/"
+    }
+  ],
+  "socialNote": "Profiles shown as icons in every footer. Only accounts confirmed live are listed: Instagram @facetpro2.0 is the one in use (Social profiles setup pack, 5 Oct 2026). Facebook (facetprouk), LinkedIn, TikTok, YouTube and Pinterest are added here once each is live and its address checked; a link to a profile that is not there, or is somebody else's, is worse than no link."
 }
