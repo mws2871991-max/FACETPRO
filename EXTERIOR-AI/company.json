@@ -12,9 +12,33 @@
     {
       "id": "instagram",
       "label": "Instagram",
-      "handle": "@facetpro2.0",
-      "url": "https://www.instagram.com/facetpro2.0/"
+      "handle": "@facetpro",
+      "url": "https://www.instagram.com/facetpro/"
+    },
+    {
+      "id": "facebook",
+      "label": "Facebook",
+      "handle": "Facet Pro",
+      "url": "https://www.facebook.com/facetprouk"
+    },
+    {
+      "id": "tiktok",
+      "label": "TikTok",
+      "handle": "@facetpro",
+      "url": "https://www.tiktok.com/@facetpro"
+    },
+    {
+      "id": "pinterest",
+      "label": "Pinterest",
+      "handle": "@facetpro",
+      "url": "https://www.pinterest.co.uk/facetpro/"
+    },
+    {
+      "id": "x",
+      "label": "X",
+      "handle": "@facetprouk",
+      "url": "https://x.com/facetprouk"
     }
   ],
-  "socialNote": "Profiles shown as icons in every footer. Only accounts confirmed live are listed: Instagram @facetpro2.0 is the one in use (Social profiles setup pack, 5 Oct 2026). Facebook (facetprouk), LinkedIn, TikTok, YouTube and Pinterest are added here once each is live and its address checked; a link to a profile that is not there, or is somebody else's, is worse than no link."
+  "socialNote": "Profiles shown as icons in every footer (homepage and cost guides). Confirmed with Mike, 6 Oct 2026: Instagram @facetpro (Mike, 6 Oct; the setup pack had named @facetpro2.0), Facebook facetprouk (page \"Facet Pro\"), TikTok @facetpro, Pinterest facetpro (the profile behind the site claim), X @facetprouk. LinkedIn and YouTube go in when each is live and its address checked; a link to a profile that is not there, or is somebody else's, is worse than none."
 }

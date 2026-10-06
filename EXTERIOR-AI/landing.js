@@ -232,7 +232,11 @@ const COMPANY = require('./company.json');
    carries no tracking pixel and no third-party script. Only profiles listed
    in company.json appear; see its socialNote for why the list is short. */
 const SOCIAL_ICONS = {
-  instagram: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.3" cy="6.7" r="1" fill="currentColor" stroke="none"/></svg>',
+  instagram: '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.3" cy="6.7" r="1" fill="currentColor" stroke="none"/></svg>',
+  facebook: '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="currentColor"><path d="M13.5 21v-7.5h2.6l.4-3h-3V8.6c0-.9.3-1.5 1.5-1.5h1.6V4.4c-.3 0-1.2-.1-2.3-.1-2.3 0-3.8 1.4-3.8 3.9v2.3H7.9v3h2.6V21z"/></svg>',
+  tiktok: '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3.5v11a3.75 3.75 0 1 1-3.2-3.7"/><path d="M14 3.5c.6 2.6 2.4 4.1 5 4.3"/></svg>',
+  pinterest: '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10.7 20.4l2-8.9"/><path d="M11.4 13.6c.6.5 1.3.7 2.1.7 2 0 3.3-1.6 3.3-3.6 0-2.3-2-4-4.6-4-2.9 0-4.7 2-4.7 4.2 0 1 .4 1.8 1 2.2"/></svg>',
+  x: '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="currentColor"><path d="M17.8 3h3l-6.6 7.6L22 21h-6.1l-4.8-6.2L5.6 21H2.6l7.1-8.1L2.2 3h6.2l4.3 5.7zm-1 16.2h1.7L7.3 4.7H5.5z"/></svg>',
 };
 const socialLinks = () => {
   const items = (COMPANY.social || []).filter(x => x && x.url && SOCIAL_ICONS[x.id]);

@@ -80,7 +80,7 @@ test('the footers link exactly the social profiles company.json lists', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const footer = html.slice(html.lastIndexOf('<footer'), html.indexOf('</footer>', html.lastIndexOf('<footer')));
   const listed = (company.social || []).filter(s => s.url).map(s => s.url).sort();
-  const inFooter = [...footer.matchAll(/href="(https:\/\/[^"]*(instagram|facebook|tiktok|youtube|linkedin|pinterest)[^"]*)"/g)].map(m => m[1]).sort();
+  const inFooter = [...footer.matchAll(/href="(https:\/\/[^"]*(instagram|facebook|tiktok|youtube|linkedin|pinterest|x\.com)[^"]*)"/g)].map(m => m[1]).sort();
   assert.deepStrictEqual(inFooter, listed, 'the homepage footer and company.json disagree');
   const landing = require('../landing');
   const page = landing.renderCostPage('new-windows-cost-uk', { catalogue: require('../catalogue.json'), siteUrl: 'https://www.facetpro.co.uk', siteMode: 'live' });
