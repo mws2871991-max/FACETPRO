@@ -5181,6 +5181,11 @@ const BRANCH_STAGES = new Map([
   ['code_saved', { of: 'visualisation_started', label: 'took a code to keep their design' }],
   ['trade_added', { of: 'estimate_viewed', label: 'added a second trade to the estimate' }],
   ['count_corrected', { of: 'upload_completed', label: 'corrected the window count' }],
+  /* Developer brief, 6 Oct (§3): three events it asks for that had no stage.
+     Branches rather than steps — not everybody passes through them. */
+  ['project_type_selected', { of: 'upload_completed', label: 'told us what they want priced' }],
+  ['estimate_shared', { of: 'estimate_viewed', label: 'shared or saved the before-and-after picture' }],
+  ['installer_match_shown', { of: 'estimate_viewed', label: 'checked their postcode and saw the installer match' }],
 ]);
 
 /* Which layout the visitor actually got. Allowlisted for the same reason every
