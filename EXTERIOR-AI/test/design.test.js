@@ -177,3 +177,16 @@ test('the could-not-measure note only speaks when walls or a roof are priced', (
   const fn = html.slice(html.indexOf('function photoNotUsed'), html.indexOf('function photoNotUsed') + 900);
   assert.match(fn, /if \(!priced\.includes\('cladding'\) && !priced\.includes\('roof'\)\) return null;/);
 });
+
+/* Demo handoff bug 7: a "bring the picture into view" scroll that fired late
+   (a hidden tab, two minutes on) threw the page to the window styles in the
+   middle of a reveal. Both such scrolls go through bringPictureSoon. */
+test('scrolls that bring a finished picture into view are dropped when late or unwanted', () => {
+  const fn = html.slice(html.indexOf('function bringPictureSoon'), html.indexOf('async function generateRealRender'));
+  assert.match(fn, /if \(touched \|\| document\.hidden \|\| Date\.now\(\) - t0 > 1500\) return;/);
+  assert.match(fn, /'wheel', 'touchstart', 'keydown', 'pointerdown'/);
+  const gen = html.slice(html.indexOf('async function generateRealRender'), html.indexOf('async function generateRealRender') + 30000);
+  assert.match(gen, /setTimeout\(\(\) => firstLook\(\(\) => \{/);
+  assert.match(gen, /requestAnimationFrame\(\(\) => settledLook\(\(\) => \{/);
+  assert.doesNotMatch(gen, /if \(landed && settled\) requestAnimationFrame\(\(\) => \{/, 'an unguarded scroll is back');
+});

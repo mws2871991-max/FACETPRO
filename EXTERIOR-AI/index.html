@@ -8161,6 +8161,34 @@ function stopRenderTimer() {
   renderStartedAt = null;
 }
 
+/* A scroll that brings a finished picture into view, only if it is still
+   wanted (demo handoff, bug 7: "after Reveal my design the page sometimes
+   scrolled down to the options").
+
+   Both of these wait — a timer, or the next frame — and the next frame does
+   not come while a tab is in the background. Watched on 5 Oct: a picture
+   landed in a hidden tab, and its scroll fired two minutes later, the moment
+   the tab was looked at, mid-way through somebody else's reveal, and threw
+   the page down to the window styles. A scroll they did not ask for, late,
+   is worse than none.
+
+   So it is dropped if they have touched the page since the picture landed
+   (they are somewhere on purpose), or if it fires more than a second and a
+   half late. Input events rather than scrollY, because render() rebuilds the
+   page in between and can move scrollY by itself. */
+function bringPictureSoon() {
+  const t0 = Date.now();
+  let touched = false;
+  const mark = () => { touched = true; };
+  const kinds = ['wheel', 'touchstart', 'keydown', 'pointerdown'];
+  kinds.forEach(k => window.addEventListener(k, mark, { passive: true, capture: true }));
+  return (fn) => {
+    kinds.forEach(k => window.removeEventListener(k, mark, { capture: true }));
+    if (touched || document.hidden || Date.now() - t0 > 1500) return;
+    fn();
+  };
+}
+
 async function generateRealRender({ settled = false, revived = false } = {}) {
   if (!state.uploadedBase64) return;
   if (settledTimer) { clearTimeout(settledTimer); settledTimer = null; }   // asked for now; no second one behind it
@@ -8299,14 +8327,15 @@ async function generateRealRender({ settled = false, revived = false } = {}) {
      * the render() in the finally block below — scrolling to where the card
      * used to be would be worse than not scrolling at all. A reader who has
      * already scrolled down to the card is left alone. */
-    setTimeout(() => {
+    const firstLook = bringPictureSoon();
+    setTimeout(() => firstLook(() => {
       const card = document.getElementById('visualizer-section');
       if (!card || !state.renderUrl || state.revealed) return;
       const top = card.getBoundingClientRect().top;
       if (top > window.innerHeight * 0.6 || top < 0) {
         card.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
-    }, 80);
+    }), 80);
   } catch (err) {
     // One message at a time: if the photo itself failed, that notice is the one to read.
     if (!state.uploadError) U(err.plain ? err.message : 'We couldn’t create that picture just now. Your design and estimate still work — please try again in a minute.');
@@ -8318,12 +8347,13 @@ async function generateRealRender({ settled = false, revived = false } = {}) {
     if (stale) scheduleSettledRender();
     /* A picture made because they stopped choosing is brought to them: on a
        phone the controls they were using are a screen below it (0058). */
-    if (landed && settled) requestAnimationFrame(() => {
+    const settledLook = landed && settled ? bringPictureSoon() : null;
+    if (settledLook) requestAnimationFrame(() => settledLook(() => {
       const v = document.getElementById('visualizer-section');
       if (!v) return;
       const r = v.getBoundingClientRect();
       if (r.bottom < 80 || r.top > window.innerHeight - 120) v.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
+    }));
     /* The two things the homeowner came for arrive at different moments: the
        picture lands here, and the price has been sitting in the panel beside
        it, unchanged, for the last minute. One beat on the total ties them
