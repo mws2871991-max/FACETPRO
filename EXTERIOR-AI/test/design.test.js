@@ -190,3 +190,19 @@ test('scrolls that bring a finished picture into view are dropped when late or u
   assert.match(gen, /requestAnimationFrame\(\(\) => settledLook\(\(\) => \{/);
   assert.doesNotMatch(gen, /if \(landed && settled\) requestAnimationFrame\(\(\) => \{/, 'an unguarded scroll is back');
 });
+
+/* Developer brief, 6 Oct (§5): the range explained, in terms of this
+   visitor's own estimate, in both panels. */
+test('both estimate panels say what sets the range', () => {
+  const fn = html.slice(html.indexOf('function rangeDrivers'), html.indexOf('function buildGlazingLedPanel'));
+  for (const label of ["'Measurement'", "'Your choices'", "'Who quotes'", "'Rates'", "'Roofline'"]) assert.ok(fn.includes(label), `${label} is missing`);
+  assert.match(fn, /What sets this range/);
+  /* The installer spread is the windows' range, not the trades': those are
+     material and labour rates, and must not be explained as company pricing. */
+  const trades = fn.slice(fn.indexOf("} else {"));
+  assert.doesNotMatch(trades, /Who quotes/);
+  assert.ok((html.match(/rangeDrivers\('trades'\)/g) || []).length >= 2, 'both trades layouts');
+  assert.match(html, /rangeDrivers\('glazing'\)/);
+  assert.match(html, /'Walls & cladding — materials and labour'/);
+  assert.match(html, /'Every window — materials and fitting'/);
+});

@@ -39,3 +39,16 @@ test('homepage FAQ: the fears come first', () => {
   assert.deepStrictEqual(qs, ['Will someone call me?', 'How much do new windows cost in the UK?',
     'What happens to my photo?', 'Does Facet Pro do the work?']);
 });
+
+/* Developer brief, 6 Oct (§11–12): cost guides on the homepage, before the
+   FAQ, linking only to guides that exist, and carrying no prices of their own. */
+test('homepage: the cost guides block links real guides and copies no prices', () => {
+  const a = html.indexOf('id="cost-guides"');
+  assert.ok(a > 0 && a < html.indexOf('id="faq"'), 'before the FAQ');
+  const sec = html.slice(a, html.indexOf('</section>', a));
+  const slugs = [...sec.matchAll(/href="\/cost\/([a-z0-9-]+)"/g)].map(m => m[1]);
+  assert.ok(slugs.length >= 9);
+  const landing = fs.readFileSync(path.join(__dirname, '..', 'landing.js'), 'utf8');
+  for (const sl of slugs) assert.ok(landing.includes(`'${sl}'`) || landing.includes(`"${sl}"`) || landing.includes(sl), `${sl} is not a guide`);
+  assert.doesNotMatch(sec.replace(/<!--[\s\S]*?-->/g, ''), /£|&pound;/, 'a price copied onto the homepage goes stale');
+});

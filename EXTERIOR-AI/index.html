@@ -1172,6 +1172,44 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
     </div>
   </section>
 
+  <!-- Cost guides on the homepage (developer brief, 6 Oct, §11–12): they were
+       in the footer only. Google search → useful answer → the visualiser, so
+       the homepage points at the answers too. No prices here on purpose: the
+       guides compute theirs from catalogue.json, and a figure copied onto
+       this page would be the one that went stale. -->
+  <section data-page="home" id="cost-guides" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8 scroll-mt-24" aria-labelledby="cost-guides-heading">
+    <p class="text-base font-semibold text-zinc-600">Cost guides</p>
+    <h2 id="cost-guides-heading" class="mt-1 serif text-[26px] md:text-[32px] tracking-tight">What things cost, worked through.</h2>
+    <p class="mt-2 text-lg leading-6 text-zinc-600 max-w-[64ch]">Typical UK prices for each job, and what moves them. Then see yours on your own house.</p>
+    <div class="mt-6 grid gap-6 md:grid-cols-3">
+      <div>
+        <h3 class="text-base font-semibold text-zinc-600">Windows</h3>
+        <ul class="mt-2 grid gap-3">
+          <li><a href="/cost/window-replacement-cost-uk" class="block h-full rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4 hover:border-zinc-400 transition"><span class="text-lg font-medium text-zinc-900">Window replacement cost &rarr;</span><span class="mt-1 block text-base leading-6 text-zinc-600">What a typical UK house pays, window by window.</span></a></li>
+          <li><a href="/cost/window-replacement-calculator" class="block h-full rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4 hover:border-zinc-400 transition"><span class="text-lg font-medium text-zinc-900">Window cost calculator &rarr;</span><span class="mt-1 block text-base leading-6 text-zinc-600">Your house, not an average: count, sizes and style.</span></a></li>
+          <li><a href="/cost/anthracite-windows-cost" class="block h-full rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4 hover:border-zinc-400 transition"><span class="text-lg font-medium text-zinc-900">Anthracite windows &rarr;</span><span class="mt-1 block text-base leading-6 text-zinc-600">What the colour adds, and when it is worth it.</span></a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="text-base font-semibold text-zinc-600">Doors</h3>
+        <ul class="mt-2 grid gap-3">
+          <li><a href="/cost/front-door-replacement-cost" class="block h-full rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4 hover:border-zinc-400 transition"><span class="text-lg font-medium text-zinc-900">Front door cost &rarr;</span><span class="mt-1 block text-base leading-6 text-zinc-600">uPVC or composite, fitted with the old door taken away.</span></a></li>
+          <li><a href="/cost/composite-door-cost" class="block h-full rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4 hover:border-zinc-400 transition"><span class="text-lg font-medium text-zinc-900">Composite door cost &rarr;</span><span class="mt-1 block text-base leading-6 text-zinc-600">What you get for the extra over uPVC.</span></a></li>
+          <li><a href="/cost/bifold-doors-cost" class="block h-full rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4 hover:border-zinc-400 transition"><span class="text-lg font-medium text-zinc-900">Bifold doors &rarr;</span><span class="mt-1 block text-base leading-6 text-zinc-600">Width, panels and the opening they need.</span></a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="text-base font-semibold text-zinc-600">Outside the house</h3>
+        <ul class="mt-2 grid gap-3">
+          <li><a href="/cost/fascia-soffit-replacement-cost" class="block h-full rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4 hover:border-zinc-400 transition"><span class="text-lg font-medium text-zinc-900">Fascias &amp; soffits &rarr;</span><span class="mt-1 block text-base leading-6 text-zinc-600">The roofline: what is priced by the metre, and why.</span></a></li>
+          <li><a href="/cost/new-roof-cost" class="block h-full rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4 hover:border-zinc-400 transition"><span class="text-lg font-medium text-zinc-900">New roof cost &rarr;</span><span class="mt-1 block text-base leading-6 text-zinc-600">Roof area, the tiles, and the scaffold that goes with it.</span></a></li>
+          <li><a href="/cost/house-rendering-cost" class="block h-full rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4 hover:border-zinc-400 transition"><span class="text-lg font-medium text-zinc-900">Rendering cost &rarr;</span><span class="mt-1 block text-base leading-6 text-zinc-600">Render over brick, priced by the square metre.</span></a></li>
+        </ul>
+      </div>
+    </div>
+    <p class="mt-5 text-lg"><a href="/cost" class="underline underline-offset-2 inline-flex items-center min-h-[44px]">All cost guides &rarr;</a></p>
+  </section>
+
   <section data-page="home" id="faq" class="rounded-2xl bg-white border border-zinc-200 p-6 md:p-8" aria-labelledby="faq-heading">
     <h2 id="faq-heading" class="serif text-[26px] md:text-[32px] tracking-tight">Questions homeowners ask</h2>
     <div class="mt-6 divide-y divide-zinc-200 border-y border-zinc-200">
@@ -5760,7 +5798,7 @@ function renderEstimatePanelOnly() {
    for a roof read "walls & cladding, fitted" in the includes list under a
    roof-only figure. The engine already reports which trades it priced; this
    reads that rather than restating the assumption. */
-const PRICED_TRADE_LINES = { cladding: 'Walls & cladding, fitted', roof: 'Roof, fitted', trim: 'Fascia, soffit & guttering' };
+const PRICED_TRADE_LINES = { cladding: 'Walls & cladding — materials and labour', roof: 'Roof — materials and labour', trim: 'Fascia, soffit & guttering — materials and labour' };
 const SCAFFOLD_TRADE_WORDS = { cladding: 'the walls', roof: 'the roof', trim: 'the roofline' };
 /* computePrice charges one scaffold whatever mix of these trades is priced,
    which is the best reason to do them together — and the page never said so. */
@@ -5821,6 +5859,72 @@ function photoChangedPriceLine(spread, n, doorOnly) {
     : `we counted ${n} window${n === 1 ? '' : 's'}, at the sizes and styles in your photo.`;
   return h('p', { className: 'mt-2 text-base leading-7 text-white/85' },
     `${moved > 0 ? 'Up' : 'Down'} from ${typical} for ${houseWord}, because this is priced from your photo: ${how}`);
+}
+
+/* What sets this range (developer brief, 6 Oct, §5: "do not make the range
+   look arbitrary"). The reasons this visitor's figure is a range and not a
+   number, each in terms of their own estimate rather than in general:
+   what we measured and what we assumed, the choices that move it, and —
+   for windows and doors, where it is the biggest part — which company
+   quotes. Walls, roof and roofline are priced from material and labour
+   rates, so the installer line is not claimed for them. */
+function rangeDrivers(kind) {
+  const rows = [];
+  const nameOf = (list, id) => (id && id !== 'none' && (list || []).find(x => x.id === id)?.name) || null;
+  if (kind === 'glazing') {
+    const g = state.glazing || {};
+    const n = g.windowCount;
+    const doorOnly = g.price?.windowsIncluded === false;
+    if (!doorOnly && Number.isFinite(n)) {
+      rows.push(['Measurement', ({
+        photo_door: `${n} window${n === 1 ? '' : 's'} counted and sized from your photo. An installer measures each one on survey.`,
+        photo_count: `${n} window${n === 1 ? '' : 's'} counted from your photo, at typical sizes — your front door was not in shot to measure against.`,
+        manual_entry: `${n} window${n === 1 ? '' : 's'} — the number you gave us, at typical sizes.`,
+      })[g.countSource] || `${n} windows — typical for this kind of house. Add a photo and we will count yours.`]);
+    }
+    const wd = state.catalogue?.windowsDoors || {};
+    const spec = [
+      doorOnly ? null : nameOf(wd.windowStyles, state.prefs.windowStyleId),
+      nameOf(wd.colours, state.prefs.windowDoorColourId),
+      nameOf(state.catalogue?.glazing?.materials, state.prefs.windowMaterialId),
+      state.prefs.windowBarsId === 'georgian' ? 'Georgian bars' : null,
+      nameOf(wd.doorStyles, state.prefs.doorStyleId),
+    ].filter(Boolean);
+    if (spec.length) rows.push(['Your choices', `${spec.join(', ')}. Change any of them above and the range moves with it.`]);
+    rows.push(['Who quotes', 'Companies charge different prices for the same job. The low end is what a keen installer typically charges; the high end is what others charge for exactly the same work.']);
+  } else {
+    const price = state.price || {};
+    const priced = price.priced || [];
+    const src = String(price.footprintSource || '');
+    const m2 = price.footprintM2;
+    if (priced.includes('cladding') || priced.includes('roof')) {
+      rows.push(['Measurement', /^photo_(door|coverage)$/.test(src)
+        ? `Wall area measured from your photo${m2 ? `, about ${m2} m²` : ''}. A photograph cannot measure to the centimetre, so the range allows for that.`
+        : src === 'manual_entry'
+          ? `The wall area you gave us${m2 ? `, ${m2} m²` : ''}.`
+          : `A typical wall area for this kind of house${m2 ? `, about ${m2} m²` : ''}, with room either side because it is not yet yours.`]);
+    }
+    if (priced.includes('trim')) {
+      rows.push(['Roofline', price.trimLengthM
+        ? `${price.trimLengthM} m of roof edge${state.trimLengthM ? ', the length you gave us' : ' — a typical run, with room either side'}.`
+        : 'A typical run of roof edge, with room either side.']);
+    }
+    const spec = [
+      priced.includes('cladding') ? state.cladding?.name : null,
+      priced.includes('roof') ? state.roof?.name : null,
+      priced.includes('trim') ? state.trim?.name : null,
+    ].filter(Boolean);
+    if (spec.length) rows.push(['Your choices', `${spec.join(', ')}. Each finish has its own material and labour rate.`]);
+    rows.push(['Rates', 'UK material and labour rates, with scaffolding, waste and VAT. Your installer confirms the final price after a survey.']);
+  }
+  if (!rows.length) return null;
+  return h('div', { id: `range-drivers-${kind}`, className: 'mt-4 rounded-xl bg-white/5 border border-white/10 p-3' }, [
+    h('div', { className: 'text-base text-white/80 font-semibold' }, 'What sets this range'),
+    h('dl', { className: 'mt-2 grid gap-2' }, rows.map(([k, v]) => h('div', {}, [
+      h('dt', { className: 'text-base font-semibold text-white/90' }, k),
+      h('dd', { className: 'text-base leading-6 text-white/80' }, v),
+    ]))),
+  ]);
 }
 
 function buildGlazingLedPanel() {
@@ -5905,9 +6009,9 @@ function buildGlazingLedPanel() {
     h('div', { className: 'mt-5 rounded-xl bg-white/5 border border-white/10 p-3' }, [
       h('div', { className: 'text-base text-white/80 font-semibold' }, 'Includes'),
       h('div', { className: 'mt-2 grid gap-1 text-base text-white/80' }, [
-        doorOnly ? `The ${doorNoun}, supplied and fitted` : 'Every window, supplied and fitted',
+        doorOnly ? `The ${doorNoun} — materials and fitting` : 'Every window — materials and fitting',
         // The door was in the price and missing from this list.
-        !doorOnly && hasDoor ? `The ${doorNoun}, supplied and fitted` : null,
+        !doorOnly && hasDoor ? `The ${doorNoun} — materials and fitting` : null,
         g.price.access ? 'Access for the upstairs windows' : null,
         'Taking the old frames away',
         'VAT (20%)',
@@ -5935,11 +6039,10 @@ function buildGlazingLedPanel() {
         : null,
     ]),
 
-    /* Why it is a range, said here rather than only two screens down. Same
-       explanation the windows section gives, shortened: the spread is which
-       company quotes you, not how roughly we measured. */
-    h('p', { className: 'mt-4 text-base leading-7 text-white/85' },
-      `Why a range? Companies charge different prices for the same job. The lower figure is what a keen installer typically charges; the higher figure is what others charge for exactly the same ${doorOnly ? (isRearOpening(doorId) ? 'doors' : 'door') : hasDoor ? 'windows and door' : 'windows'}.`),
+    /* Why it is a range, said here rather than only two screens down — now
+       as the reasons for this visitor's figure (brief §5), with the
+       installer spread as one of them. */
+    rangeDrivers('glazing'),
 
     h('p', { className: 'mt-3 text-base leading-7 text-white/80' },
       'Walls, roof and roofline aren’t in this — you told us they’re staying as they are. Turn any of them back on above and they’ll be priced here too.'),
@@ -6365,6 +6468,7 @@ function buildPricePanel(price, priceRow) {
         h('div', { className: 'mt-2 grid gap-1 text-base text-white/80' },
           pricedIncludes(priced).map(item => h('div', {}, `• ${item}`))),
       ]),
+      rangeDrivers('trades'),
       glazingAlongside(),
 
       /* "Add a photo above" is right for somebody who has not, and an insult
@@ -6462,6 +6566,7 @@ function buildPricePanel(price, priceRow) {
       : null,
     h('p', { className: 'mt-2 text-base leading-7 text-white/85' },
       'Including materials, labour, scaffolding, waste and VAT.'),
+    rangeDrivers('trades'),
     glazingAlongside(),
     /* 0088 (5 Oct, review): say WHY the final price can move, beside the range,
        not only that it can — local labour and material prices, the installer,
