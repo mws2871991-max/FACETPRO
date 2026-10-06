@@ -55,7 +55,10 @@ test('a submission is refused, and says why in plain English', async () => {
   const { status, body } = await post('/api/lead', PERSONAL);
   assert.strictEqual(status, 503);
   assert.strictEqual(body.reason, 'lead_capture_off');
-  assert.match(body.error, /privacy policy/i);
+  /* Live check, 6 Oct: the privacy policy is published, so the old reason
+     ("finishing our privacy policy first") was out of date. */
+  assert.match(body.error, /aren’t open yet/i);
+  assert.doesNotMatch(body.error, /privacy policy/i);
   // It should not read like a fault.
   assert.ok(!/error|failed|wrong/i.test(body.error), `sounds like a breakage: ${body.error}`);
 });

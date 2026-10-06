@@ -206,3 +206,24 @@ test('both estimate panels say what sets the range', () => {
   assert.match(html, /'Walls & cladding — materials and labour'/);
   assert.match(html, /'Every window — materials and fitting'/);
 });
+
+/* Live check, 6 Oct (build e422fb44b480). */
+test('a visit with no journey opens on windows only — roof, roofline and walls off', () => {
+  const fn = html.slice(html.indexOf('function applyHouseTypePreset'), html.indexOf('async function autoRenderStart'));
+  assert.match(fn, /for \(const group of \['cladding', 'trim', 'roof'\]\) \{\s*if \(state\[group\]\?\.id !== 'none'\) \{ state\[group\] = findSwatch\('none'\)/);
+});
+
+test('no price in the estimate panel before the picture it prices', () => {
+  assert.match(html, /const priceHeldForReveal = \(\) => !!state\.uploadedImg && !state\.everRevealed && !!\(state\.rendering \|\| state\.renderUrl\);/);
+  assert.ok((html.match(/priceHeldForReveal\(\)\s*\?\s*heldPrice\(/g) || []).length >= 2, 'both panels hold it');
+});
+
+test('Reveal redraws the question and the panels, and brings the picture into view', () => {
+  const i = html.indexOf("}, 'Reveal my design →'),");
+  const click = html.slice(i - 2200, i);
+  for (const call of ['renderUploadOnly();', 'renderEstimatePanelOnly();', 'renderTotalBarOnly();', "scrollIntoView({ behavior: 'smooth', block: 'center' })"]) assert.ok(click.includes(call), call);
+});
+
+test('the quotes message no longer blames the privacy policy', () => {
+  assert.doesNotMatch(html, /finishing our privacy policy first/);
+});

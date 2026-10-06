@@ -4370,7 +4370,7 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
      switch is that no personal data is handled at all. */
   if (!LEAD_CAPTURE) {
     return res.status(503).json({
-      error: 'We’re not taking details just yet — we’re finishing our privacy policy first. Everything else here works, so do have a look around.',
+      error: 'Installer quotes aren’t open yet. Save your design and your code will still work when they are.',
       reason: 'lead_capture_off',
     });
   }

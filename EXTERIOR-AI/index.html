@@ -5556,6 +5556,21 @@ function buildVisualizer() {
                          waits for the FIRST design, and "Full makeover" clears
                          state.revealed to run the reveal again. */
                       state.everRevealed = true;
+                      /* The rest of the page follows the reveal (live check,
+                         6 Oct). The question "What would you like us to
+                         price?" lives in the upload panel, which this click
+                         never redrew, so it never appeared; the estimate panel
+                         was holding its figure for the reveal. And the picture
+                         is brought into view if it is off screen — a direct
+                         tap, so no lateness guard is needed. */
+                      renderUploadOnly();
+                      renderEstimatePanelOnly();
+                      renderTotalBarOnly();
+                      requestAnimationFrame(() => {
+                        const pic = document.getElementById('after-pane') || document.getElementById('visualizer-section');
+                        const r = pic?.getBoundingClientRect();
+                        if (r && (r.top < 60 || r.bottom > window.innerHeight)) pic.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      });
                     },
                   }, 'Reveal my design →'),
                 ]),
@@ -5958,6 +5973,13 @@ function rangeDrivers(kind) {
   ]);
 }
 
+/* No figure before the picture it prices (live check, 6 Oct). The bottom bar
+   has held its price since the 5 Oct phone walk; the estimate panel was still
+   filling during the scan. Same rule: while a first picture is being made or
+   waiting to be revealed, the panel says the price is coming with it. */
+const priceHeldForReveal = () => !!state.uploadedImg && !state.everRevealed && !!(state.rendering || state.renderUrl);
+const heldPrice = (cls) => h('div', { id: 'estimate-total', className: cls.replace('serif', '') + ' text-white/80' }, 'Your price appears with your design');
+
 function buildGlazingLedPanel() {
   const g = state.glazing;
   const label = journeyLabel(state.journey);
@@ -6012,8 +6034,10 @@ function buildGlazingLedPanel() {
     ]),
 
     h('div', { className: 'mt-5' }, [
-      h('div', { id: 'estimate-total', className: 'serif text-[22px] sm:text-[26px] md:text-[30px] leading-tight measured' },
-        `${fmtMoney(spread.low)} – ${fmtMoney(spread.high)}`),
+      priceHeldForReveal()
+        ? heldPrice('text-lg leading-tight')
+        : h('div', { id: 'estimate-total', className: 'serif text-[22px] sm:text-[26px] md:text-[30px] leading-tight measured' },
+            `${fmtMoney(spread.low)} – ${fmtMoney(spread.high)}`),
       h('div', { className: 'mt-2 text-base text-white/80' },
         doorOnly
           ? `Your ${doorNoun}, supplied and fitted`
@@ -6584,8 +6608,10 @@ function buildPricePanel(price, priceRow) {
        leading-tight rather than leading-none, because at these sizes a long
        range can still wrap on a narrow phone and leading-none makes two lines
        collide. */
-    h('div', { id: 'estimate-total', className: 'mt-2 serif text-[22px] sm:text-[28px] md:text-[34px] leading-tight measured' },
-      range ? `${fmtMoney(range.low)} – ${fmtMoney(range.high)}` : fmtMoney(price.total)),
+    priceHeldForReveal()
+      ? heldPrice('mt-2 text-lg leading-tight')
+      : h('div', { id: 'estimate-total', className: 'mt-2 serif text-[22px] sm:text-[28px] md:text-[34px] leading-tight measured' },
+          range ? `${fmtMoney(range.low)} – ${fmtMoney(range.high)}` : fmtMoney(price.total)),
     /* §5. The difference the last choice made, under the number it moved.
        Subtle by instruction and by judgement — it is a footnote to the total,
        not a running commentary, and it is replaced rather than accumulated so
@@ -9294,7 +9320,7 @@ function buildSaveFraming() {
 
       /* The caveat, under the offer rather than over it. */
       h('p', { className: 'mt-6 pt-4 border-t border-white/10 text-base leading-7 text-white/80 max-w-[60ch]' },
-        'Installer quotes aren’t open yet — we’re finishing our privacy policy first, and we’d rather do that properly than take your details before it’s ready. Your code will still work when they are.'),
+        'Installer quotes aren’t open yet. Save your design and your code will still work when they are.'),
 
       /* And the choices, which the picture does not carry.
 
@@ -11409,6 +11435,14 @@ function applyHouseTypePreset() {
       if (state.prefs[k] == null) { state.prefs[k] = v; openedOnWindows = true; }
     }
     groups = [];
+    /* And the rest off, as ?journey=windows has it (live check, 6 Oct: a
+       homepage visit opened on Ink Trim + Slate Roof at £30,500 – £40,000
+       under a demo promising windows at £5–10k). The page loads with trim
+       and roof switched on unless a journey excludes them, and the line
+       above set the windows without switching those off. */
+    for (const group of ['cladding', 'trim', 'roof']) {
+      if (state[group]?.id !== 'none') { state[group] = findSwatch('none'); openedOnWindows = true; }
+    }
   }
 
   /* Nor the trade they came for. The journey already picked its opening swatch
