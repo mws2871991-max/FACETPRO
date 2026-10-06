@@ -329,8 +329,9 @@ test('a door costs the homeowner what the trade says it settles at', () => {
      already been done. It had not. So this asserts the number a homeowner
      actually reads, not the number in the file. */
   /* uPVC, composite, double and sliding: Mike's settled prices, 30 September
-     2026. Bifold: the figure from 6 August, unchanged. */
-  const SETTLED_INC_VAT = { upvc: 1498, composite: 2743, double: 2693, sliding: 2090, bifold: 4000 };
+     2026. Bifold: the figure from 6 August, unchanged. uPVC and composite
+     taken down 20% by Mike on 6 October ("they are too much"). */
+  const SETTLED_INC_VAT = { upvc: 1199, composite: 2195, double: 2693, sliding: 2090, bifold: 4000 };
   const gross = 1 + (RATES.vatPct / 100);
   for (const [id, inc] of Object.entries(SETTLED_INC_VAT)) {
     const door = RATES.doors.find(d => d.id === id);

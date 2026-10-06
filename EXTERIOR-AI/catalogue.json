@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "updated": "2026-08-06",
   "note": "Based on current UK material and labour rates, including scaffolding, a waste allowance and VAT.",
   "internalNote": "Real UK material rates and quote methodology, taken from the actual facetpro.co.uk production backend (material_detector.py and quote_generator.py) — not invented placeholders. Not shown to homeowners; `note` is the customer-facing line rendered under the price breakdown.",
@@ -674,12 +674,12 @@
       {
         "id": "upvc",
         "name": "uPVC front or back door",
-        "supplyFit": 1248
+        "supplyFit": 999
       },
       {
         "id": "composite",
         "name": "Composite Door",
-        "supplyFit": 2286
+        "supplyFit": 1829
       },
       {
         "id": "double",
@@ -717,7 +717,7 @@
     "openerCost": 324,
     "typicalOpeners": 1,
     "openerNote": "Cost of one opening light, net, on top of the band price. The bands assume one opener, which is the common case. Derived from a standard window quoted at £950 with none and £2,247 with two, less the 40% discount: £570 and £1,348 inclusive, so £389 inclusive per opener, £324 net. Flat rather than scaled by band, because an opening light is hardware and frame rather than glass — it costs much the same in a small window as a large one. One measured product; revisit when there are more.",
-    "doorNote": "Prices are net; VAT is added at the end. uPVC, composite, double (French) and sliding patio doors are Mike Sheehan's settled prices, 30 September 2026, fitted inc VAT: uPVC back door £1,498, composite £2,743, French/double doors £2,693, sliding patio £2,090 — stored net (divided by 1.2). The bifolds are unchanged: derived from Anglian's list price less the 40% discount routinely available, divided by 1.6 to bring it to the keener installer. Bifold width rests on two points only — the 2.4 m entry and a 3 m unit at £13,304 list — so anything between them is not modelled and anything above 3 m is not priced."
+    "doorNote": "Prices are net; VAT is added at the end. uPVC, composite, double (French) and sliding patio doors are Mike Sheehan's settled prices, 30 September 2026, fitted inc VAT: uPVC back door £1,498, composite £2,743, French/double doors £2,693, sliding patio £2,090 — stored net (divided by 1.2). On 6 October 2026 Mike took 20% off the uPVC and composite doors as too high: uPVC now £1,199 and composite £2,195 fitted inc VAT (net £999 and £1,829; whole pounds net, so £1 over the exact 20%). The bifolds are unchanged: derived from Anglian's list price less the 40% discount routinely available, divided by 1.6 to bring it to the keener installer. Bifold width rests on two points only — the 2.4 m entry and a 3 m unit at £13,304 list — so anything between them is not modelled and anything above 3 m is not priced."
   },
   "driveways": {
     "note": "Driveway planning estimates. Size is told, not measured: a front photograph cannot measure ground seen at an angle.",
