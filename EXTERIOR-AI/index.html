@@ -5982,6 +5982,13 @@ const FOOTPRINT_BADGE = {
    reach is the same as no reason. */
 function photoNotUsed() {
   if (!state.uploadedImg) return null;
+  /* Only when the wall area is used (demo handoff, bug 6). Walls are priced
+     by it and the roof from it; the roofline is priced by a typical length of
+     roof edge and never reads it. A roofline-only job said "We could not
+     measure your house from this photo" beside windows counted from that same
+     photo — true of a number this estimate does not use. */
+  const priced = state.price?.priced || [];
+  if (!priced.includes('cladding') && !priced.includes('roof')) return null;
   const source = String(state.price?.footprintSource || '');
 
   /* Measured, then refused by the house-type band. measure.js keeps the note
@@ -6321,7 +6328,7 @@ function buildPricePanel(price, priceRow) {
 
   if (!seenTheHouse) {
     return h('div', { className: 'rounded-2xl bg-zinc-900 text-white p-5' }, [
-      h('h3', { className: 'text-base text-white/80 font-semibold' }, 'Your estimate'),
+      h('h3', { className: 'text-base text-white/80 font-semibold' }, tradesHeading(priced, 'Your estimate')),
 
       // Light card so the dark-filled selected chip has something to read
       // against inside the dark estimate panel.
@@ -6347,6 +6354,7 @@ function buildPricePanel(price, priceRow) {
         h('div', { className: 'mt-2 grid gap-1 text-base text-white/80' },
           pricedIncludes(priced).map(item => h('div', {}, `• ${item}`))),
       ]),
+      glazingAlongside(),
 
       /* "Add a photo above" is right for somebody who has not, and an insult
          to somebody whose photo we could not use. */
@@ -6394,7 +6402,7 @@ function buildPricePanel(price, priceRow) {
        it is a preamble, not a headline competing with the price. */
     h('p', { className: 'serif text-lg leading-tight text-white/80' }, 'Your home. Your design.'),
     h('div', { className: 'mt-2 flex items-center justify-between gap-2 flex-wrap' }, [
-      h('h3', { className: 'text-base text-white/80 font-semibold' }, 'Your estimated project cost'),
+      h('h3', { className: 'text-base text-white/80 font-semibold' }, tradesHeading(priced, 'Your estimated project cost')),
       /* The badge has to say which of these it actually is.
 
          It read "Sized to your home" for everything except a typed figure —
@@ -6443,6 +6451,7 @@ function buildPricePanel(price, priceRow) {
       : null,
     h('p', { className: 'mt-2 text-base leading-7 text-white/85' },
       'Including materials, labour, scaffolding, waste and VAT.'),
+    glazingAlongside(),
     /* 0088 (5 Oct, review): say WHY the final price can move, beside the range,
        not only that it can — local labour and material prices, the installer,
        and what a survey finds. Then two ways to keep it before asking anyone
@@ -6740,6 +6749,56 @@ function renderGlazingConsumers() {
 
    Only once there is something real to show. A bar that says nothing is
    furniture. */
+/* What a windows-and-doors figure covers: "5 windows · 1 door". Shared by the
+   bar and the estimate panel so the two cannot describe one figure two ways. */
+function glazingCovers(glaz) {
+  const parts = [];
+  const n = glaz.windowCount;
+  if (glaz.price.windowsIncluded !== false) {
+    parts.push(`${n} window${n === 1 ? '' : 's'}${frontOnlyPrice(glaz) ? ' (front only)' : ''}`);
+  }
+  /* 'none' is a string, and a truthy one. Declining the door — which the
+     windows journey does for everybody who arrives on it — still counted as
+     choosing one, so the bar read "8 windows · 1 door" under a figure that
+     correctly priced no door at all. */
+  if (state.prefs.doorStyleId && state.prefs.doorStyleId !== 'none') parts.push('1 door');
+  return parts;
+}
+
+/* The windows-and-doors figure, inside the trades panel (demo handoff, bug 6).
+
+   With Ink Trim chosen as well as windows, this panel switched to the trades
+   layout and showed the roofline alone, under "Your estimated project cost" —
+   the windows were priced, in the bar, and missing from the panel that calls
+   itself the project. Shown here as the bar shows it: its own figure, labelled,
+   and not added in, because one is a range from what jobs sell for and the
+   other a total from material and labour rates. */
+function glazingAlongside() {
+  const glaz = state.glazing;
+  if (!glaz?.price) return null;
+  const r = publishedRange(glaz);
+  if (!r) return null;
+  return h('div', { className: 'mt-4 rounded-xl bg-white/5 border border-white/10 p-3' }, [
+    h('div', { className: 'text-base text-white/80 font-semibold' },
+      ['Plus windows & doors', ...glazingCovers(glaz)].join(' · ')),
+    h('div', { className: 'mt-1 serif text-[22px] sm:text-[26px] leading-tight' }, `${fmtMoney(r.low)} – ${fmtMoney(r.high)}`),
+    h('p', { className: 'mt-1 text-base leading-6 text-white/80' },
+      'Priced separately and not added in: windows and doors from what these jobs sell for, the rest from material and labour rates.'),
+  ]);
+}
+
+/* The heading over the trades figure says which trades, once there is a
+   windows figure beside it — "Your estimate" over the roofline alone read as
+   the whole job. */
+const TRADE_HEADING_WORDS = { cladding: 'walls', roof: 'roof', trim: 'roofline' };
+function tradesHeading(priced, fallback) {
+  if (!state.glazing?.price) return fallback;
+  const words = priced.map(t => TRADE_HEADING_WORDS[t]).filter(Boolean);
+  if (!words.length) return fallback;
+  const list = words.length === 1 ? words[0] : `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`;
+  return `Your ${list} estimate`;
+}
+
 function buildTotalBar() {
   const price = state.price;
   const glaz = state.glazing;
@@ -6765,18 +6824,7 @@ function buildTotalBar() {
      the windows were being priced, and "95 m² of wall" whether or not the
      walls were. A composition that lists work nobody chose is the same lie as
      a total that includes it. */
-  const parts = [];
-  if (glaz?.price) {
-    const n = glaz.windowCount;
-    if (glaz.price.windowsIncluded !== false) {
-      parts.push(`${n} window${n === 1 ? '' : 's'}${frontOnlyPrice(glaz) ? ' (front only)' : ''}`);
-    }
-    /* 'none' is a string, and a truthy one. Declining the door — which the
-       windows journey does for everybody who arrives on it — still counted as
-       choosing one, so the bar read "8 windows · 1 door" under a figure that
-       correctly priced no door at all. */
-    if (state.prefs.doorStyleId && state.prefs.doorStyleId !== 'none') parts.push('1 door');
-  }
+  const parts = glaz?.price ? glazingCovers(glaz) : [];
   if (price?.footprintM2 && price.priced?.includes('cladding')) parts.push(`${price.footprintM2} m² of wall`);
   if (price?.priced?.includes('roof')) parts.push('roof');
   if (price?.priced?.includes('trim')) parts.push('roofline');
