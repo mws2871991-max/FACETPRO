@@ -93,6 +93,7 @@ way to get this deployment wrong.
 | `RESEND_API_KEY` | for email | Without it leads are stored but nobody is notified. |
 | `LEAD_NOTIFY_EMAIL` | for email | Where new leads go. **No fallback** — unset means the email is skipped, not sent to the customer. |
 | `LEAD_FROM_EMAIL` | for email | Must be on a **domain verified at resend.com/domains**. On Resend's test sender nothing reaches real homeowners, and the design-pack email refuses to send at all. |
+| `ALERT_EMAIL` | no | Where operator alerts go (alerts.js): caps at 80% and used up, a lead that failed to reach a buyer, email failures, crashes and error bursts. Defaults to `LEAD_NOTIFY_EMAIL`. Needs `RESEND_API_KEY` and `LEAD_FROM_EMAIL`; without them an alert is only a log line. At most one email per alert per hour. |
 | `SITE_URL` | recommended | Absolute base for links inside emails. `https://www.facetpro.co.uk`. |
 | `SITE_MODE` | no | Defaults to `beta`. Set `live` to drop the beta badge and notices. |
 | `DAILY_DETECT_LIMIT` | no | Default 300 (was 50 until launch). Photo analyses per UTC day, whole site. |

@@ -6454,8 +6454,8 @@ function basisList(price) {
   }
   if (b.roof) row('estimated', 'Roof, front and back', `about ${b.roof.m2} m²`, 'Worked out from the size of the house. A roof can’t be measured from the ground — your roofer will measure it.');
   if (b.trim) {
-    if (b.trim.kind === 'told') row('told', 'Roof edge (fascias, soffits and gutters)', `${b.trim.m} m`);
-    else row('estimated', 'Roof edge (fascias, soffits and gutters)', `about ${b.trim.m} m`, `Typical for ${house.replace(/^a typical /, 'a ')}, not measured.`);
+    if (b.trim.kind === 'told') row('told', 'Roofline (fascias, soffits and gutters)', `${b.trim.m} m`);
+    else row('estimated', 'Roofline (fascias, soffits and gutters)', `about ${b.trim.m} m`, `Typical for ${house.replace(/^a typical /, 'a ')}, not measured.`);
   }
   if (!rows.length) return null;
   return h('div', { className: 'mt-3' }, [
@@ -9494,7 +9494,7 @@ function buildSaveFraming() {
          priced together, so forcing one answer would contradict it. */
       const items = [
         ['windows', 'Windows'], ['doors', 'Doors'], ['roof', 'Roof'],
-        ['cladding', 'Walls (render or cladding)'], ['roofline', 'Roof edge and gutters (fascias, soffits, guttering)'],
+        ['cladding', 'Walls (render or cladding)'], ['roofline', 'Roofline (fascias, soffits, guttering)'],
         ['multiple', 'Several of these'], ['whole-exterior', 'The whole exterior'],
       ];
       const toggle = (id) => {

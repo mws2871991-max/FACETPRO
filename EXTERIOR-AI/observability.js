@@ -149,6 +149,11 @@ function timingSummary() {
 let sink = null;
 function setSink(fn) { sink = typeof fn === 'function' ? fn : null; }
 
+/* Others who want every event as it happens (alerts.js). Same rule as the
+   sink: a listener that throws never costs the caller anything. */
+const listeners = [];
+function addListener(fn) { if (typeof fn === 'function') listeners.push(fn); }
+
 function toSink(entry) {
   if (!sink) return;
   try {
@@ -169,6 +174,7 @@ function record(kind, message, detail) {
   /* After scrubbing, never before: what is persisted is what an operator may
      read, and it must have had a homeowner taken out of it first. */
   toSink(entry);
+  for (const fn of listeners) { try { fn(entry); } catch (_) { /* never in the way */ } }
   /* Oldest out. Two hundred is enough to see a pattern and small enough that
      a crash loop cannot exhaust memory before the platform restarts us. */
   while (events.length > MAX_EVENTS) events.shift();
@@ -225,4 +231,5 @@ const reset = () => {
 };
 
 module.exports = {
+  addListener,
   setSink, record, time, outcome, timingSummary, summary, reset, MAX_EVENTS, _internals: { scrubText, scrubDetail } };

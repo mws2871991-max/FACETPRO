@@ -10,6 +10,10 @@ const emails = require('./emails');
 const delivery = require('./delivery');
 const retention = require('./retention');
 const obs = require('./observability');
+/* Emails the operator when the caps run low, a lead fails to deliver, or
+   errors cluster (alerts.js). Silent until email is configured. */
+const alerts = require('./alerts');
+obs.addListener((entry) => alerts.onEvent(entry));
 /* Events outlive the container now. observability.js keeps depending on
    nothing and is handed somewhere to write; store decides whether that is
    Postgres or a file. Failures inside the sink are swallowed there, because
@@ -699,6 +703,7 @@ function consumeDailyQuota(kind, res, req) {
   }
 
   usage[kind] += 1;
+  alerts.usage(kind, usage[kind], limit);
   if (mine) { mine[kind] += 1; perIpUsage.set(key, mine); }
   persistUsage();
   reconcileUsage(kind);        // the count a deploy cannot reset
@@ -1137,6 +1142,7 @@ async function deliverAndRecord(lead, plan) {
     // deliverTo never throws, so this is defensive — but losing the record
     // silently is the one outcome that must not happen.
     console.error(`Lead ${lead.id}: delivery crashed:`, err.message);
+    alerts.deliveryFailed({ leadId: lead.id, recipientId: 'all buyers', status: null, error: err.message });
     await record('deliveries', { ts: new Date().toISOString(), leadId: lead.id, delivered: 0, failed: chosen.length, results: [], routing: routingRecord, crashed: err.message });
     return;
   }
@@ -1155,6 +1161,7 @@ async function deliverAndRecord(lead, plan) {
       at: r.at,
       ...(r.ok ? {} : { error: r.error }),
     });
+    if (!r.ok) alerts.deliveryFailed({ leadId: lead.id, recipientId: r.id, status: r.status, error: r.error });
   }
 
   const s = delivery.summarise(results);
@@ -1193,6 +1200,7 @@ async function deliverAndRecord(lead, plan) {
 }
 
 function recordNotificationFailure(lead, notification, kind = 'lead-notification') {
+  alerts.emailFailed(kind, notification?.error || notification?.reason);
   return record('notificationFailures', {
     ts: new Date().toISOString(),
     kind,
