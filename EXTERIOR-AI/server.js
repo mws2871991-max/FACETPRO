@@ -5350,6 +5350,9 @@ app.post('/api/funnel', perMinute(120, 'Too many requests — please wait a mome
   /* Which button on a guide sent them, only alongside a `from`: three values,
      allowlisted, a button and never a person. */
   const cta = from && CTA_PLACES.has(String(req.body?.cta || '')) ? String(req.body.cta) : null;
+  /* And which homepage button (developer brief §3, hero_cta_click), counted
+     apart so a guide's hero button and the homepage's never share a total. */
+  const homeCta = !from && stage === 'cta_clicked' && CTA_PLACES.has(String(req.body?.cta || '')) ? String(req.body.cta) : null;
 
   /* Answered before the write. A counter that fails must never cost a visitor
      their journey, and the browser is not waiting for anything useful. */
@@ -5363,6 +5366,7 @@ app.post('/api/funnel', perMinute(120, 'Too many requests — please wait a mome
     if (from) await store.countStage(`from/${from}:${stage}`);
     if (device) await store.countStage(`device/${device}:${stage}`);
     if (cta) await store.countStage(`cta/${cta}:${stage}`);
+    if (homeCta) await store.countStage(`home-cta/${homeCta}:${stage}`);
   }
   catch (err) { obs.record('funnel', 'could not record a stage', { stage, reason: err.message }); }
 });

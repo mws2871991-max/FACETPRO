@@ -745,8 +745,8 @@ renderDemo();
 /* The funnel the old homepage fed (/api/funnel → /ops): a visit counts as
    `landing` and `homepage_view`, a click through to the tool as `cta_clicked`. */
 (function(){
-  function send(stage){
-    var body=JSON.stringify({stage:stage,device:innerWidth<768?'mobile':'desktop'});
+  function send(stage,cta){
+    var body=JSON.stringify({stage:stage,device:innerWidth<768?'mobile':'desktop',cta:cta||undefined});
     try{ if(navigator.sendBeacon&&navigator.sendBeacon('/api/funnel',new Blob([body],{type:'application/json'})))return; }catch(e){}
     try{ fetch('/api/funnel',{method:'POST',headers:{'Content-Type':'application/json'},body:body,keepalive:true}).catch(function(){}); }catch(e){}
   }
@@ -765,7 +765,9 @@ renderDemo();
   var clicked=false;
   document.addEventListener('click',function(e){
     var a=e.target.closest&&e.target.closest('a[href^="/design"]');
-    if(a&&!clicked){clicked=true;send('cta_clicked');}
+    /* Which button (developer brief §3, hero_cta_click): the server already
+       counts cta_clicked per place for hero, header and end. */
+    if(a&&!clicked){clicked=true;send('cta_clicked',a.closest('header')?'header':a.closest('#start')?'end':a.closest('main > section:first-child')?'hero':undefined);}
   });
 })();
 </script>

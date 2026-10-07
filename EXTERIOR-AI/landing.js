@@ -1258,10 +1258,11 @@ const conservatoryCta = (siteUrl, slug) => `<div class="cta-block">
 </div>`;
 
 const cta = (siteUrl, slug) => (isConservatory(slug) ? conservatoryCta(siteUrl, slug) : `<div class="cta-block">
-  <!-- Mike's line for every guide (29 September): the page has just shown an
-       average, so the next step says why that is not your answer. -->
-  <h2>Don&rsquo;t estimate your house from an average.</h2>
-  <p><strong>Upload a photo and see yours.</strong> Every figure above is a typical house.
+  <!-- Mike's line for every guide (29 September), reworded to the developer
+       brief's (§11, 6 Oct): the page has just shown an average, so the next
+       step says why that is not your answer. -->
+  <h2>Your house isn&rsquo;t average.</h2>
+  <p><strong>See this project on your own home and get a planning estimate.</strong> Every figure above is a typical house.
      Start with one photograph of the front and we will find your windows, doors, roof and walls,
      estimate your wall area, and price your own elevation.</p>
   <!-- "Upload a photo", the same words as every button on the homepage. This

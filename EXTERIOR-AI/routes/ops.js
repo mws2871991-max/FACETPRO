@@ -181,6 +181,8 @@ module.exports = function opsRoutes({
       for (const [name, stage] of SEO_STEPS.slice(1)) row[name] = counts[`cta/${place}:${stage}`] || 0;
       if (Object.values(row).some(n => n > 0)) byCtaPlace[place] = row;
     }
+    /* The homepage's own buttons (developer brief §3, hero_cta_click). */
+    const homepageButtons = Object.fromEntries(['hero', 'header', 'end'].map(place => [place, counts[`home-cta/${place}:cta_clicked`] || 0]));
 
     /* The loop-backs, each against a step it can honestly be compared with.
 
@@ -218,7 +220,7 @@ module.exports = function opsRoutes({
     };
 
     res.setHeader('Cache-Control', 'no-store');
-    res.json({ days, keyKpi, funnel, branches, byJourney, byDevice, bySeoPage, byCtaPlace, byDay,
+    res.json({ days, keyKpi, funnel, branches, byJourney, byDevice, bySeoPage, byCtaPlace, byDay, homepageButtons,
       note: 'Counts are per stage, not per person — see the funnel table in store.js. '
         + 'byJourney counts only visitors who arrived on a journey; the totals above include everyone. '
         + 'byDevice splits by the width the page was rendered at, under 768px being mobile, and only covers stages recorded since that key shipped — an empty or short column is missing history rather than missing traffic. '

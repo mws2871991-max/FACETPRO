@@ -498,16 +498,17 @@ test('every cost page carries the six products, and marks the one it is about', 
   assert.ok(!roofMenu.includes('aria-current'), 'a page about something else marks nothing in the menu');
 });
 
-/* 29 September: one line on every guide, and five new pages. */
+/* 29 September: one line on every guide, and five new pages. Worded to the
+   developer brief's §11 on 7 October. */
 test('every guide ends with the same line, except the conservatory page', () => {
   for (const p of landing.COST_PAGES) {
     const html = landing.renderCostPage(p.slug, OPTS);
-    const has = html.includes('Don&rsquo;t estimate your house from an average.') && html.includes('Upload a photo and see yours.');
+    const has = html.includes('Your house isn&rsquo;t average.') && html.includes('See this project on your own home and get a planning estimate.');
     assert.strictEqual(has, !/conservator/.test(p.slug), p.slug);
   }
   for (const a of landing.AREA_PAGES) {
     const html = landing.renderAreaPage(a.slug, { ...OPTS, recipients: [] });
-    assert.ok(html.includes('Don&rsquo;t estimate your house from an average.'), a.slug);
+    assert.ok(html.includes('Your house isn&rsquo;t average.'), a.slug);
   }
 });
 
