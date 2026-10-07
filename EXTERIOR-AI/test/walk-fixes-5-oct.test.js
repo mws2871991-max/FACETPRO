@@ -43,7 +43,9 @@ test('the sales-process claim is about us, not about them (5 Oct)', () => {
      which we cannot substantiate, and which puts the reader's nerve on trial.
      What we can say is what our own figure does. */
   assert.doesNotMatch(code, /sales process can decide the price/i);
-  assert.match(code, /starting point doesn’t change because you’re a better negotiator/);
+  // Replaced by the priority fixes v2 (7 Oct), which softened the precision claim.
+  assert.match(code, /Two neighbours\. Same street\. Same windows\. Very different quotes\./);
+  assert.doesNotMatch(code, /same work, same figure/);
 });
 
 test('the wall-area message is written for a homeowner (handoff §8)', () => {

@@ -20,7 +20,7 @@ const LINES = [
   ['the two neighbours, near the top', 'Two neighbours. Same street.<br>Same windows. Thousands apart.'],
   ['the simple answer first', 'It&rsquo;s a planning estimate, not a survey.'],
   ['the promise in the closing band', 'No measuring. No sales call. No pressure.'],
-  ['the photo line at the button', 'Your original photo is deleted after processing.'],
+  ['the photo line at the button', 'Your original photo is deleted immediately after processing.'],
 ];
 
 for (const [name, words] of LINES) {
