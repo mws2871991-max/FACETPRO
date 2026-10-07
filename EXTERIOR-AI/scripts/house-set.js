@@ -46,6 +46,8 @@ const EXP = arg('exp');
 const ONLY = (arg('only') || '').split(',').map(s => s.trim()).filter(Boolean);
 // --trim <id>: the roofline colour for this run (coastal-fog, ink-trim, cedar).
 const TRIM = arg('trim');
+// --roof <id>: add a roof finish to the scenario (slate-roof, charcoal-roof, terracotta).
+const ROOF = arg('roof');
 const MAX_EDGE = 1600;          // what the page downscales to before upload
 const QUALITY = 85;
 const CHANGED = 40;             // channel difference that counts as "changed"
@@ -153,7 +155,7 @@ function diff(before, renderPng) {
       if (det.status !== 200) { row.note = `analysis ${det.status}: ${det.body.error || ''}`; rows.push(row); console.log(name, row.note); continue; }
       const t0 = Date.now();
       const r = await post('/api/render', { image, mimeType: 'image/jpeg', detectionId: det.body.detectionId,
-        ...SCENARIOS[SCENARIO], ...(TRIM ? { trimId: TRIM, trimName: sw('trim', TRIM)?.name } : {}), ...(EXP ? { experiments: [EXP] } : {}) });
+        ...SCENARIOS[SCENARIO], ...(TRIM ? { trimId: TRIM, trimName: sw('trim', TRIM)?.name } : {}), ...(ROOF ? { roofId: ROOF, roofName: sw('roof', ROOF)?.name } : {}), ...(EXP ? { experiments: [EXP] } : {}) });
       row.seconds = Math.round((Date.now() - t0) / 1000);
       if (r.status !== 200 || !r.body.url) { row.note = `render ${r.status}: ${r.body.error || ''}`; rows.push(row); console.log(name, row.note); continue; }
       row.roofSkipped = r.body.roofSkipped || null;
