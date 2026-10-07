@@ -79,7 +79,17 @@ const windowsRow = (lead) => {
   return row('Windows', [head, spec ? escapeHtml(spec) : '', ...lines.map(escapeHtml)].filter(Boolean).join('<br>'));
 };
 
+/* A price with no wall, roof or roofline work in it is not a price to show.
+   The server prices the exterior on every lead, so a windows-only enquiry
+   arrived here as "Scaffolding £0 · VAT £0 · Estimated total £0, based on a
+   wall area of 90 m²" above the real windows figure — found in the launch
+   rehearsal, 7 Oct 2026. Nothing chosen reads as nothing, not as zero. */
+function pricedWork(price) {
+  return price && (Number(price.cladding) > 0 || Number(price.roof) > 0 || Number(price.trim) > 0) ? price : null;
+}
+
 function leadNotificationHtml(lead, price, siteUrl) {
+  price = pricedWork(price);
   /* The picture they designed, which this email never linked (developer
      brief, 6 Oct, §9) — the homeowner's own email always has. */
   const base = (safeUrl(siteUrl) || 'https://www.facetpro.co.uk').replace(/\/$/, '');
@@ -169,6 +179,7 @@ function glazingBlockText(lead) {
 }
 
 function designPackHtml(lead, price, siteUrl, withdrawToken, recipients) {
+  price = pricedWork(price);
   const site = safeUrl(siteUrl) || 'https://www.facetpro.co.uk';
   const base = site.replace(/\/$/, '');
   /* The notice promises "the link in any email we send you", so this has to
@@ -283,6 +294,7 @@ function whatHappensNextText(lead, recipients) {
 // Plain-text alternative. Improves deliverability and is what text-only
 // clients show instead of a wall of stripped markup.
 function designPackText(lead, price, siteUrl, withdrawToken, recipients) {
+  price = pricedWork(price);
   const base = (safeUrl(siteUrl) || 'https://www.facetpro.co.uk').replace(/\/$/, '');
   const withdrawLink = withdrawToken ? `${base}/withdraw?t=${encodeURIComponent(withdrawToken)}` : `${base}/privacy`;
   return [
