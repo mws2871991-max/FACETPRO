@@ -36,17 +36,22 @@ test('every in-page link on the homepage has somewhere to land', () => {
   for (const [, a] of h.matchAll(/href="#([^"]+)"/g)) assert.ok(ids.has(a), `#${a} goes nowhere`);
 });
 
-test('the example composite door is what the engine prices a composite door at', () => {
-  // The demo says its prices are the live engine's. The door was cut 20% on
-  // 5 Oct and the design file still had the old figure; read it from the
-  // same path the cost guides use, so the next price change fails here.
+test('the example composite door is what the engine prices it at on a detached house', () => {
+  // The demo says its prices are the live engine's, and its house is
+  // detached. A door is priced by house type: the cost guides quote a semi
+  // (£1,969–£3,579), and "correcting" this demo to that figure on 7 Oct made
+  // it wrong. Ask the engine for the detached door, as /api/glazing does.
   const catalogue = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'catalogue.json'), 'utf8'));
-  const { doorPrices, money } = require('../landing')._internals;
-  const d = doorPrices(catalogue).find(x => /composite/i.test(x.name));
-  const range = `${money(d.low)}–${money(d.high)}`;
-  const shown = [...h.matchAll(/'Composite front door','([^']+)'/g)].map(m => m[1]);
+  const glazing = require('../glazing');
+  const { money } = require('../landing')._internals;
+  const out = glazing.estimateGlazing({ rates: catalogue.glazing, houseType: 'detached', selections: { doorStyleId: 'composite', windowStyleId: 'none', windowDoorColourId: 'black' } });
+  const r = glazing.publishedRange(out);
+  const shown = [...h.matchAll(/'Composite front door','£([\d,]+)–£([\d,]+)'/g)].map(m => [m[1], m[2]].map(x => Number(x.replace(/,/g, ''))));
   assert.ok(shown.length >= 3);
-  for (const s of shown) assert.strictEqual(s, range);
+  // The door on its own is the engine's figure exactly; beside windows the
+  // row is the combined total less the windows, so rounding may move it £1.
+  assert.strictEqual(`${money(shown[0][0])}–${money(shown[0][1])}`, `${money(r.low)}–${money(r.high)}`);
+  for (const [lo, hi] of shown) assert.ok(Math.abs(lo - r.low) <= 1 && Math.abs(hi - r.high) <= 1, `${lo}–${hi}`);
 });
 
 test('ad tags ride along from the homepage to the tool', () => {

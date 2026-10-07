@@ -552,7 +552,7 @@ footer a:hover{color:var(--brick-lt)}
         <article class="case">
           <div class="ba sm" data-before="pbBefore" data-after="pbDoor" data-label="Drag to compare example one"></div>
           <div><div class="t">Bay-fronted detached</div><div class="muted" style="font-size:14px">3 windows incl. bay · composite door</div></div>
-          <div class="money"><div><small>Estimated project cost</small><span class="price" style="font-size:18px">£6,849–£12,453</span></div></div>
+          <div class="money"><div><small>Estimated project cost</small><span class="price" style="font-size:18px">£7,004–£12,734</span></div></div>
         </article>
         <article class="case">
           <div class="ba sm" data-before="c30Before" data-after="c30Full" data-label="Drag to compare example two"></div>
@@ -805,11 +805,11 @@ document.querySelectorAll('[data-house]').forEach((el) => {
 const W = {white:'', anth:'3 windows incl. bay · anthracite', black:'3 windows incl. bay · black'};
 const LOOKS = {
   white_orig: {img:'pbBefore',    price:'—',                rows:[['Nothing changed yet','—']]},
-  white_comp: {img:'pbWhiteDoor', price:'£1,969–£3,579',   rows:[['Composite front door','£1,969–£3,579']]},
+  white_comp: {img:'pbWhiteDoor', price:'£2,123–£3,859',   rows:[['Composite front door','£2,123–£3,859']]},
   anth_orig:  {img:'pbAnth',      price:'£4,880–£8,874',   rows:[[W.anth,'£4,880–£8,874']]},
-  anth_comp:  {img:'pbDoor',      price:'£6,849–£12,453',  rows:[[W.anth,'£4,880–£8,874'],['Composite front door','£1,969–£3,579']]},
+  anth_comp:  {img:'pbDoor',      price:'£7,004–£12,734',  rows:[[W.anth,'£4,880–£8,874'],['Composite front door','£2,124–£3,860']]},
   black_orig: {img:'pbBlack',     price:'£4,880–£8,874',   rows:[[W.black,'£4,880–£8,874']]},
-  black_comp: {img:'pbBlackDoor', price:'£6,849–£12,453',  rows:[[W.black,'£4,880–£8,874'],['Composite front door','£1,969–£3,579']]}
+  black_comp: {img:'pbBlackDoor', price:'£7,004–£12,734',  rows:[[W.black,'£4,880–£8,874'],['Composite front door','£2,124–£3,860']]}
 };
 const state = {win:'anth', door:'orig'};
 const after = document.querySelector('#demoBA .after');
