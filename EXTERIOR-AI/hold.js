@@ -1369,6 +1369,101 @@ function correctFrameColour(opts) {
   }
 }
 
+/* ── THE NEIGHBOURS STAY AS THEY ARE (7 Oct 2026) ──
+
+   Every hold above belongs to the windows-only job; a job with a door, a
+   roofline, a roof or walls in it reached storage with nothing between the
+   model and the street. On 7 Oct, four of seven test renders of the demo
+   houses came back with a neighbour's window darkened to the new frame
+   colour — and the 1930s homepage picture had the same fault. The prompt
+   already says "every neighbouring or attached house" is held; it lost that
+   argument the way it lost the door one.
+
+   So: everything outside the house — the subject box geometry.subjectBox
+   draws from the detections, roof and margin included — is put back from
+   the photograph, with a soft edge so no seam shows on sky, hedge or brick.
+
+   Only when the render is the photograph's picture. Most renders keep every
+   pixel where it was (measured 7 Oct: 1.4–5.2 mean difference out of 255 at
+   the edges), but some redraw the whole scene — new sky, shifted gables
+   (21–24 at best alignment) — and pasting the photograph into one of those
+   leaves a double roofline. Those are left alone and say why. Never for a
+   driveway: the drive is outside the house box by definition.
+
+   Returns { buffer, held, reason?, outsideDiff, share }. Any failure returns
+   the render untouched. */
+/* Median, not mean: the fault being held — a darkened window, a recoloured
+   neighbour's roof — is a few per cent of the area and drags a mean over any
+   threshold, while a redrawn scene moves the median everywhere. Measured
+   7 Oct: aligned renders 2–7, redrawn 18–20. */
+const OUTSIDE_ALIGN_MAX = 12;    // median |Δ luminance| outside the house, 0–255
+const OUTSIDE_FEATHER_PCT = 2;   // of the frame's width: the soft edge round the house
+
+function holdOutsideHouse(opts) {
+  const { render, renderMime, original, originalMime, box } = opts || {};
+  const untouched = (reason, extra = {}) => ({ buffer: render, held: false, reason, ...extra });
+  try {
+    if (!box || !(box.w > 0) || !(box.h > 0)) return untouched('no house box');
+    const out = decode(render, renderMime || '');
+    const src = decode(original, originalMime || '');
+    if (!out || !src) return untouched('could not read the images');
+    const W = out.width, H = out.height;
+    const sx = src.width / W, sy = src.height / H;
+    const x0 = (box.x / 100) * W, x1 = ((box.x + box.w) / 100) * W;
+    const y0 = (box.y / 100) * H, y1 = ((box.y + box.h) / 100) * H;
+    const feather = Math.max(4, (OUTSIDE_FEATHER_PCT / 100) * W);
+    /* 0 inside the house, 1 from `feather` px outside it. */
+    const weight = (x, y) => {
+      const dx = x < x0 ? x0 - x : x > x1 ? x - x1 : 0;
+      const dy = y < y0 ? y0 - y : y > y1 ? y - y1 : 0;
+      const d = Math.hypot(dx, dy);
+      return d <= 0 ? 0 : Math.min(1, d / feather);
+    };
+    const px = [0, 0, 0];
+    const lum = (r, g, b) => 0.299 * r + 0.587 * g + 0.114 * b;
+
+    /* Is this still the photograph's picture out there? Sampled on a grid
+       over the fully-held area only. */
+    const hist = new Uint32Array(256);
+    let n = 0, moved = 0;
+    for (let y = 0; y < H; y += 4) {
+      for (let x = 0; x < W; x += 4) {
+        if (weight(x, y) < 1) continue;
+        sample(src, x * sx, y * sy, px);
+        const i = (y * W + x) * 4;
+        const d = Math.min(255, Math.round(Math.abs(lum(out.data[i], out.data[i + 1], out.data[i + 2]) - lum(px[0], px[1], px[2]))));
+        hist[d]++; n++;
+        if (d > 40) moved++;
+      }
+    }
+    if (n < 100) return untouched('the house fills the picture');
+    let outsideDiff = 0;
+    for (let k = 0, acc = 0; k < 256; k++) { acc += hist[k]; if (acc >= n / 2) { outsideDiff = k; break; } }
+    if (outsideDiff > OUTSIDE_ALIGN_MAX) return untouched('the render redrew the whole picture', { outsideDiff });
+
+    const png = new PNG({ width: W, height: H });
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const i = (y * W + x) * 4;
+        const w = weight(x, y);
+        if (w <= 0) {
+          png.data[i] = out.data[i]; png.data[i + 1] = out.data[i + 1]; png.data[i + 2] = out.data[i + 2];
+        } else {
+          sample(src, x * sx, y * sy, px);
+          png.data[i] = Math.round(out.data[i] * (1 - w) + px[0] * w);
+          png.data[i + 1] = Math.round(out.data[i + 1] * (1 - w) + px[1] * w);
+          png.data[i + 2] = Math.round(out.data[i + 2] * (1 - w) + px[2] * w);
+        }
+        png.data[i + 3] = 255;
+      }
+    }
+    return { buffer: PNG.sync.write(png), held: true, outsideDiff, share: moved / n };
+  } catch (err) {
+    return untouched(`failed: ${err.message}`);
+  }
+}
+
 module.exports = { restoreInsideMask, KEEP_MAX_OF_GROUND, restoreKeptParts, KEPT_MAX_SHARE, MASK_BOX_MARGIN_PCT, cropToBox, pillarsFromObjects, PILLAR_PICK, PILLAR_ATTACH, PILLAR_SHAFT_MIN,
   restorePillars, PILLAR_MAX_OF_BAY, restoreDoor, restoreSurroundings, restoreOutsideMask, correctFrameColour,
-                   drawGeorgianBars, doorBox, changedShare, MASK_ON, rgbToLab, labToRgb, hexToRgb };
+                   drawGeorgianBars, doorBox, changedShare, MASK_ON, rgbToLab, labToRgb, hexToRgb,
+                   holdOutsideHouse, OUTSIDE_ALIGN_MAX };

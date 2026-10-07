@@ -27,7 +27,7 @@ const { isTestTraffic } = require('./testtraffic');
 
 const { buildRenderPrompt } = require('./renderprompt');
 const keptparts = require('./keptparts');
-const { restoreDoor, restoreSurroundings, restoreOutsideMask, restoreInsideMask, restoreKeptParts, doorBox, restorePillars, cropToBox, pillarsFromObjects, correctFrameColour, drawGeorgianBars, changedShare } = require('./hold');
+const { restoreDoor, restoreSurroundings, restoreOutsideMask, restoreInsideMask, restoreKeptParts, doorBox, restorePillars, cropToBox, pillarsFromObjects, correctFrameColour, drawGeorgianBars, changedShare, holdOutsideHouse } = require('./hold');
 const driveways = require('./driveways');
 const { scaffoldingFor } = require('./scaffold');
 const { fetchWindowMask, fetchObjectMasks, maskWithinGrace } = require('./windowmask');
@@ -3348,7 +3348,8 @@ async function keepRender(replicateUrl, restore = null) {
       }
     }
     if (!detections) {
-      if (restore.door || !restore.keptKeep) obs.record('render', 'kept door not restored', { reason: 'no detection record for this photograph' });
+      if (restore.door || (!restore.keptKeep && !restore.neighboursOnly)) obs.record('render', 'kept door not restored', { reason: 'no detection record for this photograph' });
+      if (restore.holdNeighbours) obs.record('render', 'neighbours not held', { reason: 'no detection record for this photograph' });
       if (restore.requireKeep) {
         obs.record('render', 'driveway render declined: walls, bins and railings not held', { reason: 'no detection record for this photograph' });
         throw new DrivewayNotHeld('no detection record');
@@ -3456,6 +3457,37 @@ async function keepRender(replicateUrl, restore = null) {
         else obs.record('render', 'georgian bars not drawn', { reason: drawn.reason });
         // Told to the page, which says so under the picture rather than promising bars.
         barsMissing = !drawn.drawn;
+      }
+
+      /* Last: everything outside the house back to the photograph, for every
+         job but a driveway (hold.js, holdOutsideHouse). The house box is the
+         roof, roofline and door extent geometry.subjectBox draws, widened to
+         take in every window and door this job is changing — a box drawn
+         without the roof must never put the homeowner's own new windows back
+         to the old ones. A redrawn scene is left alone and logged. */
+      if (restore.holdNeighbours) {
+        const sb = geometry.subjectBox(detections);
+        const own = [...glazing.frontWindowBoxes(detections, detectionAspectRatio), ...(doorBox(detections) ? [doorBox(detections)] : [])];
+        let box = sb;
+        if (box) {
+          for (const b of own) {
+            const x0 = Math.min(box.x, b.x - 2), y0 = Math.min(box.y, b.y - 2);
+            const x1 = Math.max(box.x + box.w, b.x + b.w + 2), y1 = Math.max(box.y + box.h, b.y + b.h + 2);
+            box = { x: Math.max(0, x0), y: Math.max(0, y0), w: Math.min(100, x1) - Math.max(0, x0), h: Math.min(100, y1) - Math.max(0, y0) };
+          }
+        }
+        if (!box) {
+          obs.record('render', 'neighbours not held', { reason: 'no house box from the detections' });
+        } else {
+          const held = holdOutsideHouse({ render: bytes, renderMime: mime, original: restore.original, originalMime: restore.originalMime, box });
+          if (held.held) {
+            bytes = held.buffer;
+            mime = 'image/png';
+            obs.record('render', 'held the neighbours to the photograph', { median: held.outsideDiff, moved: held.share.toFixed(3) });
+          } else {
+            obs.record('render', 'neighbours not held', { reason: held.reason, median: held.outsideDiff });
+          }
+        }
       }
     }
   }
@@ -4379,6 +4411,14 @@ app.post('/api/render', renderLimiter, async (req, res) => {
           keptChange: kept.change.buffer, keptChangeMime: kept.change.mime,
           keptOurs: { windows: !!(glazingColour && windowStyle), door: !!doorStyle } };
       }
+    }
+
+    /* Every job but a driveway keeps the neighbours as they are (holdOutsideHouse). */
+    if (!driveway) {
+      restorePlan = restorePlan
+        ? { ...restorePlan, holdNeighbours: true }
+        : { original: img.buffer, originalMime: img.mime, detectionId: detectionId ? String(detectionId) : null,
+            fingerprint: imageFingerprint(img.buffer), holdNeighbours: true, neighboursOnly: true };
     }
 
     return respondWithRender(res, url, {
