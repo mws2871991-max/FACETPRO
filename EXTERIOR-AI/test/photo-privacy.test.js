@@ -56,8 +56,18 @@ test('every cost-page upload has the line and the link', () => {
 test('what the explanation promises is what the privacy notice promises', () => {
   assert.match(privacy, /original photograph is deleted/);
   assert.match(privacy, /7 days/);
-  for (const needle of ['the photo is deleted', 'seven days', 'fingerprint']) {
+  for (const needle of ['photo is deleted after processing', '6 months', 'seven days', 'fingerprint']) {
     assert.ok(index.includes(needle), needle);
   }
   assert.ok(!/photo[^.]{0,40}kept for 30 days/i.test(index), 'no retention period the system does not implement');
+});
+
+test('one retention sentence everywhere a person first reads about their photo (handoff 7 Oct §8)', () => {
+  const home = fs.readFileSync(path.join(root, 'home.html'), 'utf8');
+  const SIMPLE = 'Your original photo is deleted after processing. We keep your generated design and selections for 6 months so you can return to your project.';
+  assert.ok(home.includes(SIMPLE), 'homepage FAQ');
+  assert.ok(index.split(SIMPLE).length - 1 >= 4, 'design page: hero, upload panel, trust card, FAQ');
+  // The fingerprint is said separately, never inside the first explanation.
+  for (const block of index.split(SIMPLE).slice(1)) assert.ok(!/^[^<]{0,80}fingerprint/.test(block));
+  assert.match(privacy, /6 months/);
 });

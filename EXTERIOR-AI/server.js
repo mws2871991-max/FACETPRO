@@ -5179,6 +5179,11 @@ const BRANCH_STAGES = new Map([
      upload_completed, so a broken photo path and an impatient visitor were
      indistinguishable — and they want opposite fixes. */
   ['upload_failed', { of: 'upload_started', label: 'the photo did not go through' }],
+  /* A picture that never came (handoff 7 Oct §17, and the summary's failure
+     events). render_shown over render_started already gives a success rate;
+     these say why the rest did not arrive: our fault, or the daily cap. */
+  ['render_failed', { of: 'render_started', label: 'the picture could not be made' }],
+  ['render_capped', { of: 'render_started', label: 'the picture hit the daily limit' }],
   /* Which invitation earned it. The hero CTA and the "that could be your
      house" block under the real homes both lead to the same upload box, and
      the handoff asks to A/B the wording of the first — which cannot be read
@@ -5285,6 +5290,11 @@ const BRANCH_STAGES = new Map([
 /* Which layout the visitor actually got. Allowlisted for the same reason every
    other key on the funnel is — see the note in the endpoint. */
 const DEVICE_KINDS = new Set(['mobile', 'desktop']);
+/* Where the visit came from (handoff 7 Oct §17: traffic source). The
+   utm_source of a tagged link, or on the homepage the referring site's kind.
+   Allowlisted like every other key; anything else is "other". */
+const TRAFFIC_SOURCES = new Set(['facebook', 'instagram', 'tiktok', 'youtube', 'x', 'pinterest', 'linkedin', 'threads', 'nextdoor',
+  'google', 'bing', 'email', 'direct', 'referral', 'other']);
 const CTA_PLACES = new Set(['hero', 'end', 'header']);
 
 /* ── POST /api/journey-timing ──
@@ -5353,6 +5363,8 @@ app.post('/api/funnel', perMinute(120, 'Too many requests — please wait a mome
   /* And which homepage button (developer brief §3, hero_cta_click), counted
      apart so a guide's hero button and the homepage's never share a total. */
   const homeCta = !from && stage === 'cta_clicked' && CTA_PLACES.has(String(req.body?.cta || '')) ? String(req.body.cta) : null;
+  const srcRaw = String(req.body?.src || '').toLowerCase();
+  const src = srcRaw ? (TRAFFIC_SOURCES.has(srcRaw) ? srcRaw : 'other') : null;
 
   /* Answered before the write. A counter that fails must never cost a visitor
      their journey, and the browser is not waiting for anything useful. */
@@ -5367,6 +5379,7 @@ app.post('/api/funnel', perMinute(120, 'Too many requests — please wait a mome
     if (device) await store.countStage(`device/${device}:${stage}`);
     if (cta) await store.countStage(`cta/${cta}:${stage}`);
     if (homeCta) await store.countStage(`home-cta/${homeCta}:${stage}`);
+    if (src) await store.countStage(`src/${src}:${stage}`);
   }
   catch (err) { obs.record('funnel', 'could not record a stage', { stage, reason: err.message }); }
 });

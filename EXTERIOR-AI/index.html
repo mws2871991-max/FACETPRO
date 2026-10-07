@@ -339,7 +339,7 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
           "name": "What happens to my photo?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Your original photograph is never saved. It goes to the AI services that find the parts of your home and generate the picture, and it is not kept, published, sold, or used to train anybody's models. We keep the picture we generate for you, the choices you made, and a fingerprint of your photo with the measurements taken from it — the fingerprint for seven days, so the same photo always gives you the same estimate."
+            "text": "Your original photo is deleted after processing. We keep your generated design and selections for 6 months so you can return to your project. It is never published, sold, or used to train anybody's models. Separately, for seven days we keep a fingerprint of the photo (not an image) and its measurements, so the same photo always gives the same estimate. The privacy notice has the full detail."
           }
         },
         {
@@ -531,7 +531,7 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
            picture, price. The AI services and the seven-day fingerprint are
            still said in full in the FAQ below ("What happens to my photo?")
            and in the privacy notice this links to. -->
-      <p class="pb-2 leading-7 text-zinc-600">We use it only to make your picture. Once your picture has been made, the photo is deleted &mdash; never published, sold, or used by us to train AI. For seven days we keep a fingerprint of it (not an image) and its measurements, so your estimate stays consistent while you use Facet Pro. <a href="/privacy#your-photograph" class="underline underline-offset-2">Full details</a></p>
+      <p class="pb-2 leading-7 text-zinc-600">Your original photo is deleted after processing. We keep your generated design and selections for 6 months so you can return to your project. It is never published, sold, or used by us to train AI. <a href="/privacy#your-photograph" class="underline underline-offset-2">Full details</a></p>
     </details>
     </div>
     <!-- 0091 (5 Oct, handoff "homepage demo swap (grey bay)" v2): the bay
@@ -1165,7 +1165,7 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
       </div>
       <div class="rounded-xl border border-zinc-200 bg-[#FDFCF9] p-5">
         <h3 class="text-lg font-semibold">Your photo</h3>
-        <p class="mt-2 text-lg leading-6 text-zinc-600">Your original photograph isn&rsquo;t kept. We temporarily keep a non-image fingerprint and its measurements, so your estimate stays consistent while you use Facet Pro. <a href="/privacy#your-photograph" class="underline underline-offset-2">Privacy notice</a></p>
+        <p class="mt-2 text-lg leading-6 text-zinc-600">Your original photo is deleted after processing. We keep your generated design and selections for 6 months so you can return to your project. <a href="/privacy#your-photograph" class="underline underline-offset-2">Privacy notice</a></p>
       </div>
       <div class="rounded-xl border border-zinc-200 bg-[#FDFCF9] p-5">
         <!-- Developer brief, 6 Oct (§7): "Early access", framed as active
@@ -1276,7 +1276,8 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
              again. A FAQ and a privacy notice disagreeing about storage is the
              same failure as the terms and the notice disagreeing about
              two-factor authentication. -->
-        <p class="pb-4 text-lg leading-6 text-zinc-600 max-w-[72ch]">Your original photograph is never saved. It goes to the AI services that find the parts of your home and generate the picture, and it is not kept, published, sold, or used to train anybody's models. What we do keep: the picture we generate for you, the choices you made, and a fingerprint of your photo with the measurements taken from it &mdash; the fingerprint for seven days, so the same photo always gives you the same estimate. Full detail is in the <a href="/privacy" class="underline hover:text-zinc-900">privacy notice</a>.</p>
+        <p class="pb-4 text-lg leading-6 text-zinc-600 max-w-[72ch]">Your original photo is deleted after processing. We keep your generated design and selections for 6 months so you can return to your project. It is never published, sold, or used to train anybody&rsquo;s models.</p>
+        <p class="pb-4 text-base leading-6 text-zinc-500 max-w-[72ch]">Separately, for seven days we keep a fingerprint of the photo (not an image) and the measurements taken from it, so the same photo always gives the same estimate. If you ask for quotes, your enquiry is kept longer. Full detail is in the <a href="/privacy#your-photograph" class="underline hover:text-zinc-900">privacy notice</a>.</p>
       </details>
 
       <details class="group">
@@ -4640,7 +4641,7 @@ function buildUploadDetect() {
           h('p', { className: 'pb-2 leading-7' }, [
             /* Short at the button (1 October); the AI services and the
                seven-day fingerprint are in the privacy notice it links to. */
-            'We use it only to make your picture. Once your picture has been made, the photo is deleted — never published, sold, or used by us to train AI. ',
+            'Your original photo is deleted after processing. We keep your generated design and selections for 6 months so you can return to your project. It is never published, sold, or used by us to train AI. ',
             h('a', { href: '/privacy#your-photograph', className: 'underline underline-offset-2' }, 'Full details'),
           ]),
         ]),
@@ -8540,6 +8541,8 @@ async function generateRealRender({ settled = false, revived = false } = {}) {
       }
     }), 80);
   } catch (err) {
+    // Why the picture did not come (handoff 7 Oct §17). A roof that is not in the frame is guidance, not a failure.
+    if (!landed && !state.roofNotInFrame) reachedStage(state.renderUnavailable ? 'render_capped' : 'render_failed');
     // One message at a time: if the photo itself failed, that notice is the one to read.
     if (!state.uploadError) U(err.plain ? err.message : 'We couldn’t create that picture just now. Your design and estimate still work — please try again in a minute.');
   } finally {
@@ -10418,6 +10421,8 @@ function reachedStage(stage) {
        anybody. Two buckets, because a third would invite a conversation about
        tablets the data cannot yet support. */
     device: innerWidth < 768 ? 'mobile' : 'desktop',
+    // Traffic source (handoff 7 Oct §17): the tagged link's utm_source, if any.
+    src: readUtm().utm_source || undefined,
   });
 }
 

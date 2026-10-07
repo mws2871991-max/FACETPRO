@@ -182,6 +182,19 @@ module.exports = function opsRoutes({
       if (Object.values(row).some(n => n > 0)) byCtaPlace[place] = row;
     }
     /* The homepage's own buttons (developer brief §3, hero_cta_click). */
+    /* Visit → upload → picture → estimate → quote per traffic source
+       (handoff 7 Oct §17). Rates are against that source's own landings. */
+    const SOURCE_STEPS = [['landings', 'landing'], ['uploaded', 'upload_completed'], ['sawTheirHouse', 'render_shown'],
+      ['sawEstimate', 'estimate_viewed'], ['askedForQuotes', 'quote_requested']];
+    const sources = new Set();
+    for (const k of Object.keys(counts)) { const m = /^src\/([^:]+):/.exec(k); if (m) sources.add(m[1]); }
+    const bySource = [...sources].map(source => {
+      const row = { source };
+      for (const [name, stage] of SOURCE_STEPS) row[name] = counts[`src/${source}:${stage}`] || 0;
+      row.uploadPct = pct(row.uploaded, row.landings);
+      row.quotePct = pct(row.askedForQuotes, row.landings);
+      return row;
+    }).sort((a, b) => b.landings - a.landings || b.uploaded - a.uploaded);
     const homepageButtons = Object.fromEntries(['hero', 'header', 'end'].map(place => [place, counts[`home-cta/${place}:cta_clicked`] || 0]));
 
     /* The loop-backs, each against a step it can honestly be compared with.
@@ -220,12 +233,12 @@ module.exports = function opsRoutes({
     };
 
     res.setHeader('Cache-Control', 'no-store');
-    res.json({ days, keyKpi, funnel, branches, byJourney, byDevice, bySeoPage, byCtaPlace, byDay, homepageButtons,
+    res.json({ days, keyKpi, funnel, branches, byJourney, byDevice, bySeoPage, byCtaPlace, byDay, homepageButtons, bySource,
       note: 'Counts are per stage, not per person — see the funnel table in store.js. '
         + 'byJourney counts only visitors who arrived on a journey; the totals above include everyone. '
         + 'byDevice splits by the width the page was rendered at, under 768px being mobile, and only covers stages recorded since that key shipped — an empty or short column is missing history rather than missing traffic. '
         + 'Each row carries firstSeen, the first day that counter recorded anything, and sameWindowAsPrevious. Where that is false, ofPreviousPct divides two counters with different amounts of history and is arithmetic rather than behaviour — render_shown over render_started read as 387% for that reason, the first having a month of history and the second days. Treat those as uncomparable rather than as findings. Note that firstSeen is first traffic, not the day the counter shipped, so a genuinely old but rarely-hit stage looks young. Where the window does match, a figure above 100% is real and means the chain is not strictly nested — the cost pages link straight into the tool, so design_opened outruns cta_clicked. '
-        + 'byDay is the raw day-keyed breakdown, so it carries the prefixed counters in the same object as the plain stages — journey:…, from/…, device/… — where funnel, byJourney and byDevice present them already split out. Filter on the prefix before summing, or the same visit is counted more than once. '
+        + 'byDay is the raw day-keyed breakdown, so it carries the prefixed counters in the same object as the plain stages — journey:…, from/…, device/…, src/… — where funnel, byJourney and byDevice present them already split out. Filter on the prefix before summing, or the same visit is counted more than once. '
         + 'bySeoPage is one row per cost guide or area page: landings (served to a visitor, counted by the server), then each later step for visitors who arrived from that page; uploadPct and quotePct are against that page\'s landings. byCtaPlace splits the same steps by which button on the guide was pressed. Organic sessions and search terms are in Google Search Console, not here. '
         + 'Read a change against the days since it shipped: a figure that looks like a rate against thirty days of history is usually a few hours of numerator over a month of denominator.' });
   });
