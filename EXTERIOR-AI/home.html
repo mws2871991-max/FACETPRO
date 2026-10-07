@@ -470,9 +470,9 @@ footer a:hover{color:var(--brick-lt)}
       <div class="cards">
         <a class="card" href="#guides"><div class="img"><div class="zoom" data-stack="pbAnth" data-crop="1.9,30%,58%"></div></div><div class="row"><h3>Windows</h3><span aria-hidden="true" style="color:var(--brick)">→</span></div><p>Change the style, colour and material.</p><div class="tags"><span>Casement</span><span>Georgian bars</span><span>Anthracite</span><span>uPVC</span></div></a>
         <a class="card" href="#guides"><div class="img"><div class="zoom" data-stack="pbDoor" data-crop="2.4,58%,62%"></div></div><div class="row"><h3>Doors</h3><span aria-hidden="true" style="color:var(--brick)">→</span></div><p>Front, back, patio and bifold.</p><div class="tags"><span>Composite</span><span>uPVC</span><span>Patio</span><span>Bifold</span></div></a>
-        <a class="card" href="#guides"><div class="img"><div class="zoom" data-stack="c30Full" data-crop="3,72%,33%"></div></div><div class="row"><h3>Roofline</h3><span aria-hidden="true" style="color:var(--brick)">→</span></div><p>Fascias, soffits &amp; guttering.</p><div class="tags"><span>Fascias</span><span>Soffits</span><span>Guttering</span></div></a>
+        <a class="card" href="#guides"><div class="img"><div class="zoom" data-stack="c30sSlate" data-crop="3,82%,40%"></div></div><div class="row"><h3>Roofline</h3><span aria-hidden="true" style="color:var(--brick)">→</span></div><p>Fascias, soffits &amp; guttering.</p><div class="tags"><span>Fascias</span><span>Soffits</span><span>Guttering</span></div></a>
         <a class="card" href="#guides"><div class="img"><div class="zoom" data-stack="c30Clad" data-crop="1.25,40%,40%"></div></div><div class="row"><h3>Walls</h3><span aria-hidden="true" style="color:var(--brick)">→</span></div><p>Render, cladding &amp; weatherboard.</p><div class="tags"><span>Render</span><span>Cladding</span><span>Weatherboard</span></div></a>
-        <a class="card" href="#guides"><div class="img"><div class="zoom" data-stack="c30Full" data-crop="2,62%,18%"></div></div><div class="row"><h3>Roofs</h3><span aria-hidden="true" style="color:var(--brick)">→</span></div><p>Slate, tile &amp; clay.</p><div class="tags"><span>Slate</span><span>Tile</span><span>Clay</span></div></a>
+        <a class="card" href="#guides"><div class="img"><div class="zoom" data-stack="c30sSlate" data-crop="2,72%,24%"></div></div><div class="row"><h3>Roofs</h3><span aria-hidden="true" style="color:var(--brick)">→</span></div><p>Slate, tile &amp; clay.</p><div class="tags"><span>Slate</span><span>Tile</span><span>Clay</span></div></a>
         <a class="card" href="#rear"><div class="img"><div class="ph"><svg width="56" height="56" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M6 28L32 10L58 28"/><path d="M12 28V54H52V28"/><path d="M12 38H52M24 28V54M40 28V54"/></svg>From £10,000–£16,000 (lean-to)</div></div><div class="row"><h3>Conservatories</h3><span aria-hidden="true" style="color:var(--brick)">→</span></div><p>Explore styles and guide prices.</p><div class="tags"><span>Lean-to</span><span>Edwardian</span><span>Victorian</span><span>Gable</span><span>Orangery</span></div></a>
       </div>
 
@@ -555,9 +555,9 @@ footer a:hover{color:var(--brick-lt)}
           <div class="money"><div><small>Estimated project cost</small><span class="price" style="font-size:18px">£7,004–£12,734</span></div></div>
         </article>
         <article class="case">
-          <div class="ba sm" data-before="c30Before" data-after="c30Full" data-label="Drag to compare example two"></div>
-          <div><div class="t">1930s detached</div><div class="muted" style="font-size:14px">4 windows · door · roofline · grey roof</div></div>
-          <div class="money"><div><small>Estimated project cost</small><span class="price" style="font-size:18px">£28,654–£48,962</span></div></div>
+          <div class="ba sm" data-before="c30sBefore" data-after="c30sSlate" data-label="Drag to compare example two"></div>
+          <div><div class="t">1930s detached</div><div class="muted" style="font-size:14px">3 windows incl. 2 bays · door · roofline · slate roof</div></div>
+          <div class="money"><div><small>Estimated project cost</small><span class="price" style="font-size:18px">£32,333–£47,561</span></div></div>
           <p class="cap">Wider range because a new roof depends on the tiles, battens and what’s underneath — the survey narrows it.</p>
         </article>
       </div>
@@ -654,7 +654,7 @@ footer a:hover{color:var(--brick-lt)}
         </div>
       </div>
       <div style="position:relative">
-        <div class="ba" data-before="c30Before" data-after="c30Full" data-label="Drag to compare the 1930s example before and after"></div>
+        <div class="ba" data-before="c30sBefore" data-after="c30sSlate" data-label="Drag to compare the 1930s example before and after"></div>
         <div style="position:absolute;left:14px;bottom:14px;background:rgba(255,255,255,.94);border-radius:4px;padding:12px 16px">
           <div class="muted" style="font-size:12px">Example property · real visualisation</div>
           <div style="font-weight:700;font-size:20px;letter-spacing:-.01em">See it. Price it. Then decide.</div>
@@ -705,9 +705,14 @@ const PHOTOS = {
   thAfter: "/assets/home/thAfter.webp",
   c30Before: "/assets/home/c30Before.webp",
   c30Full: "/assets/home/c30Full.webp",
+  /* 7 Oct: a Facet Pro render of the same photo (slate roof, anthracite windows,
+     composite door), aligned to it and cropped before the neighbour, whose
+     window the render darkened. Replaces c30Full in the sliders and cards. */
+  c30sBefore: "/assets/home/c30sBefore.webp",
+  c30sSlate: "/assets/home/c30sSlate.webp",
   c30Clad: "/assets/home/c30Clad.webp",
 };
-const ALTS = {"pbWhiteDoor": "AI visualisation: the same house with its white windows kept and a composite front door", "pbBlackDoor": "AI visualisation: the same house with black windows and a composite front door", "pbBefore": "Illustration: red-brick detached house with white uPVC windows and a bay window", "pbAnth": "AI visualisation: the same house with anthracite uPVC casement windows", "pbBlack": "AI visualisation: the same house with black uPVC casement windows", "pbDoor": "AI visualisation: the same house with anthracite windows and a composite front door", "thBefore": "Illustration: detached house with red tile-hanging and white windows", "thAfter": "AI visualisation: the same house with anthracite windows", "c30Before": "Illustration: 1930s detached house with white windows and a brown roof", "c30Full": "AI visualisation: the same house with anthracite windows, new door, light roofline and a grey roof", "c30Clad": "AI visualisation: the same house with anthracite windows and graphite cladding upstairs"};
+const ALTS = {"c30sBefore": "Illustration: 1930s detached house with white windows and a brown tiled roof", "c30sSlate": "AI visualisation: the same house with a slate roof, anthracite windows and a composite front door", "pbWhiteDoor": "AI visualisation: the same house with its white windows kept and a composite front door", "pbBlackDoor": "AI visualisation: the same house with black windows and a composite front door", "pbBefore": "Illustration: red-brick detached house with white uPVC windows and a bay window", "pbAnth": "AI visualisation: the same house with anthracite uPVC casement windows", "pbBlack": "AI visualisation: the same house with black uPVC casement windows", "pbDoor": "AI visualisation: the same house with anthracite windows and a composite front door", "thBefore": "Illustration: detached house with red tile-hanging and white windows", "thAfter": "AI visualisation: the same house with anthracite windows", "c30Before": "Illustration: 1930s detached house with white windows and a brown roof", "c30Full": "AI visualisation: the same house with anthracite windows, new door, light roofline and a grey roof", "c30Clad": "AI visualisation: the same house with anthracite windows and graphite cladding upstairs"};
 
 const OLD = {frame:'#E9E5D8',door:'#6B3A2A',doorNew:false,fascia:'#E2DCCD',soffit:'#CBC4B4',gutter:'#D6D3CA'};
 const ANTH = {frame:'#3B4045',door:'#2E3337',doorNew:true,fascia:'#34393D',soffit:'#3A3F43',gutter:'#2A2E32'};
