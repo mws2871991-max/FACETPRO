@@ -30,3 +30,26 @@ test('still counts homepage visits and clicks through to the tool', () => {
   for (const stage of ['landing', 'homepage_view', 'cta_clicked']) assert.match(h, new RegExp(`'${stage}'`));
   assert.match(h, /'\/api\/funnel'/);
 });
+
+test('every in-page link on the homepage has somewhere to land', () => {
+  const ids = new Set([...h.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]));
+  for (const [, a] of h.matchAll(/href="#([^"]+)"/g)) assert.ok(ids.has(a), `#${a} goes nowhere`);
+});
+
+test('the example composite door is what the engine prices a composite door at', () => {
+  // The demo says its prices are the live engine's. The door was cut 20% on
+  // 5 Oct and the design file still had the old figure; read it from the
+  // same path the cost guides use, so the next price change fails here.
+  const catalogue = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'catalogue.json'), 'utf8'));
+  const { doorPrices, money } = require('../landing')._internals;
+  const d = doorPrices(catalogue).find(x => /composite/i.test(x.name));
+  const range = `${money(d.low)}–${money(d.high)}`;
+  const shown = [...h.matchAll(/'Composite front door','([^']+)'/g)].map(m => m[1]);
+  assert.ok(shown.length >= 3);
+  for (const s of shown) assert.strictEqual(s, range);
+});
+
+test('ad tags ride along from the homepage to the tool', () => {
+  assert.match(h, /\['utm_source','utm_medium','utm_campaign'\]/);
+  assert.match(h, /a\[href\^="\/design"\]/);
+});
