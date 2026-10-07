@@ -307,7 +307,9 @@ test('everything needed to boot in production is a real dependency', () => {
      case: it IS needed at prestart, and is dev-only only because
      prestart-css.js checks require.resolve and falls back to the committed
      stylesheet. */
-  const ALLOWED_DEV_ONLY = ['tailwindcss', 'eslint'];
+  /* playwright-core (7 Oct 2026): drives Chrome for scripts/social, which runs
+     on a laptop to draw the month's post images. The server never loads it. */
+  const ALLOWED_DEV_ONLY = ['tailwindcss', 'eslint', 'playwright-core'];
   const unexpected = dev.filter(d => !ALLOWED_DEV_ONLY.includes(d));
   assert.deepStrictEqual(unexpected, [],
     `dev-only dependencies the server might need at runtime: ${unexpected.join(', ')}`);
