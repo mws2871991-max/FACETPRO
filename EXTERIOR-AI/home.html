@@ -260,6 +260,11 @@ footer a:hover{color:var(--brick-lt)}
 .nav .btn,.mbar{transition:opacity .2s,transform .25s}
 body.cta-dup .nav .btn{opacity:0;visibility:hidden;pointer-events:none}
 body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
+/* Tap targets of at least 44px on a phone (review, 7 Oct). */
+@media (max-width:760px){
+  footer nav a,footer a[href^="https"],.links a,details.info>summary{display:inline-flex;align-items:center;min-height:44px}
+  footer a[href^="https"]{padding-inline:4px}
+}
 .mbar .btn{font-size:15px;padding:13px 16px;white-space:nowrap}
 
 @media (max-width:960px){
@@ -300,6 +305,87 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
 .steps6{margin:0;padding-left:22px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 28px;color:var(--ink-2)}
 @media (max-width:760px){.three{grid-template-columns:1fr}.ticks,.steps6{grid-template-columns:1fr}.steps3{grid-template-columns:1fr}}
 </style>
+<script type="application/ld+json" id="faq-ld">
+{
+ "@context": "https://schema.org",
+ "@type": "FAQPage",
+ "@id": "https://www.facetpro.co.uk/#faq",
+ "mainEntity": [
+  {
+   "@type": "Question",
+   "name": "If it’s free, how does Facet Pro make money?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "Facet Pro is free for homeowners.We earn a fee from installers when you choose to request quotes from them. At most three installers receive your enquiry.We don’t charge you to use the visualiser or see your estimate, and we don’t sell your personal details."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "Do I have to speak to an installer?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "No. You can explore, price and save your design without speaking to anyone."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "Do I need measurements?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "No. We estimate sizes from what is visible in your photo. An installer takes exact measurements at the survey."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "Is the price a quotation?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "No. It is a planning estimate to help you judge your budget. The final price is confirmed by an installer after a site survey. See how we calculate it."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "What about the back of the house?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "Add a second photo of the back, or tell us how many windows there are. Typical prices for garden doors, supplied and fitted, inc. VAT: patio doors £1,876–£3,411, bifolds up to 2.4 m £3,557–£6,467, French doors £2,407–£4,376, back doors £1,092–£3,579."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "Will installers contact me automatically?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "No. You decide whether to request quotes. Exploring options and seeing your estimate does not share your details with anyone."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "How many installers receive my enquiry?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "At most three suitable installers, and only when you choose to request quotes."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "What happens to my photo?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "Your original photo is deleted after processing. We keep your generated design and selections for 6 months so you can return to your project. If you ask for quotes, your enquiry is kept longer. The detail is in our privacy policy."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "How accurate is the estimate?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "It is a realistic planning range, not a guaranteed final price. It is based on what we can see in your photo and the options you choose, and an installer confirms the exact figure after a survey. We record how our estimates compare with installers’ quotes so we can keep improving them."
+   }
+  }
+ ]
+}
+</script>
 </head>
 <body>
 
@@ -347,7 +433,7 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
           <div class="muted" style="font-size:13px;font-weight:500">Estimated project cost</div>
           <div class="row1"><div class="price" style="font-size:clamp(34px,3.4vw,44px)">£4,880–£8,874</div></div>
           <div style="font-size:13px;color:var(--ink-2)"><b>Planning estimate · inc. VAT</b> · Not a quotation. Final price confirmed after survey.</div>
-          <div class="chips"><span>3 front windows incl. the bay</span><span>uPVC casement · Anthracite</span></div>
+          <div class="chips"><span>Red-brick detached · 3 front windows incl. the bay</span><span>uPVC casement · Anthracite</span></div>
         </div>
         <div style="margin-top:12px"><p class="cap">Example property illustration. Visualisation and estimate are genuine output from our pricing engine.</p><details class="info"><summary>ⓘ About these pictures</summary><p>The house shown is an AI-generated illustration used to demonstrate Facet Pro. The visualisation and estimated price are genuine output from our pricing engine. When you upload your own photograph, Facet Pro visualises the changes on your property.</p></details></div>
       </div>
@@ -552,7 +638,7 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
   </section>
 
   <!-- FAQ -->
-  <section class="stone">
+  <section id="faq" class="stone">
     <div class="wrap g2" style="align-items:start">
       <div class="stack" style="gap:16px">
         <h2 class="h2">Questions, answered.</h2>
@@ -605,9 +691,9 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
       <nav aria-label="Footer">
         <a href="#how">How it works</a><a href="#trust">About</a>
         <a href="#change">What you can change</a><a href="mailto:hello@facetpro.co.uk">Contact</a>
-        <a href="#guides">Costs</a><a href="/privacy">Privacy</a>
+        <a href="/privacy">Privacy</a>
         <a href="/installers">For installers</a><a href="/terms">Terms</a>
-        <a href="/how-we-price">How we price</a><a href="/cost">Cost guides</a>
+        <a href="/how-we-price">How we price</a><a href="/cost">Cost guides</a><a href="#faq">Questions</a>
       </nav>
     </div>
     <div style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;border-top:1px solid var(--night-line);padding-top:24px;font-size:13px;color:#9A9DA0">

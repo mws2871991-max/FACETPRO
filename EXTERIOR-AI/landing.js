@@ -566,7 +566,7 @@ const COST_PAGES = [
           { heading: 'Why a bifold costs what it does', paras: [
             `Width is most of it. A 3 m opening is not a 2.4 m opening with a bit more glass — it is another panel, more track, heavier leaves and usually a structural lintel above it. That is why the step from ${money(bi24.low)} to ${money(bi3.low)} is steeper than the extra 600 mm suggests.`,
             'The rest is the opening itself. Bifolds usually replace a window or a single back door, so somebody has to make the hole bigger, and that is building work rather than glazing. If your opening is already the right size the figures above are the job; if it is not, add the builder.',
-            `French doors and a sliding patio door land in the same place as each other, around ${money(french.low)} to ${money(french.high)}, and both are markedly cheaper than a bifold because there is less hardware and less glass carrying its own weight.`,
+            `A sliding patio door runs about ${money(patio.low)} to ${money(patio.high)} and French doors about ${money(french.low)} to ${money(french.high)}, and both are markedly cheaper than a bifold because there is less hardware and less glass carrying its own weight.`,
           ] },
           { heading: 'We will price these, and we will not pretend to show them', paras: [
             'Facet Pro works from one photograph of the front of your house — that is where the front door is, and a UK front door is 1.98 m, which is what gives every measurement on this site its scale.',
