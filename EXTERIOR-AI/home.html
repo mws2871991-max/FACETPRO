@@ -315,6 +315,7 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
 .three .n3{font-size:clamp(72px,9vw,120px);font-weight:700;line-height:.85;letter-spacing:-.05em;color:var(--brick)}
 .three h3{font-size:clamp(24px,2.6vw,32px);letter-spacing:-.02em}.three p{color:var(--ink-2)}
 .ticks{list-style:none;padding:0;margin:4px 0 0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 24px}
+.ticks.dk{grid-template-columns:repeat(2,minmax(0,1fr))}.ticks.dk li::before{color:var(--brick-lt)}
 .ticks li{padding-left:26px;position:relative;font-weight:500}.ticks li::before{content:"✓";position:absolute;left:0;color:var(--brick);font-weight:700}
 .instbox{border:1.5px solid var(--line);border-radius:8px;padding:clamp(22px,3.5vw,40px);display:flex;flex-direction:column;gap:22px}
 .steps6{margin:0;padding-left:22px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 28px;color:var(--ink-2)}
@@ -328,10 +329,10 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
  "mainEntity": [
   {
    "@type": "Question",
-   "name": "If it’s free, how does Facet Pro make money?",
+   "name": "Is the Facet Pro price a quotation?",
    "acceptedAnswer": {
     "@type": "Answer",
-    "text": "Facet Pro is free for homeowners.We earn a fee from installers when you choose to request quotes from them. At most three installers receive your enquiry.We don’t charge you to use the visualiser or see your estimate, and we don’t sell your personal details."
+    "text": "No. It is a planning estimate. The final price is confirmed by an installer after reviewing the property and specification."
    }
   },
   {
@@ -344,42 +345,26 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
   },
   {
    "@type": "Question",
-   "name": "Do I need measurements?",
-   "acceptedAnswer": {
-    "@type": "Answer",
-    "text": "No. We estimate sizes from what is visible in your photo."
-   }
-  },
-  {
-   "@type": "Question",
-   "name": "Is the price a quotation?",
-   "acceptedAnswer": {
-    "@type": "Answer",
-    "text": "No. It is a planning estimate — see estimate vs quote."
-   }
-  },
-  {
-   "@type": "Question",
-   "name": "What about the back of the house?",
-   "acceptedAnswer": {
-    "@type": "Answer",
-    "text": "Add a second photo of the back, or tell us how many windows there are. Garden doors are priced in our bifold and patio door guide."
-   }
-  },
-  {
-   "@type": "Question",
    "name": "Will installers contact me automatically?",
    "acceptedAnswer": {
     "@type": "Answer",
-    "text": "No. You decide whether to request quotes. Exploring options and seeing your estimate does not share your details with anyone."
+    "text": "No. You decide whether to request quotes."
    }
   },
   {
    "@type": "Question",
-   "name": "How many installers receive my enquiry?",
+   "name": "How many installers will receive my details?",
    "acceptedAnswer": {
     "@type": "Answer",
-    "text": "At most three suitable installers, and only when you choose to request quotes."
+    "text": "Up to three, and only if you request quotes."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "Do I need to measure my property?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "No. We size it from your photo."
    }
   },
   {
@@ -387,7 +372,7 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
    "name": "What happens to my photo?",
    "acceptedAnswer": {
     "@type": "Answer",
-    "text": "Your original photo is deleted immediately after processing. We keep a secure fingerprint for 7 days to maintain estimate consistency, and store your generated designs for 6 months so you can return to your project. If you ask for quotes, your enquiry is kept longer. The detail is in our privacy policy."
+    "text": "Your original photo is deleted immediately after processing. We keep a secure fingerprint for 7 days to maintain estimate consistency, and store your generated designs for 6 months so you can return to your project. The detail is in our privacy policy."
    }
   },
   {
@@ -395,9 +380,37 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
    "name": "How accurate is the estimate?",
    "acceptedAnswer": {
     "@type": "Answer",
-    "text": "It is a realistic planning range, not a guaranteed final price. It is based on what we can see in your photo and the options you choose. We record how our estimates compare with installers’ quotes so we can keep improving them."
+    "text": "It is a realistic planning range, not a guaranteed final price. It is based on what we can see in your photo and the options you choose."
    }
   }
+ ]
+}
+</script>
+<script type="application/ld+json" id="app-ld">
+{
+ "@context": "https://schema.org",
+ "@type": "WebApplication",
+ "@id": "https://www.facetpro.co.uk/#app",
+ "name": "Facet Pro House Visualiser & Cost Estimator",
+ "url": "https://www.facetpro.co.uk/design",
+ "applicationCategory": "DesignApplication",
+ "operatingSystem": "Any modern web browser",
+ "browserRequirements": "Requires JavaScript",
+ "inLanguage": "en-GB",
+ "publisher": {
+  "@id": "https://www.facetpro.co.uk/#organization"
+ },
+ "offers": {
+  "@type": "Offer",
+  "price": "0",
+  "priceCurrency": "GBP"
+ },
+ "description": "Upload one photo of your house to see new windows, doors, roofline, roof and render on it, with a planning estimate of the cost.",
+ "featureList": [
+  "Finds the windows, doors, walls, roofline and roof on a photo of the front",
+  "Shows new styles and colours on your own home",
+  "AI visualisation of your house",
+  "Itemised planning estimate including labour, scaffolding, waste and VAT"
  ]
 }
 </script>
@@ -438,7 +451,7 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
         <p class="lead" style="max-width:30em">Upload a photo of your home, explore how it could look with different improvements, and get a realistic planning estimate before speaking to an installer.</p>
         <div class="cta-block">
           <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap"><a class="btn lg" href="/design?journey=windows">See my house &amp; price →</a><a href="#how" style="font-weight:600;color:var(--ink)">How it works</a></div>
-          <div class="reassure">Free · No account · No measurements · No sales call</div>
+          <div class="reassure">No account. No measurements. No sales call.</div>
         </div>
         <!-- The first price inside the first phone screen (7 Oct): the headline
              promises a cost, and on a phone the price card sat a screen down,
@@ -510,64 +523,30 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
     </div>
   </section>
 
-  <!-- REAL HOMES -->
-  <section>
-    <div class="wrap stack" style="gap:44px">
-      <div style="display:flex;justify-content:space-between;align-items:end;gap:24px;flex-wrap:wrap">
-        <h2 class="h2">Example designs, priced from one photo.</h2>
-        <span class="badge">Example properties · real visualisations &amp; estimates</span>
-      </div>
-      <div class="g3 hs">
-        <article class="case">
-          <div class="ba sm" data-before="thBefore" data-after="thAfter" data-label="Drag to compare example three"></div>
-          <div><div class="t">Tile-hung detached</div><div class="muted" style="font-size:14px">2 windows incl. bay · anthracite</div></div>
-          <div class="money"><div><small>Estimated project cost</small><span class="price" style="font-size:18px">£4,844–£8,806</span></div></div>
-        </article>
-        <article class="case">
-          <div class="ba sm" data-before="pbBefore" data-after="pbDoor" data-label="Drag to compare example one"></div>
-          <div><div class="t">Bay-fronted detached</div><div class="muted" style="font-size:14px">3 windows incl. bay · composite door</div></div>
-          <div class="money"><div><small>Estimated project cost</small><span class="price" style="font-size:18px">£7,004–£12,734</span></div></div>
-        </article>
-        <article class="case">
-          <div class="ba sm" data-before="c30sBefore" data-after="c30sSlate" data-label="Drag to compare example two"></div>
-          <div><div class="t">1930s detached</div><div class="muted" style="font-size:14px">3 windows incl. 2 bays · door · roofline · slate roof</div></div>
-          <div class="money"><div><small>Estimated project cost</small><span class="price" style="font-size:18px">£32,333–£47,561</span></div></div>
-          <p class="cap">Wider range because a new roof depends on the tiles, battens and what’s underneath.</p>
-        </article>
-      </div>
-      <p class="cap">Planning estimates · inc. VAT</p><details class="info"><summary>ⓘ About these pictures</summary><p>These houses are AI-generated illustrations used to demonstrate Facet Pro. The visualisations and estimated prices are genuine output from our pricing engine. The 1930s total adds the windows-and-door and roof-and-roofline estimates together.</p></details>
-    </div>
-  </section>
-
-  <!-- ESTIMATE VS QUOTE, SAID ONCE (handoff 7 Oct §5, §6). The detailed
+  <!-- PRICE (brief §5, §6): estimate vs quote, said once. The detailed
        method lives on /how-we-price. -->
-  <section id="estimate" class="stone" style="padding-block:clamp(48px,6vw,80px)">
+  <section id="estimate" class="stone" style="padding-block:clamp(44px,5vw,72px)">
     <div class="wrap g2" style="align-items:start">
-      <div class="stack" style="gap:14px">
+      <div class="stack" style="gap:12px">
         <h2 class="h2" style="font-size:clamp(28px,3.2vw,42px)">Your Facet Pro price is a planning estimate — not a quotation.</h2>
         <p class="lead">It gives you a useful starting point for understanding what your project could cost. An installer will confirm the final specification and price after surveying the property.</p>
       </div>
-      <div class="stack" style="gap:14px">
+      <div class="stack" style="gap:12px">
         <h3 style="font-size:22px;letter-spacing:-.01em">Where does the estimate come from?</h3>
-        <p style="color:var(--ink-2)">We combine what we can see of your property and the specification you choose with UK pricing data and typical project costs to produce a realistic price range. It is designed to help you plan — not replace an installer survey.</p>
+        <p style="color:var(--ink-2)">We combine the information available from your property and selected specification with UK pricing data and typical project costs to produce a realistic price range. It is designed to help you plan — not replace an installer survey.</p>
         <a href="/how-we-price" style="font-weight:600">See how our pricing works →</a>
       </div>
     </div>
   </section>
 
-  <!-- RESEARCH FIRST + THREE INSTALLERS (handoff 7 Oct §3, §4): the strongest
-       section, and the one home for "no sales call" and "up to three". -->
-  <section id="research" class="dark" style="padding-block:clamp(56px,7vw,96px)">
-    <div class="wrap stack" style="gap:36px">
-      <div class="g2" style="align-items:end">
-        <div class="stack" style="gap:12px"><div class="chap">Research first</div><h2 class="h2" style="font-size:clamp(32px,4.2vw,56px)">Research first. Talk to installers when you’re ready.</h2></div>
+  <!-- RESEARCH FIRST + NO TWENTY COMPANIES (brief §3, §4): one section, the
+       one home for "no sales call" and "up to three installers". -->
+  <section id="research" class="dark" style="padding-block:clamp(48px,6vw,80px)">
+    <div class="wrap stack" style="gap:28px">
+      <div class="stack" style="gap:12px;max-width:44em">
+        <h2 class="h2" style="font-size:clamp(30px,4vw,52px)">Research first. Talk to installers when you’re ready.</h2>
         <p class="lead">Facet Pro lets you explore your project and understand the likely cost before you invite anyone to quote.</p>
-      </div>
-      <div class="trust4">
-        <div><b>No obligation</b><p>Explore, price and save your design without committing to anything.</p></div>
-        <div><b>No sales call</b><p>Nobody rings you because you looked at an estimate.</p></div>
-        <div><b>No need to speak to an installer</b><p>Plenty of people just want to know the likely cost — that’s fine.</p></div>
-        <div><b>Contact only when you ask</b><p>Installers hear from you only if you request quotes.</p></div>
+        <ul class="ticks dk"><li>No obligation</li><li>No sales call</li><li>No need to speak to an installer</li><li>Installers contact you only if you ask</li></ul>
       </div>
       <div class="three">
         <div class="n3">3</div>
@@ -580,14 +559,25 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
     </div>
   </section>
 
-  <!-- FOR INSTALLERS, COMPRESSED (handoff 7 Oct §11, §12): below the
-       homeowner story, never competing with it. -->
-  <section id="installers" style="padding-block:clamp(44px,5vw,64px)">
+  <!-- FINAL CTA -->
+  <section id="start" style="padding-block:clamp(56px,7vw,96px)">
+    <div class="wrap stack" style="gap:18px;align-items:flex-start">
+      <h2 style="font-size:clamp(38px,5.4vw,72px);line-height:.98;letter-spacing:-.04em;font-weight:700">See it on your house.</h2>
+      <p class="lead" style="max-width:28em">One photo. Your home. A clearer idea of what it could look like — and what it could cost.</p>
+      <div class="cta-block">
+        <a class="btn lg" href="/design?journey=windows">See my house &amp; price →</a>
+        <div class="reassure">No account · No measurements · No sales call</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOR INSTALLERS, COMPRESSED (brief §12), below the homeowner story. -->
+  <section id="installers" style="padding-block:clamp(36px,4vw,56px)">
     <div class="wrap">
       <div class="instbox">
         <div class="stack" style="gap:8px">
           <div class="eyebrow">For installers</div>
-          <h2 class="h2" style="font-size:clamp(26px,3vw,38px)">Meet homeowners when they’re ready to buy.</h2>
+          <h2 class="h2" style="font-size:clamp(24px,2.8vw,34px)">Meet homeowners when they’re ready to buy.</h2>
           <p style="color:var(--ink-2)">By the time a homeowner reaches you, they have already:</p>
         </div>
         <ol class="steps6"><li>uploaded their property</li><li>selected the project</li><li>explored products and styles</li><li>visualised the result</li><li>seen a planning estimate</li><li>actively requested quotes</li></ol>
@@ -596,67 +586,31 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
     </div>
   </section>
 
-  <!-- TRUST -->
-  <section class="stone" id="trust">
-    <div class="wrap stack" style="gap:52px">
-      <div class="g2" style="align-items:end">
-        <h2 class="h2">Built by someone who’s been on the other side of the sales conversation.</h2>
-        <div class="stack" style="gap:14px">
-          <p style="font-size:17px;color:var(--ink-2)">Facet Pro was built by someone who has spent twenty-four years selling windows, doors and home improvements, and has seen how differently two similar houses can be priced.</p>
-          <p style="font-size:17px;color:var(--ink-2)">That experience has been turned into a simpler way for homeowners to research a project before entering the sales process.</p>
-          <p style="font-size:17px;color:var(--ink)"><b>Two neighbours. Same street. Same windows. Thousands apart.</b> Facet Pro gives you a starting point before the salesperson arrives.</p>
-        </div>
-      </div>
-      <div class="g2">
-        <div class="tile" style="flex-direction:row;align-items:center;gap:18px"><div style="width:64px;height:64px;flex:none;border-radius:50%;background:var(--night);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff">MS</div><div><b>Mike Sheehan</b><div class="muted" style="font-size:14px">Founder · 24 years in home improvement</div></div></div>
-        <div class="tile"><div class="k">WHY FACET PRO EXISTS</div><b>“I’ve spent 24 years seeing how differently similar homes can be priced. Facet Pro is designed to give homeowners a clearer starting point before they enter that process.”</b></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- FAQ -->
-  <section id="faq" class="stone">
+  <!-- FAQ (brief §14): the seven core questions. -->
+  <section id="faq" class="stone" style="padding-block:clamp(44px,5vw,72px)">
     <div class="wrap g2" style="align-items:start">
-      <div class="stack" style="gap:16px">
+      <div class="stack" style="gap:12px">
         <h2 class="h2">Questions, answered.</h2>
-        <p style="font-size:17px;color:var(--ink-2)">Short answers here. The detail lives in our <a href="/privacy">privacy policy</a> and <a href="/how-we-price">estimate methodology</a>.</p>
+        <p style="font-size:17px;color:var(--ink-2)">The detail lives in our <a href="/privacy">privacy policy</a> and <a href="/how-we-price">how we price</a>. Facet Pro is free for homeowners; installers pay us a fee only when you choose to request quotes.</p>
       </div>
       <div class="faq" style="border-top:1px solid #DEDBD4">
-        <details open><summary>If it’s free, how does Facet Pro make money?</summary><p><b>Facet Pro is free for homeowners.</b></p><p>We earn a fee from installers when you choose to request quotes from them. At most three installers receive your enquiry.</p><p>We don’t charge you to use the visualiser or see your estimate, and <b>we don’t sell your personal details.</b></p></details>
+        <details><summary>Is the Facet Pro price a quotation?</summary><p>No. It is a planning estimate. The final price is confirmed by an installer after reviewing the property and specification.</p></details>
         <details><summary>Do I have to speak to an installer?</summary><p>No. You can explore, price and save your design without speaking to anyone.</p></details>
-                <details><summary>Do I need measurements?</summary><p>No. We estimate sizes from what is visible in your photo.</p></details>
-        <details><summary>Is the price a quotation?</summary><p>No. It is a planning estimate — <a href="#estimate">see estimate vs quote</a>.</p></details>
-        <details><summary>What about the back of the house?</summary><p>Add a second photo of the back, or tell us how many windows there are. Garden doors are priced in our <a href="/cost/bifold-doors-cost">bifold and patio door guide</a>.</p></details>
-        <details><summary>Will installers contact me automatically?</summary><p>No. You decide whether to request quotes. Exploring options and seeing your estimate does not share your details with anyone.</p></details>
-        <details><summary>How many installers receive my enquiry?</summary><p>At most three suitable installers, and only when you choose to request quotes.</p></details>
-        <details><summary>What happens to my photo?</summary><p>Your original photo is deleted immediately after processing. We keep a secure fingerprint for 7 days to maintain estimate consistency, and store your generated designs for 6 months so you can return to your project. If you ask for quotes, your enquiry is kept longer. The detail is in our <a href="/privacy">privacy policy</a>.</p></details>
-        <details><summary>How accurate is the estimate?</summary><p>It is a realistic planning range, not a guaranteed final price. It is based on what we can see in your photo and the options you choose. We record how our estimates compare with installers’ quotes so we can keep improving them.</p></details>
+        <details><summary>Will installers contact me automatically?</summary><p>No. You decide whether to request quotes.</p></details>
+        <details><summary>How many installers will receive my details?</summary><p>Up to three, and only if you request quotes.</p></details>
+        <details><summary>Do I need to measure my property?</summary><p>No. We size it from your photo.</p></details>
+        <details><summary>What happens to my photo?</summary><p>Your original photo is deleted immediately after processing. We keep a secure fingerprint for 7 days to maintain estimate consistency, and store your generated designs for 6 months so you can return to your project. The detail is in our <a href="/privacy">privacy policy</a>.</p></details>
+        <details><summary>How accurate is the estimate?</summary><p>It is a realistic planning range, not a guaranteed final price. It is based on what we can see in your photo and the options you choose.</p></details>
       </div>
     </div>
   </section>
 
-  <!-- FINAL CTA -->
-  <section id="start">
-    <div class="wrap hero">
-      <div class="stack">
-        <div class="chap">Ready?</div>
-        <h2 style="font-size:clamp(42px,6vw,84px);line-height:.98;letter-spacing:-.04em;font-weight:700">See it on your house.</h2>
-        <p class="lead" style="max-width:28em">One photo. Your home. A clearer idea of what it could look like — and what it could cost.</p>
-        <div class="cta-block">
-          <a class="btn lg" href="/design?journey=windows">See my house &amp; price →</a>
-          <div class="reassure">Free · No account · No measurements · No sales call</div>
-        </div>
-      </div>
-      <div style="position:relative">
-        <div class="ba" data-before="c30sBefore" data-after="c30sSlate" data-label="Drag to compare the 1930s example before and after"></div>
-        <div style="position:absolute;left:14px;bottom:14px;background:rgba(255,255,255,.94);border-radius:4px;padding:12px 16px">
-          <div class="muted" style="font-size:12px">Example property · real visualisation</div>
-          <div style="font-weight:700;font-size:20px;letter-spacing:-.01em">See it. Price it. Then decide.</div>
-        </div>
-      </div>
+  <!-- FOUNDER (brief §13): kept, and kept low. -->
+  <section id="trust" style="padding-block:clamp(36px,4vw,56px)">
+    <div class="wrap">
+      <div class="tile" style="flex-direction:row;align-items:center;gap:18px;flex-wrap:wrap"><div style="width:56px;height:56px;flex:none;border-radius:50%;background:var(--night);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff">MS</div><div style="flex:1;min-width:14em"><b>“I’ve spent 24 years seeing how differently similar homes can be priced. Facet Pro gives homeowners a clearer starting point before they enter that process.”</b><div class="muted" style="font-size:14px;margin-top:4px">Mike Sheehan, founder · 24 years in home improvement</div></div></div>
     </div>
-  </section>
-</main>
+  </section></main>
 
 <footer>
   <div class="wrap stack" style="gap:44px">
@@ -721,7 +675,7 @@ const PHOTOS = {
   c30sSlate: "/assets/home/c30sSlate.webp",
   c30Clad: "/assets/home/c30Clad.webp",
 };
-const ALTS = {"c30sBefore": "Illustration: 1930s detached house with white windows and a brown tiled roof", "c30sSlate": "AI visualisation: the same house with a slate roof, anthracite windows and a composite front door", "pbWhiteDoor": "AI visualisation: the same house with its white windows kept and a composite front door", "pbBlackDoor": "AI visualisation: the same house with black windows and a composite front door", "pbBefore": "Illustration: red-brick detached house with white uPVC windows and a bay window", "pbAnth": "AI visualisation: the same house with anthracite uPVC casement windows", "pbBlack": "AI visualisation: the same house with black uPVC casement windows", "pbDoor": "AI visualisation: the same house with anthracite windows and a composite front door", "thBefore": "Illustration: detached house with red tile-hanging and white windows", "thAfter": "AI visualisation: the same house with anthracite windows", "c30Before": "Illustration: 1930s detached house with white windows and a brown roof", "c30Full": "AI visualisation: the same house with anthracite windows, new door, light roofline and a grey roof", "c30Clad": "AI visualisation: the same house with anthracite windows and graphite cladding upstairs"};
+const ALTS = {"c30sBefore": "Illustration: 1930s detached house with white windows and a brown tiled roof", "c30sSlate": "AI visualisation: 1930s detached house with a new slate roof, anthracite grey windows and a composite front door", "pbWhiteDoor": "AI visualisation: red-brick detached house keeping its white uPVC windows, with a new composite front door", "pbBlackDoor": "AI visualisation: red-brick detached house with black uPVC windows and a composite front door", "pbBefore": "Illustration: red-brick detached house with white uPVC windows and a bay window, before", "pbAnth": "AI visualisation: red-brick detached house with anthracite grey uPVC casement windows", "pbBlack": "AI visualisation: red-brick detached house with black uPVC casement windows", "pbDoor": "AI visualisation: red-brick detached house with anthracite grey uPVC windows and a composite front door", "thBefore": "Illustration: detached house with red tile-hanging and white windows", "thAfter": "AI visualisation: tile-hung detached house with anthracite grey uPVC windows", "c30Before": "Illustration: 1930s detached house with white windows and a brown roof", "c30Full": "AI visualisation: the same house with anthracite windows, new door, light roofline and a grey roof", "c30Clad": "AI visualisation: 1930s detached house with anthracite grey windows and graphite cladding upstairs"};
 
 const OLD = {frame:'#E9E5D8',door:'#6B3A2A',doorNew:false,fascia:'#E2DCCD',soffit:'#CBC4B4',gutter:'#D6D3CA'};
 const ANTH = {frame:'#3B4045',door:'#2E3337',doorNew:true,fascia:'#34393D',soffit:'#3A3F43',gutter:'#2A2E32'};
