@@ -30,6 +30,8 @@ const emails = require('../emails');
  * declaration, which is the pleasant kind of mistake — it fails at parse.
  * @param {string}   deps.SITE_URL             absolute base for the resume link
  */
+const formats = require('../renderformats');
+
 module.exports = function designRoutes({ perMinute, record, SITE_URL }) {
   const router = express.Router();
 
@@ -38,13 +40,27 @@ module.exports = function designRoutes({ perMinute, record, SITE_URL }) {
      capability — that is what lets it work in an email without a login, and it
      is still a great deal better than a public provider URL: we control who has
      it, how long it lives, and retention deletes it with its lead. */
+  /* In the smallest format the browser takes (renderformats.js): about 55 KB
+     of AVIF where this was 1.3 MB of PNG. ?download=1 is always a JPEG, named,
+     because the tool's "save" link writes a .jpg that has to open anywhere.
+
+     Cached for a year in the visitor's own browser — the bytes behind an id
+     never change — but `private`, never on a shared cache or CDN. The id is a
+     capability URL to a picture of someone's home, and a CDN copy is one that
+     retention and withdrawal could not delete, under a privacy notice that
+     says they do. Vary: Accept, because one URL now answers in three formats. */
   router.get('/r/:id', async (req, res) => {
     const render = await store.getRender(req.params.id);
     if (!render) return res.status(404).json({ error: 'Not found.' });
-    res.setHeader('Content-Type', render.mime || 'image/jpeg');
-    res.setHeader('Cache-Control', 'private, max-age=86400');
+    const download = req.query.download === '1';
+    const format = formats.pick(req.get('accept'), { download });
+    const smaller = await formats.encoded(req.params.id, render.bytes, format);
+    res.setHeader('Content-Type', smaller ? formats.MIME[format] : (render.mime || 'image/jpeg'));
+    res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
+    res.setHeader('Vary', 'Accept');
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.send(render.bytes);
+    if (download) res.setHeader('Content-Disposition', 'attachment; filename="my-facet-pro-design.jpg"');
+    res.send(smaller || render.bytes);
   });
 
   /* ── POST /api/measure ──
@@ -110,7 +126,7 @@ module.exports = function designRoutes({ perMinute, record, SITE_URL }) {
   <meta property="og:image" content="${emails.escapeHtml(imageUrl)}">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="icon" href="/assets/favicon-32.png">
+  <link rel="icon" href="/assets/favicon-32.png?v=2">
   <style>
     :root{color-scheme:light}
     @font-face{font-family:'Geist';font-style:normal;font-weight:100 900;font-display:swap;src:url(/assets/fonts/geist-variable.woff2) format('woff2')}

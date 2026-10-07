@@ -1130,6 +1130,9 @@ async function staleRenderIds(beforeIso) {
 
 async function deleteRenders(ids) {
   if (!ids.length) return 0;
+  /* The smaller copies /r/:id serves (renderformats.js) go with the original,
+     so retention and withdrawal leave nothing of the picture behind. */
+  require('./renderformats').forget(ids);
   if (pool) {
     const { rowCount } = await pool.query(`DELETE FROM ${SCHEMA_NAME}.renders WHERE id = ANY($1)`, [ids]);
     return rowCount;

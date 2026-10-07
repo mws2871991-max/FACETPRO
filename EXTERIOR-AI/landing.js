@@ -1355,16 +1355,16 @@ function page({ title, description, h1, canonical, body, siteUrl, siteMode, rela
 <meta property="og:title" content="${escapeHtml(title)}">
 <meta property="og:description" content="${escapeHtml(description)}">
 <meta property="og:type" content="article">
-<meta property="og:image" content="${escapeHtml(siteUrl)}/assets/og-image.png">
+<meta property="og:image" content="${escapeHtml(siteUrl)}/assets/og-image.png?v=2">
 <meta property="og:url" content="${escapeHtml(canonical)}">
 <meta property="og:site_name" content="Facet Pro">
 <meta property="og:locale" content="en_GB">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${escapeHtml(title)}">
 <meta name="twitter:description" content="${escapeHtml(description)}">
-<meta name="twitter:image" content="${escapeHtml(siteUrl)}/assets/og-image.png">
+<meta name="twitter:image" content="${escapeHtml(siteUrl)}/assets/og-image.png?v=2">
 <meta name="robots" content="index, follow">
-<link rel="icon" href="/assets/favicon-32.png">
+<link rel="icon" href="/assets/favicon-32.png?v=2">
 <link rel="stylesheet" href="/assets/landing.css">
 ${schema ? `<script type="application/ld+json">${JSON.stringify(schema).replace(/</g, '\\u003c')}</script>` : ''}
 </head><body>

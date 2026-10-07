@@ -3454,6 +3454,8 @@ async function keepRender(replicateUrl, restore = null) {
   const id = crypto.randomBytes(16).toString('hex');
   try {
     await store.putRender(id, bytes, { mime });
+    // The AVIF and WebP the page is about to ask for, encoded now (renderformats.js).
+    require('./renderformats').warm(id, bytes);
   } catch (err) {
     /* And this one is ours. The bytes arrived and the database would not take
        them, which is worth being told about on the first occurrence rather
