@@ -594,3 +594,24 @@ any lead submitted without consent.
   ratings, review counts or testimonials. Keep it that way: fake `AggregateRating`
   is a manual-action risk with Google as well as being untrue.
 - Add new pages to `sitemap.xml` as they're built.
+
+### EPC sizing (built 7 Oct 2026, off by default)
+
+Walls sized from the home's Energy Performance Certificate: assessed floor
+area, built form and room height → exposed perimeter × wall height, with the
+net-of-openings share calibrated so a survey-mean house gives the surveyed
+average (`epc.js`). Routes in `routes/epc.js`; address lookup in
+`addresslookup.js`. Every route answers 404, and `/api/config` says
+`epcSizing: false`, until all three are set:
+
+| Variable | What |
+|---|---|
+| `EPC_SIZING=on` | the switch |
+| `EPC_TOKEN` | bearer token from GOV.UK One Login (Get energy performance of buildings data) |
+| `ADDRESS_LOOKUP_KEY` | Ideal Postcodes key (`ADDRESS_LOOKUP_PROVIDER` defaults to `ideal-postcodes`) |
+
+Licence: the register's non-address fields are OGL v3.0; its address fields
+are OS/Royal Mail data restricted to energy-efficiency purposes, so this code
+never reads, stores or shows them — houses are found by UPRN from the
+licensed lookup. Before switching on, run `npm run validate:epc` against
+surveyed jobs kept outside the repo (`~/facetpro-houses/epc-jobs.json`).

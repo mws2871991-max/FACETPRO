@@ -2221,6 +2221,9 @@ const state = {
   measuring: false,
   useMeasurement: false,  // whether the measured area is currently sizing the quote
   pins: null,             // corners the homeowner placed (openPinEditor), for this photo only
+  epcAvailable: false,    // /api/config: energy-certificate sizing is switched on
+  epc: null, epcId: null, // the sized certificate and the server's id for it
+  epcLookup: { postcode: '', addresses: null, uprn: '', busy: false, error: null },
   photoLongEdge: null,    // pixels, read once per photo — a small photo is a reason to offer the pins
   // Server tells us whether it can email the homeowner their design, so the
   // form only promises it when it's true.
@@ -2366,6 +2369,7 @@ async function loadConfig() {
     state.beta = !!cfg.beta;
     state.leadCapture = cfg.leadCapture !== false;
     state.contactPhone = typeof cfg.contactPhone === 'string' ? cfg.contactPhone : null;
+    state.epcAvailable = !!cfg.epcSizing;
   } catch (err) {
     state.designPackEmail = false;   // promise nothing if we can't tell
     state.installerQuotesAvailable = false;
@@ -2502,7 +2506,8 @@ async function loadLeads(token) {
    walked out with a tape measure has told us about their house as surely as
    the camera did. Anything sized by house type is not on either list. */
 const MEASURED_FROM_PHOTO = ['photo_door', 'photo_coverage'];
-const ABOUT_THIS_HOUSE = [...MEASURED_FROM_PHOTO, 'manual_entry'];
+// 'epc': the home's own energy certificate — about this house, not read off the picture.
+const ABOUT_THIS_HOUSE = [...MEASURED_FROM_PHOTO, 'manual_entry', 'epc'];
 
 /* Once we know this house's wall area, the whole-house calculator uses it.
 
@@ -2547,6 +2552,7 @@ async function refreshPrice() {
         // Only sent once they've chosen to use it — the server looks the
         // measurement up itself, we never send an area.
         detectionId: state.useMeasurement ? state.detectionId : null,
+        epcId: state.epcId || null,   // energy-certificate sizing (epc.js): an id, never an area
         // Before we've seen the house this is what sizes the estimate, and
         // the server returns a range rather than a single figure.
         houseType: state.houseType,
@@ -5968,6 +5974,8 @@ function rangeDrivers(kind) {
         ? `Wall area measured from your photo${m2 ? `, about ${m2} m²` : ''}. A photograph cannot measure to the centimetre, so the range allows for that.`
         : src === 'manual_entry'
           ? `The wall area you gave us${m2 ? `, ${m2} m²` : ''}.`
+        : src === 'epc'
+          ? `Wall area worked out from your home’s energy certificate${m2 ? `, about ${m2} m²` : ''} — its measured floor area and room height. An installer confirms it on survey.`
           : `A typical wall area for this kind of house${m2 ? `, about ${m2} m²` : ''}, with room either side because it is not yet yours.`]);
     }
     if (priced.includes('trim')) {
@@ -8774,6 +8782,7 @@ function buildMeasureBlock() {
   ]) : null;
 
   return h('div', { className: 'mt-6 rounded-2xl border border-zinc-200 bg-[#FDFCF9] p-5' }, [
+    epcBlock(),
     h('div', { className: 'flex items-center justify-between gap-3 flex-wrap' }, [
       h('h3', { className: 'text-lg font-medium' }, 'Measure my walls from the photo'),
       h('span', { className: 'text-base text-zinc-600 font-semibold' }, 'Optional'),
@@ -8860,6 +8869,7 @@ async function fetchQuoteInstallers() {
         claddingId: state.cladding?.id, trimId: state.trim?.id, roofId: state.roof?.id,
         footprintM2: state.footprint?.area || null, trimLengthM: state.trimLengthM || null,
         detectionId: state.useMeasurement ? state.detectionId : null,
+        epcId: state.epcId || null,   // energy-certificate sizing (epc.js): an id, never an area
         houseType: state.houseType, conservatoryStyleId: state.conservatoryId,
         windowCount: state.windowCount,
         ...state.prefs,
@@ -10792,6 +10802,77 @@ async function autoMeasure() {
   } catch (_) { /* never block the journey on the optional step */ }
 }
 
+/* ── SIZED FROM THE HOME'S ENERGY CERTIFICATE (epc.js) ──
+   Shown only when /api/config says it is switched on. Postcode, then their
+   address from a licensed lookup, then the newest EPC for it: an assessor's
+   measured floor area, which beats any photo for the walls nobody
+   photographed. The page sends the chosen UPRN and gets back an id; the area
+   stays on the server. */
+function epcBlock({ dark = false } = {}) {
+  if (!state.epcAvailable) return null;
+  const L = state.epcLookup;
+  const muted = dark ? 'text-white/80' : 'text-zinc-600';
+  if (state.epcId && state.epc) {
+    return h('div', { className: `mt-3 text-base leading-7 ${muted}` }, [
+      h('p', {}, `✓ Walls sized from your energy certificate: about ${state.epc.low}–${state.epc.high} m² (${Math.round(state.epc.epc?.floorAreaM2 || 0)} m² of floor, ${String(state.epc.houseTypeLabel || '').toLowerCase()}).`),
+      h('button', {
+        type: 'button', className: 'underline underline-offset-2 min-h-[44px]',
+        onClick: async () => { state.epcId = null; state.epc = null; await refreshPrice(); render(); U('Back to sizing from your photo'); },
+      }, 'Stop using the certificate'),
+    ]);
+  }
+  const find = async () => {
+    const pc = String(L.postcode || state.postcode || '').trim();
+    if (!pc) { L.error = 'Type your postcode first.'; render(); return; }
+    L.busy = true; L.error = null; L.addresses = null; render();
+    try {
+      const res = await fetch(`/api/epc/addresses?postcode=${encodeURIComponent(pc)}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'We couldn’t look up that postcode.');
+      L.addresses = data.addresses || [];
+      L.uprn = L.addresses[0]?.uprn || '';
+      if (!L.addresses.length) L.error = 'No addresses found for that postcode.';
+    } catch (err) { L.error = err.message; }
+    L.busy = false; render();
+  };
+  const use = async () => {
+    if (!L.uprn) return;
+    L.busy = true; L.error = null; render();
+    try {
+      const res = await fetch('/api/epc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ uprn: L.uprn }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'We couldn’t read that certificate.');
+      state.epc = data; state.epcId = data.epcId;
+      reachedStage('epc_sized');
+      await refreshPrice();
+      U(`Sized from your energy certificate: about ${data.low}–${data.high} m² of wall`);
+    } catch (err) { L.error = err.message; }
+    L.busy = false; render();
+  };
+  const field = dark ? 'bg-white/10 border-white/20 text-white placeholder:text-white/50' : 'bg-white border-zinc-300 text-zinc-900';
+  return h('div', { className: 'mt-3' }, [
+    h('p', { className: `text-base leading-7 ${muted}` }, 'Most accurate: size it from your home’s energy certificate (EPC) — measured by an assessor who visited.'),
+    h('div', { className: 'mt-2 flex flex-wrap gap-2' }, [
+      h('input', {
+        type: 'text', inputmode: 'text', autocomplete: 'postal-code', 'aria-label': 'Your postcode', placeholder: 'Postcode',
+        value: L.postcode || state.postcode || '',
+        className: `px-3 min-h-[44px] rounded-lg border text-base w-36 ${field}`,
+        onInput: (e) => { L.postcode = e.target.value; },
+        onKeydown: (e) => { if (e.key === 'Enter') { e.preventDefault(); find(); } },
+      }),
+      h('button', { type: 'button', disabled: L.busy, className: 'px-4 min-h-[44px] rounded-full border border-zinc-300 bg-white text-zinc-900 text-base font-medium', onClick: find }, L.busy && !L.addresses ? 'Looking…' : 'Find my address'),
+    ]),
+    L.addresses && L.addresses.length ? h('div', { className: 'mt-2 flex flex-wrap gap-2' }, [
+      h('select', {
+        'aria-label': 'Your address', className: `px-3 min-h-[44px] rounded-lg border text-base max-w-full ${field}`,
+        onChange: (e) => { L.uprn = e.target.value; },
+      }, L.addresses.map(a => h('option', { value: a.uprn, selected: a.uprn === L.uprn || undefined }, a.label))),
+      h('button', { type: 'button', disabled: L.busy, className: 'cta px-4 min-h-[44px] rounded-full text-base font-semibold', onClick: use }, L.busy ? 'Reading the certificate…' : 'Use my certificate'),
+    ]) : null,
+    L.error ? h('p', { role: 'alert', className: `mt-2 text-base leading-7 ${dark ? 'text-[#F4B9A6]' : 'text-red-700'}` }, L.error) : null,
+  ]);
+}
+
 /* ── WHEN THE PHOTO IS HARD TO MEASURE: PIN IT YOURSELF (7 Oct 2026) ──
 
    Wall area is measured with the front door as the ruler, and the model has to
@@ -10828,7 +10909,7 @@ const SMALL_PHOTO_PX = 1000;
    have already pinned it. */
 function photoHelpReasons() {
   if (!state.uploadedImg || state.detectionStatus !== 'success' || !state.detectionId) return [];
-  if (state.pins) return [];
+  if (state.pins || state.epcId) return [];
   const areaMatters = (state.cladding?.id && state.cladding.id !== 'none') || (state.roof?.id && state.roof.id !== 'none');
   if (!areaMatters) return [];
   const m = state.measurement;
@@ -10843,6 +10924,10 @@ function photoHelpReasons() {
 }
 
 function pinsHelpPanel() {
+  // Sized from the certificate: say so here, where they asked for it.
+  if (state.epcId && state.epc) {
+    return h('div', { className: 'rounded-xl bg-white/5 border border-white/10 p-4' }, [epcBlock({ dark: true })]);
+  }
   if (state.pins && state.measurement?.pinned) {
     return h('div', { className: 'rounded-xl bg-white/5 border border-white/10 p-4 text-base leading-7 text-white/80 flex flex-wrap items-center justify-between gap-2' }, [
       h('span', {}, `✓ Walls measured from your pins: about ${state.measurement.low}–${state.measurement.high} m²`),
@@ -10859,6 +10944,7 @@ function pinsHelpPanel() {
     h('p', { className: 'mt-1 text-base leading-7 text-zinc-600' }, typical
       ? `Until then your walls are priced as a typical ${type}. Show us your front door and we’ll measure your own.`
       : 'Show us your front door and we’ll measure again from that.'),
+    epcBlock(),
     h('div', { className: 'mt-3 flex flex-wrap gap-2' }, [
       h('button', {
         type: 'button',
@@ -11913,6 +11999,7 @@ async function sendDesignPack() {
         trimLengthM: state.trimLengthM || null,
         measurementSource: state.measurementSource,
         detectionId: state.useMeasurement ? state.detectionId : null,
+        epcId: state.epcId || null,   // energy-certificate sizing (epc.js): an id, never an area
         // Just the ids — the server looks up every product from its own
         // catalogue, so nothing here can carry an invented price.
         conservatoryStyleId: state.conservatoryId,

@@ -1770,6 +1770,8 @@ app.get('/api/config', (req, res) => {
        /design when set; nothing is shown when it is not, rather than a
        placeholder. Digits, spaces and a leading + only. */
     contactPhone: CONTACT_PHONE,
+    /* Offer "size it from my energy certificate" only when it can answer. */
+    epcSizing: epcRouting.live(),
   });
 });
 
@@ -2095,13 +2097,20 @@ function seenOrEstimated({ footprint, price, trimLengthM }) {
   };
 }
 
-function resolveFootprint({ footprintM2, detectionId, houseType }) {
+function resolveFootprint({ footprintM2, detectionId, houseType, epcId }) {
   const manual = Number(footprintM2);
   if (Number.isFinite(manual) && manual >= MANUAL_AREA_MIN_M2 && manual <= MANUAL_AREA_MAX_M2) {
     return { m2: manual, source: 'manual_entry', measurement: null, exact: true };
   }
   if (Number.isFinite(manual) && manual > 0) {
     console.warn(`Ignoring an implausible wall area of ${manual} m² — outside ${MANUAL_AREA_MIN_M2}–${MANUAL_AREA_MAX_M2}. Falling back to the measurement.`);
+  }
+  /* The home's Energy Performance Certificate, when they looked it up (epc.js):
+     an assessor's measured floor area beats a door used as a ruler. After
+     their own figure, before the photo. Looked up by id, never sent. */
+  const fromEpc = require('./routes/epc').epcMeasurement(epcId);
+  if (fromEpc) {
+    return { m2: fromEpc.m2, source: 'epc', measurement: fromEpc, exact: false, areaBand: { low: fromEpc.low, high: fromEpc.high } };
   }
   const record = detectionId ? detectionRecords.get(String(detectionId)) : null;
   if (record && record.measurement) {
@@ -2260,8 +2269,8 @@ app.post('/api/quote', (req, res) => {
     obs.outcome('quote_request', res.statusCode < 400);
   });
 
-  const { claddingId, trimId, roofId, footprintM2, trimLengthM, detectionId, houseType } = req.body || {};
-  const footprint = resolveFootprint({ footprintM2, detectionId, houseType });
+  const { claddingId, trimId, roofId, footprintM2, trimLengthM, detectionId, houseType, epcId } = req.body || {};
+  const footprint = resolveFootprint({ footprintM2, detectionId, houseType, epcId });
   const price = computePrice({ claddingId, trimId, roofId, footprintM2: footprint.m2, trimLengthM });
   res.json({
     ...price,
@@ -3557,7 +3566,7 @@ app.post('/api/quote-installers', coverageLimiter, (req, res) => {
   if (!parsed) {
     return res.status(400).json({ error: 'That doesn’t look like a UK postcode.', reason: 'unreadable_postcode' });
   }
-  const footprint = resolveFootprint({ footprintM2: body.footprintM2, detectionId: body.detectionId, houseType: body.houseType });
+  const footprint = resolveFootprint({ footprintM2: body.footprintM2, detectionId: body.detectionId, houseType: body.houseType, epcId: body.epcId });
   const price = computePrice({ claddingId: body.claddingId, trimId: body.trimId, roofId: body.roofId,
     footprintM2: footprint.m2, trimLengthM: body.trimLengthM });
   const preview = {
@@ -3580,6 +3589,11 @@ app.post('/api/quote-installers', coverageLimiter, (req, res) => {
    detectionRecords is passed directly because it is a const Map mutated in
    place; contrast getUsage in routes/ops.js, which must be a getter because
    that one is reassigned. */
+/* EPC sizing (epc.js). Mounted always; every route answers 404 until
+   EPC_SIZING=on with EPC_TOKEN and ADDRESS_LOOKUP_KEY set. */
+const epcRouting = require('./routes/epc');
+app.use(epcRouting.epcRoutes({ perMinute, obs }));
+
 app.use(require('./routes/measure')({
   detectionRecords, catalogue, record, MEASURE_TUNING,
   /* Shared, not moved: /api/quote uses pricingVersion and /api/detect uses
@@ -4506,7 +4520,7 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
      never uploaded a photo was shown one number and had a different, smaller
      one stored on their lead and emailed to the installer. The quote endpoint
      had always passed it; this one never had. */
-  const footprint = resolveFootprint({ footprintM2, detectionId, houseType });
+  const footprint = resolveFootprint({ footprintM2, detectionId, houseType, epcId: req.body?.epcId });
   const price = computePrice({ claddingId, trimId, roofId, footprintM2: footprint.m2, trimLengthM });
   /* The installer sees the same labels the homeowner saw: which quantities
      were measured from the photo and which are estimates to check on survey. */
@@ -5097,6 +5111,8 @@ const BRANCH_STAGES = new Map([
      the two read as "how often it is needed" and "whether it works". */
   ['pins_opened', { of: 'analysis_completed', label: 'opened the pins on a hard-to-measure photo' }],
   ['pins_measured', { of: 'pins_opened', label: 'measured their walls from their own pins' }],
+  // Energy-certificate sizing (epc.js), once it is switched on.
+  ['epc_sized', { of: 'analysis_completed', label: 'sized their walls from their energy certificate' }],
   /* The denominator photo_retry needs.
 
      On its own, "12 people went back for another photo" could mean the notice
