@@ -2220,6 +2220,8 @@ const state = {
   measurement: null,      // { m2, low, high, method, confidence, notes, caveat }
   measuring: false,
   useMeasurement: false,  // whether the measured area is currently sizing the quote
+  pins: null,             // corners the homeowner placed (openPinEditor), for this photo only
+  photoLongEdge: null,    // pixels, read once per photo — a small photo is a reason to offer the pins
   // Server tells us whether it can email the homeowner their design, so the
   // form only promises it when it's true.
   resumeCode: null,         // a code we've issued, so they can type it on a phone
@@ -4703,6 +4705,7 @@ function buildUploadDetect() {
         ]),
         triageInPanel(),
         analysisPanel(),
+        pinsHelpPanel(),
         /* Proof you looked, in one line rather than twenty.
 
            This rendered every detection as its own row: "Guttering - Left
@@ -10695,6 +10698,8 @@ async function handleUpload(file) {
     state.scaleReference = !!data.scaleReference;
     state.measurement = null;
     state.useMeasurement = false;
+    state.pins = null;
+    state.photoLongEdge = null;
     state.stage = 'visualizer';
     state.detectionStatus = 'success';
     reachedStage('visualisation_started');
@@ -10764,13 +10769,18 @@ async function handleUpload(file) {
 }
 
 async function autoMeasure() {
-  if (!state.detectionId || !state.canMeasure) return;
+  readPhotoLongEdge();
+  // Pins stand in for walls the model could not find, so they measure either way.
+  if (!state.detectionId || (!state.canMeasure && !state.pins)) return;
   if (state.measurement) return;                 // already done for this photo
   try {
     const res = await fetch('/api/measure', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ detectionId: state.detectionId, houseType: state.houseType }),
+      /* With the homeowner's pins when they placed some: a change of house
+         type re-measures, and it must not quietly swap their pins for the
+         model's boxes. */
+      body: JSON.stringify({ detectionId: state.detectionId, houseType: state.houseType, pins: state.pins || undefined }),
     });
     if (!res.ok) return;                         // prior is a fine fallback
     const data = await res.json();
@@ -10780,6 +10790,307 @@ async function autoMeasure() {
        that tells refreshPrice it may send the id at all. */
     state.useMeasurement = true;
   } catch (_) { /* never block the journey on the optional step */ }
+}
+
+/* ── WHEN THE PHOTO IS HARD TO MEASURE: PIN IT YOURSELF (7 Oct 2026) ──
+
+   Wall area is measured with the front door as the ruler, and the model has to
+   find that door first. A small photo, a tree across the porch or a shot from
+   the side, and it misreads the door or misses it — and the estimate falls back
+   to a typical house without the visitor knowing why. The calibration is still
+   in beta; this is the fast way round it rather than "try another photo".
+
+   The visitor drags four pins to the corners of their front door, and
+   optionally four to the corners of the front wall. The server measures from
+   those (measure.js, pinnedDetections) with exactly the same ruler and limits;
+   nothing here sends an area. About twenty seconds, and only offered when the
+   photo gave us a reason to. */
+
+function readPhotoLongEdge() {
+  if (state.photoLongEdge || !state.uploadedImg) return;
+  const src = state.uploadedImg;
+  const im = new Image();
+  im.onload = () => {
+    if (state.uploadedImg !== src) return;
+    state.photoLongEdge = Math.max(im.naturalWidth, im.naturalHeight) || null;
+    if (photoHelpReasons().length) render();
+  };
+  im.src = src;
+}
+
+/* Below this the door is a few dozen pixels tall and the model's box around it
+   is a guess. The page itself downsizes to 1600, so anything under 1000 was
+   small when it arrived. */
+const SMALL_PHOTO_PX = 1000;
+
+/* Why this photo is worth pinning, in the visitor's words. Empty when it
+   measured cleanly, when nothing priced depends on the wall area, or when they
+   have already pinned it. */
+function photoHelpReasons() {
+  if (!state.uploadedImg || state.detectionStatus !== 'success' || !state.detectionId) return [];
+  if (state.pins) return [];
+  const areaMatters = (state.cladding?.id && state.cladding.id !== 'none') || (state.roof?.id && state.roof.id !== 'none');
+  if (!areaMatters) return [];
+  const m = state.measurement;
+  const type = (HOUSE_TYPES.find(t => t.id === state.houseType)?.label || 'house').toLowerCase();
+  const out = [];
+  if (state.photoLongEdge && state.photoLongEdge < SMALL_PHOTO_PX) out.push('The photo is quite small, so the front door is hard to make out.');
+  if (!state.canMeasure) out.push('We couldn’t pick out the front walls.');
+  else if (!state.scaleReference) out.push('We couldn’t see your front door clearly — a tree, car or porch may be in the way.');
+  if (m?.observed?.rejected) out.push(`The measurement came out ${m.observed.rejected.side === 'above' ? 'much bigger' : 'much smaller'} than a ${type} usually is, which usually means the door was misread.`);
+  else if (m?.observed?.clamped || (m?.crossCheck && !m.crossCheck.agrees)) out.push('Two ways of measuring disagree — usually the photo was taken at an angle, or something is in front of the house.');
+  return out;
+}
+
+function pinsHelpPanel() {
+  if (state.pins && state.measurement?.pinned) {
+    return h('div', { className: 'rounded-xl bg-white/5 border border-white/10 p-4 text-base leading-7 text-white/80 flex flex-wrap items-center justify-between gap-2' }, [
+      h('span', {}, `✓ Walls measured from your pins: about ${state.measurement.low}–${state.measurement.high} m²`),
+      h('button', { type: 'button', className: 'underline underline-offset-2 min-h-[44px]', onClick: (e) => openPinEditor(e.currentTarget) }, 'Adjust the pins'),
+    ]);
+  }
+  const reasons = photoHelpReasons();
+  if (!reasons.length) return null;
+  const typical = !state.measurement || state.measurement.method === 'prior';
+  const type = (HOUSE_TYPES.find(t => t.id === state.houseType)?.label || 'house').toLowerCase();
+  return h('div', { id: 'pins-help', className: 'rounded-xl bg-white p-4 text-zinc-900' }, [
+    h('div', { className: 'text-lg font-semibold' }, 'This photo is hard to measure'),
+    h('p', { className: 'mt-1 text-base leading-7 text-zinc-600' }, reasons[0]),
+    h('p', { className: 'mt-1 text-base leading-7 text-zinc-600' }, typical
+      ? `Until then your walls are priced as a typical ${type}. Show us your front door and we’ll measure your own.`
+      : 'Show us your front door and we’ll measure again from that.'),
+    h('div', { className: 'mt-3 flex flex-wrap gap-2' }, [
+      h('button', {
+        type: 'button',
+        className: 'cta px-5 min-h-[48px] rounded-full text-base font-semibold',
+        onClick: (e) => { reachedStage('pins_opened'); openPinEditor(e.currentTarget); },
+      }, 'Place the pins myself · 20 seconds'),
+      h('button', {
+        type: 'button',
+        className: 'px-4 min-h-[48px] rounded-full border border-zinc-300 text-base font-medium hover:border-zinc-900 transition',
+        onClick: () => { reachedStage('photo_retry'); sharedRefs.fileInput?.click(); },
+      }, 'Use a different photo'),
+    ]),
+  ]);
+}
+
+/* Four corners from a box, as the editor starts them. */
+const cornersOf = (b) => [
+  { x: b.x, y: b.y }, { x: b.x + b.w, y: b.y },
+  { x: b.x + b.w, y: b.y + b.h }, { x: b.x, y: b.y + b.h },
+];
+const boxOfDetection = (d) => ({ x: Number(d.x_pct), y: Number(d.y_pct), w: Number(d.w_pct), h: Number(d.h_pct) });
+
+/* Where the pins start: on what the model found, so a near miss is a nudge
+   rather than four long drags; in the middle of the photo when it found
+   nothing. */
+function startingPins() {
+  if (state.pins) return { door: state.pins.door.map(p => ({ ...p })), wall: (state.pins.wall || null)?.map(p => ({ ...p })) || null };
+  const ds = state.detections.filter(d => d.type === 'door-front' && Number(d.h_pct) > 0)
+    .sort((a, b) => (Number(b.confidence) || 0) - (Number(a.confidence) || 0));
+  const walls = state.detections.filter(d => d.type === 'cladding' && Number(d.w_pct) > 0).map(boxOfDetection);
+  const door = ds.length ? boxOfDetection(ds[0]) : { x: 44, y: 55, w: 12, h: 32 };
+  let wall = { x: 12, y: 22, w: 76, h: 72 };
+  if (walls.length) {
+    const x0 = Math.min(...walls.map(b => b.x)), y0 = Math.min(...walls.map(b => b.y));
+    const x1 = Math.max(...walls.map(b => b.x + b.w)), y1 = Math.max(...walls.map(b => b.y + b.h));
+    wall = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+  }
+  return { door: cornersOf(door), wall: cornersOf(wall) };
+}
+
+/* The editor. Built directly in the DOM rather than through render(): it is a
+   modal with its own pointer handling, and a re-render of the page under it
+   must not reset a pin mid-drag. */
+function openPinEditor(opener) {
+  if (!state.uploadedImg || !state.detectionId) { U('Add a photo first'); return; }
+  document.getElementById('pin-editor')?.remove();
+  const pins = startingPins();
+  const steps = [
+    { key: 'door', colour: '#B5482A', title: 'Step 1 of 2 · Your front door',
+      help: 'Drag a pin onto each corner of the door itself — not the frame, the glass beside it or the porch.' },
+    { key: 'wall', colour: '#16181A', title: 'Step 2 of 2 · The front of the house',
+      help: 'Drag a pin onto each corner of the front wall: where it meets the ground and the roof. Leave out the neighbour’s house.' },
+  ];
+  let step = 0;
+  let useWall = true;
+  const NAMES = ['top left', 'top right', 'bottom right', 'bottom left'];
+
+  const wrap = document.createElement('div');
+  wrap.id = 'pin-editor';
+  wrap.setAttribute('role', 'dialog');
+  wrap.setAttribute('aria-modal', 'true');
+  wrap.setAttribute('aria-labelledby', 'pin-title');
+  wrap.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:#16181A;display:flex;flex-direction:column;align-items:center;gap:12px;padding:calc(12px + env(safe-area-inset-top,0px)) 12px calc(12px + env(safe-area-inset-bottom,0px));overflow:auto;color:#fff;font-family:Geist,sans-serif';
+  wrap.innerHTML = `
+    <div style="width:100%;max-width:880px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+      <div><div id="pin-title" style="font-weight:700;font-size:18px"></div><p id="pin-help" style="margin:4px 0 0;font-size:16px;line-height:1.5;color:rgba(255,255,255,.82)"></p></div>
+      <button type="button" id="pin-close" aria-label="Close" style="min-width:44px;min-height:44px;border-radius:999px;border:1px solid rgba(255,255,255,.3);background:none;color:#fff;font-size:22px;line-height:1">×</button>
+    </div>
+    <div id="pin-stage" style="position:relative;max-width:880px;width:100%;touch-action:none;user-select:none">
+      <img id="pin-img" alt="Your photo" draggable="false" style="display:block;width:100%;height:auto;max-height:68vh;object-fit:contain;border-radius:6px">
+      <svg id="pin-svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+      <div id="pin-loupe" aria-hidden="true" style="position:absolute;z-index:5;width:120px;height:120px;border-radius:50%;border:3px solid #fff;box-shadow:0 6px 20px rgba(0,0,0,.5);background-repeat:no-repeat;pointer-events:none;display:none"><span style="position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border:2px solid #E08A6C;border-radius:50%;box-shadow:0 0 0 1px rgba(0,0,0,.6)"></span></div>
+    </div>
+    <p id="pin-error" role="alert" style="margin:0;max-width:880px;width:100%;color:#F4B9A6;font-size:16px;min-height:1.5em"></p>
+    <div style="width:100%;max-width:880px;display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end">
+      <button type="button" id="pin-back" style="min-height:48px;padding:0 18px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:none;color:#fff;font-size:16px;font-weight:500">Back</button>
+      <button type="button" id="pin-skip" style="min-height:48px;padding:0 18px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:none;color:#fff;font-size:16px;font-weight:500">Just use the door</button>
+      <button type="button" id="pin-next" style="min-height:48px;padding:0 22px;border-radius:4px;border:0;background:#B5482A;color:#fff;font-size:16px;font-weight:600"></button>
+    </div>`;
+  document.body.appendChild(wrap);
+  const $ = (id) => wrap.querySelector('#' + id);
+  const img = $('pin-img'), stage = $('pin-stage'), svg = $('pin-svg'), loupe = $('pin-loupe');
+  img.src = state.uploadedImg;
+  const prevOverflow = document.body.style.overflow;
+  document.body.style.overflow = 'hidden';
+
+  /* The image keeps its aspect inside a max-height, so the stage is sized to
+     the picture actually drawn and pins are placed against that. */
+  const fit = () => {
+    if (!img.naturalWidth) return;
+    const maxH = window.innerHeight * 0.68;
+    const w = Math.min(stage.parentElement.clientWidth, 880, maxH * img.naturalWidth / img.naturalHeight);
+    stage.style.width = `${w}px`;
+    img.style.maxHeight = 'none';
+  };
+
+  const handles = [];
+  const draw = () => {
+    const key = steps[step].key;
+    svg.innerHTML = '';
+    for (const s of steps) {
+      if (s.key === 'wall' && (!useWall || step === 0)) continue;
+      const pts = pins[s.key];
+      const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+      poly.setAttribute('points', pts.map(p => `${p.x},${p.y}`).join(' '));
+      poly.setAttribute('fill', s.key === key ? 'rgba(181,72,42,.18)' : 'rgba(255,255,255,.08)');
+      poly.setAttribute('stroke', s.key === key ? '#E08A6C' : 'rgba(255,255,255,.6)');
+      poly.setAttribute('stroke-width', '2');
+      poly.setAttribute('vector-effect', 'non-scaling-stroke');
+      svg.appendChild(poly);
+    }
+    pins[key].forEach((p, i) => {
+      const el = handles[i];
+      el.style.left = `${p.x}%`;
+      el.style.top = `${p.y}%`;
+      el.setAttribute('aria-label', `${key === 'door' ? 'Door' : 'Front wall'}, ${NAMES[i]} corner. Arrow keys move it.`);
+    });
+    $('pin-title').textContent = steps[step].title;
+    $('pin-help').textContent = steps[step].help;
+    $('pin-next').textContent = step === 0 ? 'Next: the house front' : 'Measure my walls';
+    $('pin-back').style.display = step === 0 ? 'none' : '';
+    $('pin-skip').style.display = step === 0 ? 'none' : '';
+  };
+
+  for (let i = 0; i < 4; i++) {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.style.cssText = 'position:absolute;z-index:2;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;border:0;background:transparent;cursor:grab;touch-action:none;padding:0';
+    el.innerHTML = '<span style="position:absolute;left:50%;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:#fff;border:3px solid #B5482A;box-shadow:0 1px 6px rgba(0,0,0,.5)"></span>';
+    stage.appendChild(el);
+    handles.push(el);
+
+    const placeFrom = (ev) => {
+      const r = img.getBoundingClientRect();
+      const p = pins[steps[step].key][i];
+      p.x = Math.min(100, Math.max(0, ((ev.clientX - r.left) / r.width) * 100));
+      p.y = Math.min(100, Math.max(0, ((ev.clientY - r.top) / r.height) * 100));
+      // A magnified view above the finger, which otherwise covers the corner it is placing.
+      const z = 3;
+      loupe.style.display = 'block';
+      loupe.style.backgroundImage = `url("${state.uploadedImg}")`;
+      loupe.style.backgroundSize = `${r.width * z}px ${r.height * z}px`;
+      loupe.style.backgroundPosition = `${60 - (p.x / 100) * r.width * z}px ${60 - (p.y / 100) * r.height * z}px`;
+      loupe.style.left = `calc(${p.x}% - 60px)`;
+      loupe.style.top = `calc(${p.y}% - ${p.y < 30 ? -40 : 160}px)`;
+      $('pin-error').textContent = '';
+      draw();
+    };
+    el.addEventListener('pointerdown', (ev) => { ev.preventDefault(); el.setPointerCapture(ev.pointerId); el.style.cursor = 'grabbing'; placeFrom(ev); });
+    el.addEventListener('pointermove', (ev) => { if (el.hasPointerCapture(ev.pointerId)) placeFrom(ev); });
+    const end = (ev) => { if (el.hasPointerCapture?.(ev.pointerId)) el.releasePointerCapture(ev.pointerId); el.style.cursor = 'grab'; loupe.style.display = 'none'; };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+    el.addEventListener('keydown', (ev) => {
+      const d = ev.shiftKey ? 2 : 0.5;
+      const p = pins[steps[step].key][i];
+      const mv = { ArrowLeft: [-d, 0], ArrowRight: [d, 0], ArrowUp: [0, -d], ArrowDown: [0, d] }[ev.key];
+      if (!mv) return;
+      ev.preventDefault();
+      p.x = Math.min(100, Math.max(0, p.x + mv[0]));
+      p.y = Math.min(100, Math.max(0, p.y + mv[1]));
+      draw();
+    });
+  }
+
+  const close = () => {
+    window.removeEventListener('resize', fit);
+    document.removeEventListener('keydown', onKey, true);
+    document.body.style.overflow = prevOverflow;
+    wrap.remove();
+    opener?.focus?.();
+  };
+  const onKey = (ev) => {
+    if (ev.key === 'Escape') { ev.preventDefault(); close(); }
+    if (ev.key === 'Tab') {   // keep focus inside the dialog
+      const f = [...wrap.querySelectorAll('button')].filter(b => b.offsetParent !== null);
+      const i = f.indexOf(document.activeElement);
+      if (ev.shiftKey && i <= 0) { ev.preventDefault(); f[f.length - 1].focus(); }
+      else if (!ev.shiftKey && i === f.length - 1) { ev.preventDefault(); f[0].focus(); }
+    }
+  };
+  document.addEventListener('keydown', onKey, true);
+  window.addEventListener('resize', fit);
+  img.addEventListener('load', () => { fit(); draw(); });
+  if (img.complete) { fit(); }
+  $('pin-close').addEventListener('click', close);
+  $('pin-back').addEventListener('click', () => { step = 0; draw(); handles[0].focus(); });
+
+  const submit = async () => {
+    const next = $('pin-next');
+    next.disabled = true;
+    next.textContent = 'Measuring…';
+    const sent = { door: pins.door.map(p => ({ x: +p.x.toFixed(2), y: +p.y.toFixed(2) })) };
+    if (useWall) sent.wall = pins.wall.map(p => ({ x: +p.x.toFixed(2), y: +p.y.toFixed(2) }));
+    try {
+      const res = await fetch('/api/measure', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ detectionId: state.detectionId, houseType: state.houseType, pins: sent }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'We couldn’t measure from those pins — please try again.');
+      /* The house-type band still applies to pins. A reading it refuses is a
+         misplaced pin or the wrong house type far more often than an unusual
+         house, and the place to say so is here, with the pins still showing. */
+      if (data.method === 'prior' && data.observed?.rejected) {
+        const type = (HOUSE_TYPES.find(t => t.id === state.houseType)?.label || 'house').toLowerCase();
+        throw new Error(`Those pins give about ${data.observed.rejected.m2} m² of wall, which is ${data.observed.rejected.side === 'above' ? 'more' : 'less'} than a ${type} usually has. Check the door pins are on the door itself — or that “${HOUSE_TYPES.find(t => t.id === state.houseType)?.label || 'house type'}” is right.`);
+      }
+      state.pins = sent;
+      state.measurement = data;
+      state.useMeasurement = true;
+      state.footprint = null;
+      reachedStage('pins_measured');
+      close();
+      await refreshPrice();
+      // The whole page: the offer, the price bar and the refine section all change.
+      render();
+      U(`Measured from your pins: about ${data.low}–${data.high} m² of wall`);
+    } catch (err) {
+      $('pin-error').textContent = err.message;
+      next.disabled = false;
+      draw();
+    }
+  };
+  $('pin-next').addEventListener('click', () => {
+    if (step === 0) { step = 1; useWall = true; draw(); handles[0].focus(); return; }
+    submit();
+  });
+  $('pin-skip').addEventListener('click', () => { useWall = false; submit(); });
+  draw();
+  handles[0].focus();
 }
 
 /* ── THE INSTANT WOW ──

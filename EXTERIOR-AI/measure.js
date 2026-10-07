@@ -29,6 +29,7 @@
    same bug had to be found in each of them separately. */
 const {
   DOOR_HEIGHT_M, isFiniteNumber, box, intersectionPct, doorReference, sawDoorBox, shapeRatio, observedDoorShape,
+  MIN_DOOR_RATIO, MAX_DOOR_RATIO, DOOR_TYPES,
 } = require('./geometry');
 
 
@@ -723,7 +724,78 @@ function exifOrientation(block) {
   }
 }
 
+/* ── PINS THE HOMEOWNER PLACED (7 Oct 2026) ──
+
+   The fallback for a photograph the model cannot read well: too small, a tree
+   across the door, shot from the side. The visitor drags four pins onto the
+   corners of their front door (and, if they like, four onto the corners of the
+   front wall), and the measurement runs on those instead of the model's boxes.
+
+   The browser sends corner positions, never an area — the rule this file and
+   /api/quote keep is that the client cannot hand us a figure. Everything after
+   the pins is the ordinary measurement: the same ruler, the same house-type
+   band, the same range. A pinned reading the band refuses is refused.
+
+   Four corners rather than a rectangle, because the angled shot is the case
+   this exists for. A door photographed from the side is a trapezium; its
+   height is the mean of its two upright edges, which is what the ruler needs,
+   and a bounding box would read the near edge and overstate it. Edge lengths
+   are taken in image-height units (x is a percentage of the width, so it is
+   scaled by the aspect ratio first). */
+function readQuad(points) {
+  if (!Array.isArray(points) || points.length !== 4) return null;
+  const pts = points.map(p => ({ x: Number(p?.x), y: Number(p?.y) }));
+  if (!pts.every(p => isFiniteNumber(p.x) && isFiniteNumber(p.y) && p.x >= 0 && p.x <= 100 && p.y >= 0 && p.y <= 100)) return null;
+  // Whatever order they arrive in: the upper two are the top edge.
+  const byY = [...pts].sort((a, b) => a.y - b.y);
+  const [tl, tr] = byY.slice(0, 2).sort((a, b) => a.x - b.x);
+  const [bl, br] = byY.slice(2).sort((a, b) => a.x - b.x);
+  return { tl, tr, bl, br };
+}
+
+function quadToBox(q, aspectRatio) {
+  const len = (a, b) => Math.hypot((b.x - a.x) * aspectRatio, b.y - a.y);   // in % of image height
+  const h = (len(q.tl, q.bl) + len(q.tr, q.br)) / 2;
+  const w = (len(q.tl, q.tr) + len(q.bl, q.br)) / 2 / aspectRatio;          // back to % of width
+  const x = Math.min(q.tl.x, q.bl.x);
+  const y = Math.min(q.tl.y, q.tr.y);
+  return { x_pct: x, y_pct: y, w_pct: Math.min(w, 100 - x), h_pct: Math.min(h, 100 - y) };
+}
+
+/* The model's detections with the door, and the walls if pinned, replaced.
+   Windows are kept: they are subtracted from the wall, and the pins say
+   nothing about them. Returns { detections } or { error } in words the
+   visitor can act on. */
+function pinnedDetections(detections, pins, aspectRatio) {
+  if (!isFiniteNumber(aspectRatio) || aspectRatio <= 0) return { error: 'That photo has expired — please upload it again.' };
+  const door = readQuad(pins?.door);
+  if (!door) return { error: 'Put one pin on each of the four corners of your front door.' };
+  const doorBox = quadToBox(door, aspectRatio);
+  if (doorBox.h_pct < 2) return { error: 'Those pins are very close together — spread them to the corners of the door itself.' };
+  const ratio = shapeRatio({ w: doorBox.w_pct, h: doorBox.h_pct }, aspectRatio);
+  if (ratio === null || ratio < MIN_DOOR_RATIO || ratio > MAX_DOOR_RATIO) {
+    return { error: ratio !== null && ratio < MIN_DOOR_RATIO
+      ? 'That shape is wider than a front door. Pin the door itself, not the glass panels or porch beside it.'
+      : 'That shape is much narrower than a front door. Put a pin on each of its four corners.' };
+  }
+  let wallBox = null;
+  if (pins?.wall != null) {
+    const wall = readQuad(pins.wall);
+    if (!wall) return { error: 'Put one pin on each of the four corners of the front of the house.' };
+    wallBox = quadToBox(wall, aspectRatio);
+    if (wallBox.w_pct * wallBox.h_pct <= doorBox.w_pct * doorBox.h_pct * 2) {
+      return { error: 'The house pins should go round the whole front wall, well outside the door.' };
+    }
+  }
+  const list = (Array.isArray(detections) ? detections : []).filter(d =>
+    !DOOR_TYPES.has(d?.type) && !(wallBox && WALL_TYPES.has(d?.type)));
+  list.push({ type: 'door-front', label: 'Front door (your pins)', confidence: 1, ...doorBox });
+  if (wallBox) list.push({ type: 'cladding', label: 'Front wall (your pins)', confidence: 1, ...wallBox });
+  return { detections: list };
+}
+
 module.exports = {
+  pinnedDetections,
   sniffImage,
   estimateWallArea,
   imageSize,

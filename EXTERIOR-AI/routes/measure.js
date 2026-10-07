@@ -114,7 +114,7 @@ module.exports = function measureRoutes({
       obs.outcome('measure_request', res.statusCode < 400);
     });
 
-    const { detectionId, houseType } = req.body || {};
+    const { detectionId, houseType, pins } = req.body || {};
     if (!detectionId) return res.status(400).json({ error: 'detectionId required.' });
 
     /* One normalised key for all four operations.
@@ -142,12 +142,25 @@ module.exports = function measureRoutes({
     detectionRecords.set(id, record);
     pruneDetectionRecords();
 
+    /* Pins the homeowner placed, when the photo was too hard for the model —
+       see pinnedDetections in measure.js. Corners only; never an area. */
+    let detections = record.detections;
+    if (pins != null) {
+      const pinned = measure.pinnedDetections(record.detections, pins, record.aspectRatio);
+      if (pinned.error) return res.status(422).json({ error: pinned.error });
+      detections = pinned.detections;
+    }
+
     const result = measure.estimateWallArea({
-      detections: record.detections,
+      detections,
       aspectRatio: record.aspectRatio,
       houseType,
       tuning: MEASURE_TUNING,
     });
+    if (pins != null) {
+      result.pinned = true;
+      result.notes.unshift('Measured from the pins you placed on your photo.');
+    }
 
     // Remembered against the record so /api/quote and /api/lead can use the
     // figure without the client being able to send one of its own.
@@ -178,7 +191,10 @@ module.exports = function measureRoutes({
       try {
         await store.recordMeasurement({
           houseType: result.houseType,
-          method: result.method,
+          /* Kept apart from the model's readings: the calibration table exists
+             to set thresholds for what the model draws, and a door the
+             homeowner pinned is different evidence (see routes/ops.js). */
+          method: result.pinned ? `${result.method}-pins` : result.method,
           m2: result.m2,
           doorRatio: result.observed?.doorRatio,
           doorHeightPct: result.observed?.doorHeightPct,

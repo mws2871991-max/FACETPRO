@@ -4547,7 +4547,9 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
     pricing: pricingVersion(),
     // Server's own view of where the area came from — the client-sent
     // measurementSource is kept only as a record of what the UI believed.
-    measurementSource: footprint.source,
+    /* `_pins` when the homeowner placed the pins on a photo the model could
+       not read well (routes/measure.js), so the installer knows to check it. */
+    measurementSource: footprint.measurement?.pinned ? `${footprint.source}_pins` : footprint.source,
     clientMeasurementSource: measurementSource || null,
     wallMeasurement: footprint.measurement,
     // Present only if they showed interest in one — useful for the installer,
@@ -5090,6 +5092,11 @@ const BRANCH_STAGES = new Map([
      with the same `from` reads against it. Never from the browser. */
   ['seo_landing', { of: 'landing', label: 'arrived on a cost guide or area page' }],
   ['photo_retry', { of: 'upload_completed', label: 'went back for another photo' }],
+  /* The pin fallback (7 Oct): offered when a photo is too small, blocked or
+     angled to measure. Opened over analysed photos; measured over opened, so
+     the two read as "how often it is needed" and "whether it works". */
+  ['pins_opened', { of: 'analysis_completed', label: 'opened the pins on a hard-to-measure photo' }],
+  ['pins_measured', { of: 'pins_opened', label: 'measured their walls from their own pins' }],
   /* The denominator photo_retry needs.
 
      On its own, "12 people went back for another photo" could mean the notice
