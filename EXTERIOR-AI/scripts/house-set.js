@@ -44,6 +44,8 @@ const DIR = arg('dir') || process.env.HOUSE_SET_DIR || path.join(os.homedir(), '
 const SCENARIO = arg('scenario', 'windows');
 const EXP = arg('exp');
 const ONLY = (arg('only') || '').split(',').map(s => s.trim()).filter(Boolean);
+// --trim <id>: the roofline colour for this run (coastal-fog, ink-trim, cedar).
+const TRIM = arg('trim');
 const MAX_EDGE = 1600;          // what the page downscales to before upload
 const QUALITY = 85;
 const CHANGED = 40;             // channel difference that counts as "changed"
@@ -106,7 +108,10 @@ const post = async (p, body, tries = 3) => {
 /* Every pixel the render moved, in red over a dimmed copy of the photo, and
    the share of the frame that moved. */
 function diff(before, renderPng) {
-  const after = PNG.sync.read(renderPng);
+  /* /r/ answers in the format the request accepts (renderformats.js, 7 Oct):
+     a plain fetch gets JPEG now, not the provider's PNG. Read either. */
+  const isPng = renderPng[0] === 0x89 && renderPng[1] === 0x50;
+  const after = isPng ? PNG.sync.read(renderPng) : jpeg.decode(renderPng, { useTArray: true, formatAsRGBA: true, maxMemoryUsageInMB: 512 });
   const b = resizeRGBA(before, after.width, after.height);
   const out = new PNG({ width: after.width, height: after.height });
   let changed = 0;
@@ -148,13 +153,14 @@ function diff(before, renderPng) {
       if (det.status !== 200) { row.note = `analysis ${det.status}: ${det.body.error || ''}`; rows.push(row); console.log(name, row.note); continue; }
       const t0 = Date.now();
       const r = await post('/api/render', { image, mimeType: 'image/jpeg', detectionId: det.body.detectionId,
-        ...SCENARIOS[SCENARIO], ...(EXP ? { experiments: [EXP] } : {}) });
+        ...SCENARIOS[SCENARIO], ...(TRIM ? { trimId: TRIM, trimName: sw('trim', TRIM)?.name } : {}), ...(EXP ? { experiments: [EXP] } : {}) });
       row.seconds = Math.round((Date.now() - t0) / 1000);
       if (r.status !== 200 || !r.body.url) { row.note = `render ${r.status}: ${r.body.error || ''}`; rows.push(row); console.log(name, row.note); continue; }
       row.roofSkipped = r.body.roofSkipped || null;
       row.missed = (r.body.missedChanges || []).join(', ') || null;
       const png = Buffer.from(await (await fetch(SITE + r.body.url)).arrayBuffer());
-      fs.writeFileSync(path.join(out, `${name}-after.png`), png);
+      row.afterFile = `${name}-after.${png[0] === 0x89 ? 'png' : 'jpg'}`;
+      fs.writeFileSync(path.join(out, row.afterFile), png);
       const d = diff(img, png);
       fs.writeFileSync(path.join(out, `${name}-changed.png`), d.png);
       row.changed = Math.round(d.changedShare * 1000) / 10;
@@ -174,7 +180,7 @@ img{width:100%;border-radius:8px;display:block}.cap{font-size:13px;color:#52525b
 <h1>${esc(SCENARIO)}${EXP ? ` · ${esc(EXP)}` : ''} — ${rows.length} houses</h1>
 <p>${esc(SITE)} · ${esc(stamp)}. Third picture: every pixel the render changed, in red. Anything red outside what was asked for is a fault.</p>
 ${rows.map(r => `<div class="row"><b>${esc(r.name)}</b> · ${r.ok ? `${r.changed}% of the frame changed · ${r.windows ?? '?'} windows counted · ${r.seconds}s${r.roofSkipped ? ` · <span class="bad">roof skipped (${esc(r.roofSkipped)})</span>` : ''}${r.missed ? ` · <span class="bad">missed: ${esc(r.missed)}</span>` : ''}` : `<span class="bad">${esc(r.note)}</span>`}
-<div class="imgs"><div><img src="${esc(r.name)}-before.jpg"><div class="cap">Before</div></div>${r.ok ? `<div><img src="${esc(r.name)}-after.png"><div class="cap">After</div></div><div><img src="${esc(r.name)}-changed.png"><div class="cap">What changed</div></div>` : ''}</div></div>`).join('\n')}`;
+<div class="imgs"><div><img src="${esc(r.name)}-before.jpg"><div class="cap">Before</div></div>${r.ok ? `<div><img src="${esc(r.afterFile)}"><div class="cap">After</div></div><div><img src="${esc(r.name)}-changed.png"><div class="cap">What changed</div></div>` : ''}</div></div>`).join('\n')}`;
   fs.writeFileSync(path.join(out, 'report.html'), html);
   fs.writeFileSync(path.join(out, 'summary.json'), JSON.stringify({ site: SITE, scenario: SCENARIO, exp: EXP, rows }, null, 2));
   console.log(`\nReport: ${path.join(out, 'report.html')}`);
