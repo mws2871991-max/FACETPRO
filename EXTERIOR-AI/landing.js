@@ -1406,21 +1406,21 @@ function page({ title, description, h1, canonical, body, siteUrl, siteMode, rela
 <meta property="og:title" content="${escapeHtml(title)}">
 <meta property="og:description" content="${escapeHtml(description)}">
 <meta property="og:type" content="article">
-<meta property="og:image" content="${escapeHtml(siteUrl)}/assets/og-image.png?v=2">
+<meta property="og:image" content="${escapeHtml(siteUrl)}/assets/og-image.png?v=3">
 <meta property="og:url" content="${escapeHtml(canonical)}">
 <meta property="og:site_name" content="Facet Pro">
 <meta property="og:locale" content="en_GB">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${escapeHtml(title)}">
 <meta name="twitter:description" content="${escapeHtml(description)}">
-<meta name="twitter:image" content="${escapeHtml(siteUrl)}/assets/og-image.png?v=2">
+<meta name="twitter:image" content="${escapeHtml(siteUrl)}/assets/og-image.png?v=3">
 <meta name="robots" content="index, follow">
 <link rel="icon" href="/assets/favicon-32.png?v=2">
 <link rel="stylesheet" href="/assets/landing.css">
 ${schema ? `<script type="application/ld+json">${JSON.stringify(schema).replace(/</g, '\\u003c')}</script>` : ''}
 </head><body>
 <header class="site"><div class="wrap">
-  <a class="logo" href="${escapeHtml(siteUrl)}/" aria-label="Facet Pro home"><svg width="24" height="24" viewBox="0 0 26 26" aria-hidden="true"><path d="M13 2L24 9V24H2V9Z" fill="none" stroke="#16181A" stroke-width="2"/><path d="M13 2V24M2 9L13 15L24 9" fill="none" stroke="#B5482A" stroke-width="2"/></svg>FACET PRO</a>
+  <a class="logo" href="${escapeHtml(siteUrl)}/" aria-label="Facet Pro home"><svg width="24" height="24" viewBox="0 0 40 40" aria-hidden="true"><defs><clipPath id="fpmark1"><rect width="40" height="40" rx="8"/></clipPath></defs><g clip-path="url(#fpmark1)"><rect width="40" height="40" fill="#16181A"/><path d="M28 0H40V12Z" fill="#B5482A"/></g><path d="M13 9H28V14H19V18.5H26.5V23.5H19V31H13Z" fill="#FFFFFF"/></svg>FACET PRO</a>
   <a class="cta-top" href="${escapeHtml(ctaHref(siteUrl, slug, 'header'))}">See my house &amp; price &rarr;</a>
 </div>${productMenu(siteUrl, slug)}</header>
 <main class="wrap">

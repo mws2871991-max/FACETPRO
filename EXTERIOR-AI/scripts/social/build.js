@@ -55,7 +55,7 @@ const fileUrl = (p) => 'file://' + p.split(path.sep).map(encodeURIComponent).joi
 /* ── the images ── */
 const FONT = fileUrl(path.join(ROOT, 'assets', 'fonts', 'geist-variable.woff2'));
 const MONO = fileUrl(path.join(ROOT, 'assets', 'fonts', 'GeistMono-500.woff2'));
-const HOUSE = (s) => `<svg width="${s}" height="${s}" viewBox="0 0 26 26"><path d="M13 2L24 9V24H2V9Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M13 2V24M2 9L13 15L24 9" fill="none" stroke="#B5482A" stroke-width="2"/></svg>`;
+const HOUSE = (s) => `<svg width="${s}" height="${s}" viewBox="0 0 40 40"><defs><clipPath id="fpmark1"><rect width="40" height="40" rx="8"/></clipPath></defs><g clip-path="url(#fpmark1)"><rect width="40" height="40" fill="currentColor"/><path d="M28 0H40V12Z" fill="#B5482A"/></g><path d="M13 9H28V14H19V18.5H26.5V23.5H19V31H13Z" fill="#FFFFFF"/></svg>`;
 const CSS = (W, H) => `
 @font-face{font-family:G;src:url(${FONT}) format('woff2');font-weight:100 900}
 @font-face{font-family:M;src:url(${MONO}) format('woff2')}

@@ -17,7 +17,7 @@ test('a real document a phone lays out at its own width', () => {
 
 test('keeps the Pinterest claim, the share card and the canonical', () => {
   assert.match(h, /<meta name="p:domain_verify" content="f04c9c0b39fbb4b990b9484ccbacb629"\/>/);
-  assert.match(h, /og:image" content="https:\/\/www\.facetpro\.co\.uk\/assets\/og-card\.png\?v=2"/);
+  assert.match(h, /og:image" content="https:\/\/www\.facetpro\.co\.uk\/assets\/og-card\.png\?v=3"/);
   assert.match(h, /<link rel="canonical" href="https:\/\/www\.facetpro\.co\.uk\/">/);
   assert.match(h, /rel="manifest"/);
 });
