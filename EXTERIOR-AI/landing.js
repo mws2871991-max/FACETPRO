@@ -321,7 +321,7 @@ const COST_PAGES = [
   },
   {
     slug: 'anthracite-windows-cost',
-    title: 'Anthracite windows cost — what the colour actually adds',
+    title: 'Anthracite grey vs white uPVC windows cost — what the colour adds',
     h1: 'What do anthracite windows cost?',
     intent: 'anthracite windows cost',
     description: 'What anthracite grey windows cost against white uPVC, and what the colour actually adds to a fitted price.',
@@ -1105,6 +1105,52 @@ const COST_PAGES = [
   },
 ];
 
+/* How our estimates work (SEO strategy, 7 Oct, spoke 3): the methodology as
+   a page a search can land on. /how-we-price is part of the app document and
+   served noindex, so the same explanation lives here as a guide, written from
+   it and saying nothing it does not. No figures of its own. */
+COST_PAGES.push({
+  slug: 'how-our-estimates-work',
+  title: 'How our estimates work — planning estimates vs installer quotes',
+  h1: 'How do Facet Pro estimates work?',
+  intent: 'how accurate are home improvement estimates',
+  description: 'How Facet Pro turns one photo of your house into a planning estimate, what is in the figure, why it is a range, and what an installer survey can still change.',
+  build: () => ({
+    included: false,
+    answer: 'From one photo of the front of your house: we find the windows, doors, walls, roofline and roof, size them against your front door, and price what you choose. Windows and doors use what those jobs actually sell for; walls, roof and roofline use UK material and labour rates with scaffolding, waste and VAT. The result is a planning estimate shown as a range — an installer confirms the final price after a survey.',
+    sections: [
+      { heading: 'Where each part of the price comes from', table: {
+        head: ['Work', 'How it is priced'],
+        rows: [
+          ['Windows and doors', 'What these jobs actually sell for, from 24 years of selling them, checked against current UK prices'],
+          ['Cladding and render', 'Material and the labour to fit it, per square metre of wall'],
+          ['Roof', 'Tiles or slate plus fitting, sized from your roof area'],
+          ['Fascias, soffits and guttering', 'Materials and labour by the metre of roofline'],
+          ['Scaffolding', 'Included from the start, counted once for the whole job'],
+          ['Waste', 'An allowance for offcuts and breakages'],
+          ['VAT', '20%, shown separately'],
+        ],
+      } },
+      { heading: 'How a photo gives us the sizes', paras: [
+        'A standard UK front door is very close to 1.98 m tall and appears in almost every photo of a British home, so it gives us the scale of everything around it — no tape measure, no visit. Where the photo cannot show enough, you can check or correct the count before your estimate is worked out.',
+        'A photo of the front shows the front. For the back and sides you can add a second photo or just tell us how many windows there are.',
+      ] },
+      { heading: 'Why the estimate is a range', paras: [
+        'Different companies charge different prices for the same job. The lower figure is what a keen installer typically charges; the higher figure is what others charge for the same work. Two neighbours on the same street can be quoted very different amounts for the same windows, which is why a starting figure before anyone visits is useful.',
+      ] },
+      { heading: 'What can still change the final price', paras: [
+        'A photograph cannot show everything. The condition of the property, access, hidden or unexpected work, the final measurements and your final product specification are all confirmed by the installer on survey. That is why Facet Pro gives a planning estimate, not a quotation.',
+      ] },
+    ],
+    faqs: [
+      { q: 'Is a Facet Pro estimate a quote?', a: 'No. It is a planning estimate to help you budget. An installer confirms the final specification and price after surveying the property.' },
+      { q: 'How accurate is the estimate?', a: 'It is a realistic planning range, not a guaranteed final price. It is based on what we can see in your photo and the options you choose. We record how our estimates compare with installers’ quotes so we can keep improving them.' },
+      { q: 'Do I need to measure anything?', a: 'No. We size your house from the photo, using your front door for scale.' },
+      { q: 'Why do quotes for the same job vary so much?', a: 'Mostly because of which company quotes. The same work to the same specification can settle at very different prices with different installers, which is why the estimate is shown as a range.' },
+    ],
+  }),
+});
+
 /* Area pages. Kept to the outward codes and towns the business actually works
    — Grays is home, and the rest are the M25-east corridor around it. A page
    for every town in Britain is exactly the thin-content estate this file's
@@ -1116,6 +1162,9 @@ const AREA_PAGES = [
   { slug: 'windows-basildon', town: 'Basildon', county: 'Essex', outward: 'SS14' },
   { slug: 'windows-kent', town: 'Kent', county: null, outward: 'DA1', region: true },
   { slug: 'windows-surrey', town: 'Surrey', county: null, outward: 'GU1', region: true },
+  // SEO strategy §4 (7 Oct): the two regional searches it names.
+  { slug: 'windows-london', town: 'London', county: null, outward: 'SW11', region: true },
+  { slug: 'windows-south-east', town: 'the South East', county: null, outward: 'RH1', region: true },
 ];
 
 /* ── TEMPLATE ───────────────────────────────────────────────────────────── */
@@ -1129,6 +1178,7 @@ const table = (t) => `<table>
 const section = (s) => `<section><h2>${escapeHtml(s.heading)}</h2>
 ${s.table ? table(s.table) : ''}
 ${(s.paras || []).map(p => `<p>${escapeHtml(p)}</p>`).join('\n')}
+${s.link ? `<p><a href="${escapeHtml(s.link.href)}">${escapeHtml(s.link.text)} &rarr;</a></p>` : ''}
 </section>`;
 
 /* Which trade a page is about, so the visualiser can open on the thing the
@@ -1794,6 +1844,8 @@ const PLANNING_VS_QUOTE = {
     'Every figure on this page is a planning estimate: what a job like this typically costs, for budgeting and for judging the quotes you get. It is not a quotation. A quotation comes from an installer after a survey, when the exact sizes, specification and condition of your house are known.',
     'Facet Pro narrows the estimate to your own house from a photograph of the front — the windows it can see, the wall it can measure against your front door — and says which parts are measured and which are estimated for your house type. Your installer confirms the figure on survey.',
   ],
+  // The methodology guide (SEO strategy, 7 Oct), linked from every guide.
+  link: { href: '/cost/how-our-estimates-work', text: 'How our estimates work' },
 };
 
 /* Down-links on a hub, and up-and-across on the cornerstone page. */
@@ -1826,6 +1878,11 @@ function renderCostPage(slug, { catalogue, siteUrl, siteMode }) {
   const built0 = def.build(catalogue);
   const extra = EXTRAS[slug] ? EXTRAS[slug](catalogue) : {};
   const built = { ...built0, sections: [...built0.sections, ...(extra.sections || [])], faqs: built0.faqs || extra.faqs };
+  /* Every guide answers in FAQ markup (SEO strategy, 7 Oct). Where a guide has
+     no question list of its own, its own question and short answer are the
+     pair, shown on the page as well, because markup is only for questions a
+     reader can see. */
+  if (!built.faqs || !built.faqs.length) built.faqs = [{ q: def.h1, a: built.answer }];
   /* NOTE, unresolved: two briefs disagree about what comes first here.
 
      §4 of the UX brief put journeyHero above the guide — "somebody who
@@ -1845,7 +1902,8 @@ function renderCostPage(slug, { catalogue, siteUrl, siteMode }) {
   const cat = categoryFor(slug);
   const shared = [
     ...(built.included === false ? [] : [includedSection(cat, catalogue)].filter(Boolean)),
-    PLANNING_VS_QUOTE,
+    // No link to itself on the methodology page.
+    slug === 'how-our-estimates-work' ? { ...PLANNING_VS_QUOTE, link: null } : PLANNING_VS_QUOTE,
   ];
   const body = `${journeyHero(siteUrl, slug)}
 <div class="answer"><strong>The short answer</strong><span>${escapeHtml(built.answer)}</span></div>
@@ -1863,6 +1921,8 @@ ${faqSection(built.faqs)}`;
     body, siteUrl, siteMode,
     related: relatedFor(slug),
     crumbs: crumbsFor(siteUrl, slug, crumbName(def.title)),
+    /* Every guide gets FAQPage markup (SEO strategy §3): where a guide has no
+       FAQ list, its visible question (the h1) and its short answer are the pair. */
     faqs: built.faqs,
     updated: catalogue.updated,
   });
@@ -2010,6 +2070,20 @@ const COST_ALIASES = {
   'rendering-cost': 'house-rendering-cost',
   'house-cladding-cost': 'cladding-cost',
   'exterior-renovation-cost': 'house-exterior-renovation-cost',
+  // SEO strategy (7 Oct): the searches and addresses it names.
+  'window-replacement-cost-guide': 'window-replacement-cost-uk',
+  'replacement-windows': 'window-replacement-cost-uk',
+  'replacement-windows-cost': 'window-replacement-cost-uk',
+  'upvc-window-cost-calculator': 'window-replacement-calculator',
+  'window-cost-calculator': 'window-replacement-calculator',
+  'composite-front-doors': 'composite-door-cost',
+  'composite-door-price-guide': 'composite-door-cost',
+  'bifold-doors': 'bifold-doors-cost',
+  'house-renovation-cost-estimator': 'house-exterior-renovation-cost',
+  'anthracite-vs-white-windows-cost': 'anthracite-windows-cost',
+  'anthracite-grey-windows-cost': 'anthracite-windows-cost',
+  'sash-windows-replacement-cost': 'sash-windows-cost',
+  'how-we-estimate': 'how-our-estimates-work',
 };
 function costRedirectFor(slug) {
   const s = String(slug || '').toLowerCase().replace(/\/+$/, '');

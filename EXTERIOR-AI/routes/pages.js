@@ -163,6 +163,23 @@ module.exports = function pageRoutes({
     countSeoLanding(req, req.params.slug);
   });
 
+  /* /costs/… (SEO strategy, 7 Oct, names its pages under /costs/). The guides
+     have lived at /cost/… since sprint 1 and keep their addresses; these are
+     permanent redirects to the page each one means, so a link or a search for
+     the other spelling still lands. */
+  const REGION_ALIASES = {
+    'window-replacement-london': 'windows-london', 'replacement-windows-london': 'windows-london',
+    'window-replacement-south-east': 'windows-south-east', 'replacement-windows-south-east': 'windows-south-east',
+  };
+  router.get('/costs', (req, res) => res.redirect(301, '/cost'));
+  router.get('/costs/:slug', perMinute(120, 'Too many requests — please wait a moment.'), (req, res, next) => {
+    const slug = String(req.params.slug || '').toLowerCase().replace(/\/+$/, '');
+    if (REGION_ALIASES[slug]) return res.redirect(301, `/${REGION_ALIASES[slug]}`);
+    if (landing.AREA_PAGES.some(p => p.slug === slug)) return res.redirect(301, `/${slug}`);
+    const to = landing.COST_PAGES.some(p => p.slug === slug) ? slug : landing.costRedirectFor(slug);
+    return to ? res.redirect(301, `/cost/${to}`) : next();
+  });
+
   router.get('/:slug', perMinute(120, 'Too many requests — please wait a moment.'), (req, res, next) => {
     /* Area pages sit at the root because "/windows-essex" is the URL somebody
        would link to and the one that reads as a page rather than a directory.
