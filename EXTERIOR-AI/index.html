@@ -1686,6 +1686,42 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
       <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Only what it can see</div><p class="mt-1 text-lg leading-6 text-zinc-600">A photo of the front shows the front. We measure that. For the back and sides you can add a second photo or just tell us the number, and we price those windows at typical sizes. Anything left — the rest of the walls, the roof — is labelled an estimate for your house type.</p></div>
       <div class="rounded-xl border border-zinc-200 p-5"><div class="font-medium">Stated uncertainty</div><p class="mt-1 text-lg leading-6 text-zinc-600">Every estimate carries a range and says which method produced it. A number without its error bars is a guess.</p></div>
     </div>
+    <!-- Measurement explained (8 Oct, "FacetPro - Measurement Engine" brief).
+         Its three customer messages and its measured-versus-estimated split,
+         written to what measure.js actually does: the 1.98 m door scale (not
+         the brief's 2,095 mm), front wall measured with openings taken out,
+         sides and back from the house type, roof from the wall area, roofline
+         a typical length unless told. No perspective correction is claimed
+         (none is done) and no accuracy percentages (none are measured yet; the
+         launch plan allows none before 30 surveyed jobs per trade). -->
+    <div class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4" id="measuring-promises">
+      <div class="rounded-xl bg-[#FDFCF9] border border-zinc-200 p-5"><div class="font-medium">No tape measure</div><p class="mt-1 text-lg leading-6 text-zinc-600">No ladders and no measuring. The sizes come from your photograph.</p></div>
+      <div class="rounded-xl bg-[#FDFCF9] border border-zinc-200 p-5"><div class="font-medium">Your photo sets the quantities</div><p class="mt-1 text-lg leading-6 text-zinc-600">How many windows, how big, how much wall: your house decides them, not how a sales conversation goes.</p></div>
+      <div class="rounded-xl bg-[#FDFCF9] border border-zinc-200 p-5"><div class="font-medium">Confirmed by survey</div><p class="mt-1 text-lg leading-6 text-zinc-600">It is a planning estimate for comparing options. The installer takes the exact measurements at the survey.</p></div>
+    </div>
+    <h3 class="mt-8 text-xl font-semibold" id="measured-or-estimated">What your photo measures, and what we estimate</h3>
+    <div class="mt-3 overflow-x-auto rounded-xl border border-zinc-200">
+      <table class="w-full text-left text-lg leading-6">
+        <thead class="bg-zinc-50 text-zinc-600 text-base"><tr><th class="px-4 py-3 font-medium">Part of the job</th><th class="px-4 py-3 font-medium">Where the figure comes from</th></tr></thead>
+        <tbody class="divide-y divide-zinc-200 text-zinc-700">
+          <tr><td class="px-4 py-3 font-medium">Windows and doors on the front</td><td class="px-4 py-3">Counted in your photo. You can correct the count, and trees, cars or scaffolding can hide one.</td></tr>
+          <tr><td class="px-4 py-3 font-medium">Their sizes</td><td class="px-4 py-3">Measured against your front door, which is very close to 1.98&nbsp;m in almost every UK home.</td></tr>
+          <tr><td class="px-4 py-3 font-medium">Front wall</td><td class="px-4 py-3">Measured from your photo, with the windows and door taken out.</td></tr>
+          <tr><td class="px-4 py-3 font-medium">Side and back walls</td><td class="px-4 py-3">Estimated from your house type and the size of the front.</td></tr>
+          <tr><td class="px-4 py-3 font-medium">Roof</td><td class="px-4 py-3">Estimated from the size of your walls.</td></tr>
+          <tr><td class="px-4 py-3 font-medium">Fascias, soffits and guttering</td><td class="px-4 py-3">A typical length for your house type, unless you tell us yours.</td></tr>
+          <tr><td class="px-4 py-3 font-medium">What a photo can&rsquo;t show</td><td class="px-4 py-3">Frame depth, the condition behind the surface, access: checked by the installer at the survey.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="mt-3 text-base leading-6 text-zinc-600 max-w-[72ch]">Because a photograph is a flat picture of a three-dimensional house, every figure comes as a range, and your estimate says which parts were measured and which were estimated.</p>
+    <h3 class="mt-8 text-xl font-semibold" id="good-photo">A photo that measures well</h3>
+    <ul class="mt-3 space-y-2 text-lg leading-6 text-zinc-700 max-w-[72ch] list-disc pl-6">
+      <li>Stand back and face the house straight on. A photo taken from a sharp angle measures less well.</li>
+      <li>Get the whole front in, with the front door at ground level in the picture: it is the ruler.</li>
+      <li>Keep the ground floor clear of cars and hedges where you can, in daylight.</li>
+      <li>If your photo is hard to measure, we tell you. You can place pins on the corners of your front door and front wall yourself (about 20 seconds), or try a different photo.</li>
+    </ul>
     <p class="mt-5 text-base leading-6 text-zinc-600 max-w-[72ch]">
       Your original photograph isn&rsquo;t saved &mdash; we keep the image we generate, not your
       photograph. <a href="/privacy" class="underline underline-offset-2 hover:text-zinc-800">What happens to your photo</a>.

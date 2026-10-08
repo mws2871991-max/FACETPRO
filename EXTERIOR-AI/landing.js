@@ -1135,6 +1135,23 @@ COST_PAGES.push({
         'A standard UK front door is very close to 1.98 m tall and appears in almost every photo of a British home, so it gives us the scale of everything around it — no tape measure, no visit. Where the photo cannot show enough, you can check or correct the count before your estimate is worked out.',
         'A photo of the front shows the front. For the back and sides you can add a second photo or just tell us how many windows there are.',
       ] },
+      { heading: 'What your photo measures, and what we estimate', table: {
+        head: ['Part of the job', 'Where the figure comes from'],
+        rows: [
+          ['Windows and doors on the front', 'Counted in your photo; you can correct the count'],
+          ['Their sizes', 'Measured against your front door (about 1.98 m)'],
+          ['Front wall', 'Measured from your photo, with the windows and door taken out'],
+          ['Side and back walls', 'Estimated from your house type and the size of the front'],
+          ['Roof', 'Estimated from the size of your walls'],
+          ['Fascias, soffits and guttering', 'A typical length for your house type, unless you tell us yours'],
+          ['What a photo cannot show', 'Frame depth, condition, access: checked by the installer at survey'],
+        ],
+      }, paras: [
+        'Your photo sets the quantities, not a sales conversation. Because a photograph is a flat picture of a three-dimensional house, every figure comes as a range.',
+      ] },
+      { heading: 'A photo that measures well', paras: [
+        'Stand back and face the house straight on; a photo from a sharp angle measures less well. Get the whole front in, with the front door at ground level in the picture, because it is the ruler. Keep the ground floor clear of cars and hedges where you can, in daylight. If a photo is hard to measure, we say so, and you can place pins on the corners of your front door and front wall yourself, or try a different photo.',
+      ] },
       { heading: 'Why the estimate is a range', paras: [
         'Different companies charge different prices for the same job. The lower figure is what a keen installer typically charges; the higher figure is what others charge for the same work. Two neighbours on the same street can be quoted very different amounts for the same windows, which is why a starting figure before anyone visits is useful.',
       ] },

@@ -71,3 +71,12 @@ test('one retention statement everywhere a person reads about their photo (prior
   assert.match(privacy, /7 days/);
   assert.match(privacy, /6 months/);
 });
+
+test('the measuring explanation says only what the engine does (8 Oct)', () => {
+  const block = index.slice(index.indexOf('id="measuring-promises"'), index.indexOf('id="good-photo"') + 2000).replace(/<!--[\s\S]*?-->/g, '');
+  assert.match(block, /1\.98/);
+  assert.match(block, /Estimated from your house type/);
+  assert.match(block, /A typical length for your house type/);
+  // never the brief's door height, an accuracy percentage, or a correction the engine does not do
+  assert.doesNotMatch(block, /2,?095|2\.1 ?m|\d+ ?%|homograph|vanishing|perspective correct/i);
+});
