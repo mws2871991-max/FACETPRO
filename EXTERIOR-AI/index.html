@@ -371,6 +371,13 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
   ]
 }
 </script>
+<style>/* Logo strapline (8 Oct dev spec): header only. */
+.fp-lock{display:inline-flex;flex-direction:column;line-height:1.05}
+.fp-name{font-weight:700;letter-spacing:.14em;font-size:15px;white-space:nowrap}
+.fp-strap{font-weight:500;text-transform:uppercase;letter-spacing:.08em;font-size:7.5px;margin-top:3px;opacity:.62}
+@media (min-width:960px){.fp-lock{flex-direction:row;align-items:center;gap:10px}.fp-strap{margin-top:0}.fp-strap::before{content:'|';margin-right:10px;opacity:.6}}
+@media (max-width:359px){.fp-strap{display:none}}
+</style>
 </head>
 <body class="min-h-screen bg-[#FBF8F3] text-zinc-900 selection:bg-zinc-900 selection:text-white">
 
@@ -383,7 +390,7 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
   <div class="max-w-6xl mx-auto px-6 py-2 sm:py-4 flex items-center justify-between">
     <a href="/" class="flex items-center gap-3 min-h-[44px]" aria-label="Facet Pro home">
       <svg width="26" height="26" viewBox="0 0 40 40" aria-hidden="true"><defs><clipPath id="fpmark1"><rect width="40" height="40" rx="8"/></clipPath></defs><g clip-path="url(#fpmark1)"><rect width="40" height="40" fill="#16181A"/><path d="M28 0H40V12Z" fill="#B5482A"/></g><path d="M13 9H28V14H19V18.5H26.5V23.5H19V31H13Z" fill="#FFFFFF"/></svg>
-      <span style="font-weight:700;letter-spacing:.14em;font-size:15px">FACET PRO</span>
+      <span class="fp-lock"><span class="fp-name">FACET PRO</span><span class="fp-strap">See Every Facet</span></span>
       <!-- The BETA badge stood here, beside the wordmark, and was the first
            thing every visitor read. Section 03 of the homepage copy handoff:
            it signals "unfinished, don't trust the numbers" before anybody has

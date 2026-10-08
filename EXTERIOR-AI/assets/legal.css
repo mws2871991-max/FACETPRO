@@ -140,3 +140,11 @@ body { background: var(--brand-cream); }
 /* The FACET PRO wordmark beside the house mark (6 Oct). A class, not a
    style attribute: these pages run under style-src 'self'. */
 .wordmark { display: inline-block; font-weight: 700; letter-spacing: .14em; font-size: 15px; color: #16181A; }
+
+/* Logo strapline (8 Oct dev spec). */
+.fp-lock{display:inline-flex;flex-direction:column;line-height:1.05}
+.fp-name{font-weight:700;letter-spacing:.14em;font-size:15px;white-space:nowrap}
+.fp-strap{font-weight:500;text-transform:uppercase;letter-spacing:.08em;font-size:7.5px;margin-top:3px;opacity:.62}
+@media (min-width:960px){.fp-lock{flex-direction:row;align-items:center;gap:10px}.fp-strap{margin-top:0}.fp-strap::before{content:'|';margin-right:10px;opacity:.6}}
+@media (max-width:359px){.fp-strap{display:none}}
+header a[aria-label="Facet Pro home"]{text-decoration:none}

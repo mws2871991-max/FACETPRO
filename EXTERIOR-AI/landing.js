@@ -1437,7 +1437,7 @@ function page({ title, description, h1, canonical, body, siteUrl, siteMode, rela
 ${schema ? `<script type="application/ld+json">${JSON.stringify(schema).replace(/</g, '\\u003c')}</script>` : ''}
 </head><body>
 <header class="site"><div class="wrap">
-  <a class="logo" href="${escapeHtml(siteUrl)}/" aria-label="Facet Pro home"><svg width="24" height="24" viewBox="0 0 40 40" aria-hidden="true"><defs><clipPath id="fpmark1"><rect width="40" height="40" rx="8"/></clipPath></defs><g clip-path="url(#fpmark1)"><rect width="40" height="40" fill="#16181A"/><path d="M28 0H40V12Z" fill="#B5482A"/></g><path d="M13 9H28V14H19V18.5H26.5V23.5H19V31H13Z" fill="#FFFFFF"/></svg>FACET PRO</a>
+  <a class="logo" href="${escapeHtml(siteUrl)}/" aria-label="Facet Pro home"><svg width="24" height="24" viewBox="0 0 40 40" aria-hidden="true"><defs><clipPath id="fpmark1"><rect width="40" height="40" rx="8"/></clipPath></defs><g clip-path="url(#fpmark1)"><rect width="40" height="40" fill="#16181A"/><path d="M28 0H40V12Z" fill="#B5482A"/></g><path d="M13 9H28V14H19V18.5H26.5V23.5H19V31H13Z" fill="#FFFFFF"/></svg><span class="fp-lock"><span class="fp-name">FACET PRO</span><span class="fp-strap">See Every Facet</span></span></a>
   <a class="cta-top" href="${escapeHtml(ctaHref(siteUrl, slug, 'header'))}">See my house &amp; price &rarr;</a>
 </div>${productMenu(siteUrl, slug)}</header>
 <main class="wrap">

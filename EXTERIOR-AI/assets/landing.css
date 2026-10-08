@@ -125,3 +125,10 @@ footer.site .social a:hover{color:#18181b;border-color:#71717a}
   figure.guide-pic{margin:22px 0 0}
   figure.guide-pic img{width:100%;height:auto;border-radius:14px;background:#f4f4f5;display:block}
   figure.guide-pic figcaption{margin-top:8px;font-size:16px;color:#52525b}
+
+/* Logo strapline (8 Oct dev spec): header only. */
+.fp-lock{display:inline-flex;flex-direction:column;line-height:1.05}
+.fp-name{font-weight:700;letter-spacing:.14em;font-size:15px;white-space:nowrap}
+.fp-strap{font-weight:500;text-transform:uppercase;letter-spacing:.08em;font-size:7.5px;margin-top:3px;opacity:.62}
+@media (min-width:960px){.fp-lock{flex-direction:row;align-items:center;gap:10px}.fp-strap{margin-top:0}.fp-strap::before{content:'|';margin-right:10px;opacity:.6}}
+@media (max-width:359px){.fp-strap{display:none}}
