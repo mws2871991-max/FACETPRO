@@ -85,6 +85,8 @@ section{padding-block:clamp(72px,10vw,128px)}
 .btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--ink)}
 .btn.ghost:hover{background:var(--ink);color:#fff}
 .reassure{font-size:14px;font-weight:500;color:var(--ink-2)}
+.lockline{margin-top:4px;color:var(--ink)}
+.founder-line{font-size:17px;line-height:1.5;color:var(--ink-2);max-width:46em;border-left:3px solid var(--brick);padding-left:14px}
 .price{font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1}
 .muted{color:var(--ink-3)}
 
@@ -281,6 +283,11 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
   .hero .lead{font-size:16px;line-height:1.5}
   .hero .stack{gap:14px}
   .hero .btn.lg{padding-block:14px}
+  .hero h1{font-size:33px}
+  .hero .lead{font-size:15px;line-height:1.45}
+  .hero .reassure{font-size:13px}
+  .hero .cta-block{gap:6px}
+  .mprice{padding:9px 12px;margin-top:0}
 }
 .mbar .btn{font-size:15px;padding:13px 16px;white-space:nowrap}
 
@@ -454,6 +461,7 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
         <div class="cta-block">
           <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap"><a class="btn lg" href="/design?journey=windows">See my house &amp; price →</a><a href="#how" style="font-weight:600;color:var(--ink)">How it works</a></div>
           <div class="reassure">No account. No measurements. No sales call.</div>
+          <div class="reassure lockline">&#128274; No phone number needed for your design and price range.</div>
         </div>
         <!-- The first price inside the first phone screen (7 Oct): the headline
              promises a cost, and on a phone the price card sat a screen down,
@@ -486,6 +494,10 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
         <li><span>02</span><b>Visualise</b><p>Explore different products, styles and colours on your own home.</p></li>
         <li><span>03</span><b>See the cost</b><p>Get a planning estimate before deciding whether you want installer quotes.</p></li>
       </ol>
+      <!-- Conversion improvements 5 (8 Oct): the founder's credibility right
+           under the three steps, as one line. Still unnamed (Mike, 8 Oct), and
+           this is now its only place on the page. -->
+      <p id="trust" class="founder-line">Built by someone who spent 24 years selling windows, doors and home improvements, to give UK homeowners a clear price before any sales visit.</p>
     </div>
   </section>
 
@@ -569,6 +581,7 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
       <div class="cta-block">
         <a class="btn lg" href="/design?journey=windows">See my house &amp; price →</a>
         <div class="reassure">No account · No measurements · No sales call</div>
+        <div class="reassure lockline">&#128274; No phone number needed for your design and price range.</div>
       </div>
     </div>
   </section>
@@ -604,14 +617,6 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
         <details><summary>What happens to my photo?</summary><p>Your original photo is deleted immediately after processing. We keep a secure fingerprint for 7 days to maintain estimate consistency, and store your generated designs for 6 months so you can return to your project. The detail is in our <a href="/privacy">privacy policy</a>.</p></details>
         <details><summary>How accurate is the estimate?</summary><p>It is a realistic planning range, not a guaranteed final price. It is based on what we can see in your photo and the options you choose.</p></details>
       </div>
-    </div>
-  </section>
-
-  <!-- FOUNDER (brief §13): kept, and kept low. Third person and unnamed,
-       as the 6 Oct brief asked (8 Oct: the name shown was wrong). -->
-  <section id="trust" style="padding-block:clamp(36px,4vw,56px)">
-    <div class="wrap">
-      <div class="tile"><b>Built by someone who spent 24 years selling windows, doors and home improvements, and saw how differently similar homes can be priced. Facet Pro gives homeowners a clearer starting point before they enter that process.</b></div>
     </div>
   </section></main>
 
