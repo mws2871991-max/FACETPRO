@@ -9023,6 +9023,7 @@ function buildInstallerConsent() {
       h('p', { className: 'text-base leading-7 text-zinc-800 font-semibold', id: 'quotes-reassurance' },
         `Only ${q.list.length === 1 ? 'the installer' : `the ${q.list.length} installers`} named below get your details, and only if you tick the box. We never sell your details to anyone else or add you to a marketing list.`),
       consentBox('installerQuotes', [CONSENT_WORDING.installerQuotes.replace('{installers}', joinNames(q.list.map(i => i.name)))]),
+      howWePaid('mt-1'),
       pricePromiseNote('mt-2'),
     ]);
   }
@@ -9034,6 +9035,17 @@ function buildInstallerConsent() {
     ]);
   }
   return h('div', { id: 'installer-consent' }, [inner]);
+}
+
+/* How Facet Pro is paid, said where somebody asks for introductions (website
+   review action plan, P1 "surface the business model at quote handoff").
+   Here and in the Terms only: on the reassurance sections it answered a
+   question nobody had asked (copy-edit handoff §3), but at the moment of
+   sharing details it is information the homeowner is owed. True as worded:
+   estimates come from the catalogue, and no installer input reaches them. */
+function howWePaid(extraClass = '') {
+  return h('p', { className: `${extraClass} text-base leading-6 text-zinc-600` },
+    'How we\u2019re paid: Facet Pro is free for you. Installers pay us when we send them an enquiry, and they can\u2019t pay to change your estimate.');
 }
 
 /* The Facet Pro price promise, where quotes are asked for. Nothing unless the
@@ -9170,6 +9182,7 @@ function buildSaveMomentSection(rows, go) {
             h('p', { className: 'text-base font-semibold text-[#B5482A] uppercase tracking-wide' }, 'Option B \u00b7 Ready for survey quotes?'),
             h('p', { className: 'mt-1 text-lg leading-6 text-zinc-700' },
               'Ask up to 3 local installers to survey and quote. You choose whether to go ahead; there is no obligation.'),
+            howWePaid('mt-2'),
             h('button', {
               type: 'button',
               className: 'mt-3 w-full sm:w-auto px-6 py-3.5 rounded-full border-2 border-zinc-900 text-lg font-semibold hover:bg-zinc-900 hover:text-white transition min-h-[52px]',

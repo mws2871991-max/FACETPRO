@@ -33,3 +33,9 @@ test('4: "How we calculate this" uses the engine amounts, not an invented materi
   for (const k of ['g.price.supplyFit', 'g.price.doors', 'g.price.access', 'g.price.disposal', 'g.price.vat', 'g.price.total']) assert.ok(fn.includes(k), k);
   assert.doesNotMatch(fn, /Specialist Fitting|Survey Labour/);
 });
+
+test('action plan P1: how Facet Pro is paid, said where quotes are asked for', () => {
+  assert.match(code, /function howWePaid/);
+  assert.ok((code.match(/howWePaid\('/g) || []).length >= 2, 'Option B and the consent box');
+  assert.match(code, /Installers pay us when we send them an enquiry, and they can\\u2019t pay to change your estimate/);
+});
