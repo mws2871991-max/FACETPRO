@@ -63,3 +63,9 @@ test('homepage: the about block says who is behind it without naming anyone', ()
   assert.match(sec, /FACETPRO LTD, registered in England and Wales, no\. 17346500\./);
   assert.doesNotMatch(sec, /Mike|Sheehan|\bI (sold|spent)\b/, 'the founder is not named on the page');
 });
+
+test('homepage: the founder is described, not named (8 Oct)', () => {
+  const home = fs.readFileSync(path.join(__dirname, '..', 'home.html'), 'utf8').replace(/<!--[\s\S]*?-->/g, '');
+  assert.doesNotMatch(home, /Sheehan|Stephenson/);
+  assert.match(home, /Built by someone who spent 24 years/);
+});

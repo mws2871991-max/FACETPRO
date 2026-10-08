@@ -662,7 +662,7 @@
       "bay": 1
     },
     "bayUplift": 1.37,
-    "stylesNote": "Mike Sheehan's settled prices, 30 September 2026, fitted inc VAT, white uPVC, 1200 x 1200 with one opener unless stated: casement £876 (so the standard band is £730 net; the other bands are scaled by the same 730/708 — an assumption, only the standard size was priced), flush casement (one fixed, one opening) £1,190 = 1.36x, sliding sash £2,279 = 2.60x. Bay: a 2.4 m three-sided bay, two openers, poles included, £2,402 = £2,002 net, which is the extra-large band (£1,460) x 1.37. Mike's measurements: 45 / 150 / 45 cm wide, 120 cm high. The bay figure already has its two openers in it, so the opener question is not applied to bays (glazing.js, openerUnits).",
+    "stylesNote": "the founder's settled prices, 30 September 2026, fitted inc VAT, white uPVC, 1200 x 1200 with one opener unless stated: casement £876 (so the standard band is £730 net; the other bands are scaled by the same 730/708 — an assumption, only the standard size was priced), flush casement (one fixed, one opening) £1,190 = 1.36x, sliding sash £2,279 = 2.60x. Bay: a 2.4 m three-sided bay, two openers, poles included, £2,402 = £2,002 net, which is the extra-large band (£1,460) x 1.37. Mike's measurements: 45 / 150 / 45 cm wide, 120 cm high. The bay figure already has its two openers in it, so the opener question is not applied to bays (glazing.js, openerUnits).",
     "georgianBarUplift": 1.12,
     "georgianBarNote": "Georgian bars, per window, as a multiple of the window price. Our own figure from typical UK trade pricing (bars commonly add about 10-15% to a window), not a supplier rate card; replace when one lands.",
     "nonWhiteUplift": 1.08,
@@ -680,7 +680,7 @@
         "colourIncluded": true
       }
     ],
-    "materialsNote": "Frame material, windows only. Every window band price is uPVC. Aluminium: Mike Sheehan's settled price, 30 September 2026 — a 1200 x 1200 aluminium casement, one opener, fitted, £1,904 inc VAT against £876 for the same window in uPVC: 2.174x on the £730 standard band gives exactly £1,904. Colour is included (powder-coated), so the non-white uplift is not added again. This replaces the 29 September 'about 25% more', which was too low. Styles apply on top as for uPVC.",
+    "materialsNote": "Frame material, windows only. Every window band price is uPVC. Aluminium: the founder's settled price, 30 September 2026 — a 1200 x 1200 aluminium casement, one opener, fitted, £1,904 inc VAT against £876 for the same window in uPVC: 2.174x on the £730 standard band gives exactly £1,904. Colour is included (powder-coated), so the non-white uplift is not added again. This replaces the 29 September 'about 25% more', which was too low. Styles apply on top as for uPVC.",
     "doors": [
       {
         "id": "upvc",
@@ -728,7 +728,7 @@
     "openerCost": 324,
     "typicalOpeners": 1,
     "openerNote": "Cost of one opening light, net, on top of the band price. The bands assume one opener, which is the common case. Derived from a standard window quoted at £950 with none and £2,247 with two, less the 40% discount: £570 and £1,348 inclusive, so £389 inclusive per opener, £324 net. Flat rather than scaled by band, because an opening light is hardware and frame rather than glass — it costs much the same in a small window as a large one. One measured product; revisit when there are more.",
-    "doorNote": "Prices are net; VAT is added at the end. uPVC, composite, double (French) and sliding patio doors are Mike Sheehan's settled prices, 30 September 2026, fitted inc VAT: uPVC back door £1,498, composite £2,743, French/double doors £2,693, sliding patio £2,090 — stored net (divided by 1.2). On 6 October 2026 Mike took 20% off the uPVC and composite doors as too high: uPVC now £1,199 and composite £2,195 fitted inc VAT (net £999 and £1,829; whole pounds net, so £1 over the exact 20%). The bifolds are unchanged: derived from Anglian's list price less the 40% discount routinely available, divided by 1.6 to bring it to the keener installer. Bifold width rests on two points only — the 2.4 m entry and a 3 m unit at £13,304 list — so anything between them is not modelled and anything above 3 m is not priced."
+    "doorNote": "Prices are net; VAT is added at the end. uPVC, composite, double (French) and sliding patio doors are the founder's settled prices, 30 September 2026, fitted inc VAT: uPVC back door £1,498, composite £2,743, French/double doors £2,693, sliding patio £2,090 — stored net (divided by 1.2). On 6 October 2026 Mike took 20% off the uPVC and composite doors as too high: uPVC now £1,199 and composite £2,195 fitted inc VAT (net £999 and £1,829; whole pounds net, so £1 over the exact 20%). The bifolds are unchanged: derived from Anglian's list price less the 40% discount routinely available, divided by 1.6 to bring it to the keener installer. Bifold width rests on two points only — the 2.4 m entry and a 3 m unit at £13,304 list — so anything between them is not modelled and anything above 3 m is not priced."
   },
   "driveways": {
     "note": "Driveway planning estimates. Size is told, not measured: a front photograph cannot measure ground seen at an angle.",
