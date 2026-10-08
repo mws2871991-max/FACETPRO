@@ -454,7 +454,10 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
          stays because aria-labelledby points at it. This page and
          /how-we-price are both served noindex, follow, so demoting their
          headings costs them nothing they were getting. -->
-    <h2 id="installers-heading" class="serif mt-2 text-[28px] sm:text-[34px] leading-tight tracking-tight">Homeowners who have already seen the job</h2>
+    <h2 id="installers-heading" class="serif mt-2 text-[28px] sm:text-[34px] leading-tight tracking-tight">Stop paying for cold leads. Meet homeowners who have already seen the job and the price.</h2>
+    <!-- Conversion wireframe 3A (8 Oct). "Budget-validated" from the wireframe is
+         left out: the figure is our planning estimate, not the homeowner's budget. -->
+    <p class="mt-3 text-lg leading-6 text-zinc-800 font-medium max-w-[62ch]">Homeowners on Facet Pro have already chosen their products, seen a realistic price, and asked for quotes.</p>
     <p class="mt-3 text-lg leading-6 text-zinc-600 max-w-[62ch]">
       Homeowners use Facet Pro to see new windows, doors, walls, roofline and roof on a photograph of their own house, with an itemised planning estimate, before anybody visits.
     </p>
@@ -468,7 +471,29 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
       <li>You choose the postcode areas you cover and the jobs you want.</li>
       <li>Every design arrives with the picture, the products and an estimate the homeowner has already seen.</li>
     </ul>
-    <p class="mt-4 text-lg leading-6 text-zinc-900">Want to receive designs in your area? Email <a href="mailto:hello@facetpro.co.uk" class="underline underline-offset-2">hello@facetpro.co.uk</a>.</p>
+    <!-- Conversion wireframe 3B (8 Oct): what a lead carries, shown. An
+         illustration built from the homepage demo house and the engine's own
+         figures for it; every field is one a real lead carries (leadview.js).
+         The wireframe's "Buy this lead £XX" is replaced: there is no self-serve
+         buying, and lead prices are not published. -->
+    <figure id="sample-lead" class="mt-6 rounded-2xl border border-zinc-300 overflow-hidden max-w-[720px]">
+      <figcaption class="flex items-center justify-between gap-3 bg-zinc-900 text-white px-4 py-3">
+        <span class="font-semibold">Example lead</span><span class="text-base text-white/80">Postcode: SW11 &bull;&bull;&bull; &middot; illustration</span>
+      </figcaption>
+      <div class="grid sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+        <div class="relative bg-zinc-100"><img src="/assets/home/pbDoor.webp" alt="AI visualisation: red-brick detached house with anthracite windows and a composite front door" class="w-full h-full object-cover" loading="lazy" decoding="async"><span class="absolute left-2 bottom-2 text-base bg-zinc-900/80 text-white px-2 py-0.5 rounded">AI illustration</span></div>
+        <dl class="p-4 grid gap-2 text-lg leading-6">
+          <div><dt class="text-base text-zinc-500">Property</dt><dd class="font-medium">Red-brick detached house</dd></div>
+          <div><dt class="text-base text-zinc-500">Scope</dt><dd class="font-medium">3 casement windows incl. the bay, and a composite front door</dd></div>
+          <div><dt class="text-base text-zinc-500">Colour</dt><dd class="font-medium">Anthracite grey</dd></div>
+          <div><dt class="text-base text-zinc-500">Facet Pro estimate</dt><dd class="font-medium">&pound;7,004&ndash;&pound;12,734 inc. VAT</dd></div>
+          <div><dt class="text-base text-zinc-500">Status</dt><dd class="font-medium">Asked for quotes</dd></div>
+          <div><dt class="text-base text-zinc-500">Also with the lead</dt><dd>Name, email and phone (with the homeowner&rsquo;s consent), the before-and-after, and which sizes were measured from the photo</dd></div>
+        </dl>
+      </div>
+    </figure>
+    <p class="mt-5"><a href="mailto:hello@facetpro.co.uk?subject=Facet%20Pro%20leads%20in%20my%20area" class="cta inline-flex items-center min-h-[52px] px-6 rounded-full text-lg font-semibold">Talk to us about your area &rarr;</a></p>
+    <p class="mt-3 text-lg leading-6 text-zinc-900">Or email <a href="mailto:hello@facetpro.co.uk" class="underline underline-offset-2">hello@facetpro.co.uk</a>.</p>
     <p class="mt-4 text-lg leading-6 text-zinc-900">Already working with us? <a href="#trade" class="underline underline-offset-2">Sign in to see the designs sent to you</a>.</p>
   </section>
 
@@ -4741,14 +4766,17 @@ function buildUploadDetect() {
            to upload at all; after they have, it is forty pixels of irrelevance
            between their own house and the analysis of it — which on a phone is
            forty pixels that pushed the narration off the bottom. */
-        state.uploadedImg ? null : h('p', { className: 'mt-4 pt-3 border-t border-zinc-200 text-base leading-7 text-zinc-600' }, [
-          'Not ready to upload? ',
+        /* Conversion wireframe 1B (8 Oct): the no-photo route as a card beside
+           the upload, not a footnote under it. Same destination as before. */
+        state.uploadedImg ? null : h('div', { id: 'no-photo-card', className: 'mt-4 rounded-xl border border-zinc-200 bg-[#FDFCF9] p-4' }, [
+          h('p', { className: 'text-lg font-semibold text-zinc-900' }, 'Don\u2019t have a photo right now?'),
+          h('p', { className: 'mt-1 text-base leading-6 text-zinc-600' },
+            'Choose your house type (detached, semi, terraced or bungalow) and get a rough estimate range straight away, without uploading a photo.'),
           h('a', {
             href: '#whole-house',
-            className: 'inline-block py-3 underline underline-offset-2',
+            className: 'mt-3 inline-flex items-center min-h-[48px] px-5 rounded-full border border-zinc-300 bg-white text-base font-semibold hover:border-zinc-900 transition',
             onClick: (e) => { e.preventDefault(); document.getElementById('mount-wholehouse')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); },
-          }, 'Get a rough figure from your house type instead'),
-          ' — no photo needed.',
+          }, 'Estimate by house type instead \u2192'),
         ]),
       ]),
       h('div', { className: 'rounded-2xl bg-zinc-900 text-white p-5 flex flex-col gap-4' }, [
@@ -6137,15 +6165,33 @@ function buildGlazingLedPanel() {
     ]),
 
     h('div', { className: 'mt-5 rounded-xl bg-white/5 border border-white/10 p-3' }, [
-      h('div', { className: 'text-base text-white/80 font-semibold' }, 'Includes'),
-      h('div', { className: 'mt-2 grid gap-1 text-base text-white/80' }, [
-        doorOnly ? `The ${doorNoun} — materials and fitting` : 'Every window — materials and fitting',
-        // The door was in the price and missing from this list.
-        !doorOnly && hasDoor ? `The ${doorNoun} — materials and fitting` : null,
-        g.price.access ? 'Access for the upstairs windows' : null,
-        'Taking the old frames away',
-        'VAT (20%)',
-      ].filter(Boolean).map(item => h('div', {}, `• ${item}`))),
+      /* Conversion wireframe 4 (8 Oct): "How we calculate this", with the
+         engine's own amounts. Not the wireframe's materials/labour split:
+         windows are priced from what these jobs sell for, so there is no
+         such split to show. The lines add up to the itemised figure; the
+         range above is wider because installers price the same job
+         differently, which "What sets this range" below explains. */
+      h('details', { id: 'how-we-calculate', className: 'group' }, [
+        h('summary', { className: 'cursor-pointer text-base text-white font-semibold min-h-[44px] flex items-center' }, 'How we calculate this \u2192'),
+        h('div', { className: 'mt-1 grid gap-1 text-base text-white/85' }, [
+          doorOnly ? [`The ${doorNoun} — materials and fitting`, g.price.doors] : ['Every window — materials and fitting', (g.price.supplyFit || 0) + (g.price.openers || 0)],
+          // The door was in the price and missing from this list.
+          !doorOnly && hasDoor ? [`The ${doorNoun} — materials and fitting`, g.price.doors] : null,
+          g.price.access ? ['Access for the upstairs windows', g.price.access] : null,
+          ['Taking the old frames away', g.price.disposal],
+          ['VAT (20%)', g.price.vat],
+        ].filter(Boolean).map(([label, amount]) => h('div', { className: 'flex items-baseline justify-between gap-3' }, [
+          h('span', {}, label),
+          h('span', { className: 'tabular-nums' }, Number.isFinite(amount) ? fmtMoney(amount) : ''),
+        ]))),
+        Number.isFinite(g.price.total)
+          ? h('div', { className: 'mt-2 pt-2 border-t border-white/10 flex items-baseline justify-between gap-3 text-base text-white font-semibold' }, [
+              h('span', {}, 'Itemised figure'), h('span', { className: 'tabular-nums' }, fmtMoney(g.price.total)),
+            ])
+          : null,
+        h('p', { className: 'mt-2 text-base leading-6 text-white/75' },
+          'Your range is wider than this one figure because installers charge different prices for the same job. Your installer confirms the final price at survey.'),
+      ]),
 
       /* The biggest cost on a bifold is not in the bifold.
 
@@ -9095,22 +9141,36 @@ function buildSaveMomentSection(rows, go) {
         h('p', { className: 'text-base text-zinc-600 font-semibold' },
           journeyNoun(state.journey) ? `Your ${journeyNoun(state.journey)} project` : 'Your design'),
         h('h2', { className: 'mt-1 serif text-[26px] md:text-[32px] tracking-tight' }, 'Like your new design?'),
-        h('p', { className: 'mt-3 text-lg leading-6 text-zinc-600 max-w-[52ch]' },
-          'Save it and we’ll keep your project details — your before-and-after, everything you chose and your itemised estimate. Quotes are a separate step, and only if you want them.'),
-        h('div', { className: 'mt-6 flex flex-col sm:flex-row gap-3' }, [
-          h('button', {
-            type: 'button',
-            className: 'cta w-full sm:w-auto px-6 py-3.5 rounded-full text-lg font-semibold min-h-[52px]',
-            onClick: () => go('save'),
-          }, 'Save my design'),
-          h('button', {
-            type: 'button',
-            className: 'w-full sm:w-auto px-6 py-3.5 rounded-full border border-zinc-300 text-lg font-medium hover:border-zinc-900 transition min-h-[52px]',
-            onClick: () => go('quotes'),
-          }, journeyNoun(state.journey) ? `Get local ${journeyNoun(state.journey)} quotes` : 'Get local quotes'),
+        /* Conversion wireframe 2 (8 Oct): two clearly separate choices, the
+           soft one (keep the design) and the high-intent one (quotes). The
+           wireframe's installer-preference boxes are left out on purpose:
+           "no national brands" would exclude the installers Facet Pro works
+           with, and an accreditation claim is not one we can evidence yet. */
+        h('div', { className: 'mt-5 grid gap-4' }, [
+          h('div', { id: 'option-save', className: 'rounded-xl border border-zinc-200 p-4' }, [
+            h('p', { className: 'text-base font-semibold text-[#B5482A] uppercase tracking-wide' }, 'Option A \u00b7 Save your design'),
+            h('p', { className: 'mt-1 text-lg leading-6 text-zinc-700' }, state.designPackEmail
+              ? 'We\u2019ll email you your before-and-after, everything you chose and your itemised estimate, to keep.'
+              : 'Keep your before-and-after, everything you chose and your itemised estimate.'),
+            h('button', {
+              type: 'button',
+              className: 'cta mt-3 w-full sm:w-auto px-6 py-3.5 rounded-full text-lg font-semibold min-h-[52px]',
+              onClick: () => go('save'),
+            }, state.designPackEmail ? 'Email me my design' : 'Save my design'),
+            h('p', { className: 'mt-2 text-base text-zinc-600' }, '\ud83d\udd12 Nobody will call you, and we never share your email without your permission.'),
+          ]),
+          h('div', { id: 'option-quotes', className: 'rounded-xl border border-zinc-200 p-4' }, [
+            h('p', { className: 'text-base font-semibold text-[#B5482A] uppercase tracking-wide' }, 'Option B \u00b7 Ready for survey quotes?'),
+            h('p', { className: 'mt-1 text-lg leading-6 text-zinc-700' },
+              'Ask up to 3 local installers to survey and quote. You choose whether to go ahead; there is no obligation.'),
+            h('button', {
+              type: 'button',
+              className: 'mt-3 w-full sm:w-auto px-6 py-3.5 rounded-full border-2 border-zinc-900 text-lg font-semibold hover:bg-zinc-900 hover:text-white transition min-h-[52px]',
+              onClick: () => go('quotes'),
+            }, journeyNoun(state.journey) ? `Get local ${journeyNoun(state.journey)} quotes` : 'Get local quotes'),
+            pricePromiseNote('mt-3'),
+          ]),
         ]),
-        h('p', { className: 'mt-3 text-base text-zinc-600' }, 'No account needed. Nobody calls unless you ask them to.'),
-        pricePromiseNote('mt-4'),
       ]),
       h('div', { className: 'rounded-2xl bg-[#111111] text-white p-5' }, [
         h('p', { className: 'text-base text-white/80 font-semibold' }, 'Your estimated project'),
