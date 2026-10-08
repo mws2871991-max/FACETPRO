@@ -2415,6 +2415,8 @@ async function loadConfig() {
     state.leadCapture = cfg.leadCapture !== false;
     state.contactPhone = typeof cfg.contactPhone === 'string' ? cfg.contactPhone : null;
     state.epcAvailable = !!cfg.epcSizing;
+    /* The price promise (pricepromise.js): only when the server says it is in force. */
+    state.pricePromise = cfg.pricePromise && Number(cfg.pricePromise.capPercent) > 0 ? cfg.pricePromise : null;
   } catch (err) {
     state.designPackEmail = false;   // promise nothing if we can't tell
     state.installerQuotesAvailable = false;
@@ -8968,6 +8970,7 @@ function buildInstallerConsent() {
       h('p', { className: 'text-base leading-7 text-zinc-800 font-semibold', id: 'quotes-reassurance' },
         `Only ${q.list.length === 1 ? 'the installer' : `the ${q.list.length} installers`} named below get your details, and only if you tick the box. We never sell your details to anyone else or add you to a marketing list.`),
       consentBox('installerQuotes', [CONSENT_WORDING.installerQuotes.replace('{installers}', joinNames(q.list.map(i => i.name)))]),
+      pricePromiseNote('mt-2'),
     ]);
   }
   if (ready && state.quote?.intent === 'quotes') {
@@ -8978,6 +8981,19 @@ function buildInstallerConsent() {
     ]);
   }
   return h('div', { id: 'installer-consent' }, [inner]);
+}
+
+/* The Facet Pro price promise, where quotes are asked for. Nothing unless the
+   server says it is in force (it is switched on only once the installers
+   have signed it), and nothing unless quotes can be asked for at all. */
+function pricePromiseNote(extraClass = '') {
+  if (!state.pricePromise || !state.installerQuotesAvailable) return null;
+  return h('div', { id: 'price-promise-note', className: `${extraClass} rounded-xl border-l-4 border-[#B5482A] bg-[#FDFCF9] px-4 py-3` }, [
+    h('p', { className: 'text-base font-semibold text-zinc-900' }, 'The Facet Pro price promise'),
+    h('p', { className: 'mt-1 text-base leading-6 text-zinc-700' },
+      `For the job you chose, your installer\u2019s quote will be within your Facet Pro range, and never more than ${state.pricePromise.capPercent}% above it. If the job changes at survey, any difference is explained to you in writing.`),
+    h('a', { href: state.pricePromise.terms || '/price-promise', className: 'mt-1 inline-block text-base underline underline-offset-2 text-zinc-700' }, 'How the price promise works'),
+  ]);
 }
 
 /* One consent checkbox. Identical markup and styling for all three, so the
@@ -9094,6 +9110,7 @@ function buildSaveMomentSection(rows, go) {
           }, journeyNoun(state.journey) ? `Get local ${journeyNoun(state.journey)} quotes` : 'Get local quotes'),
         ]),
         h('p', { className: 'mt-3 text-base text-zinc-600' }, 'No account needed. Nobody calls unless you ask them to.'),
+        pricePromiseNote('mt-4'),
       ]),
       h('div', { className: 'rounded-2xl bg-[#111111] text-white p-5' }, [
         h('p', { className: 'text-base text-white/80 font-semibold' }, 'Your estimated project'),

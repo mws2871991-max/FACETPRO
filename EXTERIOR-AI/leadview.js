@@ -24,6 +24,8 @@ const INSTALLER_FIELDS = [
   'measurementSource', 'wallMeasurement',
   // The estimate.
   'price', 'priceBreakdown', 'pricing',
+  // The price promise caps for this job, when it is switched on (pricepromise.js).
+  'pricePromise',
   // Their answers about the project, and the score worked out from them
   // (disclosed in the privacy notice, "AI, and decisions made about you").
   'project', 'property', 'leadScore',

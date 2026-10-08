@@ -9,6 +9,7 @@ const measure = require('./measure');
 const emails = require('./emails');
 const delivery = require('./delivery');
 const retention = require('./retention');
+const pricePromise = require('./pricepromise');
 const obs = require('./observability');
 /* Emails the operator when the caps run low, a lead fails to deliver, or
    errors cluster (alerts.js). Silent until email is configured. */
@@ -301,7 +302,7 @@ const CSP_LEGAL = [
    needs 'unsafe-inline' for scripts because the whole front end is inline in
    index.html; anything that does not run scripts should not be handed that,
    and the landing pages and share pages do not. */
-const isLegalPath = (p) => p === '/privacy' || p === '/terms' || p === '/investors'
+const isLegalPath = (p) => p === '/privacy' || p === '/terms' || p === '/price-promise' || p === '/investors'
   || p.startsWith('/legal/') || p.startsWith('/cost/') || /^\/windows-[a-z-]+$/.test(p);
 
 app.use((req, res, next) => {
@@ -1780,6 +1781,9 @@ app.get('/api/config', (req, res) => {
     contactPhone: CONTACT_PHONE,
     /* Offer "size it from my energy certificate" only when it can answer. */
     epcSizing: epcRouting.live(),
+    /* The price promise (pricepromise.js): only when it is switched on AND
+       quotes can be asked for, because it is a promise about quotes. */
+    pricePromise: pricePromise.enabled() && HOMEOWNER_EMAIL_ENABLED ? { capPercent: Math.round(pricePromise.CAP * 100), terms: '/price-promise' } : null,
   });
 });
 
@@ -4586,6 +4590,12 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
      The enquiry still stands on the conservatory interest and the glazing
      estimate, either of which may be the whole of what they want. */
   const hasPricedWork = price.priced.length > 0;
+  /* The walls/roof/roofline range, worked out exactly as /api/quote shows it,
+     so the price promise caps the figure the homeowner actually saw. */
+  const exteriorRange = !hasPricedWork ? null
+    : footprint.exact ? priceRangeAroundTotal(price.total)
+    : footprint.areaBand ? priceRangeFromArea({ claddingId, trimId, roofId, trimLengthM }, footprint.areaBand)
+    : priceRange({ claddingId, trimId, roofId, trimLengthM }, footprint.m2);
 
   /* The raw token goes into their email and nowhere else; we keep the hash.
      Otherwise the withdrawal link would be readable by anything that can read
@@ -4678,6 +4688,12 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
      month was scored by version 1, and re-scoring it under version 2 would
      quietly rewrite history an installer was billed against. */
   lead.leadScore = leadscore.score(lead);
+  /* The price promise, only on a quote request and only once it is switched
+     on: the caps for this job, carried on the lead so the installer quotes
+     against the same figures the homeowner holds. */
+  if (pricePromise.enabled() && lead.consent?.installerQuotes === true) {
+    lead.pricePromise = pricePromise.forLead({ glazing: lead.glazing, exterior: exteriorRange });
+  }
 
   // Stored first, unconditionally — a notification problem must never cost a lead.
   await store.append('leads', lead);

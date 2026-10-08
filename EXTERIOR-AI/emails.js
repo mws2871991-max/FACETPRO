@@ -88,6 +88,30 @@ function pricedWork(price) {
   return price && (Number(price.cladding) > 0 || Number(price.roof) > 0 || Number(price.trim) > 0) ? price : null;
 }
 
+/* The price promise (pricepromise.js), when it travels on the lead: the
+   wording and the limit for each part of the job, in pounds. Nothing when the
+   promise is off, so an email can never promise what nobody signed. */
+function promiseLines(lead) {
+  const pp = lead && lead.pricePromise;
+  if (!pp || !Array.isArray(pp.parts) || !pp.parts.length) return null;
+  return pp.parts.map(x => `${x.what}: your range ${money(x.low)}–${money(x.high)}, the promise allows up to ${money(x.capAt)}`);
+}
+function promiseHtml(lead, base) {
+  const lines = promiseLines(lead);
+  if (!lines) return '';
+  return `<div style="background:#fff;border-left:4px solid #B5482A;border-radius:8px;padding:16px 18px;margin:22px 0 0">
+      <div style="font-size:15px;font-weight:600;margin:0 0 6px">The Facet Pro price promise</div>
+      <p style="font-size:14px;line-height:1.6;color:#3f3f46;margin:0">${escapeHtml(lead.pricePromise.wording)}</p>
+      <ul style="font-size:14px;line-height:1.6;color:#3f3f46;margin:8px 0 0;padding-left:18px">${lines.map(l => `<li>${escapeHtml(l)}</li>`).join('')}</ul>
+      <p style="font-size:13px;line-height:1.6;color:#6B6E78;margin:8px 0 0"><a href="${escapeHtml(base)}/price-promise" style="color:#6B6E78">How the price promise works</a></p>
+    </div>`;
+}
+function promiseText(lead, base) {
+  const lines = promiseLines(lead);
+  if (!lines) return [];
+  return ['', 'The Facet Pro price promise', lead.pricePromise.wording, ...lines.map(l => `  ${l}`), `How it works: ${base}/price-promise`];
+}
+
 function leadNotificationHtml(lead, price, siteUrl) {
   price = pricedWork(price);
   /* The picture they designed, which this email never linked (developer
@@ -113,6 +137,7 @@ function leadNotificationHtml(lead, price, siteUrl) {
       ${windowsRow(lead)}
       ${render ? row('Visualisation', `<a href="${escapeHtml(render)}">Open their design</a>`) : ''}
       ${row('Quotes requested', lead.consent?.installerQuotes === true ? 'Yes' : 'No')}
+      ${promiseLines(lead) ? row('Price promise', promiseLines(lead).map(escapeHtml).join('<br>')) : ''}
     </table>
   </div>`;
 }
@@ -375,6 +400,7 @@ function sharingConfirmationHtml(lead, recipients, siteUrl, withdrawToken) {
         for its own use of your details.
       </p>
     </div>
+    ${(recipients || []).length ? promiseHtml(lead, base) : ''}
 
     ${withdrawLink ? `<p style="font-size:14px;line-height:1.6;color:#3f3f46;margin:22px 0 0">
       Changed your mind? You can
@@ -407,6 +433,7 @@ function sharingConfirmationText(lead, recipients, siteUrl, withdrawToken) {
     '',
     'They may contact you by email, telephone or text message to talk it through and arrange a survey.',
     'There is no obligation to go ahead at any point.',
+    ...(named.length ? promiseText(lead, base) : []),
     '',
     `Changed your mind? Stop this at any time: ${withdrawToken ? `${base}/withdraw?t=${encodeURIComponent(withdrawToken)}` : `${base}/privacy`}`,
     '',

@@ -218,6 +218,10 @@ module.exports = function pageRoutes({
   };
   router.get('/privacy', legalPage('privacy.html'));
   router.get('/terms', legalPage('terms.html'));
+  /* The price promise's terms (pricepromise.js). Served only while the
+     promise is switched on, so a promise that is not in force is not on
+     the site to be read as one. */
+  router.get('/price-promise', (req, res, next) => (require('../pricepromise').enabled() ? legalPage('price-promise.html')(req, res) : next()));
 
   /* ── THE TOOL, AND THE STAFF DOOR ──
 
