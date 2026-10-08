@@ -55,7 +55,7 @@ const fileUrl = (p) => 'file://' + p.split(path.sep).map(encodeURIComponent).joi
 /* ── the images ── */
 const FONT = fileUrl(path.join(ROOT, 'assets', 'fonts', 'geist-variable.woff2'));
 const MONO = fileUrl(path.join(ROOT, 'assets', 'fonts', 'GeistMono-500.woff2'));
-const HOUSE = (s) => `<svg width="${s}" height="${s}" viewBox="0 0 40 40"><defs><clipPath id="fpmark1"><rect width="40" height="40" rx="8"/></clipPath></defs><g clip-path="url(#fpmark1)"><rect width="40" height="40" fill="currentColor"/><path d="M28 0H40V12Z" fill="#B5482A"/></g><path d="M13 9H28V14H19V18.5H26.5V23.5H19V31H13Z" fill="#FFFFFF"/></svg>`;
+const HOUSE = (s) => `<svg width="${s}" height="${s}" viewBox="0 0 40 40"><defs><clipPath id="fpmark1"><rect width="40" height="40" rx="8"/></clipPath></defs><g clip-path="url(#fpmark1)"><rect width="40" height="40" fill="currentColor"/><path d="M28 0H40V12Z" fill="#B5482A"/></g><path class="fp-f" d="M13 9H28V14H19V18.5H26.5V23.5H19V31H13Z" fill="#FFFFFF"/></svg>`;
 const CSS = (W, H) => `
 @font-face{font-family:G;src:url(${FONT}) format('woff2');font-weight:100 900}
 @font-face{font-family:M;src:url(${MONO}) format('woff2')}
@@ -68,7 +68,7 @@ h1{font-weight:700;letter-spacing:-.035em;line-height:1.02}
 .foot{margin-top:auto;display:flex;justify-content:space-between;align-items:flex-end;gap:20px}
 .cta{background:#B5482A;color:#fff;font-weight:600;border-radius:6px;padding:${Math.round(W * 0.018)}px ${Math.round(W * 0.026)}px;font-size:${Math.round(W * 0.026)}px;white-space:nowrap}
 .fine{font-size:${Math.round(W * 0.0175)}px;color:#5B5F63;line-height:1.4;max-width:62%}
-.dark{background:#16181A;color:#fff}.dark .eb{color:#E08A6C}.dark .sub,.dark .fine{color:rgba(255,255,255,.75)}
+.dark{background:#16181A;color:#fff}.dark .fp-f{fill:#16181A}.dark .eb{color:#E08A6C}.dark .sub,.dark .fine{color:rgba(255,255,255,.75)}
 .ba{position:relative;border-radius:8px;overflow:hidden;box-shadow:0 24px 50px -20px rgba(22,24,26,.45)}
 .ba img{display:block;width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
 .ba .r{clip-path:inset(0 0 0 50%)}.ba i{position:absolute;top:0;bottom:0;left:50%;width:4px;margin-left:-2px;background:#fff}
