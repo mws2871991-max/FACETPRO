@@ -202,7 +202,10 @@ header{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:rg
 .brk div{display:flex;justify-content:space-between;gap:12px}.brk b{white-space:nowrap}
 .tryit{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:12px;margin-top:4px}
 .tryit .chip{padding:8px 12px;font-size:13.5px}
-.ticks.row{display:flex;flex-wrap:wrap;gap:6px 22px;margin:0}
+.choice3{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.choice3 li{background:#fff;border-radius:6px;padding:20px 22px;border-top:3px solid var(--brick)}
+.choice3 b{font-size:18px;letter-spacing:-.01em}.choice3 p{margin-top:6px;color:var(--ink-2)}
+@media (max-width:760px){.choice3{grid-template-columns:minmax(0,1fr);gap:10px}.choice3 li{padding:16px 18px}}
 .nos>div:first-child>div{font-size:clamp(30px,4vw,52px);font-weight:700;letter-spacing:-.03em;line-height:1.08}
 .nos>div:first-child>div:last-child{color:var(--brick)}
 
@@ -259,8 +262,13 @@ details.method[open] summary .arr{transform:rotate(90deg)}
 .faq summary{list-style:none;cursor:pointer;padding-block:22px;display:flex;justify-content:space-between;gap:16px;font-size:18px;font-weight:600}
 .faq summary::-webkit-details-marker{display:none}
 .faq summary::after{content:"+";color:var(--brick);font-weight:400;font-size:22px;line-height:1}
-.faq details[open] summary::after{content:"−"}
+.faq details[open]>summary::after{content:"−"}
 .faq details p{padding-bottom:22px;color:var(--ink-2);max-width:56ch}
+.faq .faq-more{border-bottom:0}
+.faq .faq-more-s{color:var(--brick);font-size:16px;min-height:44px;align-items:center}
+.faq .faq-more-s::after{content:""}
+.faq .faq-more[open]>.faq-more-s{display:none}
+.faq .faq-more details:last-child{border-bottom:0}
 
 footer{background:var(--night);color:#C9CBCD;padding-block:72px 48px}
 footer nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 56px}
@@ -357,18 +365,10 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
   },
   {
    "@type": "Question",
-   "name": "Will installers contact me?",
+   "name": "Will installers contact me automatically?",
    "acceptedAnswer": {
     "@type": "Answer",
-    "text": "Only if you ask for quotes, and then no more than three. You can explore, price and save your design without speaking to anyone."
-   }
-  },
-  {
-   "@type": "Question",
-   "name": "Do I need to measure my property?",
-   "acceptedAnswer": {
-    "@type": "Answer",
-    "text": "No. We size it from your photo."
+    "text": "No. You decide whether to request quotes, and then no more than three installers receive your details."
    }
   },
   {
@@ -385,6 +385,38 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
    "acceptedAnswer": {
     "@type": "Answer",
     "text": "It is a realistic planning range, not a guaranteed final price. It is based on what we can see in your photo and the options you choose."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "Do I need measurements?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "No. We size it from your photo."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "If it’s free, how does Facet Pro make money?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "Facet Pro is free for you. Installers pay us when we send them an enquiry, which only happens when you ask for quotes, and they can’t pay to change your estimate."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "Do I have to speak to an installer?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "No. You can explore, price and save your design without speaking to anyone."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "Does Facet Pro do the work?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "No. Facet Pro creates the design and the estimate. If you ask for quotes, it goes to installers who arrange a survey and quote properly. There is no obligation to go ahead."
    }
   }
  ]
@@ -465,6 +497,7 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
           <span class="muted">Example · new anthracite windows</span>
           <b>£4,880–£8,874</b>
           <span class="muted">Planning estimate · inc. VAT · not a quotation</span>
+          <span class="muted"><strong>Why a range?</strong> A photo can&rsquo;t see everything, so the final price follows your installer&rsquo;s survey.</span>
         </a>
       </div>
       <div class="hero-visual" id="demo-example">
@@ -477,7 +510,7 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
           <div class="row1"><div class="price" id="demoPrice" style="font-size:clamp(34px,3.4vw,44px)">£4,880–£8,874</div></div>
           <div style="font-size:13px;color:var(--ink-2)"><b>Planning estimate · inc. VAT</b> · Not a quotation.</div>
           <div class="brk" id="demoBrk"></div>
-          <div class="rangewhy">Why a range? Installers charge different prices for the same job. Your installer confirms the final price at survey.</div>
+          <div class="rangewhy"><b>Why a range?</b> Final price depends on the exact frame sizes, glass spec and your installer&rsquo;s survey. A photo can&rsquo;t see everything, so we don&rsquo;t pretend it can. <a href="/how-we-price">How we price &rarr;</a></div>
           <div class="tryit">
             <div class="looks opts" data-group="win" role="group" aria-label="Window colour">
               <button type="button" class="chip" data-v="white" aria-pressed="false">White</button>
@@ -508,9 +541,19 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
            under the three steps, as one line. Still unnamed (Mike, 8 Oct), and
            this is now its only place on the page. -->
       <p id="trust" class="founder-line">Built by someone who spent 24 years selling windows, doors and home improvements, to give UK homeowners a clear price before any sales visit.</p>
-      <!-- Homepage trim (9 Oct): the "Research first" and "No twenty companies"
-           section, cut to its promises. The FAQ answers each one in full. -->
-      <ul id="estimate" class="ticks row"><li>No obligation</li><li>No sales call</li><li>Up to 3 installers, only if you ask</li></ul>
+    </div>
+  </section>
+
+  <!-- REASSURANCE (dev handoff 9 Oct, P2): the one section that replaced
+       "estimate not a quotation", "Research first" and "No twenty companies". -->
+  <section id="estimate" class="stone" style="padding-block:clamp(40px,5vw,64px)">
+    <div class="wrap stack" style="gap:22px">
+      <h2 class="h2" style="font-size:clamp(28px,3.2vw,42px)">Your choice, your details</h2>
+      <ul class="choice3">
+        <li><b>Nobody rings you</b><p>Looking at a price never shares your details with anyone.</p></li>
+        <li><b>Maximum three installers</b><p>And only when you ask for quotes. Never twenty companies.</p></li>
+        <li><b>No obligation</b><p>You don&rsquo;t have to accept any quote you&rsquo;re sent.</p></li>
+      </ul>
     </div>
   </section>
 
@@ -531,19 +574,24 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
   </section>
 
 
-  <!-- FAQ (brief §14): the core questions, five since the 9 Oct trim. -->
+  <!-- FAQ (dev handoff 9 Oct, P4): six questions, collapsed, then "All questions". -->
   <section id="faq" class="stone" style="padding-block:clamp(44px,5vw,72px)">
     <div class="wrap g2" style="align-items:start">
       <div class="stack" style="gap:12px">
         <h2 class="h2">Questions, answered.</h2>
-        <p style="font-size:17px;color:var(--ink-2)">The detail lives in our <a href="/privacy">privacy policy</a> and <a href="/how-we-price">how we price</a>. Facet Pro is free for homeowners; installers pay us a fee only when you choose to request quotes.</p>
+        <p style="font-size:17px;color:var(--ink-2)">The detail lives in our <a href="/privacy">privacy policy</a> and <a href="/how-we-price">how we price</a>.</p>
       </div>
       <div class="faq" style="border-top:1px solid #DEDBD4">
         <details><summary>Is the Facet Pro price a quotation?</summary><p>No. It is a planning estimate. The final price is confirmed by an installer after reviewing the property and specification.</p></details>
-        <details><summary>Will installers contact me?</summary><p>Only if you ask for quotes, and then no more than three. You can explore, price and save your design without speaking to anyone.</p></details>
-        <details><summary>Do I need to measure my property?</summary><p>No. We size it from your photo.</p></details>
+        <details><summary>Will installers contact me automatically?</summary><p>No. You decide whether to request quotes, and then no more than three installers receive your details.</p></details>
         <details><summary>What happens to my photo?</summary><p>Your original photo is deleted immediately after processing. We keep a secure fingerprint for 7 days to maintain estimate consistency, and store your generated designs for 6 months so you can return to your project. The detail is in our <a href="/privacy">privacy policy</a>.</p></details>
         <details><summary>How accurate is the estimate?</summary><p>It is a realistic planning range, not a guaranteed final price. It is based on what we can see in your photo and the options you choose.</p></details>
+        <details><summary>Do I need measurements?</summary><p>No. We size it from your photo.</p></details>
+        <details><summary>If it&rsquo;s free, how does Facet Pro make money?</summary><p>Facet Pro is free for you. Installers pay us when we send them an enquiry, which only happens when you ask for quotes, and they can&rsquo;t pay to change your estimate.</p></details>
+        <details id="all-questions" class="faq-more"><summary class="faq-more-s">All questions &rarr;</summary>
+          <details><summary>Do I have to speak to an installer?</summary><p>No. You can explore, price and save your design without speaking to anyone.</p></details>
+          <details><summary>Does Facet Pro do the work?</summary><p>No. Facet Pro creates the design and the estimate. If you ask for quotes, it goes to installers who arrange a survey and quote properly. There is no obligation to go ahead.</p></details>
+        </details>
       </div>
     </div>
   </section></main>

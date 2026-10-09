@@ -566,7 +566,7 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
          opens in place rather than sending anyone away from the button.
          Says what legal/privacy.html says — test/photo-privacy.test.js. -->
     <details class="photo-privacy mt-1 text-base text-zinc-700 max-w-[60ch]">
-      <summary class="cursor-pointer py-2.5 leading-6">Your original photo isn&rsquo;t kept. <span class="underline underline-offset-2">See how your photo is used</span></summary>
+      <summary class="cursor-pointer py-2.5 leading-6">Your original photo is deleted after processing. <span class="underline underline-offset-2">See how your photo is used</span></summary>
       <!-- Two sentences, not five (1 October, Mike): the first screen is house,
            picture, price. The AI services and the seven-day fingerprint are
            still said in full in the FAQ below ("What happens to my photo?")
@@ -4717,7 +4717,7 @@ function buildUploadDetect() {
            read it. */
         h('details', { className: 'photo-privacy mt-3 text-base text-zinc-600' }, [
           h('summary', { className: 'cursor-pointer py-2.5 leading-6' }, [
-            'Your original photo isn’t kept. ',
+            'Your original photo is deleted after processing. ',
             h('span', { className: 'underline underline-offset-2' }, 'See how your photo is used'),
           ]),
           h('p', { className: 'pb-2 leading-7' }, [

@@ -1321,7 +1321,7 @@ const conservatoryCta = (siteUrl, slug) => `<div class="cta-block">
      table when somebody talks to you.</p>
   <p><a class="cta" href="${escapeHtml(ctaHref(siteUrl, slug, 'end'))}">Compare the styles</a></p>
   <p class="muted">Free to try &middot; No measurements &middot; No sales call unless you ask</p>
-  <p class="muted">Your original photo isn&rsquo;t kept. <a href="/privacy#your-photograph">See how your photo is used &rarr;</a></p>
+  <p class="muted">Your original photo is deleted after processing. <a href="/privacy#your-photograph">See how your photo is used &rarr;</a></p>
 </div>`;
 
 const cta = (siteUrl, slug) => (isConservatory(slug) ? conservatoryCta(siteUrl, slug) : `<div class="cta-block">
@@ -1345,7 +1345,7 @@ const cta = (siteUrl, slug) => (isConservatory(slug) ? conservatoryCta(siteUrl, 
        promise, not a second name for this one. -->
   <p><a class="cta" href="${escapeHtml(ctaHref(siteUrl, slug, 'end'))}">${escapeHtml(ctaWords())}</a></p>
   <p class="muted">Free to try &middot; No measurements &middot; No sales call unless you ask</p>
-  <p class="muted">Your original photo isn&rsquo;t kept. <a href="/privacy#your-photograph">See how your photo is used &rarr;</a></p>
+  <p class="muted">Your original photo is deleted after processing. <a href="/privacy#your-photograph">See how your photo is used &rarr;</a></p>
 </div>`);
 
 
@@ -1644,7 +1644,7 @@ const journeyHero = (siteUrl, slug) => {
   <p>${escapeHtml(copy.p)}</p>
   <p><a class="cta" href="${escapeHtml(ctaHref(siteUrl, slug, 'hero'))}">${escapeHtml(ctaWords())}</a></p>
   <p class="muted">Free &middot; No measurements &middot; No sales call unless you ask</p>
-  <p class="muted">Your original photo isn&rsquo;t kept. <a href="/privacy#your-photograph">See how your photo is used &rarr;</a></p>
+  <p class="muted">Your original photo is deleted after processing. <a href="/privacy#your-photograph">See how your photo is used &rarr;</a></p>
 </div>`;
 };
 
@@ -2039,7 +2039,7 @@ function renderCostIndex({ catalogue, siteUrl, siteMode }) {
   <p>Upload one photo of the front. See new windows and doors on your actual house, with a planning estimate for it.</p>
   <p><a class="cta" href="${escapeHtml(ctaHref(siteUrl, null, 'hero'))}">${escapeHtml(ctaWords())}</a></p>
   <p class="muted">Free &middot; No measurements &middot; No sales call unless you ask</p>
-  <p class="muted">Your original photo isn&rsquo;t kept. <a href="/privacy#your-photograph">See how your photo is used &rarr;</a></p>
+  <p class="muted">Your original photo is deleted after processing. <a href="/privacy#your-photograph">See how your photo is used &rarr;</a></p>
 </div>
 ${groups}
 ${areas}`;

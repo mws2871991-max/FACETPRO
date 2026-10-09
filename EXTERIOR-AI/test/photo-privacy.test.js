@@ -19,7 +19,8 @@ const root = path.join(__dirname, '..');
 const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const landing = fs.readFileSync(path.join(root, 'landing.js'), 'utf8');
 const privacy = fs.readFileSync(path.join(root, 'legal', 'privacy.html'), 'utf8');
-const LINE = /Your original photo isn(’|&rsquo;)t kept/;
+/* Dev handoff 9 Oct, P5: "isn't kept" became "is deleted after processing". */
+const LINE = /Your original photo is deleted after processing\./;
 
 test('the privacy notice has the anchor the upload lines link to', () => {
   assert.match(privacy, /id="your-photograph"[^>]*>What happens to your photograph/);
@@ -34,7 +35,7 @@ test('the first screen answers the question right under the hero button', () => 
 });
 
 test('the upload panel answers it in place, and links to the notice', () => {
-  const at = index.search(/'Your original photo isn’t kept\./);
+  const at = index.search(/'Your original photo is deleted after processing\./);
   assert.ok(at > 0, 'the upload panel line is missing');
   const block = index.slice(at - 400, at + 1200);
   assert.ok(block.includes("h('details'"), 'it opens in place');
@@ -48,7 +49,7 @@ test('no "how your photo is used" link points at the measurement section', () =>
 
 test('every cost-page upload has the line and the link', () => {
   const buttons = (landing.match(/No sales call unless you ask<\/p>/g) || []).length;
-  const lines = (landing.match(/Your original photo isn&rsquo;t kept\. <a href="\/privacy#your-photograph">/g) || []).length;
+  const lines = (landing.match(/Your original photo is deleted after processing\. <a href="\/privacy#your-photograph">/g) || []).length;
   assert.ok(buttons > 0);
   assert.strictEqual(lines, buttons);
 });
