@@ -92,6 +92,17 @@ const MAX_BAY_H_M = 5.0;
 const BAY_GLAZED_H_M = 2.0;
 const BAY_LABEL = /\bbay\b/i;
 
+/* Roof lights are not windows for this job (9 Oct). A semi with two
+   Velux-type lights in a loft conversion: detection called them "Roof Light
+   (left)" and "Roof Light (right)", they were merged into one 1.12 x 0.38 m
+   upstairs window, and the house was priced on five windows where the front
+   has four. Window installers do not replace roof lights — it is a roofing
+   job, priced differently — so they are neither counted, priced nor
+   repainted (left out of our boxes, the render mask puts the photograph back
+   over them). A dormer is a real window in a wall of its own and still
+   counts. */
+const ROOF_LIGHT_LABEL = /\b(roof\s?-?lights?|sky\s?lights?|velux|roof\s?windows?)\b/i;
+
 // What a house can plausibly have. Outside this the detection is wrong, and
 // the honest answer is the prior rather than a confident wrong number — the
 // same reasoning as the manual-area bounds in computePrice.
@@ -782,6 +793,7 @@ function windowCandidates(detections, aspectRatio = null) {
   const typicalArea = areas.length ? areas[Math.floor(areas.length / 2)] : 0;
 
   let sidelights = 0;
+  let roofLights = 0;
   const units = new Map();          // pane group name -> merged candidate
   const singles = [];
   let neighbours = 0;
@@ -807,6 +819,7 @@ function windowCandidates(detections, aspectRatio = null) {
        not say it in words. */
     if (aboveAnotherFrontDoor(b, ourDoor, doorBoxes)) { neighbours++; notOurs.push(b); continue; }
     if (beyondOurDoor(b, layoutDoor, bayBoxes, sides)) { neighbours++; notOurs.push(b); continue; }
+    if (ROOF_LIGHT_LABEL.test(String(d?.label || ''))) { roofLights++; continue; }
     if (isSidelight(d)) { sidelights++; continue; }
     if (isFanlight(b, String(d?.label || ''), doorB)) { sidelights++; continue; }
     if (isCellarLight(b, String(d?.label || ''), typicalArea, doorB)) continue;
@@ -869,7 +882,7 @@ function windowCandidates(detections, aspectRatio = null) {
   for (const u of joined.list) u.isBay = (u.panes || 1) >= BAY_MIN_PANES || u.labelBay === true;
   const bays = joined.list.filter(u => u.isBay).length;
 
-  return { kept: joined.list, duplicates, sidelights, panesMerged, neighbours, bays, notOurs };
+  return { kept: joined.list, duplicates, sidelights, roofLights, panesMerged, neighbours, bays, notOurs };
 }
 
 /* The front-elevation count pricing will use, for the page to show. The
