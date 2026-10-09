@@ -33,7 +33,7 @@ const { isTestTraffic } = require('./testtraffic');
 const { buildRenderPrompt } = require('./renderprompt');
 const keptparts = require('./keptparts');
 const { stripMetadata } = require('./exifstrip');
-const { restoreDoor, restoreSurroundings, restoreOutsideMask, restoreInsideMask, restoreKeptParts, doorBox, restorePillars, cropToBox, pillarsFromObjects, correctFrameColour, drawGeorgianBars, changedShare, holdOutsideHouse, rgbToLab, hexToRgb } = require('./hold');
+const { blurBoxes, boxesFromMask, restoreDoor, restoreSurroundings, restoreOutsideMask, restoreInsideMask, restoreKeptParts, doorBox, restorePillars, cropToBox, pillarsFromObjects, correctFrameColour, drawGeorgianBars, changedShare, holdOutsideHouse, rgbToLab, hexToRgb } = require('./hold');
 const driveways = require('./driveways');
 const { scaffoldingFor } = require('./scaffold');
 const { fetchWindowMask, fetchObjectMasks, maskWithinGrace } = require('./windowmask');
@@ -2633,6 +2633,24 @@ app.post('/api/detect', detectLimiter, detectHourLimiter, async (req, res) => {
      segmentation no render will use. Depends only on the photograph, so
      every surface and colour tried on it shares one. A mask that failed is
      forgotten, so the render asks again rather than inheriting the failure. */
+  /* House numbers and number plates, found precisely (journey review, test 2,
+     9 Oct). Detection says whether there are any (analysis.private) but puts
+     small boxes 5-10% off; segmentation by name puts them on the plate.
+     Only asked when detection saw one, so a photograph with none costs
+     nothing, and kept on the record for every render of this photo. */
+  const preparePrivateMask = (record, elev) => {
+    if (!record || elev !== 'front' || !process.env.REPLICATE_API_TOKEN) return;
+    if (record.privateMask || record.privatePromise) return;
+    const analysis = (record.detections || []).find(d => d?.type === 'analysis');
+    if (!Array.isArray(analysis?.private) || !analysis.private.length) return;
+    record.privatePromise = fetchWindowMask({
+      image: img.buffer, mime: img.mime,
+      replicateKey: process.env.REPLICATE_API_TOKEN,
+      deadlineAt: Date.now() + MASK_WARM_MS,
+      prompt: PRIVATE_MASK_PROMPT, dilate: 4,
+      onNote: (why) => obs.record('detect', 'house number mask not prepared', { reason: why }),
+    }).then((m) => { if (m) record.privateMask = m; else record.privatePromise = null; return m; }).catch(() => null);
+  };
   const prepareKeepMask = (record, elev) => {
     if (!record || elev !== 'front' || !process.env.REPLICATE_API_TOKEN) return;
     if (!driveways.enabled({ body: req.body })) return;
@@ -2690,7 +2708,7 @@ app.post('/api/detect', detectLimiter, detectHourLimiter, async (req, res) => {
 
   const seenId = detectionByImage.get(fingerprint);
   const seen = seenId ? detectionRecords.get(seenId) : null;
-  if (seen) { prepareWindowMask(seen, seen.elevation || elevation); prepareKeepMask(seen, seen.elevation || elevation); return answer(seen, seenId); }
+  if (seen) { prepareWindowMask(seen, seen.elevation || elevation); prepareKeepMask(seen, seen.elevation || elevation); preparePrivateMask(seen, seen.elevation || elevation); return answer(seen, seenId); }
 
   /* Not in this process — ask the store. A failure here is a cache miss and
      nothing more: the photograph still gets read, it just costs a call. */
@@ -2737,6 +2755,7 @@ app.post('/api/detect', detectLimiter, detectHourLimiter, async (req, res) => {
       ? { width: stored.aspectRatio, height: 1 } : null, elevation);
     detectionByImage.set(fingerprint, id);
     prepareWindowMask(detectionRecords.get(id), elevation);
+    preparePrivateMask(detectionRecords.get(id), elevation);
     prepareKeepMask(detectionRecords.get(id), elevation);
     return answer(detectionRecords.get(id), id);
   }
@@ -2837,7 +2856,9 @@ Coordinates: x_pct/y_pct = top-left corner, w_pct/h_pct = width/height, all as %
 
 Work across the WHOLE width of the photograph, including any part of the house set back behind a projecting bay or porch. Include an element even when only part of it is visible — cut off by the edge of the frame, behind a bush, a car or a downpipe, or in deep shadow. Box the part you can see and lower the confidence to say so. A window or door half out of frame is still that home's window or door, and leaving it out quotes the homeowner for fewer windows than they have. The front door especially: it is often recessed in a porch and in shadow, and it is the scale reference for the whole survey, so find it even when it is partly hidden.
 
-Finally add: {"type":"analysis","summary":"2-3 sentence overview of the property","era":"victorian|edwardian|inter-war|post-war|modern|contemporary","wallMaterial":"red-brick|yellow-brick|grey-brick|render|stone|pebbledash|timber|other","houseType":"detached|semi-detached|end-terrace|mid-terrace|bungalow","sides":{"left":"gap|shared|cut-off","right":"gap|shared|cut-off"}}
+Finally add: {"type":"analysis","summary":"2-3 sentence overview of the property","era":"victorian|edwardian|inter-war|post-war|modern|contemporary","wallMaterial":"red-brick|yellow-brick|grey-brick|render|stone|pebbledash|timber|other","houseType":"detached|semi-detached|end-terrace|mid-terrace|bungalow","sides":{"left":"gap|shared|cut-off","right":"gap|shared|cut-off"},"private":[{"x_pct":0-100,"y_pct":0-100,"w_pct":1-100,"h_pct":1-100}]}
+
+In "private", box every house number, house name sign and vehicle number plate you can see anywhere in the photograph, each tightly; use [] if there are none.
 
 For sides, look at the left and right edges of THIS house (the one whose front door faces the camera) and report each separately: "gap" if you can see its side wall end with open space, a path or a fence beyond it; "shared" if another house's wall continues directly from it; "cut-off" if the photograph's edge, a tree or anything else hides that side so you cannot tell. Say "cut-off" whenever you are not sure — a wrong "gap" prices the wrong house.
 For houseType, judge it from what the photograph shows: a gap on both sides is detached; a shared wall on one side with a neighbour continuing is semi-detached; a run of houses with this one at the end is end-terrace; a run continuing both ways is mid-terrace; a single storey is a bungalow. If the photograph does not show enough of the sides to tell, omit the field rather than guessing.` }
@@ -2938,6 +2959,7 @@ For houseType, judge it from what the photograph shows: a gap on both sides is d
      it away. */
   prepareWindowMask(detectionRecords.get(detectionId), elevation);
   prepareKeepMask(detectionRecords.get(detectionId), elevation);
+  preparePrivateMask(detectionRecords.get(detectionId), elevation);
 
   /* Kept so a restart does not change the answer. Awaited rather than fired
      and forgotten: if this write fails the homeowner should still get their
@@ -3301,6 +3323,13 @@ const KEEP_RETRY_MS = 400;
    detection has usually landed (~12–18s); wait for it briefly rather than
    skip. Past the wait, give up and store the render unrestored. */
 const RESTORE_WAIT_MS = 20_000;
+const PRIVATE_MASK_PROMPT = 'house number, number plate';
+/* The detection record itself, by id or by the photograph's fingerprint, the
+   same lookup detectionsForRestore makes. */
+function recordForRestore({ detectionId, fingerprint } = {}) {
+  const id = (detectionId && detectionRecords.has(detectionId)) ? detectionId : detectionByImage.get(fingerprint);
+  return id ? detectionRecords.get(id) : null;
+}
 async function detectionsForRestore({ detectionId, fingerprint }, waitMs = RESTORE_WAIT_MS) {
   const deadline = Date.now() + waitMs;
   for (;;) {
@@ -3540,6 +3569,28 @@ async function keepRender(replicateUrl, restore = null) {
     }
   }
 
+  /* House numbers, house names and number plates, pixelated before the
+     picture is stored, shared or put in a project pack (customer journey
+     review, test 2, 9 Oct). The boxes are detection's (analysis.private). */
+  let privateBoxes;
+  if (restore) {
+    await detectionsForRestore(restore, 10_000);
+    const record = recordForRestore(restore);
+    const analysis = record && (record.detections || []).find(d => d?.type === 'analysis');
+    if (Array.isArray(analysis?.private) && analysis.private.length) {
+      const m = record.privateMask || await maskWithinGrace(record.privatePromise, 15_000);
+      privateBoxes = m ? boxesFromMask({ mask: m.buffer, maskMime: m.mime }) : [];
+      const done = privateBoxes.length ? blurBoxes({ render: bytes, renderMime: mime, boxes: privateBoxes }) : { blurred: 0 };
+      if (done.blurred) {
+        bytes = done.buffer;
+        mime = done.mime;
+        obs.record('render', 'house numbers and plates pixelated', { count: done.blurred });
+      } else {
+        obs.record('render', 'house number seen but not pixelated', { reason: m ? 'no patch from segmentation' : 'segmentation not ready' });
+      }
+    }
+  }
+
   const id = crypto.randomBytes(16).toString('hex');
   try {
     await store.putRender(id, bytes, { mime });
@@ -3554,7 +3605,9 @@ async function keepRender(replicateUrl, restore = null) {
     throw new RenderNotKept('store failed');
   }
   return { url: `/r/${id}`, renderId: id, ...(barsMissing !== undefined ? { barsMissing } : {}),
-    ...(drivewayHeld ? { drivewayHeld } : {}) };
+    ...(drivewayHeld ? { drivewayHeld } : {}),
+    /* For the project pack's "before" photo, which the page pixelates itself. */
+    ...(privateBoxes && privateBoxes.length ? { privateBoxes } : {}) };
 }
 
 /* The render succeeded upstream; whether we can hand it over depends on

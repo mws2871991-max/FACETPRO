@@ -8640,6 +8640,9 @@ async function generateRealRender({ settled = false, revived = false } = {}) {
     state.drivewayNotDrawn = !!data.drivewayNotDrawn;
     /* The server checks the roof and walls changed and retries once; this is
        what is still missing after that. */
+    /* Where the house number and plates are, found by the server, for the
+       pack's "before" photo. Boxes only; nothing else. */
+    if (Array.isArray(data.privateBoxes)) state.privateBoxes = data.privateBoxes.filter(b => b && b.w_pct > 0 && b.h_pct > 0).slice(0, 12);
     state.missedChanges = Array.isArray(data.missedChanges) ? data.missedChanges.filter(t => t === 'roof' || t === 'cladding' || t === 'windows') : [];
     if (askedFor !== choiceKey()) {
       /* They changed something while this was being drawn (0058). */
@@ -9122,14 +9125,14 @@ function buildPackCard() {
   ]);
 }
 
-function packHtml() {
+function packHtml(beforeSrc = state.uploadedImg) {
   const d = packData(); if (!d) return '';
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const row = (k, v) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`;
   const money = (n) => Number.isFinite(n) ? fmtMoney(n) : '';
   const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
   const houseLabel = { detached: 'Detached', semi: 'Semi-detached', terraced: 'Terraced', bungalow: 'Bungalow', flat: 'Flat or maisonette' }[state.houseType] || '';
-  const before = state.uploadedImg || null;
+  const before = beforeSrc || null;
   const after = state.renderUrl ? (String(state.renderUrl).startsWith('/') ? location.origin + state.renderUrl : state.renderUrl) : null;
   const pics = before || after ? `<div class="pics">${before ? `<figure><img src="${esc(before)}" alt="Your house, before"><figcaption>Before</figcaption></figure>` : ''}${after ? `<figure><img src="${esc(after)}" alt="AI visualisation of your design"><figcaption>After · AI visualisation</figcaption></figure>` : ''}</div>` : '';
   const spec = [];
@@ -9182,8 +9185,42 @@ ${promise}
 </body></html>`;
 }
 
-function openProjectPack() {
-  const html = packHtml(); if (!html) return;
+/* The "before" photo with house numbers and number plates pixelated, for the
+   pack (customer journey review, test 2, 9 Oct). The boxes come back with the
+   render (privateBoxes); the server pixelates every stored render the same. Done
+   here, on the device, because the original photograph never leaves it for
+   storage. Falls back to the photo as it is if anything fails. */
+async function pixelatedBefore() {
+  const src = state.uploadedImg;
+  /* The server's boxes (segmentation, on the plate), not detection's own:
+     those were 5-10% off on a test photo and missed the number. */
+  const boxes = state.privateBoxes;
+  if (!src || !Array.isArray(boxes) || !boxes.length) return src;
+  try {
+    const img = await new Promise((resolve, reject) => { const el = new Image(); el.onload = () => resolve(el); el.onerror = reject; el.src = src; });
+    const W = img.naturalWidth, H = img.naturalHeight;
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0);
+    const tiny = document.createElement('canvas'), tctx = tiny.getContext('2d');
+    for (const b of boxes) {
+      if (!b || !(b.w_pct > 0) || !(b.h_pct > 0) || (b.w_pct * b.h_pct) / 10000 > 0.06) continue;
+      const mx = b.w_pct * 0.25, my = b.h_pct * 0.25;
+      const x = Math.max(0, Math.floor((b.x_pct - mx) / 100 * W)), y = Math.max(0, Math.floor((b.y_pct - my) / 100 * H));
+      const w = Math.min(W - x, Math.ceil((b.w_pct + 2 * mx) / 100 * W)), hh = Math.min(H - y, Math.ceil((b.h_pct + 2 * my) / 100 * H));
+      if (w < 2 || hh < 2) continue;
+      tiny.width = 3; tiny.height = 3;
+      tctx.drawImage(c, x, y, w, hh, 0, 0, 3, 3);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(tiny, 0, 0, 3, 3, x, y, w, hh);
+    }
+    return c.toDataURL('image/jpeg', 0.9);
+  } catch (_) {
+    return src;
+  }
+}
+
+async function openProjectPack() {
+  const html = packHtml(await pixelatedBefore()); if (!html) return;
   document.getElementById('pack-frame')?.remove();
   const f = document.createElement('iframe');
   f.id = 'pack-frame';
@@ -10931,6 +10968,7 @@ async function handleUpload(file) {
   if (triageTimer) { clearTimeout(triageTimer); triageTimer = null; }
   const url = URL.createObjectURL(file);
   state.uploadedImg = url;
+  state.privateBoxes = null;   // the last photo's house number is not this one's
   state.stage = 'detecting';
   state.detectionStatus = 'detecting';
   state.renderUrl = null;

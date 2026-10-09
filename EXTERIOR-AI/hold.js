@@ -1501,7 +1501,96 @@ function holdOutsideHouse(opts) {
   }
 }
 
-module.exports = { restoreInsideMask, KEEP_MAX_OF_GROUND, restoreKeptParts, KEPT_MAX_SHARE, MASK_BOX_MARGIN_PCT, cropToBox, pillarsFromObjects, PILLAR_PICK, PILLAR_ATTACH, PILLAR_SHAFT_MIN,
+/* House numbers, house names and number plates, pixelated (customer
+   journey review, test 2, 9 Oct: "No. 14" on the door, visible in the
+   shareable picture and the project pack). The boxes come from detection's
+   analysis item (analysis.private). Pixelated rather than blurred: a light
+   blur over large digits can stay legible, coarse blocks cannot. Each box is
+   grown a little, because detection boxes digits tightly and a cut-off edge
+   of a "4" still reads.
+
+   Returns { buffer, mime, blurred } — blurred is the number of boxes done.
+   Anything it cannot read is handed back untouched. */
+const PRIVATE_MARGIN = 0.25;          // of the box, each side
+const PRIVATE_MAX_SHARE = 0.06;       // a "house number" bigger than this of the frame is not one
+function blurBoxes({ render, renderMime, boxes } = {}) {
+  const untouched = { buffer: render, mime: renderMime, blurred: 0 };
+  try {
+    const list = (Array.isArray(boxes) ? boxes : []).filter(b => b && ['x_pct', 'y_pct', 'w_pct', 'h_pct'].every(k => Number.isFinite(Number(b[k])))
+      && b.w_pct > 0 && b.h_pct > 0 && (b.w_pct * b.h_pct) / 10000 <= PRIVATE_MAX_SHARE);
+    if (!list.length) return untouched;
+    const img = decode(render, renderMime || '');
+    if (!img) return untouched;
+    const W = img.width, H = img.height;
+    const out = new PNG({ width: W, height: H });
+    out.data.set(img.data.subarray(0, W * H * 4));
+    for (const b of list) {
+      const mx = b.w_pct * PRIVATE_MARGIN, my = b.h_pct * PRIVATE_MARGIN;
+      const x0 = Math.max(0, Math.floor((b.x_pct - mx) / 100 * W)), x1 = Math.min(W, Math.ceil((b.x_pct + b.w_pct + mx) / 100 * W));
+      const y0 = Math.max(0, Math.floor((b.y_pct - my) / 100 * H)), y1 = Math.min(H, Math.ceil((b.y_pct + b.h_pct + my) / 100 * H));
+      const block = Math.max(4, Math.round(Math.min(x1 - x0, y1 - y0) / 3));
+      for (let by = y0; by < y1; by += block) {
+        for (let bx = x0; bx < x1; bx += block) {
+          let r = 0, g = 0, bl = 0, n = 0;
+          for (let y = by; y < Math.min(by + block, y1); y++) for (let x = bx; x < Math.min(bx + block, x1); x++) {
+            const i = (y * W + x) * 4; r += out.data[i]; g += out.data[i + 1]; bl += out.data[i + 2]; n++;
+          }
+          if (!n) continue;
+          r = Math.round(r / n); g = Math.round(g / n); bl = Math.round(bl / n);
+          for (let y = by; y < Math.min(by + block, y1); y++) for (let x = bx; x < Math.min(bx + block, x1); x++) {
+            const i = (y * W + x) * 4; out.data[i] = r; out.data[i + 1] = g; out.data[i + 2] = bl; out.data[i + 3] = 255;
+          }
+        }
+      }
+    }
+    return { buffer: PNG.sync.write(out), mime: 'image/png', blurred: list.length };
+  } catch (_) {
+    return untouched;
+  }
+}
+
+/* Boxes round each separate patch of a mask, in percent of the frame: the
+   house numbers and plates segmentation found. Worked on a coarse grid (at
+   most 240 cells across) because the boxes are padded anyway and a
+   full-resolution flood fill buys nothing. Patches bigger than
+   PRIVATE_MAX_SHARE are dropped: a "house number" a twentieth of the picture
+   is a wall. */
+function boxesFromMask({ mask, maskMime } = {}) {
+  try {
+    const m = decode(mask, maskMime || '');
+    if (!m) return [];
+    const step = Math.max(1, Math.ceil(m.width / 240));
+    const gw = Math.ceil(m.width / step), gh = Math.ceil(m.height / step);
+    const on = new Uint8Array(gw * gh);
+    for (let gy = 0; gy < gh; gy++) for (let gx = 0; gx < gw; gx++) {
+      const x = Math.min(m.width - 1, gx * step), y = Math.min(m.height - 1, gy * step);
+      if (m.data[(y * m.width + x) * 4] >= MASK_ON) on[gy * gw + gx] = 1;
+    }
+    const seen = new Uint8Array(gw * gh), boxes = [];
+    for (let k = 0; k < on.length; k++) {
+      if (!on[k] || seen[k]) continue;
+      let x0 = gw, y0 = gh, x1 = -1, y1 = -1;
+      const stack = [k]; seen[k] = 1;
+      while (stack.length) {
+        const c = stack.pop(), cx = c % gw, cy = (c / gw) | 0;
+        if (cx < x0) x0 = cx; if (cx > x1) x1 = cx; if (cy < y0) y0 = cy; if (cy > y1) y1 = cy;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const nx = cx + dx, ny = cy + dy;
+          if (nx < 0 || ny < 0 || nx >= gw || ny >= gh) continue;
+          const n = ny * gw + nx;
+          if (on[n] && !seen[n]) { seen[n] = 1; stack.push(n); }
+        }
+      }
+      const b = { x_pct: (x0 / gw) * 100, y_pct: (y0 / gh) * 100, w_pct: ((x1 - x0 + 1) / gw) * 100, h_pct: ((y1 - y0 + 1) / gh) * 100 };
+      if ((b.w_pct * b.h_pct) / 10000 <= PRIVATE_MAX_SHARE) boxes.push(b);
+    }
+    return boxes;
+  } catch (_) {
+    return [];
+  }
+}
+
+module.exports = { blurBoxes, boxesFromMask, restoreInsideMask, KEEP_MAX_OF_GROUND, restoreKeptParts, KEPT_MAX_SHARE, MASK_BOX_MARGIN_PCT, cropToBox, pillarsFromObjects, PILLAR_PICK, PILLAR_ATTACH, PILLAR_SHAFT_MIN,
   restorePillars, PILLAR_MAX_OF_BAY, restoreDoor, restoreSurroundings, restoreOutsideMask, correctFrameColour,
                    drawGeorgianBars, doorBox, changedShare, MASK_ON, rgbToLab, labToRgb, hexToRgb,
                    holdOutsideHouse, OUTSIDE_ALIGN_MAX };
