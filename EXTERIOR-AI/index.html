@@ -5469,7 +5469,11 @@ function buildVisualizer() {
         h('div', {}, [
           h('p', { className: 'text-lg font-medium' }, 'Now make it yours'),
           h('p', { className: 'mt-0.5 text-base leading-7 text-white/80 max-w-[42ch]' },
-            state.journey
+            /* Not "the look you chose" over a picture the server says missed
+               it (9 Oct: white windows under that line, anthracite asked). */
+            state.missedChanges?.length
+              ? 'Try other colours and styles, or add the walls, roof or roofline — the estimate moves with every choice.'
+              : state.journey
               ? 'That is the look you chose, on your house. Try other colours and styles, or add the walls, roof or roofline — the estimate moves with every choice.'
               : 'That is one look, chosen for you. Change the walls, the roof, the windows and the doors — the estimate moves with every choice.'),
         ]),

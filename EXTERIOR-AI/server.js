@@ -32,7 +32,7 @@ const { isTestTraffic } = require('./testtraffic');
 
 const { buildRenderPrompt } = require('./renderprompt');
 const keptparts = require('./keptparts');
-const { restoreDoor, restoreSurroundings, restoreOutsideMask, restoreInsideMask, restoreKeptParts, doorBox, restorePillars, cropToBox, pillarsFromObjects, correctFrameColour, drawGeorgianBars, changedShare, holdOutsideHouse } = require('./hold');
+const { restoreDoor, restoreSurroundings, restoreOutsideMask, restoreInsideMask, restoreKeptParts, doorBox, restorePillars, cropToBox, pillarsFromObjects, correctFrameColour, drawGeorgianBars, changedShare, holdOutsideHouse, rgbToLab, hexToRgb } = require('./hold');
 const driveways = require('./driveways');
 const { scaffoldingFor } = require('./scaffold');
 const { fetchWindowMask, fetchObjectMasks, maskWithinGrace } = require('./windowmask');
@@ -3830,10 +3830,25 @@ const MISS_CHECKS = {
    windows branch in judgeRender. */
 const WINDOW_CHANGED = 0.35;
 const WINDOW_MISSED = 0.12;
+/* Every window left alone (9 Oct). A close photograph of a semi, white
+   casements, asked for anthracite: the model handed back the photograph,
+   slightly reframed, and nothing caught it — the rule above needs one window
+   changed to call another missed, so a render that changed none passed, and
+   the page said "That is the look you chose" over white windows. Its front
+   door was already anthracite, which may be what the model took for done.
+   Only for a colour well away from the white most frames are: below this
+   lightness (Lab L) an untouched window is a miss, so white and cream on
+   white frames are still never called one. */
+const WINDOW_DARK_L = 80;
+/* ...and "left alone" for that rule is under this share. A recolour moves
+   most of a window's box (about 0.9 upstairs on IMG_2068); the untouched
+   close photograph read 0.13 and 0.03, the 0.13 being the model reframing
+   the picture slightly, not paint. */
+const WINDOW_NONE_CHANGED = 0.25;
 /* Leave room after a retry to store the image and answer. */
 const RETRY_NEEDS_MS = 30_000;
 
-async function judgeRender(url, trades, original) {
+async function judgeRender(url, trades, original, { glazingHex = null, waitMs = 15_000 } = {}) {
   let bytes, mime;
   try {
     const controller = new AbortController();
@@ -3848,7 +3863,13 @@ async function judgeRender(url, trades, original) {
   // An image we cannot read is not worth waiting on detection for.
   const probe = [{ x_pct: 0, y_pct: 0, w_pct: 1, h_pct: 1 }];
   if (changedShare({ render: bytes, renderMime: mime, original: original.buffer, originalMime: original.mime, boxes: probe }) === null) return null;
-  const found = await detectionsForRestore(original, 15_000);
+  /* waitMs (9 Oct): fifteen seconds was too short for the automatic render.
+     It starts the moment the photo is read, beside /api/detect, and comes
+     back first — so the judge gave up before detection landed, and the first
+     picture every customer sees was never checked. A close photograph whose
+     render changed nothing at all reached the page that way. The caller now
+     passes what is left of the render budget. */
+  const found = await detectionsForRestore(original, waitMs);
   if (!found) return null;
   const detections = found.detections;
   const missed = [];
@@ -3865,6 +3886,13 @@ async function judgeRender(url, trades, original) {
         .map(b => ({ x_pct: b.x, y_pct: b.y, w_pct: b.w, h_pct: b.h }));
       const shares = ours.map(b => changedShare({ render: bytes, renderMime: mime, original: original.buffer, originalMime: original.mime, boxes: [b] }))
         .filter(v => v !== null);
+      const rgb = glazingHex ? hexToRgb(glazingHex) : null;
+      const farFromWhite = !!rgb && rgbToLab(...rgb)[0] < WINDOW_DARK_L;
+      if (farFromWhite && shares.length && Math.max(...shares) < WINDOW_NONE_CHANGED) {
+        missed.push('windows');
+        worst = Math.min(worst, Math.max(...shares) / WINDOW_NONE_CHANGED);
+        continue;
+      }
       if (shares.length < 2) continue;
       const hi = Math.max(...shares), lo = Math.min(...shares);
       if (hi >= WINDOW_CHANGED && lo < WINDOW_MISSED) {
@@ -4313,7 +4341,9 @@ app.post('/api/render', renderLimiter, async (req, res) => {
     if (trades.length) {
       const original = { buffer: img.buffer, mime: img.mime,
         detectionId: detectionId ? String(detectionId) : null, fingerprint: imageFingerprint(img.buffer) };
-      const verdict = await judgeRender(url, trades, original);
+      const judgeOpts = { glazingHex: (catalogue.windowsDoors.colours.find(c => c.id === windowDoorColourId) || {}).hex || null };
+      judgeOpts.waitMs = Math.max(15_000, deadlineAt - Date.now() - RETRY_NEEDS_MS - 10_000);
+      const verdict = await judgeRender(url, trades, original, judgeOpts);
       if (verdict && verdict.missed.length) {
         missedChanges = verdict.missed;
         /* The retry is a second call to Replicate and has to be paid for like
@@ -4327,7 +4357,7 @@ app.post('/api/render', renderLimiter, async (req, res) => {
            an improvement on a picture we can show, never a condition of it. */
         if (deadlineAt - Date.now() > RETRY_NEEDS_MS && consumeDailyQuota('render', res, req)) {
           const second = await runFlux({ prompt, inputImage, deadlineAt, replicateKey });
-          const again = second.ok ? await judgeRender(second.url, trades, original) : null;
+          const again = second.ok ? await judgeRender(second.url, trades, original, judgeOpts) : null;
           if (second.ok && (!again || again.score >= verdict.score)) {
             url = second.url;
             missedChanges = again ? again.missed : [];
