@@ -32,6 +32,7 @@ const { isTestTraffic } = require('./testtraffic');
 
 const { buildRenderPrompt } = require('./renderprompt');
 const keptparts = require('./keptparts');
+const { stripMetadata } = require('./exifstrip');
 const { restoreDoor, restoreSurroundings, restoreOutsideMask, restoreInsideMask, restoreKeptParts, doorBox, restorePillars, cropToBox, pillarsFromObjects, correctFrameColour, drawGeorgianBars, changedShare, holdOutsideHouse, rgbToLab, hexToRgb } = require('./hold');
 const driveways = require('./driveways');
 const { scaffoldingFor } = require('./scaffold');
@@ -409,6 +410,23 @@ const renderLimiter = rateLimit({
   windowMs: 60 * 1000, max: envLimit('RENDER_RATE_LIMIT', 5),
   standardHeaders: true, legacyHeaders: false,
   message: { error: 'Too many renders — please wait a minute.' }
+});
+/* Per person over a longer window (security handoff, 9 Oct). The minute
+   limits above stop a burst; these stop one visitor spending most of the
+   site's daily allowance (DAILY_DETECT_LIMIT / DAILY_RENDER_LIMIT) on their
+   own. The handoff's starting points, to be tuned from /ops. Never below the
+   per-minute budget, so a suite that raises that one is not refused here. */
+const detectHourLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: Math.max(envLimit('DETECT_HOURLY_LIMIT', 10), envLimit('DETECT_RATE_LIMIT', 10)),
+  standardHeaders: true, legacyHeaders: false,
+  message: { error: 'You’ve uploaded a lot of photos in the last hour — please try again a little later. Your designs so far are still here.' }
+});
+const renderDayLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000,
+  max: Math.max(envLimit('RENDER_DAILY_PER_IP', 30), envLimit('RENDER_RATE_LIMIT', 5)),
+  standardHeaders: true, legacyHeaders: false,
+  message: { error: 'That’s the most pictures we can draw for you today — your estimate still updates with every choice. Try the picture again tomorrow.', plain: true }
 });
 const leadLimiter = rateLimit({
   windowMs: 60 * 1000, max: 5,
@@ -2447,12 +2465,15 @@ function readImage(image, declaredMime, { requireDeclared = true } = {}) {
     return { ok: false, status: 400,
       error: `That photo is ${Math.round(megapixels)} megapixels, which is larger than we can work with. Please use a normal photo from your phone or camera.` };
   }
-  return { ok: true, mime: found.mime, width: found.width, height: found.height, buffer, payload };
+  /* Location and other metadata off, before the bytes go to Anthropic or
+     Replicate or are fingerprinted (security handoff, 9 Oct). See exifstrip.js. */
+  const clean = stripMetadata(buffer, found.mime);
+  return { ok: true, mime: found.mime, width: found.width, height: found.height, buffer: clean, payload: clean === buffer ? payload : clean.toString('base64') };
 }
 
 /* ── POST /api/detect ──
    Real AI detection via Claude vision. Requires ANTHROPIC_API_KEY. */
-app.post('/api/detect', detectLimiter, async (req, res) => {
+app.post('/api/detect', detectLimiter, detectHourLimiter, async (req, res) => {
   /* Named detect_request, not detect, because it measures this request and
      not the thing the homepage was claiming.
 
@@ -3927,7 +3948,7 @@ const PILLAR_MASK_MODE = ['off', 'test', 'on'].includes(String(process.env.PILLA
 const wantsPillarMask = (body) => PILLAR_MASK_MODE === 'on'
   || (PILLAR_MASK_MODE === 'test' && Array.isArray(body?.experiments) && body.experiments.includes('pillar-mask'));
 
-app.post('/api/render', renderLimiter, async (req, res) => {
+app.post('/api/render', renderLimiter, renderDayLimiter, async (req, res) => {
   const { image, mimeType, claddingName, trimName, roofName,
           windowStyleName, doorStyleName, doorStyleId, windowDoorColourName,
           windowDoorColourId, windowBarsId, detectionId, drivewayId, drivewayStyleId, drivewayPatternId, drivewayExisting } = req.body || {};

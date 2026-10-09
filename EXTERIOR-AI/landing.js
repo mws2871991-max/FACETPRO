@@ -258,7 +258,7 @@ const COST_PAGES = [
     title: 'Window Replacement Cost UK 2026 | How Much to Replace Windows',
     h1: 'What Does Window Replacement Cost in the UK?',
     intent: 'window replacement cost UK',
-    description: 'What replacing your windows costs in the UK in 2026 — per window, by house size and by window size, fitted and inc VAT, from what these jobs actually sell for.',
+    description: 'What replacing your windows costs in the UK in 2026 — per window, by house size and by window size, fitted and inc VAT, from what these jobs typically sell for.',
     build: (c) => {
       const semi = windowJob(c, { count: 8 });
       const detached = windowJob(c, { count: 12 });
@@ -686,7 +686,7 @@ const COST_PAGES = [
     title: 'Composite Door Cost UK 2026 | Fitted Prices & Guide',
     h1: 'How Much Does a Composite Door Cost?',
     intent: 'composite door cost',
-    description: 'What a composite front door costs fitted in the UK, against uPVC, and what moves the price — from what these jobs actually sell for.',
+    description: 'What a composite front door costs fitted in the UK, against uPVC, and what moves the price — from what these jobs typically sell for.',
     build: (c) => {
       const all = doorPrices(c);
       const comp = all.find(d => /composite/i.test(d.name));
@@ -717,7 +717,7 @@ const COST_PAGES = [
     title: 'Patio doors cost UK — sliding patio door prices',
     h1: 'What do patio doors cost?',
     intent: 'patio doors cost',
-    description: 'What a sliding patio door costs fitted in the UK, against French doors and bifolds, from what these jobs actually sell for.',
+    description: 'What a sliding patio door costs fitted in the UK, against French doors and bifolds, from what these jobs typically sell for.',
     build: (c) => {
       const all = doorPrices(c);
       const pick = (re) => all.find(d => re.test(d.name));
@@ -748,7 +748,7 @@ const COST_PAGES = [
     title: 'French doors cost UK — fitted prices for 2026',
     h1: 'What do French doors cost?',
     intent: 'French doors cost',
-    description: 'What French (double) doors cost fitted in the UK, against sliding patio doors and bifolds, from what these jobs actually sell for.',
+    description: 'What French (double) doors cost fitted in the UK, against sliding patio doors and bifolds, from what these jobs typically sell for.',
     build: (c) => {
       const all = doorPrices(c);
       const pick = (re) => all.find(d => re.test(d.name));
@@ -883,7 +883,7 @@ const COST_PAGES = [
     },
     h1: 'How Much Do Aluminium Windows Cost?',
     intent: 'aluminium window prices',
-    description: 'Aluminium window prices in the UK by size and quantity, fitted and inc VAT, against uPVC — from what these jobs actually sell for.',
+    description: 'Aluminium window prices in the UK by size and quantity, fitted and inc VAT, against uPVC — from what these jobs typically sell for.',
     build: (c) => {
       const vat = vatMult(c.glazing.vatPct ?? 20);
       const mat = (c.glazing.materials || []).find(m => m.id === 'aluminium');
@@ -1024,7 +1024,7 @@ const COST_PAGES = [
             ],
           } },
           { heading: 'Why the two are priced differently', paras: [
-            'Windows are priced from what these jobs actually sell for, so the range is mostly which company quotes. The roofline is priced from material and labour rates by the metre, plus scaffolding, so its figure moves with the length of roof edge rather than the company.',
+            'Windows are priced from what these jobs typically sell for, so the range is mostly which company quotes. The roofline is priced from material and labour rates by the metre, plus scaffolding, so its figure moves with the length of roof edge rather than the company.',
             `The scaffolding — about ${money(r.scaffolding)} of the roofline figure — is there for the roofline. It does not usually come off the window price, so treat any quote that bundles both with a large "saving" with care.`,
           ] },
         ],
@@ -1117,12 +1117,12 @@ COST_PAGES.push({
   description: 'How Facet Pro turns one photo of your house into a planning estimate, what is in the figure, why it is a range, and what an installer survey can still change.',
   build: () => ({
     included: false,
-    answer: 'From one photo of the front of your house: we find the windows, doors, walls, roofline and roof, size them against your front door, and price what you choose. Windows and doors use what those jobs actually sell for; walls, roof and roofline use UK material and labour rates with scaffolding, waste and VAT. The result is a planning estimate shown as a range — an installer confirms the final price after a survey.',
+    answer: 'From one photo of the front of your house: we find the windows, doors, walls, roofline and roof, size them against your front door, and price what you choose. Windows and doors use what those jobs typically sell for; walls, roof and roofline use UK material and labour rates with scaffolding, waste and VAT. The result is a planning estimate shown as a range — an installer confirms the final price after a survey.',
     sections: [
       { heading: 'Where each part of the price comes from', table: {
         head: ['Work', 'How it is priced'],
         rows: [
-          ['Windows and doors', 'What these jobs actually sell for, from 24 years of selling them, checked against current UK prices'],
+          ['Windows and doors', 'What these jobs typically sell for, from 24 years of selling them, checked against current UK prices'],
           ['Cladding and render', 'Material and the labour to fit it, per square metre of wall'],
           ['Roof', 'Tiles or slate plus fitting, sized from your roof area'],
           ['Fascias, soffits and guttering', 'Materials and labour by the metre of roofline'],
@@ -1352,7 +1352,7 @@ const cta = (siteUrl, slug) => (isConservatory(slug) ? conservatoryCta(siteUrl, 
 /* Every page carries the same two caveats, in the same words as the product.
    Two copies of a disclaimer is how they drift, so they are written once here
    and no page may override them. */
-const CAVEAT = 'These are planning estimates — not a quotation, and not a survey. Windows and doors: what these jobs actually sell for, from 24 years of selling them, checked against current UK prices. Walls, roof and roofline: UK material and labour rates, with scaffolding, waste and VAT. What you pay depends on your own house and, more than anything else, on which company quotes it. Your installer confirms the figure on survey.';
+const CAVEAT = 'These are planning estimates — not a quotation, and not a survey. Windows and doors: what these jobs typically sell for, from 24 years of selling them, checked against current UK prices. Walls, roof and roofline: UK material and labour rates, with scaffolding, waste and VAT. What you pay depends on your own house and, more than anything else, on which company quotes it. Your installer confirms the figure on survey.';
 
 /* "Early access", not "beta" (developer brief, 6 Oct, §7). And "starting to
    check", not "being calibrated": no surveyed house has been measured against

@@ -17,7 +17,7 @@ const LINES = [
   ['the four steps', '>Choose whether you&rsquo;d like up to three installers to quote.</p>'],
   ['never twenty companies', '<strong class="font-semibold text-zinc-900">Never sent to 20 companies.</strong> At most three installers, and only if you ask.'],
   ['the primary button', '>Upload photo &amp; see price &rarr;</button>'],
-  ['the two neighbours, near the top', 'Two neighbours. Same street.<br>Same windows. Thousands apart.'],
+  ['the two neighbours, near the top', 'Two neighbours. Same street.<br>Very different quotes.'],
   ['the simple answer first', 'It&rsquo;s a planning estimate, not a survey.'],
   ['the promise in the closing band', 'No measuring. No sales call. No pressure.'],
   ['the photo line at the button', 'Your original photo is deleted immediately after processing.'],

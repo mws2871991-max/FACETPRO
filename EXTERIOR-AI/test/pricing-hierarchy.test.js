@@ -21,7 +21,7 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const landing = fs.readFileSync(path.join(root, 'landing.js'), 'utf8');
 const visible = (s) => s.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
-const WINDOWS = 'what these jobs actually sell for, from 24 years of selling them, checked against current UK prices.';
+const WINDOWS = 'what these jobs typically sell for, from 24 years of selling them, checked against current UK prices.';
 const WALLS = 'UK material and labour rates, with scaffolding, waste and VAT.';
 const EVERY = 'a planning estimate, shown as a range, confirmed by your installer&rsquo;s survey.';
 
