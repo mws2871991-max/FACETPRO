@@ -1189,7 +1189,7 @@ const AREA_PAGES = [
 const table = (t) => `<table>
 <thead><tr>${t.head.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead>
 <tbody>${t.rows.map(r => `<tr>${r.map((cell, i) =>
-  i === 0 ? `<th scope="row">${escapeHtml(cell)}</th>` : `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')}</tbody>
+  i === 0 ? `<th scope="row">${escapeHtml(cell)}</th>` : `<td${/^\s*(from |about |up to )?£/i.test(String(cell)) ? ' class="price"' : ''}>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')}</tbody>
 </table>`;
 
 const section = (s) => `<section><h2>${escapeHtml(s.heading)}</h2>

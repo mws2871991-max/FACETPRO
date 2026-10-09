@@ -59,7 +59,11 @@
      The browser then zoomed the whole page out to fit, cancelling the larger
      text. Prices are always the last column on these pages; checked across
      all 18 at 360px and 390px, with no price split onto two lines. */
-  td:last-child{white-space:nowrap}
+  /* 9 Oct: on prices only, marked by landing.js. On /cost/how-our-estimates-work
+     the last column is a sentence, and holding it on one line pushed that
+     page to 907px on a 390px phone. */
+  td.price:last-child{white-space:nowrap}
+  @media(max-width:420px){td.price:last-child{font-size:16px}}
   @media(max-width:480px){th,td{padding:10px 10px}}
   /* The label column gives way instead, because a style name wrapping is
      harmless and a price wrapping is not. */

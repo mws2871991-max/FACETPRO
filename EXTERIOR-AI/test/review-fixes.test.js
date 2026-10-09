@@ -28,3 +28,10 @@ test('/cookies lands on the cookie section of the privacy notice', () => {
   assert.match(pages, /router\.get\('\/cookies', \(req, res\) => res\.redirect\(301, '\/privacy#cookies'\)\)/);
   assert.match(privacy, /<h2 id="cookies">Cookies and similar technologies<\/h2>/);
 });
+
+test('guide tables hold only a price on one line, never a sentence (9 Oct)', () => {
+  const css = read('assets/landing.css'), landing = read('landing.js');
+  assert.doesNotMatch(css, /^\s*td:last-child\{white-space:nowrap\}/m, 'a sentence in the last column pushed a page to 907px');
+  assert.match(css, /td\.price:last-child\{white-space:nowrap\}/);
+  assert.match(landing, /class="price"/);
+});
