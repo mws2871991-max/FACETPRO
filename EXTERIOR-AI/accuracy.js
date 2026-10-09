@@ -62,7 +62,9 @@ function summarise(rows, key) {
   };
 }
 
-const LEAD_OUTCOMES = ['quoted', 'won', 'lost'];
+/* 'survey' (9 Oct, strategy handoff): the installer booked a survey. A step in
+   the pipeline, not an outcome the accuracy report reads. */
+const LEAD_OUTCOMES = ['quoted', 'won', 'lost', 'survey'];
 
 /* The latest quote and the latest won/lost per lead, from the append-only
    leadResponses rows. installerId narrows to one installer's records. */
@@ -72,6 +74,7 @@ function foldOutcomes(rows, installerId = null) {
     if (!r?.leadId || !LEAD_OUTCOMES.includes(r.action)) continue;
     if (installerId && r.installerId !== installerId) continue;
     const o = out[r.leadId] || (out[r.leadId] = {});
+    if (r.action === 'survey') { o.survey = { date: r.surveyDate || null, at: r.ts, installerId: r.installerId }; continue; }
     if (r.action === 'quoted') o.quote = { amount: r.amount, surveyed: !!r.surveyed, at: r.ts, installerId: r.installerId };
     else o.result = { outcome: r.action, ...(r.amount ? { amount: r.amount } : {}), at: r.ts, installerId: r.installerId };
   }

@@ -5141,7 +5141,7 @@ const FUNNEL_STAGES = [
    makes spend decisions from, so the public endpoint refuses them. It costs
    nothing: the server records these itself, by calling store.countStage
    directly rather than by coming through here. */
-const SERVER_ONLY_STAGES = new Set(['lead_qualified', 'lead_sent', 'installer_received', 'installer_accepted', 'seo_landing',
+const SERVER_ONLY_STAGES = new Set(['lead_qualified', 'lead_sent', 'installer_received', 'installer_accepted', 'seo_landing', 'survey_booked',
   'crop_available', 'crop_unavailable']);
 
 /* Things that happen off the main line, counted but never chained.
@@ -5173,6 +5173,11 @@ const BRANCH_STAGES = new Map([
   /* The pin fallback (7 Oct): offered when a photo is too small, blocked or
      angled to measure. Opened over analysed photos; measured over opened, so
      the two read as "how often it is needed" and "whether it works". */
+  /* The Facet Project Pack (strategy handoff, 9 Oct): downloads against the
+     people who saw an estimate, so it reads as how many took their design away. */
+  ['pack_downloaded', { of: 'estimate_viewed', label: 'downloaded their project pack' }],
+  // An installer booked the survey (routes/installers.js), so the funnel runs to it.
+  ['survey_booked', { of: 'installer_accepted', label: 'installer booked a survey' }],
   ['pins_opened', { of: 'analysis_completed', label: 'opened the pins on a hard-to-measure photo' }],
   ['pins_measured', { of: 'pins_opened', label: 'measured their walls from their own pins' }],
   // Energy-certificate sizing (epc.js), once it is switched on.

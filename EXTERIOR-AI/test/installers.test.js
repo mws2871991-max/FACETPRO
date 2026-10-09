@@ -315,6 +315,10 @@ test('an installer records a quote and a result, and the accuracy report reads t
   assert.strictEqual((await post('/api/installer/lead-outcome', { leadId: 'LD-OUTCOME', outcome: 'quoted', amount: 9500 })).status, 409,
     'a quote was recorded on a project nobody accepted');
   assert.strictEqual((await post('/api/installer/lead-response', { leadId: 'LD-OUTCOME', action: 'accept' })).status, 200);
+  // Survey booked (9 Oct): a date within the next year, no price.
+  assert.strictEqual((await post('/api/installer/lead-outcome', { leadId: 'LD-OUTCOME', outcome: 'survey', date: '2062-01-01' })).status, 400, 'a survey was booked for 2062');
+  const soon = new Date(Date.now() + 5 * 864e5).toISOString().slice(0, 10);
+  assert.strictEqual((await post('/api/installer/lead-outcome', { leadId: 'LD-OUTCOME', outcome: 'survey', date: soon })).status, 200);
   assert.strictEqual((await post('/api/installer/lead-outcome', { leadId: 'LD-OUTCOME', outcome: 'quoted', amount: 12 })).status, 400, 'a nonsense price was taken');
   assert.strictEqual((await post('/api/installer/lead-outcome', { leadId: 'LD-NOTMINE', outcome: 'quoted', amount: 9500 })).status, 404, 'a quote on somebody else\'s lead');
   assert.strictEqual((await post('/api/installer/lead-outcome', { leadId: 'LD-OUTCOME', outcome: 'quoted', amount: 9500, surveyed: true })).status, 200);
@@ -326,6 +330,7 @@ test('an installer records a quote and a result, and the accuracy report reads t
   assert.strictEqual(view.decisions['LD-OUTCOME'].action, 'accept', 'a quote read as a change of decision');
   assert.deepStrictEqual({ amount: view.outcomes['LD-OUTCOME'].quote.amount, surveyed: view.outcomes['LD-OUTCOME'].quote.surveyed }, { amount: 9500, surveyed: true });
   assert.strictEqual(view.outcomes['LD-OUTCOME'].result.outcome, 'won');
+  assert.strictEqual(view.outcomes['LD-OUTCOME'].survey.date, soon, 'the survey date was not kept');
 
   const acc = await (await fetch(`${BASE}/api/accuracy`, { headers: { authorization: 'Bearer shared-legacy-password' } })).json();
   const row = acc.rows.find(r => r.leadId === 'LD-OUTCOME');
@@ -338,7 +343,7 @@ test('an installer records a quote and a result, and the accuracy report reads t
 test('the privacy notice says installers tell us what they quoted, and keeps it no longer than the enquiry', () => {
   const fs = require('fs'), path = require('path');
   const p = fs.readFileSync(path.join(__dirname, '..', 'legal', 'privacy.html'), 'utf8');
-  assert.match(p, /the price they quoted and whether that was after a survey, and whether you went ahead and at what price<\/td><td>The installers who received your enquiry tell us/);
+  assert.match(p, /when a survey was booked, the price they quoted and whether that was after a survey, and whether you went ahead and at what price<\/td><td>The installers who received your enquiry tell us/);
   assert.match(p, /Comparing our estimates with the prices installers quote and agree/);
   assert.match(p, /what the installers told us about quoting for it<\/td><td>24 months/);
   const routes = fs.readFileSync(path.join(__dirname, '..', 'routes', 'installers.js'), 'utf8');

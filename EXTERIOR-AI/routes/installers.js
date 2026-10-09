@@ -257,9 +257,21 @@ module.exports = function installerRoutes({
     const leadId = String(req.body?.leadId || '').trim().slice(0, 40);
     const outcome = String(req.body?.outcome || '').trim().toLowerCase();
     if (!leadId) return res.status(400).json({ error: 'leadId is required.' });
-    if (!LEAD_OUTCOMES.includes(outcome)) return res.status(400).json({ error: 'outcome must be quoted, won or lost.' });
+    if (!LEAD_OUTCOMES.includes(outcome)) return res.status(400).json({ error: 'outcome must be survey, quoted, won or lost.' });
+    /* A survey booking (9 Oct): a date, no price. Within a month back and a
+       year ahead, so a typo cannot book one for 2062. */
+    let surveyDate = null;
+    if (outcome === 'survey') {
+      const d = String(req.body?.date || '').trim();
+      if (d) {
+        const t = /^\d{4}-\d{2}-\d{2}$/.test(d) ? Date.parse(d + 'T12:00:00Z') : NaN;
+        const now = Date.now();
+        if (!Number.isFinite(t) || t < now - 31 * 864e5 || t > now + 366 * 864e5) return res.status(400).json({ error: 'Enter the survey date as a real date within the next year.' });
+        surveyDate = d;
+      }
+    }
     let amount = null;
-    if (outcome !== 'lost') {
+    if (outcome !== 'lost' && outcome !== 'survey') {
       amount = Math.round(Number(req.body?.amount));
       if (!Number.isFinite(amount) || amount < OUTCOME_MIN || amount > OUTCOME_MAX) {
         return res.status(400).json({ error: `Enter the price in pounds, inc VAT — between £${OUTCOME_MIN} and £${OUTCOME_MAX.toLocaleString('en-GB')}.` });
@@ -275,14 +287,17 @@ module.exports = function installerRoutes({
       ts: new Date().toISOString(), leadId, installerId: req.installer.id, action: outcome,
       ...(amount !== null ? { amount } : {}),
       ...(outcome === 'quoted' ? { surveyed: req.body?.surveyed === true } : {}),
+      ...(outcome === 'survey' && surveyDate ? { surveyDate } : {}),
     };
     await store.append('leadResponses', record);
     /* No amount in the audit event: lead events are kept six years as
        consent evidence, and the price is enquiry data, kept 24 months with
        the response row above (privacy notice, "How long we keep it"). */
     await leadEvent(`installer.${outcome}`, leadId, { installerId: req.installer.id });
+    // Upload to survey booking, end to end (strategy handoff, Phase 2).
+    if (outcome === 'survey') store.countStage('survey_booked').catch(() => { /* a counter never fails a booking */ });
     console.log(`Lead ${leadId}: ${req.installer.id} recorded ${outcome}${amount !== null ? ` £${amount}` : ''}.`);
-    res.json({ ok: true, leadId, outcome, amount, at: record.ts });
+    res.json({ ok: true, leadId, outcome, amount, surveyDate, at: record.ts });
   });
 
   /* The latest quote and the latest won/lost per lead, for one installer

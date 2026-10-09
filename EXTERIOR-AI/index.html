@@ -1013,6 +1013,9 @@ html[data-route="pricing"] [data-page]:not([data-page="pricing"]){display:none}
   <!-- The moment between liking a design and giving anybody your details. It
        renders nothing until there is a design worth keeping — see
        buildSaveMoment() — because an empty exhortation to save is furniture. -->
+  <!-- The Facet Project Pack (strategy handoff, 9 Oct): the design and its
+       estimate on one page, to print or save as a PDF. -->
+  <div data-page="design" id="mount-pack"></div>
   <div data-page="design" id="mount-savemoment"></div>
   <div data-page="design" id="mount-lead"></div>
   <!-- Sharing sits after the form rather than before it: a design shared
@@ -2940,6 +2943,7 @@ const MOUNTS = [
     buildConservatory)],
   ['mount-refine',     buildRefineEstimate],
   ['mount-totalbar',   buildTotalBar],
+  ['mount-pack',       buildPackCard],
   ['mount-savemoment', buildSaveMoment],
   ['mount-lead',       buildSaveFraming],
   ['mount-share',      buildShare],
@@ -9029,7 +9033,6 @@ function buildInstallerConsent() {
       h('p', { className: 'text-base leading-7 text-zinc-800 font-semibold', id: 'quotes-reassurance' },
         `Only ${q.list.length === 1 ? 'the installer' : `the ${q.list.length} installers`} named below get your details, and only if you tick the box. We never sell your details to anyone else or add you to a marketing list.`),
       consentBox('installerQuotes', [CONSENT_WORDING.installerQuotes.replace('{installers}', joinNames(q.list.map(i => i.name)))]),
-      howWePaid('mt-1'),
       pricePromiseNote('mt-2'),
     ]);
   }
@@ -9052,6 +9055,114 @@ function buildInstallerConsent() {
 function howWePaid(extraClass = '') {
   return h('p', { className: `${extraClass} text-base leading-6 text-zinc-600` },
     'How we\u2019re paid: Facet Pro is free for you. Installers pay us when we send them an enquiry, and they can\u2019t pay to change your estimate.');
+}
+
+/* ── THE FACET PROJECT PACK ──
+
+   Strategy handoff (9 Oct): when somebody has designed something, give them
+   the whole of it to keep: before and after, what they chose, the itemised
+   estimate. Built here on their device from what is on their screen, into a
+   print-ready page they can save as a PDF; nothing is uploaded to make it, and
+   the figures are the ones the page shows (publishedRange, state.price.range),
+   so the pack cannot disagree with the estimate. */
+function packData() {
+  const g = state.glazing?.price ? state.glazing : null;
+  const p = state.price && (state.price.priced || []).length ? state.price : null;
+  if (!g && !p) return null;
+  return { g, p };
+}
+
+function buildPackCard() {
+  if (!packData()) return h('div', { id: 'pack-card' });
+  return h('section', { id: 'pack-card', className: 'rounded-2xl bg-white border border-zinc-200 p-5 md:p-6 flex flex-col sm:flex-row sm:items-center gap-4 justify-between' }, [
+    h('div', {}, [
+      h('p', { className: 'text-lg font-semibold text-zinc-900' }, 'Your Facet Project Pack'),
+      h('p', { className: 'mt-1 text-base leading-6 text-zinc-600 max-w-[52ch]' },
+        'Your before-and-after, everything you chose and your itemised estimate on one page. Print it, or save it as a PDF to show any installer.'),
+    ]),
+    h('button', {
+      type: 'button',
+      className: 'cta px-6 py-3.5 rounded-full text-lg font-semibold min-h-[52px] whitespace-nowrap',
+      onClick: () => { reachedStage('pack_downloaded'); openProjectPack(); },
+    }, 'Download my project pack'),
+  ]);
+}
+
+function packHtml() {
+  const d = packData(); if (!d) return '';
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const row = (k, v) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`;
+  const money = (n) => Number.isFinite(n) ? fmtMoney(n) : '';
+  const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const houseLabel = { detached: 'Detached', semi: 'Semi-detached', terraced: 'Terraced', bungalow: 'Bungalow', flat: 'Flat or maisonette' }[state.houseType] || '';
+  const before = state.uploadedImg || null;
+  const after = state.renderUrl ? (String(state.renderUrl).startsWith('/') ? location.origin + state.renderUrl : state.renderUrl) : null;
+  const pics = before || after ? `<div class="pics">${before ? `<figure><img src="${esc(before)}" alt="Your house, before"><figcaption>Before</figcaption></figure>` : ''}${after ? `<figure><img src="${esc(after)}" alt="AI visualisation of your design"><figcaption>After · AI visualisation</figcaption></figure>` : ''}</div>` : '';
+  const spec = [];
+  if (houseLabel) spec.push(['House type', houseLabel]);
+  if (d.g && d.g.price.windowsIncluded !== false && Number.isFinite(d.g.windowCount)) spec.push(['Number of windows', `${d.g.windowCount}${d.g.countSource && d.g.countSource.startsWith('photo') ? ', counted from your photo' : d.g.countSource === 'manual_entry' ? ', the number you gave us' : ', typical for this house type'}`]);
+  for (const [k, v] of chosenSelections()) spec.push([k, v]);
+  let est = '';
+  if (d.g) {
+    const r = publishedRange(d.g), gp = d.g.price, doorOnly = gp.windowsIncluded === false;
+    const hasDoor = !!state.prefs.doorStyleId && state.prefs.doorStyleId !== 'none';
+    const lines = [
+      doorOnly ? ['Door, supplied and fitted', gp.doors] : ['Windows, supplied and fitted', (gp.supplyFit || 0) + (gp.openers || 0)],
+      !doorOnly && hasDoor ? ['Door, supplied and fitted', gp.doors] : null,
+      gp.access ? ['Access for upstairs windows', gp.access] : null,
+      ['Taking the old frames away', gp.disposal],
+      gp.minimumApplied ? ['Minimum job charge (small jobs)', Math.round((gp.total - (gp.vat || 0)) - ((doorOnly ? (gp.doors || 0) : (gp.supplyFit || 0) + (gp.openers || 0) + (hasDoor ? (gp.doors || 0) : 0)) + (gp.access || 0) + (gp.disposal || 0)))] : null,
+      ['VAT (20%)', gp.vat],
+    ].filter(Boolean);
+    est += `<h3>Windows and doors: ${money(r.low)}&ndash;${money(r.high)}</h3><table>${lines.map(([k, v]) => row(k, money(v))).join('')}<tr class="t"><td>Itemised figure</td><td>${money(gp.total)}</td></tr></table><p class="note">The range is wider than the itemised figure because installers charge different prices for the same job.</p>`;
+  }
+  if (d.p) {
+    const pr = d.p, rr = pr.range && pr.range.high > pr.range.low ? `${money(pr.range.low)}&ndash;${money(pr.range.high)}` : money(pr.total);
+    const lines = [['Walls', pr.cladding], ['Roof', pr.roof], ['Fascias, soffits and guttering', pr.trim], ['Scaffolding (counted once)', pr.scaffolding], ['Waste allowance', pr.waste], ['VAT', pr.vat]].filter(([, v]) => Number(v) > 0);
+    est += `<h3>Walls, roof and roofline: ${rr}</h3><table>${lines.map(([k, v]) => row(k, money(v))).join('')}<tr class="t"><td>Itemised figure</td><td>${money(pr.total)}</td></tr></table>`;
+  }
+  let promise = '';
+  if (state.pricePromise) {
+    const cap = (hi) => money(Math.round(hi * (1 + state.pricePromise.capPercent / 100)));
+    const caps = [d.g ? `windows and doors up to ${cap(publishedRange(d.g).high)}` : null, d.p && d.p.range ? `walls, roof and roofline up to ${cap(d.p.range.high)}` : null].filter(Boolean).join('; ');
+    promise = `<div class="promise"><b>The Facet Pro price promise.</b> For the job you chose, your installer&rsquo;s quote will be within your Facet Pro range, and never more than ${state.pricePromise.capPercent}% above it${caps ? ` (${esc(caps)})` : ''}. If the job changes at survey, any difference is explained to you in writing. Applies when you ask for quotes through Facet Pro: facetpro.co.uk/price-promise</div>`;
+  }
+  return `<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><title>Facet Project Pack</title><style>
+@page{size:A4;margin:14mm}*{box-sizing:border-box}body{font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;color:#16181A;font-size:11pt;line-height:1.4;margin:0}
+.top{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #16181A;padding-bottom:8px}.brand{display:flex;gap:9px;align-items:center;font-weight:700;letter-spacing:.14em}
+h1,.h1{font-size:20pt;font-weight:700;margin:12px 0 4px;letter-spacing:-.02em}h2{font-size:13pt;margin:16px 0 6px}h3{font-size:11.5pt;margin:12px 0 4px}
+.pics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.pics figure{margin:0}.pics img{width:100%;aspect-ratio:3/2;object-fit:cover;border-radius:6px;border:1px solid #ddd}figcaption{font-size:9pt;color:#5B5F63;margin-top:3px}
+table{width:100%;border-collapse:collapse;font-size:10.5pt}td{padding:4px 6px;border-bottom:1px solid #E4E2DD}td:last-child{text-align:right;white-space:nowrap}tr.t td{font-weight:700;border-top:1px solid #16181A}
+.note{font-size:9pt;color:#5B5F63;margin:4px 0 0}.box{background:#F4F2EE;border-radius:6px;padding:9px 12px;margin-top:12px;font-size:10pt}.promise{border-left:4px solid #B5482A;background:#FDFCF9;padding:8px 12px;margin-top:12px;font-size:10pt}
+.foot{margin-top:14px;border-top:1px solid #E4E2DD;padding-top:6px;font-size:8.5pt;color:#5B5F63}
+</style></head><body>
+<div class="top"><div class="brand"><svg width="22" height="22" viewBox="0 0 40 40"><defs><clipPath id="c"><rect width="40" height="40" rx="8"/></clipPath></defs><g clip-path="url(#c)"><rect width="40" height="40" fill="#16181A"/><path d="M28 0H40V12Z" fill="#B5482A"/></g><path d="M13 9H28V14H19V18.5H26.5V23.5H19V31H13Z" fill="#fff"/></svg>FACET PRO</div><div style="font-size:9pt;color:#5B5F63">${esc(today)}</div></div>
+<div class="h1">Your Facet Project Pack</div>
+${pics}
+<h2>Your project</h2><table>${spec.map(([k, v]) => row(k, v)).join('')}</table>
+<h2>Your planning estimate</h2>${est}
+<div class="box"><b>Planning estimate · inc. VAT · not a quotation.</b> Worked out from your photo, your choices and UK installation rates. An installer confirms the exact measurements, specification and price at a survey.</div>
+${promise}
+<h2>Next steps</h2><p style="margin:0">Show this pack to any installer, or ask Facet Pro for quotes from up to 3 local installers at facetpro.co.uk. There is no obligation.</p>
+<div class="foot">Made on your device by Facet Pro (facetpro.co.uk) from your design. FACETPRO LTD · Registered in England &amp; Wales No. 17346500.</div>
+</body></html>`;
+}
+
+function openProjectPack() {
+  const html = packHtml(); if (!html) return;
+  document.getElementById('pack-frame')?.remove();
+  const f = document.createElement('iframe');
+  f.id = 'pack-frame';
+  f.setAttribute('aria-hidden', 'true');
+  f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0';
+  f.onload = () => {
+    const w = f.contentWindow;
+    const imgs = [...w.document.images];
+    Promise.all(imgs.map(i => i.complete ? null : new Promise(r => { i.onload = i.onerror = r; })))
+      .then(() => { try { w.focus(); w.print(); } catch (_) { U('Your browser would not open the print window — try again from a computer.'); } });
+  };
+  f.srcdoc = html;
+  document.body.appendChild(f);
 }
 
 /* The Facet Pro price promise, where quotes are asked for. Nothing unless the
@@ -9131,7 +9242,9 @@ function buildSaveMoment() {
      itemisation; this only restates the headline. */
   const rows = [];
   if (price?.total) rows.push(['Walls, roof & trim', fmtMoney(price.total)]);
-  if (glaz?.price) rows.push(['Windows & doors', `${fmtMoney(glaz.range.low)}–${fmtMoney(glaz.range.high)}`]);
+  /* publishedRange, the range the estimate panel shows. This read glaz.range,
+     the narrower one underneath it, so one page showed two prices for one job. */
+  if (glaz?.price) { const r = publishedRange(glaz); rows.push(['Windows & doors', `${fmtMoney(r.low)}–${fmtMoney(r.high)}`]); }
 
   return buildSaveMomentSection(rows, startSave);
 }
@@ -10068,20 +10181,22 @@ function buildInstaller() {
       const input = document.getElementById(`outcome-amount-${leadId}`);
       const surveyed = document.getElementById(`outcome-surveyed-${leadId}`)?.checked === true;
       const amount = input ? Number(String(input.value).replace(/[£,\s]/g, '')) : null;
+      const date = outcome === 'survey' ? (document.getElementById(`survey-date-${leadId}`)?.value || '') : undefined;
       try {
         const res = await fetch('/api/installer/lead-outcome', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.installerToken}` },
-          body: JSON.stringify({ leadId, outcome, amount, surveyed }),
+          body: JSON.stringify({ leadId, outcome, amount, surveyed, date }),
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) { U(data.error || 'Could not record that.'); return; }
         const o = { ...((state.outcomes || {})[leadId] || {}) };
-        if (outcome === 'quoted') o.quote = { amount: data.amount, surveyed, at: data.at };
+        if (outcome === 'survey') o.survey = { date: data.surveyDate || null, at: data.at };
+        else if (outcome === 'quoted') o.quote = { amount: data.amount, surveyed, at: data.at };
         else o.result = { outcome, ...(data.amount ? { amount: data.amount } : {}), at: data.at };
         state.outcomes = { ...(state.outcomes || {}), [leadId]: o };
         renderInstallerOnly();
-        U(outcome === 'quoted' ? `Quote recorded for ${leadId}` : outcome === 'won' ? `Marked ${leadId} as won` : `Marked ${leadId} as lost`);
+        U(outcome === 'survey' ? `Survey booked for ${leadId}` : outcome === 'quoted' ? `Quote recorded for ${leadId}` : outcome === 'won' ? `Marked ${leadId} as won` : `Marked ${leadId} as lost`);
       } catch (_) {
         U('Could not reach the server.');
       }
@@ -10090,12 +10205,21 @@ function buildInstaller() {
     const outcomeBlock = (lead) => {
       const o = (state.outcomes || {})[lead.id] || {};
       const done = [
+        o.survey ? `Survey booked${o.survey.date ? ` for ${new Date(o.survey.date + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}` : null,
         o.quote ? `Quoted ${fmtMoney(o.quote.amount)}${o.quote.surveyed ? ' after a survey' : ''}` : null,
         o.result ? (o.result.outcome === 'won' ? `Won at ${fmtMoney(o.result.amount)}` : 'Lost') : null,
       ].filter(Boolean);
       return h('div', { className: 'mt-3 rounded-lg bg-white/5 border border-white/10 p-3' }, [
         h('p', { className: 'text-base text-white/80 font-semibold' }, 'What happened next'),
         done.length ? h('p', { className: 'mt-1 text-base text-white/85' }, done.join(' · ')) : null,
+        /* Survey booked (9 Oct, strategy handoff): the step between accepting
+           and quoting, so the pipeline runs New, Accepted, Survey booked,
+           Quote submitted, Won/Lost. */
+        (o.result || o.quote) ? null : h('div', { className: 'mt-2 flex flex-wrap items-center gap-2' }, [
+          h('label', { className: 'text-base text-white/80', for: `survey-date-${lead.id}` }, 'Survey date'),
+          h('input', { id: `survey-date-${lead.id}`, type: 'date', className: 'rounded-lg px-3 min-h-[44px] text-zinc-900 text-lg', value: o.survey?.date || '' }),
+          h('button', { type: 'button', className: 'px-4 rounded-full border border-white/25 text-base min-h-[44px]', onClick: () => recordOutcome(lead.id, 'survey') }, o.survey ? 'Change survey date' : 'Survey booked'),
+        ]),
         o.result ? null : h('div', { className: 'mt-2 flex flex-wrap items-center gap-2' }, [
           h('label', { className: 'text-base text-white/80', for: `outcome-amount-${lead.id}` }, 'Price, £ inc VAT'),
           h('input', {
@@ -10116,12 +10240,14 @@ function buildInstaller() {
     };
 
     const projectCard = (lead) => {
+      const stage = pipelineStage(lead, state.decisions, state.outcomes);
       const est = estimateOf(lead);
       const reqs = requirementsOf(lead);
       const score = lead.leadScore;
       const decision = (state.decisions || {})[lead.id];
 
       return h('div', { className: 'rounded-xl bg-white/5 border border-white/10 p-4' }, [
+        h('span', { className: 'inline-block mb-2 text-base px-2 py-0.5 rounded-full bg-white/10 text-white/90' }, PIPELINE_LABEL[stage]),
         h('div', { className: 'flex items-start justify-between gap-3 flex-wrap' }, [
           h('div', {}, [
             h('p', { className: 'text-base text-white/80 font-semibold' }, 'New Facet Pro project'),
@@ -10270,11 +10396,44 @@ function buildInstaller() {
     (state.installerScope === 'installer' && state.leads.length)
       ? installerDashboard(summariseInstallerLeads({ leads: state.leads, decisions: state.decisions || {}, outcomes: state.outcomes || {}, estimateOf }))
       : null,
+    (state.installerScope === 'installer' && state.leads.length) ? pipelineBar() : null,
     h('div', { className: 'mt-4 grid gap-3 max-h-[70vh] overflow-auto pr-1' },
       state.leads.length === 0
         ? [h('div', { className: 'text-base text-white/80 p-3' }, state.leadsLoaded ? 'No designs saved yet.' : 'Loading…')]
-        : state.leads.map(projectCard)
+        : state.leads.filter(l => !state.pipelineFilter || pipelineStage(l, state.decisions, state.outcomes) === state.pipelineFilter).map(projectCard)
     ),
+  ]);
+}
+
+/* The installer pipeline (strategy handoff, 9 Oct): every lead in one stage,
+   from the portal's own records (accept/pass decisions, survey bookings,
+   quotes and results). Pure, so it can be tested. */
+const PIPELINE = ['new', 'accepted', 'survey', 'quoted', 'won', 'lost', 'passed'];
+const PIPELINE_LABEL = { new: 'New', accepted: 'Accepted', survey: 'Survey booked', quoted: 'Quote submitted', won: 'Won', lost: 'Lost', passed: 'Passed' };
+function pipelineStage(lead, decisions = {}, outcomes = {}) {
+  const d = (decisions || {})[lead.id], o = (outcomes || {})[lead.id] || {};
+  if (o.result) return o.result.outcome === 'won' ? 'won' : 'lost';
+  if (o.quote) return 'quoted';
+  if (o.survey) return 'survey';
+  if (d?.action === 'accept') return 'accepted';
+  if (d?.action === 'pass') return 'passed';
+  return 'new';
+}
+function pipelineBar() {
+  const counts = Object.fromEntries(PIPELINE.map(k => [k, 0]));
+  for (const l of state.leads) counts[pipelineStage(l, state.decisions, state.outcomes)]++;
+  const chip = (k, label, n) => h('button', {
+    type: 'button',
+    'aria-pressed': state.pipelineFilter === k ? 'true' : 'false',
+    className: `px-3 min-h-[44px] rounded-full text-base border transition ${state.pipelineFilter === k ? 'bg-white text-zinc-900 border-white' : 'border-white/20 text-white/85 hover:bg-white/10'}`,
+    onClick: () => { state.pipelineFilter = state.pipelineFilter === k ? null : k; renderInstallerOnly(); },
+  }, `${label} · ${n}`);
+  return h('div', { id: 'pipeline', className: 'mt-4' }, [
+    h('p', { className: 'text-base text-white/80 font-semibold' }, 'Your pipeline'),
+    h('div', { className: 'mt-2 flex flex-wrap gap-2' }, [
+      chip(null, 'All', state.leads.length),
+      ...PIPELINE.filter(k => k !== 'passed' || counts.passed).map(k => chip(k, PIPELINE_LABEL[k], counts[k])),
+    ]),
   ]);
 }
 

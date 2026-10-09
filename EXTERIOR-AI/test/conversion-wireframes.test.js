@@ -36,6 +36,7 @@ test('4: "How we calculate this" uses the engine amounts, not an invented materi
 
 test('action plan P1: how Facet Pro is paid, said where quotes are asked for', () => {
   assert.match(code, /function howWePaid/);
-  assert.ok((code.match(/howWePaid\('/g) || []).length >= 2, 'Option B and the consent box');
+  // Option B; the consent box keeps its own line from 29 September, so it is not said twice there.
+  assert.ok((code.match(/howWePaid\('/g) || []).length >= 1, 'Option B');
   assert.match(code, /Installers pay us when we send them an enquiry, and they can\\u2019t pay to change your estimate/);
 });
