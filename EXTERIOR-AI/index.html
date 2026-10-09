@@ -6005,8 +6005,18 @@ function photoChangedPriceLine(spread, n, doorOnly) {
   /* Front only: the typical figure was a whole house, so comparing the two
      would read as a saving that is not one. Say what this covers instead. */
   if (frontOnlyPrice(state.glazing)) {
+    const whole = `a whole ${String(was.typeLabel || 'house').toLowerCase()}${/bungalow/i.test(was.typeLabel || '') ? '' : ' house'}`;
+    /* The front alone above the whole typical house (test 2, 9 Oct: a
+       Victorian terrace's front at £18,747–£34,085 under a "typical"
+       £13,411–£24,384) read as a mistake. It usually is not: the typical
+       figure has no bays and average-sized windows. Say so. */
+    if (spread.high > was.high) {
+      const bays = (state.glazing?.windows || []).filter(w => w.isBay).length;
+      return h('p', { className: 'mt-2 text-base leading-7 text-white/85' },
+        `This is the front only, and it is already more than our typical figure for ${whole} (${fmtMoney(was.low)} – ${fmtMoney(was.high)}). That figure assumes average-sized windows and no bays; ${bays ? `your front has ${bays === 1 ? 'a bay' : `${bays} bays`} and larger windows` : 'your front windows are larger than average'}, and those cost more. If we’ve counted a window wrongly, change the number above.`);
+    }
     return h('p', { className: 'mt-2 text-base leading-7 text-white/85' },
-      `This is the front only. The typical figure (${fmtMoney(was.low)} – ${fmtMoney(was.high)}) was for a whole ${String(was.typeLabel || 'house').toLowerCase()}${/bungalow/i.test(was.typeLabel || '') ? '' : ' house'}.`);
+      `This is the front only. The typical figure (${fmtMoney(was.low)} – ${fmtMoney(was.high)}) was for ${whole}.`);
   }
   const moved = spread.high - was.high;
   if (Math.abs(moved) < 50) return null;
@@ -8133,6 +8143,15 @@ function buildDetailOptions() {
           ? h('p', { className: 'text-base leading-7 text-zinc-600 -mt-2' },
               'The picture shows your frame colour and Georgian bars. A sliding sash may not show on it — it is always in your price.')
           : null,
+        /* Period houses (customer journey review, test 2, 9 Oct: a Victorian
+           terrace, sashes and bays, and nothing said). Swapping timber
+           sashes for uPVC at the front of a house in a conservation area or
+           a listed building can need permission; the homeowner should hear
+           that before an installer measures up, not after. */
+        ['sliding-sash', 'bay'].includes(state.prefs.windowStyleId)
+          ? h('p', { className: 'text-base leading-7 text-zinc-700 -mt-2' },
+              'Period house? If it’s listed or in a conservation area, changing the front windows can need permission — check with your council before you order.')
+          : null,
         materialRow(wd.windowMaterials),
         barsRow(wd.windowBars),
         h('div', {}, [
@@ -8145,6 +8164,13 @@ function buildDetailOptions() {
             : null,
         ]),
         colourRow(wd.colours, 'windowDoorColourId'),
+        /* White on white (test 2, 9 Oct): white sashes drawn as white sashes,
+           and the before and after looked the same. Most frames are white
+           already, so say it, and point at what would show. */
+        state.prefs.windowDoorColourId === 'white' && state.prefs.windowStyleId && state.prefs.windowStyleId !== 'none'
+          ? h('p', { className: 'text-base leading-7 text-zinc-600 -mt-2' },
+              'If your windows are white now, the picture will look much like your house today — the price is for new windows all the same. To see a difference, try anthracite or add Georgian bars.')
+          : null,
       ]),
       glazingPanel(),
     ]) : null, 'Also thinking about windows or a front door?', glazingJourney, glazingEngaged),

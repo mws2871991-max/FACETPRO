@@ -41,3 +41,12 @@ test('one address: /index.html and the raw Railway host go to the real pages, /h
   assert.match(server, /if \(req\.path === '\/healthz'\) return next\(\);\s*if \(\/\\\.up\\\.railway\\\.app\$\/i\.test/);
   assert.match(server, /if \(req\.path === '\/index\.html'\) \{/);
 });
+
+test('journey test 2 (9 Oct): period-house note, white-on-white note, and why a front can cost more than a typical house', () => {
+  const page = read('index.html');
+  assert.match(page, /\['sliding-sash', 'bay'\]\.includes\(state\.prefs\.windowStyleId\)/);
+  assert.match(page, /Period house\? If it’s listed or in a conservation area/);
+  assert.match(page, /If your windows are white now, the picture will look much like your house today/);
+  assert.match(page, /if \(spread\.high > was\.high\) \{/);
+  assert.match(page, /That figure assumes average-sized windows and no bays/);
+});
