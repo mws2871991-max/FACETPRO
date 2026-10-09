@@ -27,7 +27,7 @@ test('the privacy notice has the anchor the upload lines link to', () => {
 
 test('the first screen answers the question right under the hero button', () => {
   const start = index.indexOf('id="choose-heading"');
-  const button = index.indexOf('See my house &amp; price', start);
+  const button = index.indexOf('Upload photo &amp; see price', start);
   const after = index.slice(button, button + 2000);
   assert.match(after, LINE);
   assert.ok(after.includes('/privacy#your-photograph'));

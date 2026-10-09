@@ -19,7 +19,7 @@ const home = () => {
 test('between the h1 and the picture: the offer, the button, the reassurance — nothing else', () => {
   const s = home();
   const top = s.slice(0, s.indexOf('<figure')).replace(/<!--[\s\S]*?-->/g, '');
-  assert.match(top, /See my house &amp; price &rarr;/);
+  assert.match(top, /Upload photo &amp; see price &rarr;/);
   assert.doesNotMatch(top, /Works best on/, 'the fit line belongs under the choice');
   assert.doesNotMatch(s, /See my price<\/button>/, 'one button, not two for the same thing');
 });

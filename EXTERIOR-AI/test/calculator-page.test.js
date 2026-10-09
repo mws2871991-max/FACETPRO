@@ -11,6 +11,6 @@ test('the calculator page exists, is in the sitemap and leads with the argument'
   assert.ok(landing.allPaths().includes('/cost/window-replacement-calculator'));
   const html = landing.renderCostPage('window-replacement-calculator', OPTS);
   assert.match(html, /Why estimate someone else&#39;s house\? Upload a photo of yours\./);
-  assert.match(html, /See my house &amp; price →/);   // one button wording since 6 Oct
+  assert.match(html, /Upload photo &amp; see price →/);   // one button wording since 6 Oct
   assert.match(html, /not a quotation/);
 });

@@ -16,7 +16,7 @@ const LINES = [
   ['the trust line', '>Free &middot; No account &middot; No measurements &middot; No sales call</p>'],
   ['the four steps', '>Choose whether you&rsquo;d like up to three installers to quote.</p>'],
   ['never twenty companies', '<strong class="font-semibold text-zinc-900">Never sent to 20 companies.</strong> At most three installers, and only if you ask.'],
-  ['the primary button', '>See my house &amp; price &rarr;</button>'],
+  ['the primary button', '>Upload photo &amp; see price &rarr;</button>'],
   ['the two neighbours, near the top', 'Two neighbours. Same street.<br>Same windows. Thousands apart.'],
   ['the simple answer first', 'It&rsquo;s a planning estimate, not a survey.'],
   ['the promise in the closing band', 'No measuring. No sales call. No pressure.'],

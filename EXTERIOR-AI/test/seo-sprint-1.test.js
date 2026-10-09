@@ -16,16 +16,16 @@ const render = (slug) => landing.renderCostPage(slug, OPTS);
 const schemaOf = (html) => JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1]);
 
 const SPRINT = {
-  'new-windows-cost-uk': ['New Windows Cost UK 2026 | Prices & Fitted Estimates', 'How Much Do New Windows Cost in the UK?', 'See my house & price →'],
-  'window-replacement-cost-uk': ['Window Replacement Cost UK 2026 | How Much to Replace Windows', 'What Does Window Replacement Cost in the UK?', 'See my house & price →'],
-  '10-window-replacement-cost': ['10 Window Replacement Cost UK 2026 | Fitted Prices', 'How Much Does It Cost to Replace 10 Windows?', 'See my house & price →'],
-  '12-window-replacement-cost': ['12 Window Replacement Cost UK 2026 | Fitted Prices', 'How Much Does It Cost to Replace 12 Windows?', 'See my house & price →'],
-  'upvc-window-prices': ['uPVC Window Prices UK 2026 | Supply & Fitted Costs', 'uPVC Window Prices: How Much Do They Cost Fitted?', 'See my house & price →'],
-  'aluminium-window-prices': ['Aluminium Window Prices UK 2026 | Fitted Cost Guide', 'How Much Do Aluminium Windows Cost?', 'See my house & price →'],
-  'front-door-replacement-cost': ['Front Door Replacement Cost UK 2026 | Fitted Prices', 'How Much Does a New Front Door Cost?', 'See my house & price →'],
-  'composite-door-cost': ['Composite Door Cost UK 2026 | Fitted Prices & Guide', 'How Much Does a Composite Door Cost?', 'See my house & price →'],
-  'house-rendering-cost': ['House Rendering Cost UK 2026 | Cost Per m² & Per House', 'How Much Does It Cost to Render a House?', 'See my house & price →'],
-  'house-exterior-renovation-cost': ['House Exterior Renovation Cost UK 2026 | Complete Guide', 'How Much Does It Cost to Renovate the Outside of a House?', 'See my house & price →'],
+  'new-windows-cost-uk': ['New Windows Cost UK 2026 | Prices & Fitted Estimates', 'How Much Do New Windows Cost in the UK?', 'Upload photo & see price →'],
+  'window-replacement-cost-uk': ['Window Replacement Cost UK 2026 | How Much to Replace Windows', 'What Does Window Replacement Cost in the UK?', 'Upload photo & see price →'],
+  '10-window-replacement-cost': ['10 Window Replacement Cost UK 2026 | Fitted Prices', 'How Much Does It Cost to Replace 10 Windows?', 'Upload photo & see price →'],
+  '12-window-replacement-cost': ['12 Window Replacement Cost UK 2026 | Fitted Prices', 'How Much Does It Cost to Replace 12 Windows?', 'Upload photo & see price →'],
+  'upvc-window-prices': ['uPVC Window Prices UK 2026 | Supply & Fitted Costs', 'uPVC Window Prices: How Much Do They Cost Fitted?', 'Upload photo & see price →'],
+  'aluminium-window-prices': ['Aluminium Window Prices UK 2026 | Fitted Cost Guide', 'How Much Do Aluminium Windows Cost?', 'Upload photo & see price →'],
+  'front-door-replacement-cost': ['Front Door Replacement Cost UK 2026 | Fitted Prices', 'How Much Does a New Front Door Cost?', 'Upload photo & see price →'],
+  'composite-door-cost': ['Composite Door Cost UK 2026 | Fitted Prices & Guide', 'How Much Does a Composite Door Cost?', 'Upload photo & see price →'],
+  'house-rendering-cost': ['House Rendering Cost UK 2026 | Cost Per m² & Per House', 'How Much Does It Cost to Render a House?', 'Upload photo & see price →'],
+  'house-exterior-renovation-cost': ['House Exterior Renovation Cost UK 2026 | Complete Guide', 'How Much Does It Cost to Renovate the Outside of a House?', 'Upload photo & see price →'],
 };
 const esc = (t) => t.replace(/&/g, '&amp;');
 
@@ -105,7 +105,7 @@ test('hubs link down, every guide links up, the cornerstone links to every part'
 test('CTAs go to the right journey, say which button, and aluminium opens on aluminium', () => {
   /* One wording on every button since 6 Oct; the journey and the material
      still differ per page, and that is what this checks. */
-  const W = 'See my house &amp; price →';
+  const W = 'Upload photo &amp; see price →';
   const hrefs = (html) => [...html.matchAll(new RegExp(`href="([^"]+)">${W}</a>`, 'g'))].map(m => m[1]);
   assert.ok(hrefs(render('new-windows-cost-uk')).some(h => /\/design\?journey=windows&amp;from=new-windows-cost-uk&amp;cta=(hero|end)/.test(h)));
   assert.ok(hrefs(render('composite-door-cost')).some(h => /journey=doors/.test(h)));

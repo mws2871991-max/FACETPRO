@@ -86,6 +86,7 @@ section{padding-block:clamp(72px,10vw,128px)}
 .btn.ghost:hover{background:var(--ink);color:#fff}
 .reassure{font-size:14px;font-weight:500;color:var(--ink-2)}
 .lockline{margin-top:4px;color:var(--ink)}
+.rangewhy{font-size:13px;line-height:1.45;color:var(--ink-2);margin-top:6px}
 .founder-line{font-size:17px;line-height:1.5;color:var(--ink-2);max-width:46em;border-left:3px solid var(--brick);padding-left:14px}
 .price{font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1}
 .muted{color:var(--ink-3)}
@@ -453,7 +454,7 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
       <a href="/cost">Cost guides</a>
       <a href="/installers">For installers</a>
     </nav>
-    <a class="btn" href="/design?journey=windows">See my house &amp; price →</a>
+    <a class="btn" href="/design?journey=windows">Upload photo &amp; see price →</a>
   </div>
 </header>
 
@@ -463,11 +464,11 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
     <div class="wrap hero">
       <div class="stack">
         <div class="eyebrow">See it · Price it · Then decide</div>
-        <h1>See your house.<br><span>See what it could cost.</span></h1>
-        <p class="lead" style="max-width:30em">Upload a photo of your home, explore how it could look with different improvements, and get a realistic planning estimate before speaking to an installer.</p>
+        <h1>Plan your home improvement <span>before asking for a quote.</span></h1>
+        <p class="lead" style="max-width:30em">Upload a photo. Visualise new windows or doors. Get a clear price range &mdash; all before speaking to a single salesperson.</p>
         <div class="cta-block">
-          <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap"><a class="btn lg" href="/design?journey=windows">See my house &amp; price →</a><a href="#how" style="font-weight:600;color:var(--ink)">How it works</a></div>
-          <div class="reassure">No account. No measurements. No sales call.</div>
+          <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap"><a class="btn lg" href="/design?journey=windows">Upload photo &amp; see estimated price →</a><a href="#how" style="font-weight:600;color:var(--ink)">How it works</a></div>
+          <div class="reassure">Free · No account required · No sales call</div>
           <div class="reassure lockline">&#128274; No phone number needed for your design and price range.</div>
         </div>
         <!-- The first price inside the first phone screen (7 Oct): the headline
@@ -485,6 +486,7 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
           <div class="muted" style="font-size:13px;font-weight:500">Estimated project cost</div>
           <div class="row1"><div class="price" style="font-size:clamp(34px,3.4vw,44px)">£4,880–£8,874</div></div>
           <div style="font-size:13px;color:var(--ink-2)"><b>Planning estimate · inc. VAT</b> · Not a quotation.</div>
+          <div class="rangewhy">Why a range? Installers charge different prices for the same job. Your installer confirms the final price at survey.</div>
           <div class="chips"><span>Red-brick detached · 3 front windows incl. the bay</span><span>uPVC casement · Anthracite</span></div>
         </div>
         <div style="margin-top:12px"><p class="cap">Example property illustration. Visualisation and estimate are genuine output from our pricing engine.</p><details class="info"><summary>ⓘ About these pictures</summary><p>The house shown is an AI-generated illustration used to demonstrate Facet Pro. The visualisation and estimated price are genuine output from our pricing engine. When you upload your own photograph, Facet Pro visualises the changes on your property.</p></details></div>
@@ -497,9 +499,9 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
     <div class="wrap stack" style="gap:26px">
       <h2 class="h2" style="font-size:clamp(28px,3.2vw,42px)">How it works</h2>
       <ol class="steps4 steps3">
-        <li><span>01</span><b>Upload</b><p>Take a photo or upload one you already have.</p></li>
-        <li><span>02</span><b>Visualise</b><p>Explore different products, styles and colours on your own home.</p></li>
-        <li><span>03</span><b>See the cost</b><p>Get a planning estimate before deciding whether you want installer quotes.</p></li>
+        <li><span>01</span><b>Design</b><p>Customise frames, colours and styles on your actual property photo.</p></li>
+        <li><span>02</span><b>Price</b><p>View an itemised cost range based on real UK installation rates.</p></li>
+        <li><span>03</span><b>Choose</b><p>Share your project pack with up to 3 local installers when you&rsquo;re ready.</p></li>
       </ol>
       <!-- Conversion improvements 5 (8 Oct): the founder's credibility right
            under the three steps, as one line. Still unnamed (Mike, 8 Oct), and
@@ -536,38 +538,25 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
             <div class="price" id="demoPrice" style="font-size:clamp(40px,4.6vw,56px)">£4,880–£8,874</div>
             <div class="muted" style="font-size:13px">Planning estimate · inc. VAT</div>
             <div class="brk" id="demoBrk"></div>
-            <p style="font-size:15px;color:var(--ink-2);margin-top:6px">The estimate is based on what we can see in the photograph and the options chosen. <a href="#estimate">Estimate vs quote</a>.</p>
-            <p class="cap">Example property illustration. Every look is a genuine render with its own estimate. Walls, roof and roofline: try them on your own house.</p><details class="info"><summary>ⓘ About these pictures</summary><p>The house shown is an AI-generated illustration used to demonstrate Facet Pro. The visualisation and estimated price are genuine output from our pricing engine. When you upload your own photograph, Facet Pro visualises the changes on your property.</p></details>
+            <p class="rangewhy" style="margin-top:6px">Why a range? Installers charge different prices for the same job. Your installer confirms the final price at survey.</p>
+            <p class="cap">Example property illustration. Every look is a genuine render with its own estimate.</p>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- PRICE (brief §5, §6): estimate vs quote, said once. The detailed
-       method lives on /how-we-price. -->
-  <section id="estimate" class="stone" style="padding-block:clamp(44px,5vw,72px)">
-    <div class="wrap g2" style="align-items:start">
-      <div class="stack" style="gap:12px">
-        <h2 class="h2" style="font-size:clamp(28px,3.2vw,42px)">Your Facet Pro price is a planning estimate — not a quotation.</h2>
-        <p class="lead">It gives you a useful starting point for understanding what your project could cost. An installer will confirm the final specification and price after surveying the property.</p>
-      </div>
-      <div class="stack" style="gap:12px">
-        <h3 style="font-size:22px;letter-spacing:-.01em">Where does the estimate come from?</h3>
-        <p style="color:var(--ink-2)">We combine the information available from your property and selected specification with UK pricing data and typical project costs to produce a realistic price range. It is designed to help you plan — not replace an installer survey.</p>
-        <a href="/cost/how-our-estimates-work" style="font-weight:600">See how our pricing works →</a>
-      </div>
-    </div>
-  </section>
 
-  <!-- RESEARCH FIRST + NO TWENTY COMPANIES (brief §3, §4): one section, the
-       one home for "no sales call" and "up to three installers". -->
+  <!-- RESEARCH FIRST, ESTIMATE VS QUOTE, NO TWENTY COMPANIES: one section since
+       the 8 Oct site review (it was three, back to back). -->
   <section id="research" class="dark" style="padding-block:clamp(48px,6vw,80px)">
     <div class="wrap stack" style="gap:28px">
       <div class="stack" style="gap:12px;max-width:44em">
         <h2 class="h2" style="font-size:clamp(30px,4vw,52px)">Research first. Talk to installers when you’re ready.</h2>
         <p class="lead">Facet Pro lets you explore your project and understand the likely cost before you invite anyone to quote.</p>
         <ul class="ticks dk"><li>No obligation</li><li>No sales call</li><li>No need to speak to an installer</li><li>Installers contact you only if you ask</li></ul>
+        <!-- Site review 8 Oct: the estimate section merged in here, so estimate-vs-quote is said once. -->
+        <p id="estimate" style="color:#C9CBCD;font-size:17px;line-height:1.55;margin-top:6px">Your Facet Pro price is a planning estimate, built from your photo, your choices and UK installation rates. An installer confirms the final specification and price after surveying your home. <a href="/cost/how-our-estimates-work" style="color:#fff;font-weight:600">See how our pricing works &rarr;</a></p>
       </div>
       <div class="three">
         <div class="n3">3</div>
@@ -586,27 +575,13 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
       <h2 style="font-size:clamp(38px,5.4vw,72px);line-height:.98;letter-spacing:-.04em;font-weight:700">See it on your house.</h2>
       <p class="lead" style="max-width:28em">One photo. Your home. A clearer idea of what it could look like — and what it could cost.</p>
       <div class="cta-block">
-        <a class="btn lg" href="/design?journey=windows">See my house &amp; price →</a>
-        <div class="reassure">No account · No measurements · No sales call</div>
+        <a class="btn lg" href="/design?journey=windows">Upload photo &amp; see estimated price →</a>
+        <div class="reassure">Free · No account required</div>
         <div class="reassure lockline">&#128274; No phone number needed for your design and price range.</div>
       </div>
     </div>
   </section>
 
-  <!-- FOR INSTALLERS, COMPRESSED (brief §12), below the homeowner story. -->
-  <section id="installers" style="padding-block:clamp(36px,4vw,56px)">
-    <div class="wrap">
-      <div class="instbox">
-        <div class="stack" style="gap:8px">
-          <div class="eyebrow">For installers</div>
-          <h2 class="h2" style="font-size:clamp(24px,2.8vw,34px)">Meet homeowners when they’re ready to buy.</h2>
-          <p style="color:var(--ink-2)">By the time a homeowner reaches you, they have already:</p>
-        </div>
-        <ol class="steps6"><li>uploaded their property</li><li>selected the project</li><li>explored products and styles</li><li>visualised the result</li><li>seen a planning estimate</li><li>actively requested quotes</li></ol>
-        <div><a class="btn ghost" href="/installers">See how Facet Pro works for installers →</a></div>
-      </div>
-    </div>
-  </section>
 
   <!-- FAQ (brief §14): the seven core questions. -->
   <section id="faq" class="stone" style="padding-block:clamp(44px,5vw,72px)">
@@ -650,8 +625,8 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
 </footer>
 
 <div class="mbar">
-  <div style="line-height:1.2"><div class="muted" style="font-size:11px">Free · No sales call</div><div style="font-size:14px;font-weight:700">One photo is all it takes</div></div>
-  <a class="btn" href="/design?journey=windows">See my house &amp; price →</a>
+  <div style="line-height:1.2"><div class="muted" style="font-size:11px">Free · No account</div><div style="font-size:14px;font-weight:700">One photo is all it takes</div></div>
+  <a class="btn" href="/design?journey=windows">Upload photo &amp; see price →</a>
 </div>
 
 <script>

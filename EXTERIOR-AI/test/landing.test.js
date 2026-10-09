@@ -301,7 +301,7 @@ test('pages with no priced journey get no hero', () => {
   const ext = landing.renderCostPage('house-exterior-renovation-cost', OPTS);
   const hero = ext.slice(ext.indexOf('journey-hero'), ext.indexOf('</div>', ext.indexOf('journey-hero')));
   assert.match(hero, /Your house isn\u2019t a typical house\.|Your house isn’t a typical house\./);
-  assert.match(hero, /See my house &amp; price →/);   // one button wording since 6 Oct
+  assert.match(hero, /Upload photo &amp; see price →/);   // one button wording since 6 Oct
   assert.doesNotMatch(hero, /journey=/);
 });
 
