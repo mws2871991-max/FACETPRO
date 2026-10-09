@@ -3574,7 +3574,9 @@ async function keepRender(replicateUrl, restore = null) {
      review, test 2, 9 Oct). The boxes are detection's (analysis.private). */
   let privateBoxes;
   if (restore) {
-    await detectionsForRestore(restore, 10_000);
+    /* No waiting here: the holds above already waited for detection, and a
+       render with no detection record must not sit out a timeout to find
+       there is nothing to blur. */
     const record = recordForRestore(restore);
     const analysis = record && (record.detections || []).find(d => d?.type === 'analysis');
     if (Array.isArray(analysis?.private) && analysis.private.length) {
