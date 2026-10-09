@@ -199,7 +199,10 @@ header{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:rg
 .dark .cap{color:#A9ACAF}
 .looks{display:flex;flex-wrap:wrap;gap:8px}
 .brk{font-size:14px;color:var(--ink-2);display:grid;gap:4px}
-.brk div{display:flex;justify-content:space-between;gap:12px}
+.brk div{display:flex;justify-content:space-between;gap:12px}.brk b{white-space:nowrap}
+.tryit{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:12px;margin-top:4px}
+.tryit .chip{padding:8px 12px;font-size:13.5px}
+.ticks.row{display:flex;flex-wrap:wrap;gap:6px 22px;margin:0}
 .nos>div:first-child>div{font-size:clamp(30px,4vw,52px);font-weight:700;letter-spacing:-.03em;line-height:1.08}
 .nos>div:first-child>div:last-child{color:var(--brick)}
 
@@ -354,26 +357,10 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
   },
   {
    "@type": "Question",
-   "name": "Do I have to speak to an installer?",
+   "name": "Will installers contact me?",
    "acceptedAnswer": {
     "@type": "Answer",
-    "text": "No. You can explore, price and save your design without speaking to anyone."
-   }
-  },
-  {
-   "@type": "Question",
-   "name": "Will installers contact me automatically?",
-   "acceptedAnswer": {
-    "@type": "Answer",
-    "text": "No. You decide whether to request quotes."
-   }
-  },
-  {
-   "@type": "Question",
-   "name": "How many installers will receive my details?",
-   "acceptedAnswer": {
-    "@type": "Answer",
-    "text": "Up to three, and only if you request quotes."
+    "text": "Only if you ask for quotes, and then no more than three. You can explore, price and save your design without speaking to anyone."
    }
   },
   {
@@ -481,13 +468,27 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
         </a>
       </div>
       <div class="hero-visual" id="demo-example">
-        <div class="ba shadow" data-before="pbBefore" data-start="30" data-after="pbAnth" data-label="Drag to compare the example house before and after new anthracite windows"></div>
+        <!-- Homepage trim (9 Oct): the hero picture is now the demo. The same
+             house used to appear again a screen lower with the colour and door
+             buttons; it shows once, here. -->
+        <div class="ba shadow" id="demoBA" data-before="pbBefore" data-start="30" data-after="custom" data-label="Drag to compare the example house before and after"></div>
         <div class="hero-est">
           <div class="muted" style="font-size:13px;font-weight:500">Estimated project cost</div>
-          <div class="row1"><div class="price" style="font-size:clamp(34px,3.4vw,44px)">£4,880–£8,874</div></div>
+          <div class="row1"><div class="price" id="demoPrice" style="font-size:clamp(34px,3.4vw,44px)">£4,880–£8,874</div></div>
           <div style="font-size:13px;color:var(--ink-2)"><b>Planning estimate · inc. VAT</b> · Not a quotation.</div>
+          <div class="brk" id="demoBrk"></div>
           <div class="rangewhy">Why a range? Installers charge different prices for the same job. Your installer confirms the final price at survey.</div>
-          <div class="chips"><span>Red-brick detached · 3 front windows incl. the bay</span><span>uPVC casement · Anthracite</span></div>
+          <div class="tryit">
+            <div class="looks opts" data-group="win" role="group" aria-label="Window colour">
+              <button type="button" class="chip" data-v="white" aria-pressed="false">White</button>
+              <button type="button" class="chip" data-v="anth" aria-pressed="true">Anthracite</button>
+              <button type="button" class="chip" data-v="black" aria-pressed="false">Black</button>
+            </div>
+            <div class="looks opts" data-group="door" role="group" aria-label="Front door">
+              <button type="button" class="chip" data-v="orig" aria-pressed="true">Original door</button>
+              <button type="button" class="chip" data-v="comp" aria-pressed="false">Composite door</button>
+            </div>
+          </div>
         </div>
         <div style="margin-top:12px"><p class="cap">Example property illustration. Visualisation and estimate are genuine output from our pricing engine.</p><details class="info"><summary>ⓘ About these pictures</summary><p>The house shown is an AI-generated illustration used to demonstrate Facet Pro. The visualisation and estimated price are genuine output from our pricing engine. When you upload your own photograph, Facet Pro visualises the changes on your property.</p></details></div>
       </div>
@@ -507,67 +508,14 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
            under the three steps, as one line. Still unnamed (Mike, 8 Oct), and
            this is now its only place on the page. -->
       <p id="trust" class="founder-line">Built by someone who spent 24 years selling windows, doors and home improvements, to give UK homeowners a clear price before any sales visit.</p>
-    </div>
-  </section>
-
-  <!-- DEMO -->
-  <section id="demo" class="stone">
-    <div class="wrap stack" style="gap:44px">
-      <div class="stack" style="gap:12px">
-        <div class="chap">See it</div>
-        <h2 class="h2">What difference could a new look make?</h2>
-      </div>
-      <div class="demo">
-        <div class="ba" id="demoBA" data-before="pbBefore" data-start="22" data-after="custom" data-label="Drag to compare the demo house before and after"></div>
-        <div class="panel">
-          <fieldset class="group"><legend>CHOOSE YOUR LOOK</legend>
-            <div class="looks opts" data-group="win">
-              <button type="button" class="chip" data-v="white" aria-pressed="false">White</button>
-              <button type="button" class="chip" data-v="anth" aria-pressed="true">Anthracite</button>
-              <button type="button" class="chip" data-v="black" aria-pressed="false">Black</button>
-            </div>
-          </fieldset>
-          <fieldset class="group"><legend>ADD A DOOR</legend>
-            <div class="looks opts" data-group="door">
-              <button type="button" class="chip" data-v="orig" aria-pressed="true">Original</button>
-              <button type="button" class="chip" data-v="comp" aria-pressed="false">Composite</button>
-            </div>
-          </fieldset>
-          <div class="estblock">
-            <div class="muted" style="font-size:14px;font-weight:500">Estimated project cost</div>
-            <div class="price" id="demoPrice" style="font-size:clamp(40px,4.6vw,56px)">£4,880–£8,874</div>
-            <div class="muted" style="font-size:13px">Planning estimate · inc. VAT</div>
-            <div class="brk" id="demoBrk"></div>
-            <p class="rangewhy" style="margin-top:6px">Why a range? Installers charge different prices for the same job. Your installer confirms the final price at survey.</p>
-            <p class="cap">Example property illustration. Every look is a genuine render with its own estimate.</p>
-          </div>
-        </div>
-      </div>
+      <!-- Homepage trim (9 Oct): the "Research first" and "No twenty companies"
+           section, cut to its promises. The FAQ answers each one in full. -->
+      <ul id="estimate" class="ticks row"><li>No obligation</li><li>No sales call</li><li>Up to 3 installers, only if you ask</li></ul>
     </div>
   </section>
 
 
-  <!-- RESEARCH FIRST, ESTIMATE VS QUOTE, NO TWENTY COMPANIES: one section since
-       the 8 Oct site review (it was three, back to back). -->
-  <section id="research" class="dark" style="padding-block:clamp(48px,6vw,80px)">
-    <div class="wrap stack" style="gap:28px">
-      <div class="stack" style="gap:12px;max-width:44em">
-        <h2 class="h2" style="font-size:clamp(30px,4vw,52px)">Research first. Talk to installers when you’re ready.</h2>
-        <p class="lead">Facet Pro lets you explore your project and understand the likely cost before you invite anyone to quote.</p>
-        <ul class="ticks dk"><li>No obligation</li><li>No sales call</li><li>No need to speak to an installer</li><li>Installers contact you only if you ask</li></ul>
-        <!-- Site review 8 Oct: the estimate section merged in here, so estimate-vs-quote is said once. -->
-        <p id="estimate" style="color:#C9CBCD;font-size:17px;line-height:1.55;margin-top:6px">Your Facet Pro price is a planning estimate, built from your photo, your choices and UK installation rates. An installer confirms the final specification and price after surveying your home. <a href="/cost/how-our-estimates-work" style="color:#fff;font-weight:600">See how our pricing works &rarr;</a></p>
-      </div>
-      <div class="three">
-        <div class="n3">3</div>
-        <div class="stack" style="gap:10px">
-          <h3>No twenty companies calling you.</h3>
-          <p>If you decide you want quotes, you can choose to share your project with up to three suitable installers.</p>
-          <ul class="ticks"><li>Maximum three installers</li><li>You choose whether to request quotes</li><li>Your details aren’t passed on just because you explored an estimate</li><li>No obligation to accept a quote</li></ul>
-        </div>
-      </div>
-    </div>
-  </section>
+
 
   <!-- FINAL CTA -->
   <section id="start" style="padding-block:clamp(56px,7vw,96px)">
@@ -583,7 +531,7 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
   </section>
 
 
-  <!-- FAQ (brief §14): the seven core questions. -->
+  <!-- FAQ (brief §14): the core questions, five since the 9 Oct trim. -->
   <section id="faq" class="stone" style="padding-block:clamp(44px,5vw,72px)">
     <div class="wrap g2" style="align-items:start">
       <div class="stack" style="gap:12px">
@@ -592,9 +540,7 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
       </div>
       <div class="faq" style="border-top:1px solid #DEDBD4">
         <details><summary>Is the Facet Pro price a quotation?</summary><p>No. It is a planning estimate. The final price is confirmed by an installer after reviewing the property and specification.</p></details>
-        <details><summary>Do I have to speak to an installer?</summary><p>No. You can explore, price and save your design without speaking to anyone.</p></details>
-        <details><summary>Will installers contact me automatically?</summary><p>No. You decide whether to request quotes.</p></details>
-        <details><summary>How many installers will receive my details?</summary><p>Up to three, and only if you request quotes.</p></details>
+        <details><summary>Will installers contact me?</summary><p>Only if you ask for quotes, and then no more than three. You can explore, price and save your design without speaking to anyone.</p></details>
         <details><summary>Do I need to measure my property?</summary><p>No. We size it from your photo.</p></details>
         <details><summary>What happens to my photo?</summary><p>Your original photo is deleted immediately after processing. We keep a secure fingerprint for 7 days to maintain estimate consistency, and store your generated designs for 6 months so you can return to your project. The detail is in our <a href="/privacy">privacy policy</a>.</p></details>
         <details><summary>How accurate is the estimate?</summary><p>It is a realistic planning range, not a guaranteed final price. It is based on what we can see in your photo and the options you choose.</p></details>
