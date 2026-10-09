@@ -200,14 +200,28 @@ test('cream: when the glass wins the vote, the render is left alone rather than 
   assert.strictEqual(r.buffer, render, 'handed back untouched');
 });
 
-test('a neutral frame that was repainted is corrected, and the glass is not swept in with it', () => {
+test('grey frames asked to be a grey are left as the model drew them (9 Oct)', () => {
+  /* Was "a neutral frame that was repainted is corrected". A semi asked for
+     anthracite on 9 Oct: the frames came back mid grey and the reflections
+     and net curtains in the glass were the same grey, so correcting the
+     lightness painted the glass black. Grey to grey is now left alone. */
   const GREY = '#8A8D8F';
-  const render = window_((x, y) => [180 + (y % 2) * 3, 182 + (y % 2) * 3, 184 + (y % 2) * 3],   // frames came back too light
-    (x, y) => [90 + (y % 9) * 5, 92 + (x % 7) * 5, 96 + (y % 9) * 5]);                         // glass, darker, varied, also redrawn
+  const render = window_((x, y) => [180 + (y % 2) * 3, 182 + (y % 2) * 3, 184 + (y % 2) * 3],
+    (x, y) => [90 + (y % 9) * 5, 92 + (x % 7) * 5, 96 + (y % 9) * 5]);
   const r = correctFrameColour({ render, renderMime: 'image/png', original: png(W, H, () => [20, 20, 20]), originalMime: 'image/png',
     mask: WIN_MASK, maskMime: 'image/png', hex: GREY });
-  assert.strictEqual(r.corrected, true, r.reason || '');
-  const out = read(r.buffer);
-  assert.ok(dE(at(out, 12, 30), GREY) < 10, `the frame is agate grey (ΔE ${dE(at(out, 12, 30), GREY).toFixed(1)})`);
-  assert.deepStrictEqual(at(out, 30, 30), at(read(render), 30, 30), 'the glass untouched');
+  assert.strictEqual(r.corrected, false);
+  assert.match(r.reason, /grey frames asked to be a grey/);
+  assert.strictEqual(r.buffer, render, 'handed back untouched');
+});
+
+test('anthracite over grey glass: the glass is not painted (the 9 Oct house)', () => {
+  /* Frames the model made mid grey, glass reflections the same grey: the
+     render is kept, not darkened into black glass. */
+  const ANTHRACITE = '#383E42';
+  const render = window_(() => [108, 116, 122], (x, y) => [104 + (y % 4) * 3, 112 + (y % 4) * 3, 118 + (y % 4) * 3]);
+  const r = correctFrameColour({ render, renderMime: 'image/png', original: WIN_ORIG, originalMime: 'image/png',
+    mask: WIN_MASK, maskMime: 'image/png', hex: ANTHRACITE });
+  assert.strictEqual(r.corrected, false, 'a grey render asked for anthracite is left alone');
+  assert.strictEqual(r.buffer, render);
 });

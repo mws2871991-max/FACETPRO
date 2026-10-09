@@ -449,3 +449,22 @@ test('a mask that was wanted and did not arrive says so', () => {
   assert.match(src, /if \(maskWanted && !mask\) \{[\s\S]{0,160}window mask not ready in time/,
     'a mask that never arrived is skipped without a word');
 });
+
+test('a mask that stops just short of the frame edge is grown to it, inside our box only (9 Oct)', () => {
+  /* The 9 Oct semi: segmentation stopped 2–3px under the head of the upstairs
+     bay and the old white frame came back as a jagged line round new grey
+     frames. 800px wide grows the mask 2px — inside our window's box, never
+     onto the wall beyond it. */
+  const BW = 800, BH = 200;
+  const orig = png(BW, BH, () => [0, 0, 255]);
+  const rend = png(BW, BH, () => [255, 0, 0]);
+  const mask = png(BW, BH, (x, y) => (x >= 202 && x <= 397 && y >= 52 && y <= 147 ? [255, 255, 255] : [0, 0, 0]));
+  const ours = [{ x: 25, y: 25, w: 25, h: 50 }];   // x 200–400, y 50–150 in pixels
+  const r = restoreOutsideMask({ render: rend, renderMime: 'image/png', original: orig, originalMime: 'image/png',
+    mask, maskMime: 'image/png', ours });
+  assert.strictEqual(r.restored, true, r.reason || '');
+  const out = read(r.buffer);
+  assert.deepStrictEqual(at(out, 200, 100), [255, 0, 0], 'the frame edge the mask missed keeps the render');
+  assert.deepStrictEqual(at(out, 300, 50), [255, 0, 0], 'the head of the frame keeps the render');
+  assert.deepStrictEqual(at(out, 150, 100), [0, 0, 255], 'the wall well outside the box is the photograph');
+});

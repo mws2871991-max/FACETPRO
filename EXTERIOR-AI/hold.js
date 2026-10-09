@@ -787,6 +787,16 @@ const MASK_MIN_COVER = 0.08;
    already loose around the frame and the stonework begins right beside it. */
 const MASK_BOX_MARGIN_PCT = 0.5;
 
+/* How far the mask is grown before it is used, as a share of the frame's
+   width (9 Oct). A semi, anthracite casements: segmentation stopped two or
+   three pixels short of the head of the upstairs bay, under the soffit, and
+   the photograph's white frame came back along that edge as a thin jagged
+   line round new grey frames. A frame's outer edge is exactly where the
+   mask is least sure. Grown only inside our own boxes (plus the margin
+   above), so the stone-head rule still holds, and never into a neighbour's
+   window. 1/400 of the width is 2px on an 880px render. */
+const MASK_GROW_FRAC = 1 / 400;
+
 function restoreOutsideMask(opts) {
   /* Destructured inside, not in the signature: a default only
      catches undefined, and these must refuse null too. Everything
@@ -892,11 +902,24 @@ function restoreOutsideMask(opts) {
        photograph keeps the bilinear sample it has always had. */
     const px = [0, 0, 0];
     let inside = 0;
+    let held = new Uint8Array(W * H);
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) {
         const mx = Math.min(m.width - 1, Math.max(0, Math.round((x + 0.5) * m.width / W - 0.5)));
         const my = Math.min(m.height - 1, Math.max(0, Math.round((y + 0.5) * m.height / H - 0.5)));
-        if (((m.data[(my * m.width + mx) * 4] >= MASK_ON && inOurBox(x, y)) || filledWindow(x, y)) && !notOurWindow(x, y)) { inside++; continue; }   // our window: keep the render
+        if (((m.data[(my * m.width + mx) * 4] >= MASK_ON && inOurBox(x, y)) || filledWindow(x, y)) && !notOurWindow(x, y)) held[y * W + x] = 1;
+      }
+    }
+    for (let r = Math.round(W * MASK_GROW_FRAC); r > 0; r--) {
+      const grown = dilate(held, W, H);
+      for (let k = 0; k < grown.length; k++) {
+        if (grown[k] && !held[k]) { const x = k % W, y = (k / W) | 0; if (!inOurBox(x, y) || notOurWindow(x, y)) grown[k] = 0; }
+      }
+      held = grown;
+    }
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        if (held[y * W + x]) { inside++; continue; }   // our window: keep the render
         sample(src, (x + 0.5) * (src.width / W) - 0.5, (y + 0.5) * (src.height / H) - 0.5, px);
         const i = (y * W + x) * 4;
         out.data[i] = px[0]; out.data[i + 1] = px[1]; out.data[i + 2] = px[2];
@@ -1216,6 +1239,18 @@ const CORRECT_SKIP_DE = 12;        // already this close to the swatch: leave it
 const CORRECT_NEUTRAL_CHROMA = 30;
 const CORRECT_NEUTRAL_L_BAND = 15;
 const CORRECT_NEUTRAL_MAX_DL = 25;
+/* Grey to grey: leave it (9 Oct). A semi with white casements, asked for
+ * anthracite: the model's frames came back a mid grey, rgb(108,116,122), and
+ * the raw render was clean. The correction then darkened every pixel that
+ * matched that grey, and the reflections and net curtains in the glass did,
+ * so the glass came out as black blotches and the extension window as a
+ * solid panel. Checking the photograph does not save it: the curtains were
+ * white there, like the frames. When both colours are true greys the only
+ * thing left to correct is lightness, and on lightness alone frame and glass
+ * cannot be told apart. A frame a little light is a far smaller wrong than
+ * glass painted over, so the render is kept as the model drew it. Chartwell
+ * Green, the reason this step exists, has chroma 23.6 and is still corrected. */
+const CORRECT_GREY_CHROMA = 12;
 
 const srgbToLinear = (v) => { const c = v / 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
 const linearToSrgb = (c) => {
@@ -1322,6 +1357,9 @@ function correctFrameColour(opts) {
     const neutralSwatch = Math.hypot(tl[1], tl[2]) < CORRECT_NEUTRAL_CHROMA;
     if (neutralFrame && neutralSwatch && Math.abs(dl[0] - tl[0]) > CORRECT_NEUTRAL_MAX_DL) {
       return untouched(`most-changed colour rgb(${dominant.join(',')}) is ${Math.abs(dl[0] - tl[0]).toFixed(0)} lighter/darker than a neutral swatch — that is the glass, not the frame`);
+    }
+    if (Math.hypot(dl[1], dl[2]) < CORRECT_GREY_CHROMA && Math.hypot(tl[1], tl[2]) < CORRECT_GREY_CHROMA) {
+      return untouched(`grey frames asked to be a grey: only lightness would change, and the glass cannot be told from the frame on lightness`);
     }
 
     /* Which pixels are frame, and how light the model made them on average.
