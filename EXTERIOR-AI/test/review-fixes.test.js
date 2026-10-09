@@ -22,3 +22,9 @@ test('the homepage carries FAQPage markup that matches its visible questions', (
 test('no page claims more about AI training than the privacy notice does', () => {
   for (const html of [home, index]) assert.doesNotMatch(html, /train anybody/);
 });
+
+test('/cookies lands on the cookie section of the privacy notice', () => {
+  const pages = read('routes/pages.js'), privacy = read('legal/privacy.html');
+  assert.match(pages, /router\.get\('\/cookies', \(req, res\) => res\.redirect\(301, '\/privacy#cookies'\)\)/);
+  assert.match(privacy, /<h2 id="cookies">Cookies and similar technologies<\/h2>/);
+});

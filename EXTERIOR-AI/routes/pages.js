@@ -172,6 +172,10 @@ module.exports = function pageRoutes({
     'window-replacement-south-east': 'windows-south-east', 'replacement-windows-south-east': 'windows-south-east',
   };
   router.get('/costs', (req, res) => res.redirect(301, '/cost'));
+  /* /cookies is where people and old checklists look (13 May checklist). The
+     cookie section lives in the privacy notice: there is no banner because
+     there is nothing to consent to, so there is no separate policy page. */
+  router.get('/cookies', (req, res) => res.redirect(301, '/privacy#cookies'));
   router.get('/costs/:slug', perMinute(120, 'Too many requests — please wait a moment.'), (req, res, next) => {
     const slug = String(req.params.slug || '').toLowerCase().replace(/\/+$/, '');
     if (REGION_ALIASES[slug]) return res.redirect(301, `/${REGION_ALIASES[slug]}`);
