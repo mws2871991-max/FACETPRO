@@ -4499,6 +4499,7 @@ app.post('/api/render', renderLimiter, renderDayLimiter, async (req, res) => {
 /* ── POST /api/lead ──
    Real lead capture. Recomputes price server-side (never trusts client price),
    stores it, emails the owner via Resend if configured, fires a CRM webhook if configured. */
+const recentQuoteRequests = new Map();
 app.post('/api/lead', leadLimiter, async (req, res) => {
   /* Refused before anything is read, so nothing the homeowner typed is
      logged, stored or even parsed into a lead object. The point of the
@@ -4653,6 +4654,23 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
      a lead, including the installer portal. */
   const { token: withdrawToken, hash: withdrawTokenHash } = withdrawal.newToken();
 
+  /* The same quote request twice in a day (security handoff, 9 Oct: duplicate
+     check). A double tap or a resend made two leads, and installers pay per
+     lead. The same design from the same email and postcode within 24 hours gets
+     the first one back, and nothing is sent again. In memory: a restart forgets,
+     which costs at most one duplicate. */
+  /* Identical, not merely the same person: someone who changes their design
+     and asks again is a new request, and is recorded as one. A double tap
+     sends the same body twice, and that is what this catches. */
+  const { consent: _c, email: _e, postcode: _p, ...designBody } = req.body || {};
+  const dupKey = consent.installerQuotes === true
+    ? `${email.toLowerCase()}|${postcode.replace(/\s+/g, '')}|${crypto.createHash('sha256').update(JSON.stringify([designBody, consent.emailPack === true])).digest('hex')}`
+    : null;
+  const dupSeen = dupKey ? recentQuoteRequests.get(dupKey) : null;
+  if (dupSeen && Date.now() - dupSeen.at < 24 * 60 * 60 * 1000) {
+    obs.record('lead', 'duplicate quote request returned the first one', {});
+    return res.json({ ok: true, duplicate: true, lead: dupSeen.lead });
+  }
   const lead = {
     ts: new Date().toISOString(),
     id: newLeadId(),
@@ -4826,6 +4844,10 @@ app.post('/api/lead', leadLimiter, async (req, res) => {
   /* The hash is ours. It is no use to an installer and no use to the browser,
      and the fewer places a credential's shadow appears the better. */
   const { withdrawTokenHash: _hash, ...publicLead } = lead;
+  if (dupKey) {
+    recentQuoteRequests.set(dupKey, { at: Date.now(), lead: publicLead });
+    if (recentQuoteRequests.size > 5000) recentQuoteRequests.delete(recentQuoteRequests.keys().next().value);
+  }
   res.json({ ok: true, lead: publicLead });
 });
 
