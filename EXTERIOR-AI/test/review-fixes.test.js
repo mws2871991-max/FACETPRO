@@ -35,3 +35,9 @@ test('guide tables hold only a price on one line, never a sentence (9 Oct)', () 
   assert.match(css, /td\.price:last-child\{white-space:nowrap\}/);
   assert.match(landing, /class="price"/);
 });
+
+test('one address: /index.html and the raw Railway host go to the real pages, /healthz never redirects', () => {
+  const server = read('server.js');
+  assert.match(server, /if \(req\.path === '\/healthz'\) return next\(\);\s*if \(\/\\\.up\\\.railway\\\.app\$\/i\.test/);
+  assert.match(server, /if \(req\.path === '\/index\.html'\) \{/);
+});

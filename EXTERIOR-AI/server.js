@@ -148,6 +148,21 @@ app.set('trust proxy', 1);
 app.use(['/api/detect', '/api/render'], express.json({ limit: '12mb' }));
 app.use(express.json({ limit: '128kb' }));
 
+/* One address for the site (customer journey review, 9 Oct). /index.html
+   served the old one-page homepage, with old example prices, beside the real
+   one at /; and the raw *.up.railway.app address served everything. Both
+   now go to the canonical page. /healthz is left alone: the platform's health
+   check must never be redirected. */
+app.use((req, res, next) => {
+  if (req.path === '/healthz') return next();
+  if (/\.up\.railway\.app$/i.test(String(req.headers.host || ''))) return res.redirect(301, SITE_URL + req.originalUrl);
+  if (req.path === '/index.html') {
+    const q = req.originalUrl.indexOf('?');
+    return res.redirect(301, '/' + (q >= 0 ? req.originalUrl.slice(q) : ''));
+  }
+  next();
+});
+
 /* ── STATIC FILES ──
    Deny by default. Serving __dirname wholesale published the entire project —
    data/leads.jsonl (bypassing the /api/leads password outright), server.js,
