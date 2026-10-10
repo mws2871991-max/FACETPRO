@@ -50,3 +50,11 @@ test('journey test 2 (9 Oct): period-house note, white-on-white note, and why a 
   assert.match(page, /if \(spread\.high > was\.high\) \{/);
   assert.match(page, /That figure assumes average-sized windows and no bays/);
 });
+
+test('no photo to hand: the example house is offered from the homepage and the design page (Gemini funnel note, 9 Oct)', () => {
+  const home = read('home.html'), page = read('index.html');
+  assert.match(home, /<a class="trysample" href="#demo-example">No photo to hand\? Try our example house/);
+  assert.match(home, /<a class="ownhouse" href="\/design\?journey=windows">Now try it on your own house/);
+  assert.match(home, /id="demo-example"/);
+  assert.match(page, /href: '\/#demo-example'[\s\S]{0,300}Or try our example house first/);
+});

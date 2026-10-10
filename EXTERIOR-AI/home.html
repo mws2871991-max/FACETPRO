@@ -202,6 +202,9 @@ header{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:rg
 .brk div{display:flex;justify-content:space-between;gap:12px}.brk b{white-space:nowrap}
 .tryit{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:12px;margin-top:4px}
 .tryit .chip{padding:8px 12px;font-size:13.5px}
+.trysample{display:inline-block;margin-top:2px;font-weight:600;color:var(--ink);text-decoration:underline;text-underline-offset:3px;min-height:44px;line-height:44px}
+.ownhouse{display:inline-flex;align-items:center;min-height:44px;font-weight:700;color:var(--brick);text-decoration:none}
+.ownhouse:hover{text-decoration:underline}
 .choice3{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
 .choice3 li{background:#fff;border-radius:6px;padding:20px 22px;border-top:3px solid var(--brick)}
 .choice3 b{font-size:18px;letter-spacing:-.01em}.choice3 p{margin-top:6px;color:var(--ink-2)}
@@ -489,6 +492,11 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
           <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap"><a class="btn lg" href="/design?journey=windows">Upload photo &amp; see estimated price →</a><a href="#how" style="font-weight:600;color:var(--ink)">How it works</a></div>
           <div class="reassure">Free · No account required · No sales call</div>
           <div class="reassure lockline">&#128274; No phone number needed for your design and price range.</div>
+          <!-- Gemini funnel note (9 Oct): "Upload photo or try sample house". The
+               example house below is the sample: every look on it is a real
+               render with its own estimate, made once, so trying it costs
+               nothing and uses none of the day's picture allowance. -->
+          <a class="trysample" href="#demo-example">No photo to hand? Try our example house &darr;</a>
         </div>
         <!-- The first price inside the first phone screen (7 Oct): the headline
              promises a cost, and on a phone the price card sat a screen down,
@@ -522,6 +530,7 @@ body.cta-dup .mbar{transform:translateY(110%);visibility:hidden}
               <button type="button" class="chip" data-v="comp" aria-pressed="false">Composite door</button>
             </div>
           </div>
+          <a class="ownhouse" href="/design?journey=windows">Now try it on your own house &rarr;</a>
         </div>
         <div style="margin-top:12px"><p class="cap">Example property illustration. Visualisation and estimate are genuine output from our pricing engine.</p><details class="info"><summary>ⓘ About these pictures</summary><p>The house shown is an AI-generated illustration used to demonstrate Facet Pro. The visualisation and estimated price are genuine output from our pricing engine. When you upload your own photograph, Facet Pro visualises the changes on your property.</p></details></div>
       </div>

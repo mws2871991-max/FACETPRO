@@ -4792,6 +4792,11 @@ function buildUploadDetect() {
             className: 'mt-3 inline-flex items-center min-h-[48px] px-5 rounded-full border border-zinc-300 bg-white text-base font-semibold hover:border-zinc-900 transition',
             onClick: (e) => { e.preventDefault(); document.getElementById('mount-wholehouse')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); },
           }, 'Estimate by house type instead \u2192'),
+          /* Gemini funnel note (9 Oct): "or try sample house". The homepage
+             example is the sample — real renders and estimates, made once, so
+             it costs nothing per visitor. */
+          h('a', { href: '/#demo-example', className: 'mt-1 ml-1 inline-flex items-center min-h-[44px] text-base font-semibold underline underline-offset-2 text-zinc-800' },
+            'Or try our example house first \u2192'),
         ]),
       ]),
       h('div', { className: 'rounded-2xl bg-zinc-900 text-white p-5 flex flex-col gap-4' }, [
