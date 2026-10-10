@@ -2651,6 +2651,21 @@ app.post('/api/detect', detectLimiter, detectHourLimiter, async (req, res) => {
       onNote: (why) => obs.record('detect', 'house number mask not prepared', { reason: why }),
     }).then((m) => { if (m) record.privateMask = m; else record.privatePromise = null; return m; }).catch(() => null);
   };
+  /* The front door's outline (10 Oct), for restoreDoor: detection's box is
+     sometimes low and only part of a kept door came back. One segmentation
+     per photograph, started now so the render never waits on it. */
+  const prepareDoorMask = (record, elev) => {
+    if (!record || elev !== 'front' || !process.env.REPLICATE_API_TOKEN) return;
+    if (record.doorMask || record.doorPromise) return;
+    if (!(record.detections || []).some(d => d?.type === 'door-front')) return;
+    record.doorPromise = fetchWindowMask({
+      image: img.buffer, mime: img.mime,
+      replicateKey: process.env.REPLICATE_API_TOKEN,
+      deadlineAt: Date.now() + MASK_WARM_MS,
+      prompt: 'front door', dilate: 2,
+      onNote: (why) => obs.record('detect', 'door mask not prepared', { reason: why }),
+    }).then((m) => { if (m) record.doorMask = m; else record.doorPromise = null; return m; }).catch(() => null);
+  };
   const prepareKeepMask = (record, elev) => {
     if (!record || elev !== 'front' || !process.env.REPLICATE_API_TOKEN) return;
     if (!driveways.enabled({ body: req.body })) return;
@@ -2708,7 +2723,7 @@ app.post('/api/detect', detectLimiter, detectHourLimiter, async (req, res) => {
 
   const seenId = detectionByImage.get(fingerprint);
   const seen = seenId ? detectionRecords.get(seenId) : null;
-  if (seen) { prepareWindowMask(seen, seen.elevation || elevation); prepareKeepMask(seen, seen.elevation || elevation); preparePrivateMask(seen, seen.elevation || elevation); return answer(seen, seenId); }
+  if (seen) { prepareWindowMask(seen, seen.elevation || elevation); prepareKeepMask(seen, seen.elevation || elevation); preparePrivateMask(seen, seen.elevation || elevation); prepareDoorMask(seen, seen.elevation || elevation); return answer(seen, seenId); }
 
   /* Not in this process — ask the store. A failure here is a cache miss and
      nothing more: the photograph still gets read, it just costs a call. */
@@ -2756,6 +2771,7 @@ app.post('/api/detect', detectLimiter, detectHourLimiter, async (req, res) => {
     detectionByImage.set(fingerprint, id);
     prepareWindowMask(detectionRecords.get(id), elevation);
     preparePrivateMask(detectionRecords.get(id), elevation);
+    prepareDoorMask(detectionRecords.get(id), elevation);
     prepareKeepMask(detectionRecords.get(id), elevation);
     return answer(detectionRecords.get(id), id);
   }
@@ -2960,6 +2976,7 @@ For houseType, judge it from what the photograph shows: a gap on both sides is d
   prepareWindowMask(detectionRecords.get(detectionId), elevation);
   prepareKeepMask(detectionRecords.get(detectionId), elevation);
   preparePrivateMask(detectionRecords.get(detectionId), elevation);
+  prepareDoorMask(detectionRecords.get(detectionId), elevation);
 
   /* Kept so a restart does not change the answer. Awaited rather than fired
      and forgotten: if this write fails the homeowner should still get their
@@ -3433,7 +3450,11 @@ async function keepRender(replicateUrl, restore = null) {
       }
     } else {
       if (restore.door) {
-        const held = restoreDoor({ render: bytes, ...common });
+        /* The door's own outline from segmentation, when it arrived in time,
+           joined to detection's box (see doorWithMask in hold.js). */
+        const rec = recordForRestore(restore);
+        const dm = rec && (rec.doorMask || await maskWithinGrace(rec.doorPromise, 4_000));
+        const held = restoreDoor({ render: bytes, ...common, maskBoxes: dm ? boxesFromMask({ mask: dm.buffer, maskMime: dm.mime }) : [] });
         if (held.restored) bytes = held.buffer;
         else obs.record('render', 'kept door not restored', { reason: held.reason });
       }

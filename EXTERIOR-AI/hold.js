@@ -53,6 +53,28 @@ function windowBoxes(detections) {
     .map(d => ({ x: Number(d.x_pct), y: Number(d.y_pct), w: Number(d.w_pct), h: Number(d.h_pct) }));
 }
 
+/* The door the photograph's segmentation found, joined to detection's box
+   (10 Oct). Detection's box is sometimes low: on one render of the semi the
+   model removed the door's glass and only the bottom of the door came back.
+   Segmentation by name ("front door") landed on the door on whole-front
+   photos and missed on a close-up, so neither is trusted alone: the restore
+   covers both. Only a patch of real size near detection's door is used, so a
+   neighbour's door or a speck is never pasted back. */
+const DOOR_MASK_MIN_SHARE = 0.003;
+function doorWithMask(box, maskBoxes) {
+  const list = (Array.isArray(maskBoxes) ? maskBoxes : [])
+    .filter(b => b && b.w_pct * b.h_pct / 10000 >= DOOR_MASK_MIN_SHARE)
+    .map(b => ({ x: b.x_pct, y: b.y_pct, w: b.w_pct, h: b.h_pct }));
+  if (!box) return null;
+  const near = list.filter(m => {
+    const dx = Math.abs((m.x + m.w / 2) - (box.x + box.w / 2)), dy = Math.abs((m.y + m.h / 2) - (box.y + box.h / 2));
+    return dx < Math.max(box.w, m.w) && dy < Math.max(box.h, m.h);
+  }).sort((a, b) => b.w * b.h - a.w * a.h)[0];
+  if (!near) return box;
+  const x0 = Math.min(box.x, near.x), y0 = Math.min(box.y, near.y);
+  const x1 = Math.max(box.x + box.w, near.x + near.w), y1 = Math.max(box.y + box.h, near.y + near.h);
+  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+}
 function doorBox(detections) {
   const doors = detectionList(detections)
     .filter(d => d && d.type === 'door-front' && Number(d.confidence) >= MIN_DOOR_CONFIDENCE
@@ -268,11 +290,11 @@ function restoreDoor(opts) {
      catches undefined, and these must refuse null too. Everything
      else here is written so a bad input is a refusal rather than a
      throw — this is the one path that was not. */
-  const { render, renderMime, original, originalMime, detections } = opts || {};
+  const { render, renderMime, original, originalMime, detections, maskBoxes } = opts || {};
   const untouched = (reason) => ({ buffer: render, restored: false, reason });
   try {
     if (!/png/i.test(renderMime || '')) return untouched('render is not a PNG');
-    const box = doorBox(detections);
+    const box = doorWithMask(doorBox(detections), maskBoxes);
     if (!box) return untouched('no confident front door');
     const src = decode(original, originalMime || '');
     if (!src) return untouched('photograph type not handled');
@@ -1590,7 +1612,7 @@ function boxesFromMask({ mask, maskMime } = {}) {
   }
 }
 
-module.exports = { blurBoxes, boxesFromMask, restoreInsideMask, KEEP_MAX_OF_GROUND, restoreKeptParts, KEPT_MAX_SHARE, MASK_BOX_MARGIN_PCT, cropToBox, pillarsFromObjects, PILLAR_PICK, PILLAR_ATTACH, PILLAR_SHAFT_MIN,
+module.exports = { doorWithMask, blurBoxes, boxesFromMask, restoreInsideMask, KEEP_MAX_OF_GROUND, restoreKeptParts, KEPT_MAX_SHARE, MASK_BOX_MARGIN_PCT, cropToBox, pillarsFromObjects, PILLAR_PICK, PILLAR_ATTACH, PILLAR_SHAFT_MIN,
   restorePillars, PILLAR_MAX_OF_BAY, restoreDoor, restoreSurroundings, restoreOutsideMask, correctFrameColour,
                    drawGeorgianBars, doorBox, changedShare, MASK_ON, rgbToLab, labToRgb, hexToRgb,
                    holdOutsideHouse, OUTSIDE_ALIGN_MAX };
